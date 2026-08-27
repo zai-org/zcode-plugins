@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "autoresearch": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "AR_MAX_ITERATIONS": "${user_config.maxIterations}",
+        "AR_BENCHMARK_TIMEOUT_MS": "${user_config.benchmarkTimeoutMs}",
+        "AR_CHECKS_TIMEOUT_MS": "${user_config.checksTimeoutMs}"
+      },
+      "enabled": true,
+      "timeoutMs": 60000
+    }
+  }
+}

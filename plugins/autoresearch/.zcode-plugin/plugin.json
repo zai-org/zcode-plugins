@@ -1,0 +1,40 @@
+{
+  "name": "autoresearch",
+  "description": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate — measure, keep what works, revert what doesn't, repeat. Provides init/run/log experiment tools (MCP), a loop protocol skill, guardrails (frozen benchmark, checks backpressure, memory injection, Stop continuation), and a static dashboard export.",
+  "description_i18n": {
+    "en": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate — measure, keep what works, revert what doesn't, repeat.",
+    "zh-CN": "ZCode 自主实验循环：设定目标与机械度量，让 agent 迭代——测量、保留有效改动、回滚无效改动、循环往复。"
+  },
+  "version": "0.1.0",
+  "author": {
+    "name": "luochang212"
+  },
+  "keywords": [
+    "autoresearch",
+    "experiment",
+    "optimization",
+    "loop",
+    "benchmark",
+    "mcp"
+  ],
+  "userConfig": {
+    "maxIterations": {
+      "title": "Max Iterations",
+      "description": "Default iteration cap per experiment segment. Overridable per session via .auto/config.json.",
+      "type": "number",
+      "default": 20
+    },
+    "benchmarkTimeoutMs": {
+      "title": "Benchmark Timeout (ms)",
+      "description": "Wall-clock timeout for run_experiment commands.",
+      "type": "number",
+      "default": 600000
+    },
+    "checksTimeoutMs": {
+      "title": "Checks Timeout (ms)",
+      "description": "Wall-clock timeout for the correctness check script (.auto/checks.sh).",
+      "type": "number",
+      "default": 300000
+    }
+  }
+}

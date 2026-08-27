@@ -1,0 +1,87 @@
+{
+  "description": "autoresearch plugin hooks: loop continuation (Stop), frozen benchmark write protection (PreToolUse), ledger memory injection (UserPromptSubmit/SessionStart). All fail-open.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/stop-continue.mjs",
+              "${ZCODE_PROJECT_DIR}"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "autoresearch: checking loop continuation…"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|ApplyPatch",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/guard-frozen.mjs",
+              "${ZCODE_PROJECT_DIR}"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "autoresearch: checking frozen files…"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/permission-gate.mjs",
+              "${ZCODE_PROJECT_DIR}"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "autoresearch: gating experiment tools…"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/memory-inject.mjs",
+              "${ZCODE_PROJECT_DIR}"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "autoresearch: injecting ledger memory…"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/session-start.mjs",
+              "${ZCODE_PROJECT_DIR}"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "autoresearch: session context…"
+          }
+        ]
+      }
+    ]
+  }
+}

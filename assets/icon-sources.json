@@ -2049,5 +2049,12 @@
     "homepage": "https://www.zyte.com",
     "mimeType": "image/png",
     "sha256": "8613b1dc383a3b6090a8a81aefc13f4867667fbf1902dc35471f8d554e69a1cd"
+  },
+  {
+    "name": "autoresearch",
+    "icon": "autoresearch/icon.png",
+    "source": "https://github.com/luochang212/zcode-autoresearch/blob/main/assets/icon.svg",
+    "mimeType": "image/png",
+    "sha256": "990e83531f283f2a24f456c8dec76fef87fc0970ca3710463ca4af51efbbd686"
   }
 ]
