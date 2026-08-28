@@ -18,28 +18,84 @@ import {
   unwrapMeasureCommand,
   median,
   detectDoomLoop,
-} from "./lib/experiment.mjs";
+} from "./lib/experiment.ts";
 import {
   autoPaths,
   appendLedgerEntry,
   rebuildState,
   readSessionConfig,
   writeDashboard,
-} from "./lib/ledger.mjs";
+} from "./lib/ledger.ts";
 import {
   commitExperiment,
   rollbackWorkingTree,
   isGitRepo,
   isDirty,
   currentBranch,
-} from "./lib/git.mjs";
-import { renderDashboard } from "./lib/dashboard.mjs";
-import { resolveWorkCwd } from "./lib/paths.mjs";
-import { validateLedger } from "./lib/validate.mjs";
+} from "./lib/git.ts";
+import { renderDashboard } from "./lib/dashboard.ts";
+import { resolveWorkCwd } from "./lib/paths.ts";
+import { validateLedger } from "./lib/validate.ts";
 import {
   ensureDashboardServer,
   broadcastDashboardUpdate,
-} from "./lib/dashboard-server.mjs";
+} from "./lib/dashboard-server.ts";
+import type {
+  Direction,
+  LedgerRun,
+  RunStatus,
+  SessionState,
+} from "./lib/types.ts";
+
+interface JsonRpcRequest {
+  jsonrpc?: string;
+  id?: unknown;
+  method?: string;
+  params?: { name?: string; arguments?: Record<string, unknown> };
+}
+
+interface RunOutcome {
+  exitCode: number | null;
+  signal: NodeJS.Signals | null;
+  durationMs: number;
+  output: string;
+  logFile: string | null;
+  timedOut: boolean;
+}
+
+interface HookOutcome {
+  exitCode: number | null;
+  timedOut: boolean;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
+  spawnError?: string;
+}
+
+interface InitToolArgs {
+  name?: unknown;
+  metric_name?: string;
+  metricName?: string;
+  metric_unit?: string;
+  metricUnit?: string;
+  direction?: string;
+}
+
+interface RunToolArgs {
+  command?: unknown;
+  timeout_seconds?: number;
+  repeat?: number;
+}
+
+interface LogToolArgs {
+  status?: string;
+  description?: unknown;
+  metric?: unknown;
+  metrics?: Record<string, number>;
+  asi?: Record<string, unknown>;
+  constraints?: Array<{ name: string; maxPct: number }>;
+  commit?: string;
+}
 
 const projectCwd = process.cwd();
 // Effective research directory: `.auto/config.json` may set workingDir.
@@ -61,19 +117,19 @@ const LLM_MAX_BYTES = 4096;
 // JSON-RPC transport (newline-delimited on stdout; logs on stderr)
 // ---------------------------------------------------------------------------
 
-function send(msg) {
+function send(msg: unknown) {
   process.stdout.write(JSON.stringify(msg) + "\n");
 }
 
-function result(id, result) {
+function result(id: unknown, result: unknown) {
   send({ jsonrpc: "2.0", id, result });
 }
 
-function error(id, code, message) {
+function error(id: unknown, code: number, message: string) {
   send({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
-function log(...args) {
+function log(...args: unknown[]) {
   process.stderr.write(`[autoresearch] ${args.join(" ")}\n`);
 }
 
@@ -101,10 +157,10 @@ function sessionState() {
 }
 
 function truncateTail(
-  text,
+  text: unknown,
   maxLines = LLM_MAX_LINES,
   maxBytes = LLM_MAX_BYTES,
-) {
+): string {
   if (text == null) return "";
   const lines = String(text).split("\n");
   let out = lines.slice(-maxLines).join("\n");
@@ -114,7 +170,7 @@ function truncateTail(
   return out;
 }
 
-function runCommand(command, timeoutMs) {
+function runCommand(command: string, timeoutMs: number): Promise<RunOutcome> {
   return new Promise((resolve) => {
     const started = Date.now();
     const proc = spawn("bash", ["-c", command], {
@@ -122,10 +178,10 @@ function runCommand(command, timeoutMs) {
       detached: true, // own process group so we can kill the tree
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const chunks = [];
+    const chunks: Buffer[] = [];
     let totalBytes = 0;
-    let logFile = null;
-    proc.stdout.on("data", (d) => {
+    let logFile: string | null = null;
+    proc.stdout.on("data", (d: Buffer) => {
       chunks.push(d);
       totalBytes += d.length;
       if (totalBytes > 2 * 1024 * 1024 && !logFile) {
@@ -138,7 +194,7 @@ function runCommand(command, timeoutMs) {
         log("output overflowed, spilling to", logFile);
       }
     });
-    proc.stderr.on("data", (d) => {
+    proc.stderr.on("data", (d: Buffer) => {
       chunks.push(d);
       totalBytes += d.length;
       if (totalBytes > 2 * 1024 * 1024 && !logFile) {
@@ -154,7 +210,7 @@ function runCommand(command, timeoutMs) {
     const kill = () => {
       didTimeout = true;
       try {
-        process.kill(-proc.pid, "SIGTERM");
+        if (proc.pid != null) process.kill(-proc.pid, "SIGTERM");
       } catch {
         /* already gone */
       }
@@ -183,7 +239,7 @@ function runCommand(command, timeoutMs) {
   });
 }
 
-async function runChecks(checksFile) {
+async function runChecks(checksFile: string) {
   const res = await runCommand(`bash ${checksFile}`, CHECKS_TIMEOUT_MS);
   return {
     failed: res.exitCode !== 0,
@@ -200,7 +256,7 @@ async function runChecks(checksFile) {
 const HOOK_TIMEOUT_MS = 30_000;
 const HOOK_MAX_BYTES = 8 * 1024;
 
-function isExecutable(file) {
+function isExecutable(file: string): boolean {
   if (!existsSync(file)) return false;
   try {
     return (statSync(file).mode & 0o111) !== 0;
@@ -210,12 +266,15 @@ function isExecutable(file) {
 }
 
 // --- benchmark drift detection (frozen-file hashes) -------------------------
-function sha256File(file) {
+function sha256File(file: string): string | null {
   if (!existsSync(file)) return null;
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-function currentBenchmarkHashes() {
+function currentBenchmarkHashes(): {
+  measure: string | null;
+  checks: string | null;
+} {
   return {
     measure: sha256File(paths.measure),
     checks: sha256File(paths.checks),
@@ -230,11 +289,14 @@ function readBenchmarkHashes() {
   }
 }
 
-function writeBenchmarkHashes(hashes) {
+function writeBenchmarkHashes(hashes: {
+  measure: string | null;
+  checks: string | null;
+}): void {
   const cfgPath = join(projectCwd, ".auto", "config.json");
-  let cfg = {};
+  let cfg: Record<string, unknown> = {};
   try {
-    cfg = JSON.parse(readFileSync(cfgPath, "utf8"));
+    cfg = JSON.parse(readFileSync(cfgPath, "utf8")) as Record<string, unknown>;
   } catch {
     /* start fresh */
   }
@@ -254,7 +316,7 @@ function checkBenchmarkDrift() {
     writeBenchmarkHashes(current);
     return { drift: false, reason: "recorded", hashes: current };
   }
-  for (const key of ["measure", "checks"]) {
+  for (const key of ["measure", "checks"] as const) {
     if (
       recorded[key] != null &&
       current[key] != null &&
@@ -271,11 +333,14 @@ function checkBenchmarkDrift() {
  * stdout capped at 8KB. Returns the raw outcome; the loop stays fail-open
  * (errors surface as steer text, never block).
  */
-function runHookRaw(scriptPath, payload) {
+function runHookRaw(
+  scriptPath: string,
+  payload: unknown,
+): Promise<HookOutcome> {
   return new Promise((resolve) => {
     const started = Date.now();
     const proc = spawn("bash", [scriptPath], { cwd });
-    const chunks = [];
+    const chunks: Buffer[] = [];
     let total = 0;
     let stderrTail = "";
     proc.stdout.on("data", (d) => {
@@ -325,7 +390,7 @@ function runHookRaw(scriptPath, payload) {
 
 // pi-style steer formatting: failures are steered back to the agent as text;
 // a healthy silent hook stays silent.
-function steerFor(stage, r) {
+function steerFor(stage: string, r: HookOutcome): string | null {
   if (r.spawnError) return `[${stage} hook failed to start: ${r.spawnError}]`;
   if (r.timedOut)
     return `[${stage} hook timed out after ${HOOK_TIMEOUT_MS / 1000}s]`;
@@ -338,7 +403,7 @@ function steerFor(stage, r) {
   return text || null;
 }
 
-function logHookEntry(stage, r) {
+function logHookEntry(stage: "before" | "after", r: HookOutcome): void {
   appendLedgerEntry(cwd, {
     type: "hook",
     stage,
@@ -349,7 +414,7 @@ function logHookEntry(stage, r) {
   });
 }
 
-function hookSessionPayload(state) {
+function hookSessionPayload(state: SessionState) {
   return {
     metric_name: state.config?.metricName ?? null,
     direction: state.config?.direction ?? "lower",
@@ -359,7 +424,7 @@ function hookSessionPayload(state) {
   };
 }
 
-async function runBeforeHook(state, nextRun) {
+async function runBeforeHook(state: SessionState, nextRun: number) {
   const hook = join(cwd, ".auto", "hooks", "before.sh");
   if (!isExecutable(hook)) return null;
   const last = state.lastRun
@@ -383,7 +448,7 @@ async function runBeforeHook(state, nextRun) {
   return steer ? { steer } : null;
 }
 
-async function runAfterHook(runEntry) {
+async function runAfterHook(runEntry: LedgerRun) {
   const hook = join(cwd, ".auto", "hooks", "after.sh");
   if (!isExecutable(hook)) return null;
   const r = await runHookRaw(hook, {
@@ -408,12 +473,14 @@ async function runAfterHook(runEntry) {
 // Tool handlers
 // ---------------------------------------------------------------------------
 
-async function toolInitExperiment(args) {
+async function toolInitExperiment(
+  args: InitToolArgs,
+): Promise<Record<string, unknown>> {
   const name = String(args.name ?? "autoresearch");
   const metricName = String(args.metric_name ?? args.metricName ?? "");
   if (!metricName) return { ok: false, error: "metric_name is required" };
   const metricUnit = args.metric_unit || args.metricUnit || undefined;
-  const direction = args.direction ?? args.direction ?? "lower";
+  const direction = (args.direction ?? "lower") as Direction;
   if (direction !== "lower" && direction !== "higher") {
     return { ok: false, error: "direction must be lower or higher" };
   }
@@ -443,7 +510,9 @@ async function toolInitExperiment(args) {
   };
 }
 
-async function toolRunExperiment(args) {
+async function toolRunExperiment(
+  args: RunToolArgs,
+): Promise<Record<string, unknown>> {
   const state = sessionState();
   const maxIter = state.maxIterations ?? DEFAULT_MAX_ITERATIONS;
   if (state.config && state.runs.length >= maxIter) {
@@ -454,11 +523,7 @@ async function toolRunExperiment(args) {
   }
   // Audit: a crash with unrolled-back working tree must not start a new run.
   const lastRun = state.lastRun;
-  if (
-    lastRun &&
-    (lastRun.status === "crash" || lastRun.status === "error") &&
-    isDirty(cwd)
-  ) {
+  if (lastRun && lastRun.status === "crash" && isDirty(cwd)) {
     return {
       ok: false,
       error: `audit: last run was ${lastRun.status} with unrolled-back working-tree changes — revert first (or /autoresearch:clear) before starting a new experiment`,
@@ -493,8 +558,16 @@ async function toolRunExperiment(args) {
   const before = await runBeforeHook(state, state.runs.length + 1);
 
   const metricName = state.config?.metricName;
-  const runs = [];
-  let last = null;
+  const runs: Array<{
+    run: number;
+    exit_code: number | null;
+    signal: NodeJS.Signals | null;
+    duration_ms: number;
+    timed_out: boolean;
+    metrics: Record<string, number>;
+    metric: number | null;
+  }> = [];
+  let last: RunOutcome | null = null;
   for (let i = 0; i < repeat; i++) {
     last = await runCommand(rawCommand, timeoutMs);
     const { metrics, primary } = parseMetricLines(last.output, metricName);
@@ -508,16 +581,23 @@ async function toolRunExperiment(args) {
       metric: primary ?? null,
     });
   }
+  if (last == null)
+    return { ok: false, error: "internal: no benchmark run completed" };
 
   // Correctness backpressure: .auto/checks.sh runs once, after the last run.
-  let checks = null;
+  let checks: {
+    failed: boolean;
+    exitCode: number | null;
+    durationMs: number;
+    outputTail: string;
+  } | null = null;
   if (existsSync(paths.checks) && last.exitCode === 0) {
     checks = await runChecks(paths.checks);
   }
 
   const values = runs
     .map((r) => r.metric)
-    .filter((v) => v != null && Number.isFinite(v));
+    .filter((v): v is number => v != null && Number.isFinite(v));
   const medianMetric =
     repeat > 1 && values.length > 0
       ? median(values)
@@ -555,7 +635,9 @@ async function toolRunExperiment(args) {
   return ret;
 }
 
-async function toolLogExperiment(args) {
+async function toolLogExperiment(
+  args: LogToolArgs,
+): Promise<Record<string, unknown>> {
   const state = sessionState();
   if (!state.config) {
     return {
@@ -631,11 +713,11 @@ async function toolLogExperiment(args) {
 
   // Audit: validate the would-be ledger (existing runs + this row) BEFORE any
   // git operation or file write. auditBypass: true in config skips this.
-  const entryPrelim = {
+  const entryPrelim: LedgerRun = {
     type: "run",
     run: state.runs.length + 1,
     segment: state.segment,
-    status,
+    status: status as RunStatus,
     metric: status === "crash" ? 0 : metric,
     commit: args.commit ?? null,
   };
@@ -686,11 +768,11 @@ async function toolLogExperiment(args) {
     rollbackWorkingTree(cwd);
   }
 
-  const entry = {
+  const entry: LedgerRun = {
     type: "run",
     run: state.runs.length + 1,
     segment: state.segment,
-    status,
+    status: status as RunStatus,
     metric: status === "crash" ? 0 : metric,
     metrics,
     asi,
@@ -885,7 +967,10 @@ const TOOLS = [
   },
 ];
 
-const handlerFor = {
+const handlerFor: Record<
+  string,
+  (args: Record<string, unknown>) => Promise<Record<string, unknown>>
+> = {
   init_experiment: toolInitExperiment,
   run_experiment: toolRunExperiment,
   log_experiment: toolLogExperiment,
@@ -916,7 +1001,7 @@ process.stdin.on("data", (chunk) => {
   }
 });
 
-async function dispatch(msg) {
+async function dispatch(msg: JsonRpcRequest) {
   if (msg.method === "initialize") {
     send({
       jsonrpc: "2.0",
@@ -935,7 +1020,7 @@ async function dispatch(msg) {
     return;
   }
   if (msg.method === "tools/call") {
-    const name = msg.params?.name;
+    const name = msg.params?.name ?? "";
     const args = msg.params?.arguments ?? {};
     const handler = handlerFor[name];
     if (!handler) {

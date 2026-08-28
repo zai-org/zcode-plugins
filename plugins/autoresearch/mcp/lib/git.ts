@@ -3,11 +3,11 @@
 // discard/crash/checks_failed → drop working-tree changes, exempt `.auto/`.
 import { execFileSync } from "node:child_process";
 
-export function git(cwd, args) {
+export function git(cwd: string, args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 }
 
-export function isGitRepo(cwd) {
+export function isGitRepo(cwd: string): boolean {
   try {
     execFileSync("git", ["rev-parse", "--git-dir"], { cwd, stdio: "ignore" });
     return true;
@@ -16,7 +16,7 @@ export function isGitRepo(cwd) {
   }
 }
 
-export function isDirty(cwd) {
+export function isDirty(cwd: string): boolean {
   try {
     return git(cwd, ["status", "--porcelain"]).length > 0;
   } catch {
@@ -24,7 +24,7 @@ export function isDirty(cwd) {
   }
 }
 
-export function shortHash(cwd) {
+export function shortHash(cwd: string): string {
   return git(cwd, ["rev-parse", "--short=7", "HEAD"]);
 }
 
@@ -32,7 +32,10 @@ export function shortHash(cwd) {
  * Commit all tracked+untracked changes as one experiment.
  * Returns the short hash, or null when there is nothing to commit.
  */
-export function commitExperiment(cwd, { description, result }) {
+export function commitExperiment(
+  cwd: string,
+  { description, result }: { description: string; result: unknown },
+): string | null {
   git(cwd, ["add", "-A"]);
   // git diff --cached --quiet exits 0 when there are no staged changes.
   const hasStaged = (() => {
@@ -57,7 +60,7 @@ export function commitExperiment(cwd, { description, result }) {
  * session directory intact. Uses `checkout HEAD` (not `checkout --`) so
  * staged-but-uncommitted experiment changes are reverted to HEAD too.
  */
-export function rollbackWorkingTree(cwd) {
+export function rollbackWorkingTree(cwd: string): void {
   execFileSync(
     "git",
     ["checkout", "HEAD", "--", ".", ":(exclude,glob)**/.auto/**"],
@@ -81,7 +84,7 @@ export function rollbackWorkingTree(cwd) {
   );
 }
 
-export function currentBranch(cwd) {
+export function currentBranch(cwd: string): string {
   try {
     return git(cwd, ["branch", "--show-current"]);
   } catch {

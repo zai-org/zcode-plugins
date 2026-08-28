@@ -1,6 +1,7 @@
 // Ledger audit invariants (leo-inspired): the ledger must be a replayable
 // state machine. Pure function, zero I/O, unit-testable.
-import { isBetter } from "./experiment.mjs";
+import { isBetter } from "./experiment.ts";
+import type { LedgerConfig } from "./types.ts";
 
 const VALID_STATUS = new Set([
   "keep",
@@ -9,6 +10,25 @@ const VALID_STATUS = new Set([
   "checks_failed",
   "noop",
 ]);
+
+/**
+ * A ledger row as the auditor sees it. The audit's whole job is to accept
+ * possibly-malformed rows, so fields are loose (string status/type allowed).
+ */
+export interface LedgerRow {
+  type?: string;
+  run?: number;
+  segment?: number;
+  status?: string;
+  metric?: number | null;
+  commit?: string | null;
+}
+
+export interface LedgerViolation {
+  code: string;
+  run?: number;
+  message: string;
+}
 
 /**
  * Validate a run sequence against the session config. Returns a list of
@@ -23,13 +43,17 @@ const VALID_STATUS = new Set([
  *   beats the retained value, only `checks_failed` may discard it
  * - commit field: keep rows must carry a commit, non-keep rows must not
  */
-export function validateLedger(runs, config) {
-  const violations = [];
+export function validateLedger(
+  runs: Array<LedgerConfig | LedgerRow>,
+  config: Pick<LedgerConfig, "segment" | "direction"> | null | undefined,
+): LedgerViolation[] {
+  const violations: LedgerViolation[] = [];
   const direction = config?.direction ?? "lower";
-  let retained = null; // current best kept metric (null until first keep)
+  let retained: number | null = null; // current best kept metric (null until first keep)
   let expectedRun = 1;
 
-  const push = (code, run, message) => violations.push({ code, run, message });
+  const push = (code: string, run: number | undefined, message: string) =>
+    violations.push({ code, run, message });
 
   for (const r of runs) {
     if (r.type === "config") {
@@ -39,10 +63,10 @@ export function validateLedger(runs, config) {
 
     // ---- event order / baseline ----
     if (r.type !== "run") {
-      push("event_order", r.run, `unknown row type ${r.type}`);
+      push("event_order", undefined, `unknown row type ${r.type}`);
       continue;
     }
-    if (!VALID_STATUS.has(r.status)) {
+    if (!VALID_STATUS.has(r.status ?? "")) {
       push("event_order", r.run, `invalid status ${r.status}`);
     }
     if (r.run !== expectedRun) {

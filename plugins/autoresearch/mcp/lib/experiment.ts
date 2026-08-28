@@ -1,5 +1,6 @@
 // Pure functions for the autoresearch experiment loop.
 // No I/O here so they are unit-testable without a workspace.
+import type { Confidence, Direction, RunLike } from "./types.ts";
 
 export const METRIC_RE = /^METRIC\s+([\w.µ]+)=(\S+)$/;
 
@@ -10,9 +11,12 @@ const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
  * Returns { metrics, primary } where primary is metrics[metricName] if present.
  * Same-name keys: last wins. Dangerous key names are rejected.
  */
-export function parseMetricLines(output, metricName) {
-  const metrics = {};
-  let primary;
+export function parseMetricLines(
+  output: unknown,
+  metricName?: string,
+): { metrics: Record<string, number>; primary: number | undefined } {
+  const metrics: Record<string, number> = {};
+  let primary: number | undefined;
   for (const line of String(output ?? "").split("\n")) {
     const m = METRIC_RE.exec(line.trim());
     if (!m) continue;
@@ -30,7 +34,11 @@ export function parseMetricLines(output, metricName) {
  * Direction-aware improvement test.
  * direction: "lower" (default) or "higher".
  */
-export function isBetter(current, best, direction = "lower") {
+export function isBetter(
+  current: number | null | undefined,
+  best: number | null | undefined,
+  direction: Direction = "lower",
+): boolean {
   if (current == null || best == null) return false;
   return direction === "higher" ? current > best : current < best;
 }
@@ -39,7 +47,7 @@ export function isBetter(current, best, direction = "lower") {
  * MAD-based noise floor for the current segment.
  * Returns null when there are fewer than 3 data points or MAD is 0.
  */
-export function median(values) {
+export function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
@@ -48,7 +56,15 @@ export function median(values) {
     : sorted[mid];
 }
 
-export function computeConfidence({ values, baseline, best }) {
+export function computeConfidence({
+  values,
+  baseline,
+  best,
+}: {
+  values: number[];
+  baseline: number | null;
+  best: number | null;
+}): Confidence | null {
   if (values.length < 3 || baseline == null || best == null) return null;
   const med = median(values);
   if (med == null || med === 0) return null;
@@ -56,7 +72,7 @@ export function computeConfidence({ values, baseline, best }) {
   const mad = median(deviations);
   if (mad == null || mad === 0) return null;
   const ratio = Math.abs(best - baseline) / mad;
-  let level = "red";
+  let level: Confidence["level"] = "red";
   if (ratio >= 2.0) level = "green";
   else if (ratio >= 1.0) level = "yellow";
   return { confidence: ratio, level };
@@ -73,12 +89,15 @@ const WRAP_RE = /^(env|time|nice|nohup)\s+/;
 // leading env assignment including its value: `FOO=1 ` or `FOO="a b" `
 const ASSIGN_RE = /^[A-Za-z_][A-Za-z0-9_]*=\S*\s*/;
 
-export function unwrapMeasureCommand(command, measureScript) {
+export function unwrapMeasureCommand(
+  command: unknown,
+  measureScript: string,
+): string | null {
   let cmd = String(command ?? "").trim();
   if (!cmd) return null;
   // Strip leading env assignments and wrapper prefixes, alternating, until
   // stable (`env X=1 bash .auto/measure.sh` needs env→assignment→bash).
-  let prev;
+  let prev: string;
   do {
     prev = cmd;
     cmd = cmd.replace(ASSIGN_RE, "").trim();
@@ -110,7 +129,11 @@ export function unwrapMeasureCommand(command, measureScript) {
  * Stop when: current segment runs >= maxIterations, or the last N (default 3)
  * results are all failures (discard/crash/checks_failed).
  */
-export function isStopReached(runs, maxIterations, consecutiveFailures = 3) {
+export function isStopReached(
+  runs: RunLike[],
+  maxIterations: number | undefined,
+  consecutiveFailures = 3,
+): boolean {
   if (maxIterations != null && runs.length >= maxIterations) return true;
   if (runs.length === 0) return false;
   const tail = runs.slice(-consecutiveFailures);
@@ -123,7 +146,7 @@ export function isStopReached(runs, maxIterations, consecutiveFailures = 3) {
  * Normalize a hypothesis/description for comparison: lowercase, strip
  * non-alphanumerics, sort tokens. Returns null when there is no signal.
  */
-export function normalizeHypothesis(text) {
+export function normalizeHypothesis(text: unknown): string | null {
   const tokens = String(text ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ")
@@ -134,7 +157,10 @@ export function normalizeHypothesis(text) {
 }
 
 /** Jaccard similarity of two normalized hypotheses (token sets), or subset. */
-export function hypothesesSimilar(a, b) {
+export function hypothesesSimilar(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
   const A = new Set(a.split(" "));
@@ -149,7 +175,7 @@ export function hypothesesSimilar(a, b) {
  * Direction label for a run: prefer asi.hypothesis, else description; take the
  * leading clause (up to first comma/period/semicolon), capped at 40 chars.
  */
-export function directionLabel(run) {
+export function directionLabel(run: RunLike): string {
   const raw = run?.asi?.hypothesis || run?.description || "";
   const clause =
     String(raw)
@@ -166,12 +192,15 @@ export function directionLabel(run) {
  * - repeat: last 3 runs have similar normalized hypotheses.
  * - oscillate: last 4 runs are [X, Y, X, Y] (X~X, Y~Y, X!~Y).
  */
-export function detectDoomLoop(runs, { window = 6 } = {}) {
+export function detectDoomLoop(
+  runs: RunLike[],
+  { window = 6 } = {},
+): { doomLoop: boolean; pattern: "repeat" | "oscillate" } | null {
   const norm = runs
     .filter((r) => r.description || r?.asi?.hypothesis)
     .slice(-window)
     .map((r) => normalizeHypothesis(r.asi?.hypothesis || r.description))
-    .filter(Boolean);
+    .filter((n): n is string => n != null);
   if (norm.length < 3) return null;
 
   // 3+ consecutive repeats (needs 3)
@@ -205,16 +234,26 @@ export function detectDoomLoop(runs, { window = 6 } = {}) {
  * valid records (not enough data to judge).
  */
 export function detectPlateau(
-  runs,
-  { window = 5, minImprovement = 0.01, direction = "lower" } = {},
-) {
+  runs: RunLike[],
+  {
+    window = 5,
+    minImprovement = 0.01,
+    direction = "lower",
+  }: {
+    window?: number;
+    minImprovement?: number;
+    direction?: Direction;
+  } = {},
+): boolean {
   const valid = runs
     .filter((r) => r.metric != null && Number.isFinite(r.metric))
     .slice(-window);
   if (valid.length < window) return false;
   const first = valid[0].metric;
+  if (first == null) return false;
   let best = first;
   for (const r of valid) {
+    if (r.metric == null) continue;
     if (direction === "higher" ? r.metric > best : r.metric < best)
       best = r.metric;
   }

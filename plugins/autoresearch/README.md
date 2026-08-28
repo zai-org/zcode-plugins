@@ -16,7 +16,7 @@ This plugin executes code and operates on a git repository. Enabling it grants c
 - **Serves a local HTTP dashboard** on 127.0.0.1 via `export_dashboard`;
 - **Writes session state** to `.auto/` files (`log.jsonl`, `config.json`) in the project directory.
 
-No third-party npm dependencies: the MCP server and hooks are Node-stdlib-only scripts.
+No third-party npm dependencies: the MCP server and hooks are Node-stdlib TypeScript scripts (Node ≥24, types stripped natively — no build step).
 
 ## Install
 
@@ -75,15 +75,15 @@ plugin/
 ├── .zcode-plugin/plugin.json   # manifest (userConfig: maxIterations / timeouts)
 ├── .mcp.json                   # MCP stdio server declaration
 ├── mcp/
-│   ├── server.mjs              # JSON-RPC line protocol + tools
+│   ├── server.ts              # JSON-RPC line protocol + tools
 │   └── lib/                    # pure logic: experiment / ledger / git / validate / dashboard / dashboard-server / html / paths
 ├── hooks/
 │   ├── hooks.json              # Stop / PreToolUse / PermissionRequest / UserPromptSubmit / SessionStart
-│   ├── stop-continue.mjs       # loop unfinished → block
-│   ├── guard-frozen.mjs        # frozen-file write protection → deny
-│   ├── permission-gate.mjs     # experiment-tool gating → deny
-│   ├── memory-inject.mjs       # ledger tail injection
-│   ├── session-start.mjs       # session resume hints
+│   ├── stop-continue.ts       # loop unfinished → block
+│   ├── guard-frozen.ts        # frozen-file write protection → deny
+│   ├── permission-gate.ts     # experiment-tool gating → deny
+│   ├── memory-inject.ts       # ledger tail injection
+│   ├── session-start.ts       # session resume hints
 │   └── examples/               # 6 ready-to-use before/after iteration hooks
 ├── skills/
 │   ├── autoresearch/           # SKILL.md thin router + references/
@@ -117,5 +117,5 @@ Setting `"workingDir": "work/"` in `.auto/config.json` separates the research di
 ## Development
 
 ```bash
-cd plugin && node --test tests/*.test.mjs   # unit tests
+cd plugin && node --test tests/*.test.ts   # unit tests
 ```

@@ -1,10 +1,10 @@
 // Audit invariant tests: adversarial ledgers must be flagged, legal ones pass.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateLedger } from "../mcp/lib/validate.mjs";
+import { validateLedger } from "../mcp/lib/validate.ts";
 
-const cfg = { segment: 1, direction: "lower", metricName: "time_ms" };
-const run = (n, over = {}) => ({
+const cfg = { segment: 1, direction: "lower", metricName: "time_ms" } as const;
+const run = (n: number, over: Record<string, unknown> = {}) => ({
   type: "run",
   run: n,
   segment: 1,
@@ -79,7 +79,11 @@ test("commit field consistency", () => {
 });
 
 test("higher direction: improvement means larger", () => {
-  const higher = { segment: 1, direction: "higher", metricName: "score" };
+  const higher = {
+    segment: 1,
+    direction: "higher",
+    metricName: "score",
+  } as const;
   const runs = [
     run(1, { metric: 10, commit: "a" }),
     run(2, { metric: 10, commit: "b" }), // equal → not better (higher)

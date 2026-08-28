@@ -7,22 +7,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import type { RunLike } from "../mcp/lib/types.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const EX = join(ROOT, "hooks", "examples");
 
-function runExample(name, cwd, stdin) {
+function runExample(name: string, cwd: string, stdin: string): string {
   return execFileSync("bash", [join(EX, name)], {
     input: stdin,
     encoding: "utf8",
   });
 }
 
-function tempCwd() {
+function tempCwd(): string {
   return mkdtempSync(join(tmpdir(), "ar-ex-"));
 }
 
-function seedLedger(cwd, runs) {
+function seedLedger(cwd: string, runs: RunLike[]): void {
   mkdirSync(join(cwd, ".auto"), { recursive: true });
   writeFileSync(
     join(cwd, ".auto", "log.jsonl"),
@@ -30,7 +31,7 @@ function seedLedger(cwd, runs) {
   );
 }
 
-const beforePayload = (cwd, extra = {}) =>
+const beforePayload = (cwd: string, extra: Record<string, unknown> = {}) =>
   JSON.stringify({
     event: "before",
     cwd,
@@ -39,8 +40,11 @@ const beforePayload = (cwd, extra = {}) =>
     session: { run_count: 0 },
     ...extra,
   });
-const afterPayload = (cwd, run, session = {}) =>
-  JSON.stringify({ event: "after", cwd, run_entry: run, session });
+const afterPayload = (
+  cwd: string,
+  run: unknown,
+  session: Record<string, unknown> = {},
+) => JSON.stringify({ event: "after", cwd, run_entry: run, session });
 
 test("anti-thrash: suggests a rethink after 3 consecutive non-keeps, silent otherwise", () => {
   const cwd = tempCwd();

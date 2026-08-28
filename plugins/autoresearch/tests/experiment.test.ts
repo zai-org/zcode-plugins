@@ -11,7 +11,7 @@ import {
   normalizeHypothesis,
   directionLabel,
   detectDoomLoop,
-} from "../mcp/lib/experiment.mjs";
+} from "../mcp/lib/experiment.ts";
 
 test("parseMetricLines extracts METRIC name=value lines", () => {
   const out = [
@@ -242,7 +242,7 @@ test("directionLabel takes hypothesis, else description clause", () => {
 });
 
 test("detectDoomLoop flags repeats and oscillation, not normal progress", () => {
-  const run = (d) => ({ description: d });
+  const run = (d: string) => ({ description: d });
   // oscillation A→B→A→B
   assert.equal(
     detectDoomLoop([

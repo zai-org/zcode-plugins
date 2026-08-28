@@ -2,18 +2,19 @@
 // Stop hook: keep the autoresearch loop running while it is not finished.
 // zcode grants at most 3 consecutive Stop continuations per window, so this
 // hook only fires when the ledger shows the loop should continue.
-import { rebuildState, readSessionConfig } from "../mcp/lib/ledger.mjs";
-import { resolveWorkCwd } from "../mcp/lib/paths.mjs";
-import { isStopReached, detectDoomLoop } from "../mcp/lib/experiment.mjs";
+import { rebuildState, readSessionConfig } from "../mcp/lib/ledger.ts";
+import { resolveWorkCwd } from "../mcp/lib/paths.ts";
+import { isStopReached, detectDoomLoop } from "../mcp/lib/experiment.ts";
+import type { SessionState } from "../mcp/lib/types.ts";
 
 const projectCwd = process.argv[2] || process.cwd();
 const cwd = resolveWorkCwd(projectCwd);
 
-function failOpen() {
+function failOpen(): never {
   process.exit(0);
 }
 
-let state;
+let state: SessionState | undefined;
 try {
   const cfg = readSessionConfig(projectCwd);
   const max = Number(cfg.maxIterations);
@@ -27,7 +28,7 @@ try {
 }
 
 // No active session → let the model finish normally.
-if (!state.config || state.runs.length === 0) failOpen();
+if (!state || !state.config || state.runs.length === 0) failOpen();
 
 const finished = isStopReached(
   state.runs,
@@ -49,7 +50,7 @@ if (state.plateau) {
     .map((r) => {
       let line = `#${r.run} ${r.status} metric=${r.metric ?? "—"} ${r.description ?? ""}`;
       if (r.asi && typeof r.asi === "object") {
-        const parts = [];
+        const parts: string[] = [];
         if (r.asi.hypothesis) parts.push(`hyp: ${r.asi.hypothesis}`);
         if (r.asi.next_action_hint)
           parts.push(`next: ${r.asi.next_action_hint}`);

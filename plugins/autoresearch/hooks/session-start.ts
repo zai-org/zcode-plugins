@@ -5,7 +5,7 @@
 // injected, though the session can still be entered manually.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { resolveWorkCwd } from "../mcp/lib/paths.mjs";
+import { resolveWorkCwd } from "../mcp/lib/paths.ts";
 
 const cwd = resolveWorkCwd(process.argv[2] || process.cwd());
 const log = join(cwd, ".auto", "log.jsonl");
@@ -15,7 +15,7 @@ let off = false;
 try {
   const cfg = JSON.parse(
     readFileSync(join(cwd, ".auto", "config.json"), "utf8"),
-  );
+  ) as { autoresearchOff?: unknown };
   off = cfg.autoresearchOff === true;
 } catch {
   /* no config → treat as active */

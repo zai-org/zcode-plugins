@@ -8,7 +8,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/hooks/stop-continue.mjs",
+              "${ZCODE_PLUGIN_ROOT}/hooks/stop-continue.ts",
               "${ZCODE_PROJECT_DIR}"
             ],
             "timeoutMs": 5000,
@@ -25,7 +25,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/hooks/guard-frozen.mjs",
+              "${ZCODE_PLUGIN_ROOT}/hooks/guard-frozen.ts",
               "${ZCODE_PROJECT_DIR}"
             ],
             "timeoutMs": 5000,
@@ -41,7 +41,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/hooks/permission-gate.mjs",
+              "${ZCODE_PLUGIN_ROOT}/hooks/permission-gate.ts",
               "${ZCODE_PROJECT_DIR}"
             ],
             "timeoutMs": 5000,
@@ -57,7 +57,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/hooks/memory-inject.mjs",
+              "${ZCODE_PLUGIN_ROOT}/hooks/memory-inject.ts",
               "${ZCODE_PROJECT_DIR}"
             ],
             "timeoutMs": 5000,
@@ -74,7 +74,7 @@
             "type": "process",
             "command": "node",
             "args": [
-              "${ZCODE_PLUGIN_ROOT}/hooks/session-start.mjs",
+              "${ZCODE_PLUGIN_ROOT}/hooks/session-start.ts",
               "${ZCODE_PROJECT_DIR}"
             ],
             "timeoutMs": 5000,

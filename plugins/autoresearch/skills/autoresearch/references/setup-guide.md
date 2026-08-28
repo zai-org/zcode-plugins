@@ -33,7 +33,7 @@ A correctness gate that exits non-zero when the change broke something:
 ```bash
 #!/usr/bin/env bash
 # example: the optimized module must still produce correct output
-node test-correctness.mjs
+node test-correctness.ts
 ```
 
 Checks run automatically after a passing benchmark; failure forbids `keep`.

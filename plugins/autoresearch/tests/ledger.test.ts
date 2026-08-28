@@ -8,7 +8,7 @@ import {
   rebuildState,
   readSessionConfig,
   LOG_FILE,
-} from "../mcp/lib/ledger.mjs";
+} from "../mcp/lib/ledger.ts";
 
 function tempCwd() {
   return mkdtempSync(join(tmpdir(), "ar-ledger-"));
@@ -87,6 +87,7 @@ test("lastRunChecksFailed is set by a failed check", () => {
     segment: 1,
     name: "s",
     metricName: "m",
+    direction: "lower",
   });
   appendLedgerEntry(cwd, {
     type: "run",

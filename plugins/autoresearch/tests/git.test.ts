@@ -16,9 +16,9 @@ import {
   isDirty,
   shortHash,
   currentBranch,
-} from "../mcp/lib/git.mjs";
+} from "../mcp/lib/git.ts";
 
-function gitInit(cwd) {
+function gitInit(cwd: string): void {
   for (const a of [
     ["init", "-q"],
     ["config", "user.email", "t@t"],
@@ -27,7 +27,7 @@ function gitInit(cwd) {
     execFileSync("git", a, { cwd, stdio: "ignore" });
 }
 
-function git(cwd, args) {
+function git(cwd: string, args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 }
 

@@ -7,11 +7,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import type { LedgerConfig, LedgerEntry, LedgerRun } from "../mcp/lib/types.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const HOOKS = join(ROOT, "hooks");
 
-function runHook(name, cwd, stdin) {
+function runHook(name: string, cwd: string, stdin: string): string {
   const out = execFileSync("node", [join(HOOKS, name), cwd], {
     input: stdin,
     encoding: "utf8",
@@ -19,11 +20,11 @@ function runHook(name, cwd, stdin) {
   return out;
 }
 
-function tempCwd() {
+function tempCwd(): string {
   return mkdtempSync(join(tmpdir(), "ar-hook-"));
 }
 
-function seedLedger(cwd, entries) {
+function seedLedger(cwd: string, entries: LedgerEntry[]): void {
   mkdirSync(join(cwd, ".auto"), { recursive: true });
   writeFileSync(
     join(cwd, ".auto", "log.jsonl"),
@@ -31,7 +32,7 @@ function seedLedger(cwd, entries) {
   );
 }
 
-const cfgLine = {
+const cfgLine: LedgerConfig = {
   type: "config",
   segment: 1,
   name: "s",
@@ -42,7 +43,7 @@ const cfgLine = {
 test("guard-frozen denies writes to frozen scripts, allows others", () => {
   const cwd = tempCwd();
   const deny = runHook(
-    "guard-frozen.mjs",
+    "guard-frozen.ts",
     cwd,
     JSON.stringify({
       hook_event_name: "PreToolUse",
@@ -55,7 +56,7 @@ test("guard-frozen denies writes to frozen scripts, allows others", () => {
   assert.match(d.hookSpecificOutput.permissionDecisionReason, /frozen/);
 
   const allow = runHook(
-    "guard-frozen.mjs",
+    "guard-frozen.ts",
     cwd,
     JSON.stringify({
       hook_event_name: "PreToolUse",
@@ -71,7 +72,7 @@ test("memory-inject injects ledger progress when runs exist, silent otherwise", 
   // no ledger -> no output
   assert.equal(
     runHook(
-      "memory-inject.mjs",
+      "memory-inject.ts",
       cwd,
       JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "x" }),
     ),
@@ -99,7 +100,7 @@ test("memory-inject injects ledger progress when runs exist, silent otherwise", 
   ]);
   const out = JSON.parse(
     runHook(
-      "memory-inject.mjs",
+      "memory-inject.ts",
       cwd,
       JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "go" }),
     ),
@@ -139,7 +140,7 @@ test("memory-inject aggregates tried directions and trajectory", () => {
   ]);
   const out = JSON.parse(
     runHook(
-      "memory-inject.mjs",
+      "memory-inject.ts",
       cwd,
       JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "go" }),
     ),
@@ -148,7 +149,9 @@ test("memory-inject aggregates tried directions and trajectory", () => {
   assert.match(ctx, /已尝试方向：/);
   assert.match(ctx, /best 轨迹：100 → 50/);
   // the deduped directions line lists "sqrt cutoff" only once
-  const dirLine = ctx.split("\n").find((l) => l.startsWith("已尝试方向"));
+  const dirLine = ctx
+    .split("\n")
+    .find((l: string) => l.startsWith("已尝试方向"));
   assert.equal((dirLine.match(/sqrt cutoff/g) || []).length, 1);
 });
 
@@ -191,7 +194,7 @@ test("memory-inject warns on doom loop", () => {
   ]);
   const out = JSON.parse(
     runHook(
-      "memory-inject.mjs",
+      "memory-inject.ts",
       cwd,
       JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "go" }),
     ),
@@ -222,7 +225,7 @@ test("stop-continue blocks while the loop is unfinished, with progress", () => {
   ]);
   const out = JSON.parse(
     runHook(
-      "stop-continue.mjs",
+      "stop-continue.ts",
       cwd,
       JSON.stringify({ hook_event_name: "Stop" }),
     ),
@@ -234,7 +237,7 @@ test("stop-continue blocks while the loop is unfinished, with progress", () => {
 
 test("stop-continue reports plateau convergence", () => {
   const cwd = tempCwd();
-  const flat = [cfgLine];
+  const flat: LedgerEntry[] = [cfgLine];
   for (let i = 1; i <= 5; i++)
     flat.push({
       type: "run",
@@ -243,11 +246,11 @@ test("stop-continue reports plateau convergence", () => {
       status: "keep",
       metric: 42,
       description: `flat ${i}`,
-    });
+    } as LedgerRun);
   seedLedger(cwd, flat);
   const out = JSON.parse(
     runHook(
-      "stop-continue.mjs",
+      "stop-continue.ts",
       cwd,
       JSON.stringify({ hook_event_name: "Stop" }),
     ),
@@ -261,7 +264,7 @@ test("session-start announces an existing session", () => {
   seedLedger(cwd, [cfgLine]);
   const out = JSON.parse(
     runHook(
-      "session-start.mjs",
+      "session-start.ts",
       cwd,
       JSON.stringify({ hook_event_name: "SessionStart", source: "startup" }),
     ),
@@ -278,7 +281,7 @@ test("session-start respects autoresearchOff decision", () => {
   );
   assert.equal(
     runHook(
-      "session-start.mjs",
+      "session-start.ts",
       cwd,
       JSON.stringify({ hook_event_name: "SessionStart" }),
     ),
@@ -291,7 +294,7 @@ test("permission-gate denies experiment tools without a session, allows with one
   // no session → deny init_experiment
   const deny = JSON.parse(
     runHook(
-      "permission-gate.mjs",
+      "permission-gate.ts",
       cwd,
       JSON.stringify({
         hook_event_name: "PermissionRequest",
@@ -304,7 +307,7 @@ test("permission-gate denies experiment tools without a session, allows with one
   // non-experiment tool → silent
   assert.equal(
     runHook(
-      "permission-gate.mjs",
+      "permission-gate.ts",
       cwd,
       JSON.stringify({
         hook_event_name: "PermissionRequest",
@@ -327,7 +330,7 @@ test("permission-gate denies experiment tools without a session, allows with one
   ]);
   assert.equal(
     runHook(
-      "permission-gate.mjs",
+      "permission-gate.ts",
       cwd,
       JSON.stringify({
         hook_event_name: "PermissionRequest",

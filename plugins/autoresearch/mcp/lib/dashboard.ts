@@ -1,8 +1,9 @@
 // Static dashboard renderer: pure function from ledger state to self-contained HTML.
-import { escapeHtml } from "./html.mjs";
-import { deltaFor } from "./ledger.mjs";
+import { escapeHtml } from "./html.ts";
+import { deltaFor } from "./ledger.ts";
+import type { SessionState } from "./types.ts";
 
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<string, string> = {
   keep: "keep",
   discard: "discard",
   crash: "crash",
@@ -10,16 +11,16 @@ const STATUS_LABEL = {
   noop: "no-op",
 };
 
-export function renderDashboard(state) {
+export function renderDashboard(state: SessionState): string {
   return renderBody(state, false);
 }
 
 /** Live variant: same body plus an SSE client that auto-reloads on updates. */
-export function renderLiveDashboard(state) {
+export function renderLiveDashboard(state: SessionState): string {
   return renderBody(state, true);
 }
 
-function renderBody(state, live) {
+function renderBody(state: SessionState, live: boolean): string {
   const cfg = state.config;
   const direction = cfg?.direction ?? "lower";
   const rows = state.runs

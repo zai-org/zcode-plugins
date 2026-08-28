@@ -2,23 +2,24 @@
 // UserPromptSubmit hook: inject an aggregated session-memory summary so the
 // loop survives compaction and long sessions — progress, deduplicated tried
 // directions, best trajectory, recent runs with ASI, and a doom-loop warning.
-import { rebuildState, readSessionConfig } from "../mcp/lib/ledger.mjs";
-import { resolveWorkCwd } from "../mcp/lib/paths.mjs";
+import { rebuildState, readSessionConfig } from "../mcp/lib/ledger.ts";
+import { resolveWorkCwd } from "../mcp/lib/paths.ts";
 import {
   directionLabel,
   detectDoomLoop,
   normalizeHypothesis,
   hypothesesSimilar,
-} from "../mcp/lib/experiment.mjs";
+} from "../mcp/lib/experiment.ts";
+import type { SessionState } from "../mcp/lib/types.ts";
 
 const projectCwd = process.argv[2] || process.cwd();
 const cwd = resolveWorkCwd(projectCwd);
 
-function pass() {
+function pass(): never {
   process.exit(0);
 }
 
-let state;
+let state: SessionState | undefined;
 try {
   const cfg = readSessionConfig(projectCwd);
   const max = Number(cfg.maxIterations);
@@ -28,10 +29,10 @@ try {
 } catch {
   pass();
 }
-if (!state.config || state.runs.length === 0) pass();
+if (!state || !state.config || state.runs.length === 0) pass();
 
 const cfg = state.config;
-const lines = [];
+const lines: string[] = [];
 
 // Progress line
 lines.push(
@@ -40,8 +41,8 @@ lines.push(
 );
 
 // Deduplicated tried directions (similarity-based, most recent label kept)
-const tried = [];
-const triedNorm = [];
+const tried: string[] = [];
+const triedNorm: string[] = [];
 for (const r of state.runs) {
   const label = directionLabel(r);
   const n = normalizeHypothesis(label) ?? label;
@@ -69,7 +70,7 @@ const recent = state.runs
   .map((r) => {
     let line = `#${r.run} ${r.status} metric=${r.metric ?? "—"} ${r.description ?? ""}`;
     if (r.asi && typeof r.asi === "object") {
-      const parts = [];
+      const parts: string[] = [];
       if (r.asi.hypothesis) parts.push(`hyp: ${r.asi.hypothesis}`);
       if (r.asi.next_action_hint) parts.push(`next: ${r.asi.next_action_hint}`);
       if (r.asi.rollback) parts.push(`rollback: ${r.asi.rollback}`);

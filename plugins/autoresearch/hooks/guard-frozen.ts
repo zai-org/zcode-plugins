@@ -3,18 +3,23 @@
 // (.auto/measure.sh, .auto/checks.sh). The matcher limits this to
 // Write|Edit|ApplyPatch; path filtering happens here, per zcode docs.
 import { resolve, relative } from "node:path";
-import { resolveWorkCwd } from "../mcp/lib/paths.mjs";
+import { resolveWorkCwd } from "../mcp/lib/paths.ts";
+
+interface PreToolUseInput {
+  tool_input?: { file_path?: string; path?: string };
+  toolInput?: { file_path?: string; path?: string };
+}
 
 const cwd = resolveWorkCwd(process.argv[2] || process.cwd());
 const FROZEN = new Set([".auto/measure.sh", ".auto/checks.sh"]);
 
 let raw = "";
 process.stdin.setEncoding("utf8");
-for await (const chunk of process.stdin) raw += chunk;
+for await (const chunk of process.stdin as AsyncIterable<string>) raw += chunk;
 
-let input = {};
+let input: PreToolUseInput = {};
 try {
-  input = raw.trim() ? JSON.parse(raw) : {};
+  input = raw.trim() ? (JSON.parse(raw) as PreToolUseInput) : {};
 } catch {
   process.exit(0); // fail open
 }
@@ -23,7 +28,7 @@ const ti = input.tool_input || input.toolInput || {};
 const fp = ti.file_path || ti.path || "";
 if (!fp) process.exit(0);
 
-let rel;
+let rel: string;
 try {
   rel = relative(cwd, resolve(cwd, fp));
 } catch {

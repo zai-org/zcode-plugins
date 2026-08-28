@@ -7,7 +7,12 @@
 // skill remain the backstop.
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { resolveWorkCwd } from "../mcp/lib/paths.mjs";
+import { resolveWorkCwd } from "../mcp/lib/paths.ts";
+
+interface PermissionRequestInput {
+  tool_name?: string;
+  toolName?: string;
+}
 
 const projectCwd = process.argv[2] || process.cwd();
 const cwd = resolveWorkCwd(projectCwd);
@@ -21,11 +26,11 @@ const EXPERIMENT_TOOLS = new Set([
 
 let raw = "";
 process.stdin.setEncoding("utf8");
-for await (const chunk of process.stdin) raw += chunk;
+for await (const chunk of process.stdin as AsyncIterable<string>) raw += chunk;
 
-let input = {};
+let input: PermissionRequestInput = {};
 try {
-  input = raw.trim() ? JSON.parse(raw) : {};
+  input = raw.trim() ? (JSON.parse(raw) as PermissionRequestInput) : {};
 } catch {
   process.exit(0); // fail open
 }

@@ -4,11 +4,11 @@
 import { readFileSync, statSync } from "node:fs";
 import { resolve, isAbsolute, join } from "node:path";
 
-export function resolveWorkCwd(projectCwd) {
+export function resolveWorkCwd(projectCwd: string): string {
   try {
     const cfg = JSON.parse(
       readFileSync(join(projectCwd, ".auto", "config.json"), "utf8"),
-    );
+    ) as { workingDir?: unknown };
     const wd = cfg.workingDir;
     if (typeof wd === "string" && wd.trim()) {
       const target = isAbsolute(wd) ? wd : resolve(projectCwd, wd);

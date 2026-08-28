@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FINALIZE = join(ROOT, "scripts", "finalize.sh");
 
-function git(cwd, args) {
+function git(cwd: string, args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" });
 }
 
@@ -52,7 +52,7 @@ function setup() {
   return { cwd, base, c1, c2 };
 }
 
-function groups(cwd, goal, arr) {
+function groups(cwd: string, goal: string, arr: unknown): string {
   const f = join(cwd, "groups.json");
   writeFileSync(f, JSON.stringify({ base: "main", goal, groups: arr }));
   return f;
@@ -101,7 +101,10 @@ test("finalize rejects overlapping files across groups and rolls back", () => {
     execFileSync("bash", [FINALIZE, cwd, g2], { encoding: "utf8" });
   } catch (e) {
     threw = true;
-    assert.match(String(e.stderr ?? ""), /multiple groups|FATAL/);
+    assert.match(
+      String((e as { stderr?: unknown }).stderr ?? ""),
+      /multiple groups|FATAL/,
+    );
   }
   assert.equal(threw, true, "overlapping groups must fail");
   // rolled back: back on original branch, no stray branches

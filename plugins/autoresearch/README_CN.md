@@ -14,7 +14,7 @@
 2. 在 **Settings → Plugin Management** 安装并启用 `autoresearch`。
 3. 插件提供：MCP 服务（5 个工具）、skill `autoresearch`、5 个命令、5 个 hook。启用插件即授予代码执行信任（官方约定）。
 
-> 无第三方 npm 依赖：MCP server 与 hooks 均为 Node 标准库脚本。
+> 无第三方 npm 依赖：MCP server 与 hooks 均为 Node 标准库 TypeScript 脚本（Node ≥24，类型由 Node 原生剥离，无构建步骤）。
 
 ## 安全与副作用
 
@@ -75,15 +75,15 @@ plugin/
 ├── .zcode-plugin/plugin.json   # manifest（userConfig: maxIterations / 超时）
 ├── .mcp.json                   # MCP stdio server 声明
 ├── mcp/
-│   ├── server.mjs              # JSON-RPC 换行协议 + 5 个工具
+│   ├── server.ts              # JSON-RPC 换行协议 + 5 个工具
 │   └── lib/                    # 纯逻辑：experiment / ledger / git / validate / dashboard / dashboard-server / html / paths
 ├── hooks/
 │   ├── hooks.json              # Stop / PreToolUse / PermissionRequest / UserPromptSubmit / SessionStart
-│   ├── stop-continue.mjs       # 循环未结束 → block
-│   ├── guard-frozen.mjs        # 冻结文件写保护 → deny
-│   ├── permission-gate.mjs     # 实验工具门禁 → deny
-│   ├── memory-inject.mjs       # 账本尾行注入
-│   ├── session-start.mjs       # 会话恢复提示
+│   ├── stop-continue.ts       # 循环未结束 → block
+│   ├── guard-frozen.ts        # 冻结文件写保护 → deny
+│   ├── permission-gate.ts     # 实验工具门禁 → deny
+│   ├── memory-inject.ts       # 账本尾行注入
+│   ├── session-start.ts       # 会话恢复提示
 │   └── examples/               # 6 个现成的 before/after 迭代钩子示例
 ├── skills/
 │   ├── autoresearch/           # SKILL.md 薄路由 + references/
@@ -117,5 +117,5 @@ plugin/
 ## 开发
 
 ```bash
-cd plugin && node --test tests/*.test.mjs   # 单元测试
+cd plugin && node --test tests/*.test.ts   # 单元测试
 ```

@@ -15,7 +15,24 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const SERVER = join(ROOT, "mcp", "server.mjs");
+const SERVER = join(ROOT, "mcp", "server.ts");
+
+interface JsonRpcResponse {
+  id?: number;
+  result?: { content?: Array<{ type?: string; text?: string }> };
+}
+
+interface McpClient {
+  call(
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<JsonRpcResponse>;
+  tool(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<Record<string, unknown>>;
+  close(): void;
+}
 
 function tempRepo() {
   const cwd = mkdtempSync(join(tmpdir(), "ar-dash-"));
@@ -36,28 +53,35 @@ function tempRepo() {
   return cwd;
 }
 
-function connect(cwd) {
+function connect(cwd: string): McpClient {
   const proc = spawn("node", [SERVER], { cwd });
-  let id = 0,
-    buf = "";
-  const pending = new Map();
+  let id = 0;
+  let buf = "";
+  const pending = new Map<number, (msg: JsonRpcResponse) => void>();
   proc.stdout.setEncoding("utf8");
-  proc.stdout.on("data", (d) => {
+  proc.stdout.on("data", (d: string) => {
     buf += d;
     let i;
     while ((i = buf.indexOf("\n")) >= 0) {
       const line = buf.slice(0, i);
       buf = buf.slice(i + 1);
       try {
-        const m = JSON.parse(line);
-        if (m.id != null && pending.has(m.id)) {
-          pending.get(m.id)(m);
-          pending.delete(m.id);
+        const m: JsonRpcResponse = JSON.parse(line);
+        const mid = m.id;
+        if (mid != null && pending.has(mid)) {
+          const cb = pending.get(mid);
+          if (cb) {
+            cb(m);
+            pending.delete(mid);
+          }
         }
       } catch {}
     }
   });
-  const call = (method, params) =>
+  const call = (
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<JsonRpcResponse> =>
     new Promise((res) => {
       const i = id++;
       pending.set(i, res);
@@ -65,15 +89,24 @@ function connect(cwd) {
         JSON.stringify({ jsonrpc: "2.0", id: i, method, params }) + "\n",
       );
     });
-  const tool = async (name, args) => {
+  const tool = async (
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> => {
     const m = await call("tools/call", { name, arguments: args });
-    return JSON.parse(m.result.content[0].text);
+    return JSON.parse(m.result?.content?.[0]?.text ?? "{}") as Record<
+      string,
+      unknown
+    >;
   };
   const close = () => proc.kill();
   return { call, tool, close };
 }
 
-async function withServer(cwd, fn) {
+async function withServer(
+  cwd: string,
+  fn: (s: McpClient) => Promise<unknown>,
+): Promise<unknown> {
   const s = connect(cwd);
   await s.call("initialize", {
     protocolVersion: "2024-11-05",
@@ -98,19 +131,24 @@ test("export_dashboard starts a live server with HTML, ledger and SSE routes", a
     });
     const exp = await s.tool("export_dashboard", {});
     assert.equal(exp.ok, true);
-    assert.match(exp.url, /^http:\/\/127\.0\.0\.1:\d+$/);
+    assert.match(String(exp.url), /^http:\/\/127\.0\.0\.1:\d+$/);
 
-    const html = await (await fetch(exp.url + "/")).text();
+    const html = await (await fetch(String(exp.url) + "/")).text();
     assert.match(html, /<table/);
     assert.match(html, /EventSource\('\/events'\)/);
 
-    const ledger = await (await fetch(exp.url + "/autoresearch.jsonl")).text();
+    const ledger = await (
+      await fetch(String(exp.url) + "/autoresearch.jsonl")
+    ).text();
     assert.match(ledger, /"type":"config"/);
     assert.match(ledger, /"type":"run"/);
 
-    const sseRes = await fetch(exp.url + "/events");
+    const sseRes = await fetch(String(exp.url) + "/events");
     assert.equal(sseRes.status, 200);
-    assert.match(sseRes.headers.get("content-type"), /text\/event-stream/);
+    assert.match(
+      sseRes.headers.get("content-type") ?? "",
+      /text\/event-stream/,
+    );
     await sseRes.body?.cancel();
   });
 });
@@ -121,8 +159,10 @@ test("SSE broadcasts jsonl-updated after log_experiment (live refresh)", async (
     await s.tool("init_experiment", { name: "t", metric_name: "time_ms" });
     const exp = await s.tool("export_dashboard", {});
     const ctrl = new AbortController();
-    const sseRes = await fetch(exp.url + "/events", { signal: ctrl.signal });
-    const reader = sseRes.body.getReader();
+    const sseRes = await fetch(String(exp.url) + "/events", {
+      signal: ctrl.signal,
+    });
+    const reader = sseRes.body!.getReader();
     await s.tool("run_experiment", { command: "bash .auto/measure.sh" });
     await s.tool("log_experiment", {
       status: "keep",
@@ -131,11 +171,11 @@ test("SSE broadcasts jsonl-updated after log_experiment (live refresh)", async (
     });
     const { value } = await Promise.race([
       reader.read(),
-      new Promise((_, rej) =>
+      new Promise<never>((_, rej) =>
         setTimeout(() => rej(new Error("no SSE event within 3s")), 3000),
       ),
     ]);
-    const text = new TextDecoder().decode(value);
+    const text = new TextDecoder().decode(value ?? new Uint8Array());
     assert.match(text, /jsonl-updated/);
     ctrl.abort();
   });
