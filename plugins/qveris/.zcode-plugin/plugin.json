@@ -1,0 +1,30 @@
+{
+  "name": "qveris",
+  "displayName": "QVeris",
+  "displayName_i18n": {
+    "en": "QVeris",
+    "zh-CN": "QVeris"
+  },
+  "version": "0.1.0",
+  "description": "Discover, inspect, validate, and call external APIs and data capabilities through the official QVeris MCP server.",
+  "description_i18n": {
+    "en": "Discover, inspect, validate, and call external APIs and data capabilities through the official QVeris MCP server.",
+    "zh-CN": "通过 QVeris 官方 MCP 服务发现、检查、校验并调用外部 API 与数据能力。"
+  },
+  "author": {
+    "name": "QVeris",
+    "url": "https://qveris.ai"
+  },
+  "homepage": "https://qveris.ai/docs/mcp-server",
+  "repository": "https://github.com/QVerisAI/qveris-agent-toolkit",
+  "license": "Apache-2.0",
+  "keywords": [
+    "qveris",
+    "mcp",
+    "api",
+    "data",
+    "tools"
+  ],
+  "skills": "skills",
+  "mcpServers": ".mcp.json"
+}
