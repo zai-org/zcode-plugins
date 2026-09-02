@@ -15,13 +15,25 @@ Exact legal entity first (see entity-resolution discipline in `dd-report`). All 
 
 ### Step 2: Pull the relationship layers
 
-Primary tool: 天眼查 (capability-list tools via the gateway protocol). Pull each dimension separately and label it.
+Primary tool: 天眼查 —— `tools/list` 即权威工具清单,逐维度单独调、单独标注。
 
-**The tool names below are illustrative, not guaranteed.** The capability list is returned **per company** and varies — a sample on one large listed entity (2026-08-07) offered only `get_shareholder_info`, `get_external_investments`, `get_company_registration_info`, `get_judicial_case`, `get_annual_reports`, `get_branches`, `get_change_records`, `get_historical_registration`. So: anchor with `search_companies` and take the candidate's `id` — `get_company_capabilities` **requires** `company_id` and will not resolve a bare name (verified 2026-08-17: passing `keyword`/`company_name` alone returns `company_id is required for get_company_capabilities; call search_companies first`). Then run `get_company_capabilities` with that id, copy `tool_name` **verbatim** from what it returns, and where a dimension below has no tool on this company's list, record that dimension as `源不可用` naming what it would have covered. **Never call a name from this page that the capability list did not offer.** Every dimension here is exploratory tracing, so keep each call single-step (`call_tool`, never `call_tools_batch`) and pull a fresh `get_company_capabilities` for each new subject the map uncovers.
+主体传 `company`(**全称**),列表型传 `page` / `size`(上限 20)。名称可能歧义时先用
+`tianyancha.search_companies` 锚定,取候选表里的 `name`。
 
-1. **股权链 — 向上**: shareholders with percentages (cross-check 天眼查 `get_shareholder_info`); iterate up to the actual controller (实控人 — `get_actual_controller` returns the resolved terminal, `get_equity_ratio` the control path, `get_beneficial_owners` the UBO under 央行 rules) or a natural person/SOE terminal. Note pledge status on major holdings (`get_equity_pledge_info` / `get_stock_pledge_info`).
-2. **股权链 — 向下**: outbound investments (对外投资, cross-check 天眼查 `get_external_investments`; `get_equity_tree` for the layered structure, `get_controlled_companies` for the down-pierced list) with percentages; flag 100% shells and recently created vehicles.
-3. **兄弟公司**: same-controller entities — the usual channel for related-party transactions. 天眼查 `get_group_info` identifies the group and its `groupUUID`; `get_company_group_profile` then returns members, group-level outbound investments and investors. `get_relation_graph` / `get_relation_path` expose the edges between two named subjects.
+**每个维度的判定读返回体的 `_coverage.status`**(`有记录` / `检索范围内未发现` /
+`源不可用`),不要自己从空列表推断:参数写错会报错而不是返回空。一个维度返回
+`检索范围内未发现` 就照实记该维度无记录,**不要写 `源不可用`** —— 后者只留给调用真的
+失败。返回体带 `total` 与 `fetched`,`total > fetched` 时 `_notes` 写明差多少条;
+关系图谱这类动辄上百条的维度,把截断上限写进输出。
+
+**每个新主体都要重新调一遍。** 一个控股股东、一个集团成员、一个董监高各是独立主体,
+锚定主体的 `检索范围内未发现` 说明不了它们任何事。人员维度另有一条硬要求:
+`tianyancha.get_person_profile` / `tianyancha.get_person_risk_profile` **必须同时传 `person` 与
+`company`**(所在公司全称),天眼查靠「姓名 + 所在公司」定位,只给姓名会把同名人混在一起。
+
+1. **股权链 — 向上**: shareholders with percentages (cross-check 天眼查 `tianyancha.get_shareholder_info`); iterate up to the actual controller (实控人 — `tianyancha.get_actual_controller` returns the resolved terminal, `tianyancha.get_equity_ratio` the control path, `tianyancha.get_beneficial_owners` the UBO under 央行 rules) or a natural person/SOE terminal. Note pledge status on major holdings (`tianyancha.get_equity_pledge_info` / `tianyancha.get_stock_pledge_info`).
+2. **股权链 — 向下**: outbound investments (对外投资, cross-check 天眼查 `tianyancha.get_external_investments`; `tianyancha.get_equity_tree` for the layered structure, `tianyancha.get_controlled_companies` for the down-pierced list) with percentages; flag 100% shells and recently created vehicles.
+3. **兄弟公司**: same-controller entities — the usual channel for related-party transactions. 天眼查 `tianyancha.get_group_info` identifies the group and its `groupUUID`; `tianyancha.get_company_group_profile` then returns members, group-level outbound investments and investors. `tianyancha.get_relation_graph` / `tianyancha.get_relation_path` expose the edges between two named subjects.
 4. **供应链**: suppliers and customers with data vintage; flag concentration (any counterparty appearing as both supplier and customer is a `🔴 高` finding — resolve before deciding).
 5. **资金链**: funding/transaction relationships where the data source exposes them.
 

@@ -17,47 +17,80 @@ If the exact legal entity is ambiguous (similarly named companies, group vs. lis
 
 ## Data Source Priority
 
-1. **天眼查 (tianyancha MCP)** — the primary evidence source for registry facts and risk records. It is a **gateway, not a flat tool list**: `tools/list` exposes only entry points, and the registry/risk tools live behind a per-company capability list. Always in this order:
+1. **天眼查 (`tianyancha`)** — the primary evidence source for registry facts and risk
+   records. **`tools/list` is the authoritative tool list**, one tool per dimension;
+   call the one you need directly.
 
-   1. `search_companies` — anchor the exact legal entity, take its `company_id` from the candidate table.
-   2. `get_company_capabilities` — pass that `company_id`; returns the tools actually available *for this company*, with their real `tool_name`s.
-   3. `call_tool` (one) or `call_tools_batch` (≤3, independent fact-filling only) — `tool_name` must be copied **verbatim** from that list. Never translate a Chinese dimension name into a guessed tool name; never reuse another vendor's tool name. Pass `company_name` as the subject parameter in preference to `company_id`.
+   Pass the company's **full legal name** as `company`. Where the name could resolve to
+   several entities, anchor it first with `tianyancha.search_companies` and take the
+   `name` from the candidate table. List tools take `page` / `size` (upstream caps
+   `size` at 20).
 
-   Rules the gateway enforces, so the report does not silently lose a check: list-type tools require explicit `page`/`page_size`; exploratory tracing (relationship graphs, equity paths, detail drill-down) stays single-step and out of batches; and **every new subject needs its own `get_company_capabilities`** — a controller, a group member, and a 董监高 are separate subjects.
+   **Every response carries `_coverage.status`, and it is the service's verdict, not
+   yours to infer.** Three values only:
 
-   A dimension under 「当前未查询到记录的维度」 is evidence of `检索范围内未发现` **for that company under that tool** — it is not evidence that the capability is absent, and never evidence for a related subject. Do not retry synonyms to get around it.
+   | `_coverage.status` | Means | Report as |
+   |---|---|---|
+   | `有记录` | the dimension returned rows | 有记录 |
+   | `检索范围内未发现` | queried successfully, no records for this subject | `检索范围内未发现` |
+   | `源不可用` | the call failed — credential, permission, or network | `源不可用` |
 
-   Direct entry points that skip the capability list: `get_company_basic_profile` (registry, contacts, tags, former names), `get_company_people` then `get_person_profile` / `get_person_risk_profile` (natural-person risk), `get_group_info` / `get_company_group_profile` (group and control chain), `get_risk_overview` (自身/周边/预警 triage).
+   Do not derive these from an empty list: a malformed call raises an error rather
+   than returning empty, so an empty result really does mean「no records」. Each
+   response also carries `total` and `fetched` — when `total > fetched`, `_notes`
+   says how many rows were left behind. **A single page is not a complete list**;
+   page through it or state the cap.
 
-   **Routing — 要查什么走哪个 `tool_name`.** Copy the name from this company's
-   capability list rather than from here; a sample on one large listed entity
-   returned 87 tools (2026-08-17), and the roster varies by subject.
+   `检索范围内未发现` is evidence **for this subject under this tool only** — never for
+   a controller, a group member, or a 董监高. Each of those is its own subject and
+   needs its own calls. Do not retry a synonym tool to get around an absent record.
 
-   | 检查项 | `tool_name` |
+   Start with `tianyancha.get_risk_overview` — it returns a 自身 / 周边 / 历史 / 预警
+   triage with per-category counts in one call, which tells you which dimensions are
+   worth pulling. Use it to triage only: a zero count there does not populate the
+   coverage table, the per-dimension call does.
+
+   **Routing — 要查什么走哪个工具.**
+
+   | 检查项 | 工具 |
    |---|---|
-   | 失信被执行 / 违约事件 | `get_default_event_info` |
-   | 涉诉与司法文书 | `get_judicial_case` / `get_judicial_documents` / `get_lawsuit_detail` / `get_case_filing_info` |
-   | 开庭与法院公告 | `get_hearing_notice` / `get_court_notice` |
-   | 行政处罚 / 行政许可 | `get_administrative_penalty` / `get_administrative_license` |
-   | 股权质押(工商 / 股票) | `get_equity_pledge_info` / `get_stock_pledge_info` |
-   | 对外担保 | `get_guarantee_info` |
-   | 动产抵押 | `get_chattel_mortgage_info` |
-   | 经营异常(历史) | `get_historical_business_exception` |
-   | 抽查 / 随机检查 | `get_spot_check_info` / `get_random_check` |
-   | 空壳特征 | `get_shell_company_check` |
-   | 股权链向上 / 实控人 / UBO | `get_shareholder_info` / `get_actual_controller` / `get_equity_ratio` / `get_beneficial_owners` |
-   | 股权链向下 / 控制清单 | `get_external_investments` / `get_equity_tree` / `get_controlled_companies` |
-   | 兄弟公司与关系边 | `get_group_info` → `get_company_group_profile`;`get_relation_graph` / `get_relation_path` |
-   | 供应链上下游 | `get_suppliers_and_customers` |
-   | 招投标 / 破产重整 / 司法拍卖 | `search_bids`(资产处置与重整招募走同一工具) |
-   | 发债记录 | `get_bonds` |
-   | 财务(上市主体) | `get_financial_data` / `get_income_statement` / `get_balance_sheet` / `get_cash_flow_statement` / `get_financial_main_indicators` |
-   | 税务与信用评级 | `get_credit_evaluation` |
-   | 变更与历史 | `get_change_records` / `get_historical_registration` / `get_historical_shareholders` |
+   | 风险总览 / 明细下钻 | `tianyancha.get_risk_overview` → `tianyancha.get_risk_detail` |
+   | 失信被执行 / 违约事件 | `tianyancha.get_default_event_info`(失信人+被执行人,含各自历史) |
+   | 涉诉与司法文书 | `tianyancha.get_judicial_case`(案件级聚合口径,`total` 最大) / `tianyancha.get_judicial_documents`(裁判文书) / `tianyancha.get_lawsuit_detail` / `tianyancha.get_case_filing_info` |
+   | 开庭与法院公告 | `tianyancha.get_hearing_notice` / `tianyancha.get_court_notice`(含送达公告) |
+   | 终本 / 限高 / 限制出境 | `tianyancha.get_terminated_cases` / `tianyancha.get_high_consumption_restriction`(含限制出境) |
+   | 破产重整 / 司法拍卖 | `tianyancha.get_bankruptcy_reorganization` / `tianyancha.get_judicial_auction`(含询价评估) |
+   | **股权冻结 / 司法协助** | `tianyancha.get_judicial_assistance` —— 天眼查把股权冻结放在司法协助里,每条带 `typeState`(形如 `股权冻结 \| 冻结`)、被冻结标的公司、冻结金额、执行法院;只要冻结传 `only_freeze=true` |
+   | 行政处罚 / 行政许可 | `tianyancha.get_administrative_penalty`(含历史) / `tianyancha.get_administrative_license`(综合+工商局+信用中国+历史四源) |
+   | 经营异常与存续性 | `tianyancha.get_business_exception` —— 一次取 经营异常(现状+历史)、严重违法失信、清算、简易注销、注销备案六项 |
+   | 税务风险 | `tianyancha.get_tax_risk`(欠税公告 / 税务非正常户 / 税收违法) |
+   | 股权质押(工商 / 股票) | `tianyancha.get_equity_pledge_info` / `tianyancha.get_stock_pledge_info` |
+   | 对外担保 | `tianyancha.get_guarantee_info` |
+   | 动产 / 土地抵押 | `tianyancha.get_chattel_mortgage_info` |
+   | 抽查 / 双随机 | `tianyancha.get_spot_check_info` / `tianyancha.get_random_check` |
+   | 空壳特征 | `tianyancha.get_shell_company_check` |
+   | 股权链向上 / 实控人 / UBO | `tianyancha.get_shareholder_info` / `tianyancha.get_actual_controller` / `tianyancha.get_equity_ratio` / `tianyancha.get_beneficial_owners` |
+   | 股权链向下 / 控制清单 | `tianyancha.get_external_investments` / `tianyancha.get_equity_tree` / `tianyancha.get_controlled_companies` |
+   | 兄弟公司与关系边 | `tianyancha.get_group_info` → `tianyancha.get_company_group_profile`;`tianyancha.get_relation_graph` / `tianyancha.get_relation_path` |
+   | 自然人风险 | `tianyancha.get_company_people` → `tianyancha.get_person_profile` / `tianyancha.get_person_risk_profile` —— **两个人员工具都必须同时传 `person` 与 `company`**(所在公司全称);天眼查靠「姓名 + 所在公司」定位,只给姓名会把同名人混在一起 |
+   | 基础画像 / 登记原文 | `tianyancha.get_company_basic_profile`(登记+规模+曾用名+所在园区+简介) / `tianyancha.get_company_registration_info`(登记原文) |
+   | 供应链上下游 | `tianyancha.get_suppliers_and_customers` |
+   | 招投标 | `tianyancha.get_bidding_info`(本主体的记录清单) / `tianyancha.search_bids`(跨公司垂搜,可分 采购人 / 供应商 方向,并覆盖重整招募、重整投资人资格、管理人公告、资产处置公告) |
+   | 发债记录 | `tianyancha.get_bonds` —— 发行日期 / 债券名称 / 代码 / 类型,只有发行记录。债项评级与主体评级要另取,走 `hexin-bond.bond_special_data` |
+   | 财务(上市主体) | `tianyancha.get_financial_data` —— 一次取 财务简析 + 主要指标(年/季) + 三表。非上市主体这几项通常为 `检索范围内未发现`,那是口径而非缺数据,改看 `tianyancha.get_annual_reports` |
+   | 十大股东 | `tianyancha.get_top_shareholders` —— 回传全部可选报告期,默认取最新一期 |
+   | 税务与信用评级 | `tianyancha.get_credit_evaluation`(税务评级+企业信用评级+一般纳税人+进出口信用) |
+   | 变更与历史 | `tianyancha.get_change_records` / `tianyancha.get_historical_registration` / `tianyancha.get_historical_shareholders` |
+   | 新闻舆情 | `tianyancha.get_company_news` —— **媒体源**,未被记录印证前一律 `[媒体]`,不是 `[披露]` |
 
-   一个未开通的 API 返回 `HTTP 403 无权限访问此api` —— 那是 `源不可用`,按名字
-   记下来,不要换同义工具重试。哪个接口未开通随账号与时间变化,以本次调用的实际
-   返回为准。
+   **`get_guarantee_info` returns the historical record, not the live book.** Rows carry
+   `grnt_sd` / `grnt_ed`(起止日)、`grnt_amt`、`grnt_type`、`is_fulfillment`、
+   `announcement_date`、`grnt_corp_name` / `secured_org_name`(担保方 / 被担保方)。
+   Read `grnt_ed` against today before any amount enters a ratio: observed on a
+   distressed issuer, rows carried 到期日 several years past with `is_fulfillment=否`,
+   i.e. already run off. Total only what is still live and say how many rows you
+   excluded. Where 担保方 equals 被担保方, exclude the row from 对外担保 entirely.
+
 2. **万得 `wind-docs` / 同花顺 `hexin-bond`** — announcements and news for listed entities; `hexin-bond.bond_basic_info` / `bond_financial_data` for bond-issuing entities' issuer profile and financials.
    - `hexin-bond.bond_special_data` — the agency rating on a bond-issuing counterparty: 债项评级, 主体评级(主评机构), 主体评级展望, **主体最新评级变动方向**, 评级机构, 评级类型, 评级日期. A downgrade or a 负面 outlook is first-order DD evidence. **`主体评级类型` must be read back on every call** — on a guaranteed bond it can return `债券担保人信用评级`, i.e. the guarantor's rating from a different agency, which would make a credit-dependent counterparty look standalone.
    - **Reconcile every response against your request and its own metadata — three checks, one habit.** 同花顺 returns successfully while giving you less, or other, than you asked for.

@@ -52,18 +52,18 @@ State the mandate back in one line before running anything.
 
 Most mandates are region+行业, so `search_companies_by_industry_region` is the default engine. Record every finer criterion the user named that is **not** a 天眼查 filter (see Step 4): 划型, 评分等级, 注册资本区间, 成立时间区间, 融资轮次, 园区/集群归属, 核心企业角色, 风险项 include/exclude. These are either post-filtered from returned rows, enriched per-company from `get_company_basic_profile`, or dropped — and Step 4 has to say which.
 
-**「产业链批量获客」is a different entry point, not a filter.** There is no upstream/downstream classification field to screen on, and asking for one is the wrong shape. What the mandate actually means in corporate banking is *anchor-and-chain*: name the 核心企业, pull its disclosed trading counterparties with `call_tool` → `get_suppliers_and_customers`, and screen **that** list. So when the purpose is 产业链批量获客:
+**「产业链批量获客」is a different entry point, not a filter.** There is no upstream/downstream classification field to screen on, and asking for one is the wrong shape. What the mandate actually means in corporate banking is *anchor-and-chain*: name the 核心企业, pull its disclosed trading counterparties with `tianyancha.get_suppliers_and_customers`, and screen **that** list. So when the purpose is 产业链批量获客:
 
 1. Confirm the 核心企业 (one or a few named anchors) — without an anchor there is no chain to work along.
 2. Pull each anchor's suppliers and customers; these are `[披露]` edges, not an inferred chain position.
 3. Enrich and rank those names by the same criteria as any other screen (划型, 资质, 区域), and state which of them fall inside the coverage territory and which do not.
-4. Say the cap you used (`page`/`page_size`) — a capped counterparty list is not the anchor's full chain, and the note says so.
+4. Say the cap you used (`page`/`size`) — a capped counterparty list is not the anchor's full chain, and the note says so.
 
 State plainly that this covers **disclosed trading relationships only**: a firm in the same value chain with no disclosed link to the anchor will not appear.
 
 ### Step 3: Execute
 
-Run the chosen entry point with `page` / `page_size` (list tools require explicit paging — the gateway silently caps otherwise). Defaults:
+Run the chosen entry point with `page` / `size` (upstream caps `size` at 20; the response's `total` / `fetched` say what was left behind). Defaults:
 
 - Default to 存续/在业 names and say that you did — the registry carries a 登记状态 field, so filter on it explicitly; a screen that silently includes 注销 entities is a different screen.
 - If the result count is implausibly large or empty, widen or narrow **one** dimension at a time (the region, the 行业 phrasing, or swap to a tag/listed cut) and report the iteration, so the executed screen stays reproducible.
@@ -104,7 +104,7 @@ Deliver as Markdown for a shortlist read in-session; route a target list intende
 引擎实际执行的条件: [逐项列出 — 入口工具、query 原文、登记状态默认、分页上限]
 未能由数据源执行的条件: [逐条一行,说明是丢弃、检索后人工过滤、还是逐家用 get_company_basic_profile 富集;天眼查切分较粗,此列通常较长 — 不合并]
 检索后人工过滤: [如有,写明过滤规则;人工过滤不等于引擎执行]
-源不可用: [本次失败或未开通的工具/字段,以及它们本应覆盖的条件。仅指调用没成功——如某工具不在该主体能力清单上,或返回 `无权限访问此api`(以本次调用的实际返回为准)。引擎不支持的条件不写在这里,写在上面两行:天眼查引擎只按 industry/region/tag 切分,发债、评分、风险的 exclude 语义都无引擎参数,但数据按公司可取(get_bonds / get_ipr_score / get_risk_overview、风险标签见基础画像 `标签`),属检索后过滤或逐家富集;若为产业链批量获客,写明锚点企业与上下游名单的截断上限]
+源不可用: [本次调用失败的工具/字段,以及它们本应覆盖的条件。以返回体的 `_coverage.status` 为准,只有它写 `源不可用` 时才算。引擎不支持的条件不写在这里,写在上面两行:天眼查引擎只按 industry/region/tag 切分,发债、评分、风险的 exclude 语义都无引擎参数,但数据按公司可取(get_bonds / get_ipr_score / get_risk_overview、风险标签见基础画像 `标签`),属检索后过滤或逐家富集;若为产业链批量获客,写明锚点企业与上下游名单的截断上限]
 
 本清单为 [date] 时点快照,工商登记、资质与融资状态均会变动。
 "检索范围内未发现符合条件的企业"仅指上述引擎在该口径下无返回,不等于该类企业不存在。

@@ -30,7 +30,7 @@ If the instrument is ambiguous (an issuer with many outstanding bonds, a 简称 
 | 可转债转股条款(转股价格 / 转换比例 / 正股代码 / 剩余规模) | `hexin-bond.bond_special_data` | 仅可转债 |
 | 基准曲线(国债 / 国开 / 中短期票据 / 城投债)、政策利率 | `wind-economic.query_economic_indicator_data` | 见下方两步取数 |
 | 区域财力(城投主体的真实兜底) | `wind-economic.query_economic_indicator_data` | 省 / 市 / 区县三级 |
-| 担保圈、股权链、关联方与资金往来 | 天眼查 `search_companies` → `get_company_capabilities` → `call_tool` | `get_guarantee_info` / `get_shareholder_info` / `get_actual_controller` / `get_relation_graph` 等,`tool_name` 逐字复制 |
+| 担保圈、股权链、关联方与资金往来 | 天眼查 —— `tools/list` 即权威清单,直接调 | `tianyancha.get_guarantee_info` / `tianyancha.get_shareholder_info` / `tianyancha.get_actual_controller` / `tianyancha.get_relation_graph`;主体传 `company`(全称)。返回体的 `_coverage.status` 三态(`有记录` / `检索范围内未发现` / `源不可用`)由服务判定,不要自己从空列表推断 |
 | 评级 / 兑付 / 违约公告 | `wind-docs.get_company_announcements` | 公告正文文本,归 `[披露]` |
 | 负面舆情 | `wind-docs.get_financial_news` | 带标题/日期/URL,归 `[媒体]` |
 

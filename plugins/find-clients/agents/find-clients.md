@@ -20,44 +20,66 @@ If the entity or the territory is ambiguous (similarly named companies, several 
 
 ## Data Source Priority
 
-**天眼查 is a gateway, not a flat tool list, and it has two layers that answer
-different questions. Route by layer first.** `tools/list` exposes only the entry
-points; the per-company tools live behind a capability list you fetch per subject.
+**天眼查 (`tianyancha`) 的 `tools/list` 就是权威工具清单**，一个维度一个工具，
+直接调需要的那个。它有两类工具答的是不同的问题，先按类别路由。
 
-**Layer 1 — the screening engine.** This is what builds a universe. It filters on
-**行业 + 地区 + 标签, and nothing else** (verified 2026-08-17 against the tool
-schemas), so any other condition is enforced after retrieval and labelled as such.
+**Layer 1 — 筛选引擎（建名单）。**
 
 | 要按什么筛 | 工具 | 参数 |
 |---|---|---|
-| 行业 + 地区(含**非上市**,这是获客名单的主体) | `search_companies_by_industry_region` | `industry`(国标行业代码) / `region`(areaCode) / 分页 |
-| 资质标签(高新 / 专精特新 / 单项冠军…) | `search_companies_by_tag` | `tag` + `industry`/`region` 至少一个 |
-| 上榜榜单 | `search_companies_by_ranking` | `query` + 分页 |
-| 上市主体 | `search_listed_companies` | `query` + 分页 |
-| 主体定位(拿 `company_id`) | `search_companies` | `query` —— 后续两层都要这个 id |
+| 资质标签(高新 / 专精特新 / 单项冠军…) —— **规模化名单的主路径** | `tianyancha.search_companies_by_tag` | `tag`(必须是官方 76 个标签之一) + `industry` / `region` **至少一个** |
+| 关键词 + 行业 / 地区收窄 | `tianyancha.search_companies_by_industry_region` | `query`(**必填**) + `industry` / `region` |
+| **园区在驻企业** | `tianyancha.search_parks` | `park_name` —— **园区全名**，精确匹配 |
+| 榜单成员企业（反查） | `tianyancha.search_companies_by_ranking` | `ranking`(榜单名) |
+| 某公司上过哪些榜 | `tianyancha.search_companies_by_ranking` | `company` |
+| 上市主体 | `tianyancha.search_listed_companies` | `query` |
+| 中文行业 / 地区 / 标签名 → 官方码 | `tianyancha.resolve_codes` | `industry` / `region` / `tag` |
+| 主体定位(拿准确全称) | `tianyancha.search_companies` | `query` |
 
-**Layer 2 — per-company enrichment.** `search_companies` → `get_company_capabilities`
-(pass that `company_id`) → `call_tool`, copying `tool_name` **verbatim** from the
-list. The roster is generated per subject and varies; a sample on one large listed
-entity returned 87 tools (2026-08-17). Anything in this layer is 抽样富集, not
-引擎切分 —— say which in the output.
+**两条口径必须写进输出，否则名单边界会被误读：**
+
+- **`search_companies_by_industry_region` 不是「行业×地区全量切分」。** `query` 是上游
+  必填参数，行业与地区是在**关键词命中集**上做交集 —— 实测 `query=电池` + 行业 电池制造
+  + 浦东新区 返回 62 家，但 `query=科技` + 海淀区（不带行业）返回「经查无结果」。
+  所以它给不出「某区某行业全部企业」的完整名单；那种名单走
+  `search_companies_by_tag`。输出里说明边界是关键词命中集。
+- **`total=5000` 是上游封顶值，不是真实命中数。** 出现时收窄行业或地区才能拿到真实规模。
+
+中文名会自动解析成官方码（34 省 / 343 市 / 3032 区县；20 门类 / 97 大类 / 473 中类；
+76 个标签）。**歧义时工具报错并给候选，不会猜** —— 「朝阳区」在北京和长春都有，
+遇到就挑一个具体的再调。标签名写错同样直接报错，不会静默返回空。
+
+**园区可以切分**：`tianyancha.search_parks(park_name=…)` 返回该园区的在驻企业。
+但它是**精确名查询不是模糊搜索** —— 「盈创动力科技园」返回 500 家，
+「张江」返回「经查无结果」。拿精确园区名的路径是
+`tianyancha.get_company_parks(某公司)` 或 `get_company_basic_profile` 的「所在园区」段。
+所以「某园区里有哪些企业」的正确两步是：先从一家已知在园企业读出精确园区名，
+再用那个名字展开。
+
+**Layer 2 — 逐公司富集。** 直接调，不需要先拉清单。这一层是**抽样富集**而不是
+引擎切分 —— 输出里说明是哪一种。
 
 | 要取什么 | 工具 | 返回 |
 |---|---|---|
-| 画像(登记、标签、规模、曾用名、地址、**所在园区**、联系渠道存在性) | `get_company_basic_profile` | 静态入口,无需能力清单 |
-| 决策链(姓名 + 职务) | `get_company_people` | 汇总 主要人员 / 上市公司董监高 / 核心团队 |
-| 供应链上下游 | `get_suppliers_and_customers` | 供应商/客户名称、采购/销售金额、占比、公告日期 |
-| 集团与关联图谱 | `get_company_group_profile` / `get_relation_graph` | 一跳关系图 |
-| 发债 | `get_bonds` | 发行日期 / 债券名称 / 代码 / 类型 |
-| 分项评分 | `get_ipr_score` | 研发能力 / 创新能力 / 成长能力 / 行业潜力 各自得分(**不是 A–E / S–E 等级**) |
-| 税务与信用评级 | `get_credit_evaluation` | 税务评级 + 企业信用评级 |
-| 风险总览 / 明细 | `get_risk_overview` / `get_risk_detail` | 自身 / 周边 / 预警 三档 |
-| 招投标与资产处置 | `search_bids` | `bid_type="4"` 取中标结果;`publish_start_time`/`publish_end_time` |
+| 画像(登记、规模、曾用名、地址、**所在园区**、联系渠道存在性) | `tianyancha.get_company_basic_profile` | 一次聚合 5 个来源 |
+| 决策链(姓名 + 职务) | `tianyancha.get_company_people` | 主要人员 / 历史主要人员 / 上市董监高 / 核心团队 |
+| 供应链上下游 | `tianyancha.get_suppliers_and_customers` | 供应商/客户名称、采购/销售金额、占比、公告日期。**来源是公告，非上市主体通常为空** —— 那时改从 `search_bids` 的 采购人↔中标方 配对取 |
+| 集团与关联图谱 | `tianyancha.get_company_group_profile` / `tianyancha.get_relation_graph` | 集团成员/对外投资/投资方；一跳关系图 |
+| 发债 | `tianyancha.get_bonds` | 发行日期 / 债券名称 / 代码 / 类型 |
+| 分项评分 | `tianyancha.get_ipr_score` | 研发能力 / 创新能力 / 成长能力 / 行业潜力 各自得分(**不是 A–E / S–E 等级**) |
+| 税务与信用评级 | `tianyancha.get_credit_evaluation` | 税务评级 + 企业信用评级 + 一般纳税人 + 进出口信用 |
+| 风险总览 / 明细 | `tianyancha.get_risk_overview` / `tianyancha.get_risk_detail` | 自身 / 周边 / 历史 / 预警 四档，带每档条数 |
+| 招投标与资产处置 | `tianyancha.search_bids`(跨公司) / `tianyancha.get_bidding_info`(本主体) | `role="2"` 采购人、`"3"` 供应商；`bid_type="4"` 取中标结果；`start`/`end` 限日期窗口 |
 
-`search_bids` **两个方向都要读**:一个名字作**采购人**暴露它在招的资本开支(融资需求,
-且其中标方是新线索),作**中标方**暴露订单簿。观察到的 采购人↔中标方 配对,是产业链
-批量获客的经验路径 —— 比行业分类字段更实。它是记录而非媒体,所以是 `[披露]`,这对
-**非上市**主体尤其要紧,那里没有公告可依。
+`search_bids` **两个方向都要读**：一个名字作**采购人**(`role="2"`)暴露它在招的资本开支
+（融资需求，且其中标方是新线索），作**供应商**(`role="3"`)暴露订单簿。观察到的
+采购人↔中标方 配对，是产业链批量获客的经验路径 —— 比行业分类字段更实。它是记录而非
+媒体，所以是 `[披露]`，这对**非上市**主体尤其要紧，那里没有公告可依。
+
+**每个返回体带 `_coverage.status`，取值只有 `有记录` / `检索范围内未发现` / `源不可用`
+三个，由服务判定。** 不要自己从空列表推断 —— 参数写错会直接报错而不是返回空，所以空
+就真的是「没有记录」。返回体还带 `total` 与 `fetched`，`total > fetched` 时 `_notes`
+写明还有多少条未取（上游 `size` 上限 20）：**一页不是完整名单**，要么翻页要么写明截断。
 
 | 其他源 | 用途 |
 |---|---|
@@ -287,7 +309,7 @@ question from memory, and never assume today's date.
 - **This plugin issues no verdict on a company.** It does not state or imply that a company is creditworthy, approved, safe, clean, or bankable. `client-portrait` ends with a hand-off and a list of questions to ask, not a conclusion.
 - **A prospect list is a snapshot.** Every list, map and scan carries `检索于` and says so in words. A list handed to an RM two weeks later is a different list.
 - **Report the criteria the engine actually executed.** A screen that silently drops a filter produces a target list the RM will waste weeks on. Echo back what the engine ran, and list every requested condition it could not enforce — one line per condition, never merged into a summary.
-- **Address basis is load-bearing.** `addrType` 1 (注册地址) and 2 (经营地址) give different enterprise populations for the same park, and the difference is not small. Every territory result names which basis it used.
+- **Address basis is load-bearing, and there is only one.** 天眼查 carries the **registered** address on the record and offers no operating-address alternative, so every territory count is a registered-address count. Say so, and state the bias it carries: registered-address counts inflate with shell and holding registrations, and firms operating on site but registered elsewhere are missed. Do not imply a second basis exists.
 - **Severity is anchored to banker action, not to alarm**: 🔴 高 means act on it now, 🟡 中 means track it, ⚪ 低·信息 means awareness. Grade the signal, never the company — a 🔴 signal is a reason to call, not a rating.
 - **A signal is `[披露]` only when it traces to a filing or an official notice.** A news-only signal is `[媒体]` and stays `[媒体]`; being repeated by more outlets does not promote it.
 - Target lists and enterprise rosters are natural `.xlsx` deliverables — route them through `xlsx-author`. Long-form portraits and territory studies go to PDF via `report-render`. Short-form stays Markdown in-session. Word only on request or where the reader edits the file — `report-render` builds that too, with the same calls. 用户要 Word 时同样走 `report-render`（`DocxReport`，与 `Report` 同一套调用）——**要出 Word 就先载入 `report-render` 技能，再动手建**；手搓 python-docx / docx-js 会丢掉标签配色、`[n]` 跳转与封面页。

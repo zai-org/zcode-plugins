@@ -11,17 +11,17 @@ Everything an RM needs to walk into the room, and nothing that pretends to be a 
 
 ### Step 1: Resolve the entity
 
-天眼查 `search_companies` (or `search_companies_by_industry_region` when only a region+行业 hint is given) to anchor the exact legal entity and take its `company_id`. Group vs listed vehicle vs operating subsidiary are different companies with different bankers and different balance sheets.
+天眼查 `tianyancha.search_companies` (or `tianyancha.search_companies_by_industry_region` when only a region+行业 hint is given) to anchor the exact legal entity and take its **full legal name**. Group vs listed vehicle vs operating subsidiary are different companies with different bankers and different balance sheets.
 
 If several entities match, list them with region, 成立时间 and 企业类型 and ask which one. Do not proceed on a guess, and do not merge two matches into one portrait.
 
 ### Step 2: 登记与基础画像
 
-天眼查 `get_company_basic_profile` (with the `company_id` / `company_name`) returns the portrait. Report only fields the tool actually returned: 名称, 统一社会信用代码 where exposed, 地区, 行业 (国标), 企业类型, 成立时间, 注册资本(万元), 登记状态, 规模/划型, 曾用名, 资质标签, 上市市场, 园区与地址(登记地址及园区, where on the record), and contact-channel-existence flags (电话/邮箱/网址/地址 presence — flags only).
+天眼查 `tianyancha.get_company_basic_profile` (with that name as `company`) returns the portrait. Report only fields the tool actually returned: 名称, 统一社会信用代码 where exposed, 地区, 行业 (国标), 企业类型, 成立时间, 注册资本(万元), 登记状态, 规模/划型, 曾用名, 资质标签, 上市市场, 园区与地址(登记地址及园区, where on the record), and contact-channel-existence flags (电话/邮箱/网址/地址 presence — flags only).
 
 A field the record does not carry stays `n.d.（未披露）`. Never fill a registry field from memory. Contact completeness is a flag that a channel exists — this skill emits no phone number, no email, and no personal data.
 
-**Scores exist, but not as letter grades.** There is no 综合评分等级 (A–E) or 科创评分等级 (S–E) source here, so never print one. What is available per company is `get_ipr_score`, which returns **component scores** (研发能力评分, 创新能力评分, 成长能力评分, 行业潜力评分) alongside patent and software-copyright counts, and `get_credit_evaluation`, which returns 税务评级 and 企业信用评级. Report the fields the call actually returned, each with its own name, and do **not** roll them into a letter grade the source never issued. `源不可用` belongs here only when the call itself failed — a tool absent from this company's capability list, or a `无权限访问此api` 403, both of which are named as such. Which API is un-provisioned varies by account and over time — go by what this call actually returned.
+**Scores exist, but not as letter grades.** There is no 综合评分等级 (A–E) or 科创评分等级 (S–E) source here, so never print one. What is available per company is `get_ipr_score`, which returns **component scores** (研发能力评分, 创新能力评分, 成长能力评分, 行业潜力评分) alongside patent and software-copyright counts, and `get_credit_evaluation`, which returns 税务评级 and 企业信用评级. Report the fields the call actually returned, each with its own name, and do **not** roll them into a letter grade the source never issued. `源不可用` belongs here only when the call itself failed — the response's own `_coverage.status` says which of the three it was, so read it rather than inferring from an empty list. An empty result carries `检索范围内未发现`, which is a finding about this company, not a missing source.
 
 ### Step 2.5: 决策链 — 谁是这次拜访的对接口
 
@@ -53,7 +53,7 @@ or reports as failed on its own terms.
 
 ### Step 4: 关系网 — where the next three clients are
 
-天眼查 exposes supply-chain and equity relationships as **dynamic tools** behind its gateway — not as static entries in `tools/list`. Follow the gateway three-step (see `vet-companies` for the full protocol): `search_companies` to anchor → `get_company_capabilities` to list the tools actually available *for this company* → `call_tool` per dimension, copying `tool_name` **verbatim** from the list. Pass `company_name` as the subject parameter. List tools need explicit `page`/`page_size`; relationship tracing is exploratory, so keep each call single-step (`call_tool`, not batched), and pull a fresh `get_company_capabilities` for each new subject the map uncovers.
+天眼查's supply-chain and equity dimensions each have their own tool — call the one you need: `tianyancha.get_suppliers_and_customers`, `tianyancha.get_shareholder_info`, `tianyancha.get_relation_graph`, `tianyancha.get_company_group_profile`. Pass the company's full legal name as `company`, and `page` / `size` on list tools (upstream caps `size` at 20). Where the name could resolve to several entities, anchor it first with `tianyancha.search_companies`. **Each new subject the map uncovers is its own subject** — a `检索范围内未发现` on the anchor says nothing about its controller or group members.
 
 The dimensions that map to this skill:
 
@@ -63,7 +63,7 @@ The dimensions that map to this skill:
 | 集团 / 关联方 / 兄弟公司 | `get_company_group_profile` |
 | 股权关系图 | `get_relation_graph` |
 
-State the cap you used (page/page_size), because a capped graph is not a complete graph. Report each dimension separately with its data vintage, and say what each one is worth commercially — 上下游 for 供应链金融 and batch acquisition, 兄弟公司 and 对外投资 for group-account and cash-management coverage, 股东 for the sponsor relationship. Those commercial reads are `[推断]`; the edges themselves are `[披露]`.
+State the cap you used (page/size), because a capped graph is not a complete graph. Report each dimension separately with its data vintage, and say what each one is worth commercially — 上下游 for 供应链金融 and batch acquisition, 兄弟公司 and 对外投资 for group-account and cash-management coverage, 股东 for the sponsor relationship. Those commercial reads are `[推断]`; the edges themselves are `[披露]`.
 
 This is a **one-hop marketing map**. It is not ownership penetration and not related-party analysis — `related-party-map` in `vet-companies` does that, with the depth a credit file needs.
 
@@ -104,9 +104,9 @@ Short pre-meeting brief: Markdown. A full portrait for circulation: PDF via `rep
 人员数据滞后于实际变动,以上为登记与公告口径的「截至检索时记录」。
 
 **三、产业链定位**
-所处节点: [n] [推断](无上下游分类字段可筛,据国标行业与链条知识推断)　上下游名单: 供应商 [n] 家 / 客户 [n] 家 [披露](天眼查 `get_suppliers_and_customers`,上限 [page_size])　地方规划契合度: [n] [披露]/[推断]/源不可用
+所处节点: [n] [推断](无上下游分类字段可筛,据国标行业与链条知识推断)　上下游名单: 供应商 [n] 家 / 客户 [n] 家 [披露](天眼查 `get_suppliers_and_customers`,上限 [size])　地方规划契合度: [n] [披露]/[推断]/源不可用
 
-**四、关系网(一跳,每维度上限 [page_size] 条)**
+**四、关系网(一跳,每维度上限 [size] 条)**
 | 关系维度 | 对手方 | 数据时点 | 营销含义 | 源 [n] |
 |---|---|---|---|---|
 | 供应链-供应商 / 客户 (get_suppliers_and_customers) |  |  | [推断] |  |
@@ -132,7 +132,7 @@ Short pre-meeting brief: Markdown. A full portrait for circulation: PDF via `rep
 | 检查项 | 结论 | 源 | 检索于 |
 |---|---|---|---|
 | 工商与画像字段 | 有记录 [n] / 检索范围内未发现 / 源不可用 | 天眼查 get_company_basic_profile | [date] |
-| 评分(分项) | 研发/创新/成长/行业潜力 各自得分 [n] / 检索范围内未发现 / 源不可用(调用失败或未开通) | 天眼查 get_ipr_score | [date] |
+| 评分(分项) | 研发/创新/成长/行业潜力 各自得分 [n] / 检索范围内未发现 / 源不可用(调用失败) | 天眼查 企业科创分(分项得分) | [date] |
 | 产业链节点 |  | 引擎无上下游分类字段可筛(仅行业/地区/标签),故 [推断] / web 取规划文本;上下游名单另见关系网一行 | [date] |
 | 地方产业规划 |  | web / 源不可用 | [date] |
 | 供应链关系 |  | 天眼查 get_suppliers_and_customers (动态工具) | [date] |

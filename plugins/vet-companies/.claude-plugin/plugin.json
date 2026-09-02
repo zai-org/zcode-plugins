@@ -1,7 +1,7 @@
 {
   "name": "vet-companies",
   "displayName": "企业尽调",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
   "author": {
     "name": "Z.ai"

@@ -194,7 +194,7 @@
         "en": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
         "zh-CN": "【二级市场】固收研究:债券档案与估值、发行主体信用、收益率曲线与信用利差、信用风险跟踪"
       },
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -223,7 +223,7 @@
         "en": "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk",
         "zh-CN": "【一级市场与银行】对公营销:按区域/产业链/园区筛选目标客户、园区与集群扫描、商机线索、客户全景画像"
       },
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -368,7 +368,7 @@
         "en": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
         "zh-CN": "【一级市场与银行】企业排查:尽调报告、关联方与供应链图谱、失信涉诉质押风险快扫"
       },
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"

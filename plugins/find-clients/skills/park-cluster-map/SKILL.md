@@ -22,11 +22,11 @@ If several regions could hold the named park, list them and confirm which one th
 
 ### Step 2: Declare the address basis before you count — and what is not available
 
-The old 注册地址 / 经营地址 (`addrType` 1/2) split is **gone** — 天眼查 carries the registered address on the record, with no operating-address alternative. So every count here is a **registered-address** count. State that in the header, and note the known bias: registered-address counts inflate with shell and holding registrations; operating-on-site firms registered elsewhere are missed. There is no delta to report because there is no second basis — say that, rather than implying one.
+天眼查 carries the **registered** address on the record and offers no operating-address alternative, so every count here is a **registered-address** count. State that in the header, and note the known bias: registered-address counts inflate with shell and holding registrations; operating-on-site firms registered elsewhere are missed. There is no second basis, so there is no delta to report — say that rather than implying one.
 
 ### Step 3: Pull the population and cut it
 
-天眼查 `search_companies_by_industry_region` (query = 行政区 + 行业), `statusKeywords` defaulted to 存续/在业 and said so, paginated with `page` / `page_size`. The returned total is the base count.
+天眼查 `tianyancha.search_companies_by_industry_region` (`query` = 行政区 + 行业, plus `industry` / `region` to收窄), paginated with `page` / `size` (上限 20). **登记状态不是引擎参数** —— 存续/在业 只能取回后自筛,所以那是检索后过滤而不是引擎切分,输出里按此标注。The returned `total` is the base count; `total=5000` 是上游封顶值而非真实命中数,出现时收窄条件。
 
 Then cut the population. 天眼查 exposes very few of these as engine filters, so most cuts are **assembled** by running a different entry point over the same region, or by enriching a sample per-company — be explicit about which:
 
@@ -51,7 +51,7 @@ Pull the published 产业规划 / 园区 notice — **`finance-search.finance_se
 
 Name two or three coverage priorities, each as a hypothesis labelled `[推断]` with the counts that triggered it — a 资质 cluster with no listed names, a sub-行业 dense in 中型 firms, a segment the plan targets but the population does not yet cover. Do not rank the companies here; that is `prospect-screen`.
 
-**Anchor-and-chain, where the territory has an anchor.** A region map gets more actionable when the local 龙头 is traced outward: pick the one or two anchors the counts surface (listed, 上榜, or the largest 资质 holders), and pull their disclosed counterparties with `call_tool` → `get_suppliers_and_customers`. Those edges are `[披露]` and show where the territory's bankable flow actually runs — which upstream suppliers and downstream customers sit inside the region (immediate coverage targets, and 供应链金融 candidates against the anchor) and which sit outside it (out-of-territory, hand to the owning branch). Cap it per anchor, state the cap, and never present a capped counterparty list as the anchor's whole chain. Do this for anchors only, not for the population — it is a per-company call, not an engine cut.
+**Anchor-and-chain, where the territory has an anchor.** A region map gets more actionable when the local 龙头 is traced outward: pick the one or two anchors the counts surface (listed, 上榜, or the largest 资质 holders), and pull their disclosed counterparties with `tianyancha.get_suppliers_and_customers`. Those edges are `[披露]` and show where the territory's bankable flow actually runs — which upstream suppliers and downstream customers sit inside the region (immediate coverage targets, and 供应链金融 candidates against the anchor) and which sit outside it (out-of-territory, hand to the owning branch). Cap it per anchor, state the cap, and never present a capped counterparty list as the anchor's whole chain. Do this for anchors only, not for the population — it is a per-company call, not an engine cut.
 
 ### Step 6: Output
 
@@ -72,7 +72,7 @@ territory: [resolved entity name]  ·  切分: 行政区 + 行业(引擎无园�
 | 评分等级 | 研发/创新/成长/行业潜力 分项 |  | [测算] | 抽样富集(`get_ipr_score`) |  |
 
 地方产业规划: [plan / 口号 / 十五五 formulation] [披露]/[推断] [n]
-锚点与上下游（若有锚点; 每锚点上限 [page_size]）: [锚点企业] → 区域内供应商/客户 [N] 家、区域外 [M] 家 [披露] [n]
+锚点与上下游（若有锚点; 每锚点上限 [size]）: [锚点企业] → 区域内供应商/客户 [N] 家、区域外 [M] 家 [披露] [n]
 覆盖优先级: [2–3 条,每条 [推断] 并附触发它的计数]
 
 ## 覆盖范围与局限
@@ -86,7 +86,7 @@ territory: [resolved entity name]  ·  切分: 行政区 + 行业(引擎无园�
 | 资质密度 |  | 天眼查 search_companies_by_tag |  |
 | 上市/发债 |  | 天眼查 search_listed_companies / get_bonds(抽样) |  |
 | 地方产业规划 |  | web / 源不可用 |  |
-| 锚点上下游（供应商/客户） | 有记录([N] 家, 上限 [page_size]) / 不适用(无锚点) / 源不可用 | 天眼查 get_suppliers_and_customers (动态工具) | [date] |
+| 锚点上下游（供应商/客户） | 有记录([N] 家, 上限 [size]) / 不适用(无锚点) / 源不可用 | 天眼查 供应商与客户（公告披露口径） | [date] |
 | 园区精确归属 | 有记录 [n] / 检索范围内未发现(抽样内无园区记录) | 天眼查 get_company_basic_profile `所在园区`(按公司,非引擎切分) | [date] |
 | 集群名录(产业链成员枚举) | 检索范围内未获得可引用名录 | 已查:天眼查引擎筛选参数(仅行业/地区/标签)、金融垂搜、web;完整名录须另接数据源 | [date] |
 

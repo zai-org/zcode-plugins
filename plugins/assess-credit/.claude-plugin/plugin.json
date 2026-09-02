@@ -1,7 +1,7 @@
 {
   "name": "assess-credit",
   "displayName": "固收研究",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
   "author": {
     "name": "Z.ai"

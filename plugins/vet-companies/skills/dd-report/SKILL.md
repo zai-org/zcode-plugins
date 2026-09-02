@@ -11,11 +11,11 @@ A structured, evidence-first DD report. Every section states what was checked, w
 
 ### Step 1: Entity resolution
 
-Resolve the exact legal entity via registry lookup (天眼查 `search_companies`). Confirm 统一社会信用代码/注册号, full legal name, and whether the target is the group, the listed vehicle, or a subsidiary. If multiple plausible entities exist, stop and confirm with the user. Keep the resolved `company_id` — the capability list in later steps requires it.
+Resolve the exact legal entity via registry lookup (天眼查 `search_companies`). Confirm 统一社会信用代码/注册号, full legal name, and whether the target is the group, the listed vehicle, or a subsidiary. If multiple plausible entities exist, stop and confirm with the user. Carry the resolved **full legal name** forward — every later call takes it as `company`.
 
 ### Step 2: Registry profile (登记信息 section)
 
-Registration status, capital (认缴 vs 实缴 — label which), establishment date, legal representative, registered address, business scope, and recent registry changes (法人变更、注册资本变动、经营范围变更 — frequent changes are themselves a flag). 天眼查 `get_company_basic_profile` returns the aggregated picture directly (registry, contacts, tags, scale, former names) and needs no capability list; go through the capability list for `get_company_registration_info` and `get_change_records` when you need the itemised change history.
+Registration status, capital (认缴 vs 实缴 — label which), establishment date, legal representative, registered address, business scope, and recent registry changes (法人变更、注册资本变动、经营范围变更 — frequent changes are themselves a flag). 天眼查 `tianyancha.get_company_basic_profile` returns the aggregated picture (registry, contacts, tags, scale, former names, 所在园区); use `tianyancha.get_company_registration_info` for the registry original and `tianyancha.get_change_records` for the itemised change history.
 
 登记信息 is a section heading, not a provenance tag: every field here is `[披露]` with its `[n]`. Any ratio you derive from these fields (实缴/认缴 占比, 变更频次) is `[测算]`, and "frequent changes suggest instability" is `[推断]`.
 
@@ -34,11 +34,11 @@ Run the `related-party-map` skill's core steps: shareholders (with percentages a
 
 ### Step 5: Risk records (风险记录 section)
 
-Run the `risk-scan` skill for the target AND its controlling shareholder / actual controller / key related entities identified in Step 3. Each of those is a separate subject: pull a fresh capability list per entity, because an absent dimension on the target says nothing about its controller.
+Run the `risk-scan` skill for the target AND its controlling shareholder / actual controller / key related entities identified in Step 3. Each of those is a separate subject: run the checks again per entity, because a `检索范围内未发现` on the target says nothing about its controller.
 
-For natural persons (实控人、法定代表人、董监高), 天眼查 `get_company_people` lists them and `get_person_risk_profile` returns that person's 风险总览、失信、被执行、限制消费、终本案件、司法协助 — direct entry points, no capability list needed. Company-oriented checks miss these entirely. Related-party risk transmits: a clean target with a defaulted controller is not clean, and the report says so rather than leaving the reader to join two sections.
+For natural persons (实控人、法定代表人、董监高), 天眼查 `tianyancha.get_company_people` lists them and `tianyancha.get_person_risk_profile` returns that person's 风险总览、失信、被执行、限制消费、终本案件、司法协助、限制出境 —— **both take `person` plus `company`** (the employing company's full name), because 天眼查 locates a person by name *and* company; a name alone merges same-named individuals. Company-oriented checks miss these entirely. Related-party risk transmits: a clean target with a defaulted controller is not clean, and the report says so rather than leaving the reader to join two sections.
 
-**Join the two directions on the name.** `risk-scan`'s 限制高消费 check returns a `restrictedPerson` per record — the natural person the court restricted, typically the 法定代表人 or an 实际控制人. Match that name against the Step 3 roster and against Step 2's 法定代表人: a 限高 naming the *current* legal representative is a live finding about the company's own management, while one naming a predecessor is dated and says so. Where the name matches nobody in either list, say that rather than dropping the record.
+**Join the two directions on the name.** `risk-scan`'s 限制高消费 check returns an `xname` per record — the natural person the court restricted, typically the 法定代表人 or an 实际控制人. Match that name against the Step 3 roster and against Step 2's 法定代表人: a 限高 naming the *current* legal representative is a live finding about the company's own management, while one naming a predecessor is dated and says so. Where the name matches nobody in either list, say that rather than dropping the record.
 
 风险记录 is likewise a section heading, not a tag — a recorded 失信/涉诉/处罚/质押 item is `[披露]`. Each check carries one of `有记录` / `检索范围内未发现` / `源不可用` into Step 7's coverage table.
 
