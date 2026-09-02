@@ -101,6 +101,34 @@ test("lastRunChecksFailed is set by a failed check", () => {
   assert.equal(state.consecutiveFailures, 1);
 });
 
+test("lastRunChecksFailed follows the latest run (no one-way latch)", () => {
+  const cwd = tempCwd();
+  appendLedgerEntry(cwd, {
+    type: "config",
+    segment: 1,
+    name: "s",
+    metricName: "m",
+    direction: "lower",
+  });
+  // status alone marks checks failure (no checksFailed field needed)
+  appendLedgerEntry(cwd, {
+    type: "run",
+    run: 1,
+    status: "checks_failed",
+    metric: 42,
+  });
+  assert.equal(rebuildState(cwd).lastRunChecksFailed, true);
+  // a subsequent checks-passing run resets the flag (overwrite, not latch)
+  appendLedgerEntry(cwd, {
+    type: "run",
+    run: 2,
+    status: "keep",
+    metric: 40,
+    commit: "abc1234",
+  });
+  assert.equal(rebuildState(cwd).lastRunChecksFailed, false);
+});
+
 test("session config file is read", () => {
   const cwd = tempCwd();
   mkdirSync(join(cwd, ".auto"), { recursive: true });
@@ -118,4 +146,41 @@ test("rebuild from empty cwd yields empty state", () => {
   assert.equal(state.runs.length, 0);
   assert.equal(state.config, null);
   assert.ok(!existsSync(join(tempCwd(), LOG_FILE)));
+});
+
+test("rebuildState: noop resets the consecutive-failure streak without counting", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "ar-ledger-"));
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  appendLedgerEntry(cwd, {
+    type: "config",
+    segment: 1,
+    name: "t",
+    metricName: "time_ms",
+    direction: "lower",
+  });
+  appendLedgerEntry(cwd, {
+    type: "run",
+    run: 1,
+    status: "discard",
+    metric: 99,
+  });
+  appendLedgerEntry(cwd, {
+    type: "run",
+    run: 2,
+    status: "crash",
+    metric: null,
+  });
+  let state = rebuildState(cwd);
+  assert.equal(state.consecutiveFailures, 2);
+  appendLedgerEntry(cwd, { type: "run", run: 3, status: "noop", metric: null });
+  state = rebuildState(cwd);
+  assert.equal(state.consecutiveFailures, 0); // noop breaks the chain
+  appendLedgerEntry(cwd, {
+    type: "run",
+    run: 4,
+    status: "discard",
+    metric: 98,
+  });
+  state = rebuildState(cwd);
+  assert.equal(state.consecutiveFailures, 1); // restarts from zero
 });

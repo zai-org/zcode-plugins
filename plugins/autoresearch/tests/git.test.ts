@@ -63,6 +63,33 @@ test("commitExperiment returns null when nothing changed", () => {
   assert.equal(hash, null);
 });
 
+test("commitExperiment excludes the .auto session dir from staging", () => {
+  const cwd = tempRepo();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  // session files only (no code change) → nothing to commit
+  writeFileSync(join(cwd, ".auto", "log.jsonl"), '{"type":"config"}\n');
+  writeFileSync(join(cwd, ".auto", "config.json"), "{}");
+  assert.equal(
+    commitExperiment(cwd, { description: "ledger only", result: {} }),
+    null,
+  );
+  // a real code change commits, but without any .auto noise
+  writeFileSync(join(cwd, "main.js"), "v2\n");
+  const hash = commitExperiment(cwd, {
+    description: "real change",
+    result: { metric: 1 },
+  });
+  assert.ok(hash);
+  const files = git(cwd, ["show", "--name-only", "--format=", "HEAD"]);
+  assert.ok(files.includes("main.js"));
+  assert.ok(
+    !files.split("\n").some((f) => f.startsWith(".auto/") || f === ".auto"),
+    `commit must not contain .auto files, got: ${files}`,
+  );
+  // .auto files stay on disk and untracked-pending (not committed)
+  assert.ok(existsSync(join(cwd, ".auto", "log.jsonl")));
+});
+
 test("rollbackWorkingTree discards changes but keeps .auto/", () => {
   const cwd = tempRepo();
   mkdirSync(join(cwd, ".auto"), { recursive: true });
@@ -76,7 +103,19 @@ test("rollbackWorkingTree discards changes but keeps .auto/", () => {
     existsSync(join(cwd, ".auto", "log.jsonl")),
     ".auto survives clean",
   );
-  assert.equal(isDirty(cwd), true); // .auto/log.jsonl untracked -> still dirty, that's expected
+  assert.equal(
+    isDirty(cwd),
+    false, // .auto/log.jsonl untracked but excluded — session files are not real changes
+  );
+});
+
+test("isDirty ignores .auto-only changes but sees real ones", () => {
+  const cwd = tempRepo();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  writeFileSync(join(cwd, ".auto", "log.jsonl"), '{"type":"config"}\n');
+  assert.equal(isDirty(cwd), false); // session files alone are not dirty
+  writeFileSync(join(cwd, "main.js"), "v2\n");
+  assert.equal(isDirty(cwd), true); // a real change still counts
 });
 
 test("rollbackWorkingTree leaves staged-but-uncommitted changes reverted too", () => {

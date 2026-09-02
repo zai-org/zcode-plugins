@@ -114,7 +114,8 @@ export function validateLedger(
     } else if (r.status === "noop") {
       // noop does not change the retained value and needs no commit
     } else if (r.status === "crash") {
-      // crash metric (0) is a placeholder — no measurement semantics
+      // crash metric is null — a crash measured nothing, so it must not
+      // touch the retained value (legacy rows carrying 0 are tolerated)
     } else {
       // discard / checks_failed
       if (

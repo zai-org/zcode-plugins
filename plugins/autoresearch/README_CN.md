@@ -4,7 +4,7 @@
 
 让 ZCode 的 coding agent 在**固定度量**上自主迭代优化：改代码 → 跑基准 → 保留改进、回滚退化 → 循环。
 
-基于 [karpathy/autoresearch](https://github.com/karpathy/autoresearch) 与 [pi-autoresearch](https://github.com/yourduskqubis/pi-autoresearch) 的调研（见仓库根 `docs/research/autoresearch-survey.md`）。架构决策见 `adr/decisions/1-*.md`、`2-*.md`。
+基于 [karpathy/autoresearch](https://github.com/karpathy/autoresearch) 与 [pi-autoresearch](https://github.com/davebcn87/pi-autoresearch) 的调研（见仓库根 `docs/research/autoresearch-survey.md`）。架构决策见 `adr/decisions/1-*.md`、`2-*.md`。
 
 ## 安装
 
@@ -99,14 +99,14 @@ plugin/
 
 ## 会话状态（`.auto/`）
 
-| 文件          | 作用                                                                     |
-| ------------- | ------------------------------------------------------------------------ |
-| `log.jsonl`   | **append-only 单一事实源**：config 行 + run 行；segment 由 config 行推进 |
-| `prompt.md`   | 会话章程（目标/度量/范围/Off Limits/What's Been Tried）                  |
-| `measure.sh`  | 基准脚本（冻结）                                                         |
-| `checks.sh`   | 可选正确性门禁（冻结）                                                   |
-| `config.json` | 可选 `{ "maxIterations": N }`                                            |
-| `ideas.md`    | 可选假设清单                                                             |
+| 文件          | 作用                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `log.jsonl`   | **append-only 单一事实源**：config 行 + run 行；segment 由 config 行推进                                                                                                 |
+| `prompt.md`   | 会话章程（目标/度量/范围/Off Limits/What's Been Tried）                                                                                                                  |
+| `measure.sh`  | 基准脚本（冻结）                                                                                                                                                         |
+| `checks.sh`   | 可选正确性门禁（冻结）                                                                                                                                                   |
+| `config.json` | 可选会话覆盖项：`maxIterations`、`consecutiveFailures`、`workingDir`、`auditBypass`、`autoresearchOff`（`benchmarkHashes`/`pendingChecksFailed` 等服务端管理键也存于此） |
+| `ideas.md`    | 可选假设清单                                                                                                                                                             |
 
 ## 已知边界（研究实证，详见报告 §4.1）
 

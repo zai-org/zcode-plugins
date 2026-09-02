@@ -2,7 +2,7 @@
 // Routes: / (live HTML), /autoresearch.jsonl (ledger raw), /events (SSE).
 import { createServer } from "node:http";
 import type { Server, ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { rebuildState, readSessionConfig } from "./ledger.ts";
 import { renderLiveDashboard } from "./dashboard.ts";
@@ -12,8 +12,18 @@ let server: Server | null = null;
 let boundPort: number | null = null;
 
 function broadcast(): void {
+  // The MCP server process hosts this HTTP server: a single dead client must
+  // never take the whole process down. Skip and evict broken connections.
   for (const res of clients) {
-    res.write(`event: jsonl-updated\ndata: ${Date.now()}\n\n`);
+    if (res.destroyed) {
+      clients.delete(res);
+      continue;
+    }
+    try {
+      res.write(`event: jsonl-updated\ndata: ${Date.now()}\n\n`);
+    } catch {
+      clients.delete(res);
+    }
   }
 }
 
@@ -39,6 +49,13 @@ function start(workCwd: string): Promise<{ port: number; url: string }> {
     }
     if (url.pathname === "/autoresearch.jsonl") {
       const log = join(workCwd, ".auto", "log.jsonl");
+      // The ledger legitimately disappears (clear_experiments); respond 404
+      // instead of throwing ENOENT inside the MCP server process.
+      if (!existsSync(log)) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("ledger not found (no active session)");
+        return;
+      }
       res.writeHead(200, {
         "Content-Type": "application/x-ndjson; charset=utf-8",
       });

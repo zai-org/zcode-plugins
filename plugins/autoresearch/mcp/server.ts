@@ -58,7 +58,10 @@ interface RunOutcome {
   exitCode: number | null;
   signal: NodeJS.Signals | null;
   durationMs: number;
+  /** Metric-parseable text: the full output, or just the METRIC lines when the output spilled to a file. */
   output: string;
+  /** Display-tail source: the full output, or a bounded tail when spilled. */
+  outputTail: string;
   logFile: string | null;
   timedOut: boolean;
 }
@@ -170,6 +173,15 @@ function truncateTail(
   return out;
 }
 
+// Output accounting: under the spill threshold the full output stays in
+// memory; once it spills, data streams straight to the spill file and only
+// the METRIC lines (scanned incrementally, position-independent) plus a
+// bounded tail survive in memory.
+const SPILL_THRESHOLD_BYTES = 2 * 1024 * 1024;
+const TAIL_CAP_BYTES = 64 * 1024;
+const MAX_METRIC_LINES = 1000;
+const KILL_GRACE_MS = 5_000;
+
 function runCommand(command: string, timeoutMs: number): Promise<RunOutcome> {
   return new Promise((resolve) => {
     const started = Date.now();
@@ -178,35 +190,59 @@ function runCommand(command: string, timeoutMs: number): Promise<RunOutcome> {
       detached: true, // own process group so we can kill the tree
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const chunks: Buffer[] = [];
+    const chunks: Buffer[] = []; // full output, only while under the threshold
     let totalBytes = 0;
     let logFile: string | null = null;
-    proc.stdout.on("data", (d: Buffer) => {
-      chunks.push(d);
+    const tail: Buffer[] = [];
+    let tailBytes = 0;
+    const metricLines: string[] = [];
+    let carry = ""; // partial line carried between data events
+    const onData = (d: Buffer) => {
       totalBytes += d.length;
-      if (totalBytes > 2 * 1024 * 1024 && !logFile) {
-        logFile = join(
-          tmpdir(),
-          `pi-experiment-${process.pid}-${Date.now()}.log`,
-        );
-        writeFileSync(logFile, Buffer.concat(chunks));
-        chunks.length = 0;
-        log("output overflowed, spilling to", logFile);
+      if (!logFile) {
+        chunks.push(d);
+        if (totalBytes > SPILL_THRESHOLD_BYTES) {
+          logFile = join(
+            tmpdir(),
+            `pi-experiment-${process.pid}-${Date.now()}.log`,
+          );
+          writeFileSync(logFile, Buffer.concat(chunks));
+          chunks.length = 0;
+          log("output overflowed, spilling to", logFile);
+        }
+      } else {
+        try {
+          appendFileSync(logFile, d);
+        } catch {
+          /* ignore */
+        }
       }
-    });
-    proc.stderr.on("data", (d: Buffer) => {
-      chunks.push(d);
-      totalBytes += d.length;
-      if (totalBytes > 2 * 1024 * 1024 && !logFile) {
-        logFile = join(
-          tmpdir(),
-          `pi-experiment-${process.pid}-${Date.now()}.log`,
-        );
-        writeFileSync(logFile, Buffer.concat(chunks));
-        chunks.length = 0;
+      tail.push(d);
+      tailBytes += d.length;
+      while (tailBytes > TAIL_CAP_BYTES && tail.length > 0) {
+        const excess = tailBytes - TAIL_CAP_BYTES;
+        const first = tail[0];
+        if (first.length <= excess) {
+          tailBytes -= first.length;
+          tail.shift();
+        } else {
+          tail[0] = first.subarray(excess);
+          tailBytes -= excess;
+        }
       }
-    });
+      carry += d.toString("utf8");
+      const lines = carry.split("\n");
+      carry = lines.pop() ?? "";
+      if (carry.length > TAIL_CAP_BYTES) carry = carry.slice(-TAIL_CAP_BYTES);
+      for (const line of lines) {
+        if (metricLines.length < MAX_METRIC_LINES && line.startsWith("METRIC "))
+          metricLines.push(line);
+      }
+    };
+    proc.stdout.on("data", onData);
+    proc.stderr.on("data", onData);
     let didTimeout = false;
+    let killTimer: NodeJS.Timeout | null = null;
     const kill = () => {
       didTimeout = true;
       try {
@@ -214,24 +250,28 @@ function runCommand(command: string, timeoutMs: number): Promise<RunOutcome> {
       } catch {
         /* already gone */
       }
+      // A benchmark that traps/ignores SIGTERM must not hang the tool call:
+      // escalate to SIGKILL (uncatchable) on the whole process group.
+      killTimer = setTimeout(() => {
+        try {
+          if (proc.pid != null) process.kill(-proc.pid, "SIGKILL");
+        } catch {
+          /* already gone */
+        }
+      }, KILL_GRACE_MS);
     };
     const timer = setTimeout(kill, timeoutMs);
     proc.on("close", (code, signal) => {
       clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
       const elapsed = Date.now() - started;
-      const all = Buffer.concat(chunks).toString("utf8");
-      if (logFile) {
-        try {
-          appendFileSync(logFile, all);
-        } catch {
-          /* ignore */
-        }
-      }
+      const full = Buffer.concat(chunks).toString("utf8");
       resolve({
         exitCode: code,
         signal,
         durationMs: elapsed,
-        output: logFile ? "" : all,
+        output: logFile ? metricLines.join("\n") : full,
+        outputTail: logFile ? Buffer.concat(tail).toString("utf8") : full,
         logFile,
         timedOut: didTimeout,
       });
@@ -245,7 +285,7 @@ async function runChecks(checksFile: string) {
     failed: res.exitCode !== 0,
     exitCode: res.exitCode,
     durationMs: res.durationMs,
-    outputTail: truncateTail(res.output, 80, 4096),
+    outputTail: truncateTail(res.outputTail, 80, 4096),
   };
 }
 
@@ -289,10 +329,8 @@ function readBenchmarkHashes() {
   }
 }
 
-function writeBenchmarkHashes(hashes: {
-  measure: string | null;
-  checks: string | null;
-}): void {
+/** Merge a patch into the project's `.auto/config.json` (creates if missing). */
+function patchSessionConfig(patch: Record<string, unknown>): void {
   const cfgPath = join(projectCwd, ".auto", "config.json");
   let cfg: Record<string, unknown> = {};
   try {
@@ -300,32 +338,72 @@ function writeBenchmarkHashes(hashes: {
   } catch {
     /* start fresh */
   }
-  cfg.benchmarkHashes = hashes;
+  Object.assign(cfg, patch);
   writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+}
+
+function writeBenchmarkHashes(hashes: {
+  measure: string | null;
+  checks: string | null;
+}): void {
+  patchSessionConfig({ benchmarkHashes: hashes });
+}
+
+/**
+ * Persist the checks outcome of the latest run_experiment so log_experiment's
+ * keep gate works even across an MCP server restart (pi `runtime.lastRunChecks`
+ * equivalent, but on disk). `failed` is true only when checks ran and failed.
+ */
+function setPendingChecksFailed(failed: boolean): void {
+  patchSessionConfig({ pendingChecksFailed: failed });
+}
+
+function pendingChecksFailed(): boolean {
+  return readSessionConfig(projectCwd).pendingChecksFailed === true;
 }
 
 /**
  * Compare current frozen-file hashes against the session's recorded ones.
- * Returns { drift, reason } where drift is true when a recorded hash changed.
- * First sighting (recorded null but file exists) records and reports "recorded".
+ * Returns { drift, reason, deleted } where drift is true when a recorded hash
+ * changed (deleted=false) or a recorded file was deleted (deleted=true).
+ * First sighting (recorded null but file exists) records the hash without
+ * warning.
  */
 function checkBenchmarkDrift() {
   const recorded = readBenchmarkHashes();
   const current = currentBenchmarkHashes();
   if (!recorded) {
     writeBenchmarkHashes(current);
-    return { drift: false, reason: "recorded", hashes: current };
+    return {
+      drift: false,
+      reason: "recorded",
+      deleted: false,
+      hashes: current,
+    };
   }
+  const merged = { ...recorded };
+  let firstSeen = false;
   for (const key of ["measure", "checks"] as const) {
-    if (
-      recorded[key] != null &&
-      current[key] != null &&
-      recorded[key] !== current[key]
-    ) {
-      return { drift: true, reason: key, hashes: current };
+    if (recorded[key] == null && current[key] != null) {
+      merged[key] = current[key]; // first sighting: record, no warning
+      firstSeen = true;
+      continue;
+    }
+    // changed (hash mismatch) or deleted (current null) → drift
+    if (recorded[key] != null && current[key] == null) {
+      return { drift: true, reason: key, deleted: true, hashes: current };
+    }
+    if (recorded[key] != null && recorded[key] !== current[key]) {
+      return { drift: true, reason: key, deleted: false, hashes: current };
     }
   }
-  return { drift: false, reason: null, hashes: current };
+  if (firstSeen) writeBenchmarkHashes(merged);
+  return {
+    drift: false,
+    reason: firstSeen ? "recorded" : null,
+    deleted: false,
+    hashes: current,
+  };
 }
 
 /**
@@ -484,6 +562,14 @@ async function toolInitExperiment(
   if (direction !== "lower" && direction !== "higher") {
     return { ok: false, error: "direction must be lower or higher" };
   }
+  // The loop's keep/discard semantics (commit + rollback) need git; a non-git
+  // research dir would only fail later at log time, in a half-initialized state.
+  if (!isGitRepo(cwd)) {
+    return {
+      ok: false,
+      error: `research directory is not a git repository — the experiment loop needs git commit/rollback semantics. Run git init there (or point .auto/config.json workingDir at a repo) first.`,
+    };
+  }
   const state = sessionState();
   const segment = (state.segment ?? 0) + 1;
   appendLedgerEntry(cwd, {
@@ -497,8 +583,10 @@ async function toolInitExperiment(
   });
   // Record frozen-file hashes as the benchmark baseline for this session.
   writeBenchmarkHashes(currentBenchmarkHashes());
+  // New segment: any pending checks outcome from a previous session is stale.
+  setPendingChecksFailed(false);
   broadcastDashboardUpdate();
-  const branch = isGitRepo(cwd) ? currentBranch(cwd) : "";
+  const branch = currentBranch(cwd);
   return {
     ok: true,
     segment,
@@ -532,7 +620,7 @@ async function toolRunExperiment(
   // Benchmark drift: frozen files changed since the session baseline.
   const drift = checkBenchmarkDrift();
   const driftWarn = drift.drift
-    ? `benchmark_drift: ${drift.reason === "measure" ? "measure.sh" : "checks.sh"} changed since session start — metrics are no longer comparable. Start a new segment (init_experiment) or confirm the change.`
+    ? `benchmark_drift: ${drift.reason === "measure" ? "measure.sh" : "checks.sh"} ${drift.deleted ? "was deleted" : "changed"} since session start — metrics are no longer comparable. Start a new segment (init_experiment) or confirm the change.`
     : null;
   const rawCommand = String(args.command ?? "");
   if (!rawCommand.trim()) return { ok: false, error: "command is required" };
@@ -594,6 +682,9 @@ async function toolRunExperiment(
   if (existsSync(paths.checks) && last.exitCode === 0) {
     checks = await runChecks(paths.checks);
   }
+  // Persist the checks outcome for log_experiment's keep gate (see
+  // setPendingChecksFailed). No checks.sh / benchmark crashed → not failed.
+  setPendingChecksFailed(checks?.failed === true);
 
   const values = runs
     .map((r) => r.metric)
@@ -602,6 +693,20 @@ async function toolRunExperiment(
     repeat > 1 && values.length > 0
       ? median(values)
       : (runs[0]?.metric ?? null);
+  // Secondary metrics aggregate to per-name medians across the repetitions,
+  // the same source as median_metric (the primary is not special-cased).
+  const metricNames = new Set<string>();
+  for (const r of runs) {
+    for (const n of Object.keys(r.metrics)) metricNames.add(n);
+  }
+  const aggMetrics: Record<string, number> = {};
+  for (const n of metricNames) {
+    const vs = runs
+      .map((r) => r.metrics[n])
+      .filter((v): v is number => v != null && Number.isFinite(v));
+    const m = vs.length > 0 ? median(vs) : null;
+    if (m != null) aggMetrics[n] = m;
+  }
 
   const ret = {
     ok: true,
@@ -611,7 +716,7 @@ async function toolRunExperiment(
     signal: last.signal ?? null,
     duration_ms: last.durationMs,
     timed_out: last.timedOut,
-    metrics: runs[0]?.metrics ?? {},
+    metrics: aggMetrics,
     metric: medianMetric,
     median_metric: repeat > 1 ? medianMetric : undefined,
     checks: checks
@@ -622,7 +727,7 @@ async function toolRunExperiment(
           output_tail: checks.outputTail,
         }
       : { ran: false },
-    output_tail: truncateTail(last.output),
+    output_tail: truncateTail(last.outputTail),
     log_file: last.logFile ?? null,
     ...(before ? { before_steer: before.steer } : {}),
     ...(driftWarn ? { benchmark_drift: true, warning: driftWarn } : {}),
@@ -663,8 +768,10 @@ async function toolLogExperiment(
       )
     : [];
 
-  // keep gate: previous run's checks failed → refuse keep.
-  if (status === "keep" && state.lastRunChecksFailed) {
+  // keep gate: the just-run benchmark's checks failed → refuse keep. The
+  // outcome is persisted by run_experiment (pendingChecksFailed), because the
+  // ledger cannot know about a run that has not been logged yet.
+  if (status === "keep" && pendingChecksFailed()) {
     return {
       ok: false,
       error:
@@ -718,7 +825,9 @@ async function toolLogExperiment(
     run: state.runs.length + 1,
     segment: state.segment,
     status: status as RunStatus,
-    metric: status === "crash" ? 0 : metric,
+    // null (not a 0 placeholder): a crash measured nothing and must not
+    // pollute baseline/best/confidence downstream.
+    metric: status === "crash" ? null : metric,
     commit: args.commit ?? null,
   };
   const cfgAudit = readSessionConfig(projectCwd);
@@ -773,15 +882,19 @@ async function toolLogExperiment(
     run: state.runs.length + 1,
     segment: state.segment,
     status: status as RunStatus,
-    metric: status === "crash" ? 0 : metric,
+    metric: status === "crash" ? null : metric,
     metrics,
     asi,
     description,
     commit,
+    // audit trail: a checks_failed row carries the flag explicitly
+    ...(status === "checks_failed" ? { checksFailed: true } : {}),
     timestamp: new Date().toISOString(),
   };
 
   appendLedgerEntry(cwd, entry);
+  // The pending run is now accounted for — clear the keep-gate state.
+  setPendingChecksFailed(false);
   broadcastDashboardUpdate();
 
   // Iteration hook: .auto/hooks/after.sh runs after the record (fail-open).
@@ -833,6 +946,7 @@ async function toolLogExperiment(
 }
 
 async function toolClearExperiments() {
+  setPendingChecksFailed(false);
   if (!existsSync(paths.log))
     return { ok: true, message: "no active session to clear" };
   const { rmSync } = await import("node:fs");
@@ -927,7 +1041,8 @@ const TOOLS = [
         },
         metric: {
           type: "number",
-          description: "primary metric value from run_experiment (0 for crash)",
+          description:
+            "primary metric value from run_experiment (omit for crash — the ledger row records null)",
         },
         description: {
           type: "string",

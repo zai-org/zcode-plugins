@@ -101,5 +101,7 @@ export interface SessionConfig {
   auditBypass?: boolean;
   autoresearchOff?: boolean;
   benchmarkHashes?: { measure: string | null; checks: string | null } | null;
+  /** Server-managed: checks outcome of the latest run_experiment (keep gate). */
+  pendingChecksFailed?: boolean;
   [key: string]: unknown;
 }

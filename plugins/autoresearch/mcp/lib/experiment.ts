@@ -118,16 +118,21 @@ export function unwrapMeasureCommand(
   ];
   const match = variants.find((v) => cmd === v || cmd.startsWith(v + " "));
   if (!match) return null;
-  // 4) no shell metacharacters after the script (rejects `; evil` chaining)
-  const rest = cmd.slice(match.length).trim();
-  if (/[;&|`]/.test(rest) || rest.includes("$(")) return null;
+  // 4) args after the script must be plain tokens — whitelist characters only.
+  //    A blacklist cannot enumerate the shell injection surface (newlines, CR,
+  //    redirection, quotes, backticks, $, globs, ...), so anything outside
+  //    [word chars . / : = + - space tab] is rejected.
+  const rest = cmd.slice(match.length);
+  if (!/^[\w./:=+ \t-]*$/.test(rest)) return null;
   return cmd;
 }
 
 /**
  * Decide whether the loop has reached a stop condition.
- * Stop when: current segment runs >= maxIterations, or the last N (default 3)
- * results are all failures (discard/crash/checks_failed).
+ * Stop when: current segment runs >= maxIterations, or the trailing run of
+ * real failures (discard/crash/checks_failed) reaches consecutiveFailures.
+ * noop neither counts as a failure nor keeps the streak alive — it breaks
+ * the chain, like keep does.
  */
 export function isStopReached(
   runs: RunLike[],
@@ -136,10 +141,13 @@ export function isStopReached(
 ): boolean {
   if (maxIterations != null && runs.length >= maxIterations) return true;
   if (runs.length === 0) return false;
-  const tail = runs.slice(-consecutiveFailures);
-  return (
-    tail.length >= consecutiveFailures && tail.every((r) => r.status !== "keep")
-  );
+  let streak = 0;
+  for (let i = runs.length - 1; i >= 0; i--) {
+    const s = runs[i].status;
+    if (s === "discard" || s === "crash" || s === "checks_failed") streak += 1;
+    else break;
+  }
+  return streak >= consecutiveFailures;
 }
 
 /**

@@ -117,6 +117,58 @@ test("unwrapMeasureCommand rejects non-benchmark or chained commands", () => {
   assert.equal(unwrapMeasureCommand(null, "measure.sh"), null);
 });
 
+test("unwrapMeasureCommand rejects shell injection after the script (whitelist)", () => {
+  // newline / CR chaining
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh \necho PWNED", "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh \recho PWNED", "measure.sh"),
+    null,
+  );
+  // redirection
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh > /tmp/x", "measure.sh"),
+    null,
+  );
+  // backtick / dollar / quotes / glob
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh `id`", "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh $HOME", "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand('bash .auto/measure.sh --name="a b"', "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh *.js", "measure.sh"),
+    null,
+  );
+});
+
+test("unwrapMeasureCommand allows plain benchmark args (whitelist)", () => {
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh --verbose", "measure.sh"),
+    "bash .auto/measure.sh --verbose",
+  );
+  assert.equal(
+    unwrapMeasureCommand("bash .auto/measure.sh --foo=bar -n 3", "measure.sh"),
+    "bash .auto/measure.sh --foo=bar -n 3",
+  );
+  assert.equal(
+    unwrapMeasureCommand(
+      "bash .auto/measure.sh --input=./data/a_b-c.txt:2 +x",
+      "measure.sh",
+    ),
+    "bash .auto/measure.sh --input=./data/a_b-c.txt:2 +x",
+  );
+});
+
 test("isStopReached on cap and consecutive failures", () => {
   const runs = [1, 2, 3].map((n) => ({ run: n, status: "keep" }));
   assert.equal(isStopReached(runs, 3), true);
@@ -275,4 +327,52 @@ test("detectDoomLoop flags repeats and oscillation, not normal progress", () => 
   );
   // too few runs → null
   assert.equal(detectDoomLoop([run("a"), run("a")]), null);
+});
+
+test("isStopReached: noop neither counts as a failure nor keeps the streak", () => {
+  const mk = (status: string) => ({ status });
+  // [discard, crash, noop]: trailing failure streak is 0 — no stop
+  assert.equal(
+    isStopReached(
+      [mk("discard"), mk("crash"), mk("noop")].map((r, i) => ({
+        ...r,
+        run: i + 1,
+      })),
+      20,
+    ),
+    false,
+  );
+  // [discard, crash, noop, discard]: streak restarts at 1 — no stop
+  assert.equal(
+    isStopReached(
+      [mk("discard"), mk("crash"), mk("noop"), mk("discard")].map((r, i) => ({
+        ...r,
+        run: i + 1,
+      })),
+      20,
+    ),
+    false,
+  );
+  // three real failures in a row still stop
+  assert.equal(
+    isStopReached(
+      [mk("discard"), mk("crash"), mk("checks_failed")].map((r, i) => ({
+        ...r,
+        run: i + 1,
+      })),
+      20,
+    ),
+    true,
+  );
+  // all noop never stops
+  assert.equal(
+    isStopReached(
+      [mk("noop"), mk("noop"), mk("noop"), mk("noop")].map((r, i) => ({
+        ...r,
+        run: i + 1,
+      })),
+      20,
+    ),
+    false,
+  );
 });

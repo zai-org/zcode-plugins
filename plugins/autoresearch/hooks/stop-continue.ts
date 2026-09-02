@@ -38,11 +38,14 @@ const finished = isStopReached(
 if (finished) failOpen();
 
 // Plateau convergence: recent runs improved < 1% → let the model wrap up.
+// The Stop schema has no allow-with-reason shape, so the advisory goes to
+// stderr (hook log) while the hook exits 0 to allow the stop.
 if (state.plateau) {
-  const reason =
+  process.stderr.write(
     `[autoresearch] 循环已进入平台期（最近 5 轮改善 < 1%，best=${state.best ?? "—"}）。` +
-    `建议：用 run_experiment repeat:3 复测确认，或 init_experiment 开启新 segment，或就此收尾总结。`;
-  process.stdout.write(JSON.stringify({ decision: "block", reason }));
+      `建议：用 run_experiment repeat:3 复测确认，或 init_experiment 开启新 segment，或就此收尾总结。\n`,
+  );
+  process.exit(0);
 } else {
   const dir = state.config?.direction ?? "lower";
   const tail = state.runs

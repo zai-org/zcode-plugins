@@ -4,7 +4,7 @@
 
 An autonomous experiment loop for ZCode: set a fixed, mechanical metric and let the coding agent iterate — modify code → run the benchmark → keep improvements, revert regressions → repeat.
 
-Based on research into [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [pi-autoresearch](https://github.com/yourduskqubis/pi-autoresearch) (see `docs/research/autoresearch-survey.md`). Architecture decisions live in `adr/decisions/`.
+Based on research into [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [pi-autoresearch](https://github.com/davebcn87/pi-autoresearch) (see `docs/research/autoresearch-survey.md`). Architecture decisions live in `adr/decisions/`.
 
 ## Security and side effects
 
@@ -99,14 +99,14 @@ Setting `"workingDir": "work/"` in `.auto/config.json` separates the research di
 
 ## Session state (`.auto/`)
 
-| File          | Purpose                                                                                            |
-| ------------- | -------------------------------------------------------------------------------------------------- |
-| `log.jsonl`   | **append-only single source of truth**: config lines + run lines; segments advance on config lines |
-| `prompt.md`   | session charter (goal/metric/scope/Off Limits/What's Been Tried)                                   |
-| `measure.sh`  | benchmark script (frozen)                                                                          |
-| `checks.sh`   | optional correctness gate (frozen)                                                                 |
-| `config.json` | optional `{ "maxIterations": N }`                                                                  |
-| `ideas.md`    | optional hypothesis list                                                                           |
+| File          | Purpose                                                                                                                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `log.jsonl`   | **append-only single source of truth**: config lines + run lines; segments advance on config lines                                                                                                   |
+| `prompt.md`   | session charter (goal/metric/scope/Off Limits/What's Been Tried)                                                                                                                                     |
+| `measure.sh`  | benchmark script (frozen)                                                                                                                                                                            |
+| `checks.sh`   | optional correctness gate (frozen)                                                                                                                                                                   |
+| `config.json` | optional session overrides: `maxIterations`, `consecutiveFailures`, `workingDir`, `auditBypass`, `autoresearchOff` (server-managed keys like `benchmarkHashes`/`pendingChecksFailed` also live here) |
+| `ideas.md`    | optional hypothesis list                                                                                                                                                                             |
 
 ## Known limits (research-backed, see `docs/research/autoresearch-survey.md` §4.1)
 

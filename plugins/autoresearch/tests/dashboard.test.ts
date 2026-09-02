@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import {
   mkdtempSync,
   writeFileSync,
+  appendFileSync,
   mkdirSync,
   existsSync,
   readFileSync,
@@ -13,6 +14,47 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { renderDashboard } from "../mcp/lib/dashboard.ts";
+import type { LedgerRun, SessionState } from "../mcp/lib/types.ts";
+
+function sampleState(
+  runs: Array<[status: string, metric: number | null]> = [
+    ["keep", 100],
+    ["discard", 105],
+    ["keep", 60],
+    ["noop", null],
+    ["keep", 40],
+  ],
+): SessionState {
+  const entries: LedgerRun[] = runs.map(([status, metric], i) => ({
+    type: "run",
+    run: i + 1,
+    segment: 1,
+    status: status as LedgerRun["status"],
+    metric,
+    description: status === "noop" ? "no code change" : `hypothesis ${i + 1}`,
+  }));
+  return {
+    config: {
+      type: "config",
+      segment: 1,
+      name: "t",
+      metricName: "time_ms",
+      direction: "lower",
+    },
+    segment: 1,
+    runs: entries,
+    baseline: 100,
+    best: 40,
+    lastRunChecksFailed: false,
+    lastRun: entries[entries.length - 1],
+    totalExperiments: entries.length,
+    consecutiveFailures: 0,
+    confidence: { confidence: 3.0, level: "green" },
+    plateau: false,
+    failureThreshold: 3,
+  };
+}
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SERVER = join(ROOT, "mcp", "server.ts");
@@ -124,6 +166,8 @@ test("export_dashboard starts a live server with HTML, ledger and SSE routes", a
   await withServer(cwd, async (s) => {
     await s.tool("init_experiment", { name: "t", metric_name: "time_ms" });
     await s.tool("run_experiment", { command: "bash .auto/measure.sh" });
+    // keep requires a real (non-.auto) change since the .auto exclusion fix
+    appendFileSync(join(cwd, "code.js"), "// change\n");
     await s.tool("log_experiment", {
       status: "keep",
       metric: 42,
@@ -200,6 +244,8 @@ test("workingDir redirects the ledger, benchmark and git to the research dir", a
       command: "bash .auto/measure.sh",
     });
     assert.equal(run.metric, 7);
+    // keep requires a real (non-.auto) change in the research dir
+    writeFileSync(join(cwd, "work", "code.js"), "v2\n");
     await s.tool("log_experiment", {
       status: "keep",
       metric: 7,
@@ -216,4 +262,74 @@ test("workingDir redirects the ledger, benchmark and git to the research dir", a
     const state = readFileSync(join(cwd, "work", ".auto", "log.jsonl"), "utf8");
     assert.match(state, /"type":"run"/);
   });
+});
+
+test("live server survives a deleted ledger (404) and dead SSE clients", async () => {
+  const cwd = tempRepo();
+  await withServer(cwd, async (s) => {
+    await s.tool("init_experiment", { name: "t", metric_name: "time_ms" });
+    const exp = await s.tool("export_dashboard", {});
+    // an SSE client connects, then dies abruptly (aborted fetch)
+    const ctrl = new AbortController();
+    const sseRes = await fetch(String(exp.url) + "/events", {
+      signal: ctrl.signal,
+    });
+    ctrl.abort();
+    // the ledger legitimately disappears (clear_experiments)
+    await s.tool("clear_experiments", {});
+    const gone = await fetch(String(exp.url) + "/autoresearch.jsonl");
+    assert.equal(gone.status, 404);
+    // a later broadcast (init writes the ledger again) must not crash the
+    // process even though a dead client may still be in the broadcast set
+    await s.tool("init_experiment", { name: "t2", metric_name: "time_ms" });
+    const home = await fetch(String(exp.url) + "/");
+    assert.equal(home.status, 200);
+    await sseRes.body?.cancel().catch(() => {});
+  });
+});
+
+test("renderer: equal-width card grid, dual theme, overflow guards, neutral no-op", () => {
+  const html = renderDashboard(sampleState());
+  assert.match(html, /box-sizing: border-box/);
+  assert.match(
+    html,
+    /grid-template-columns: repeat\(auto-fit, minmax\(110px, 1fr\)\)/,
+  );
+  assert.match(html, /prefers-color-scheme: dark/);
+  assert.match(html, /overflow-wrap: anywhere/);
+  assert.match(html, /class="tablewrap"/);
+  assert.match(html, /overflow-x: auto/);
+  // no-op is neutral, never the crash-red fallback
+  assert.match(html, /badge noop">no-op/);
+  assert.doesNotMatch(html, /badge crash">no-op/);
+  // confidence card carries its value next to the level
+  assert.match(html, /confidence 3\.00/);
+});
+
+test("renderer: SVG trend line with per-status points and baseline reference", () => {
+  const html = renderDashboard(sampleState());
+  assert.match(html, /<svg viewBox="0 0 860 120"/);
+  assert.match(html, /<polyline class="line"/);
+  // 4 valid metric points (100/105/60/40; the no-op row has none)
+  assert.equal((html.match(/<circle class="c-/g) ?? []).length, 4);
+  assert.match(html, /class="base"/); // dashed baseline reference
+  assert.match(html, /baseline 100/);
+  assert.match(html, /class="gline"/); // light horizontal grid ticks
+  assert.match(html, />50<\/text>/); // nice ticks land on round values
+  assert.match(html, />75<\/text>/);
+  assert.match(html, />100<\/text>/);
+  assert.match(html, /c-keep/); // keep points filled
+  assert.match(html, /c-discard/); // discard points hollow
+});
+
+test("renderer: no trend below two valid points", () => {
+  const html = renderDashboard(
+    sampleState([
+      ["keep", 100],
+      ["noop", null],
+      ["crash", null],
+    ]),
+  );
+  assert.doesNotMatch(html, /<svg/);
+  assert.match(html, /badge noop">no-op/);
 });

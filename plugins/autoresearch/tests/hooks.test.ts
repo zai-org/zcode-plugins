@@ -235,7 +235,7 @@ test("stop-continue blocks while the loop is unfinished, with progress", () => {
   assert.match(out.reason, /baseline=10/);
 });
 
-test("stop-continue reports plateau convergence", () => {
+test("stop-continue allows the stop on plateau convergence (spec: 放行)", () => {
   const cwd = tempCwd();
   const flat: LedgerEntry[] = [cfgLine];
   for (let i = 1; i <= 5; i++)
@@ -248,15 +248,15 @@ test("stop-continue reports plateau convergence", () => {
       description: `flat ${i}`,
     } as LedgerRun);
   seedLedger(cwd, flat);
-  const out = JSON.parse(
+  // plateau → the hook must NOT block; advisory goes to stderr, stdout empty
+  assert.equal(
     runHook(
       "stop-continue.ts",
       cwd,
       JSON.stringify({ hook_event_name: "Stop" }),
     ),
+    "",
   );
-  assert.equal(out.decision, "block");
-  assert.match(out.reason, /平台期/);
 });
 
 test("session-start announces an existing session", () => {
@@ -287,6 +287,42 @@ test("session-start respects autoresearchOff decision", () => {
     ),
     "",
   );
+});
+
+test("session-start respects autoresearchOff set in the project config under workingDir", () => {
+  const project = tempCwd();
+  mkdirSync(join(project, ".auto"), { recursive: true });
+  mkdirSync(join(project, "work", ".auto"), { recursive: true });
+  // the ledger lives in the research dir; the off switch in the project config
+  writeFileSync(
+    join(project, ".auto", "config.json"),
+    JSON.stringify({ workingDir: "work", autoresearchOff: true }),
+  );
+  writeFileSync(
+    join(project, "work", ".auto", "log.jsonl"),
+    JSON.stringify(cfgLine) + "\n",
+  );
+  assert.equal(
+    runHook(
+      "session-start.ts",
+      project,
+      JSON.stringify({ hook_event_name: "SessionStart" }),
+    ),
+    "",
+  );
+  // without the off switch the resume hint comes back
+  writeFileSync(
+    join(project, ".auto", "config.json"),
+    JSON.stringify({ workingDir: "work" }),
+  );
+  const out = JSON.parse(
+    runHook(
+      "session-start.ts",
+      project,
+      JSON.stringify({ hook_event_name: "SessionStart" }),
+    ),
+  );
+  assert.match(out.hookSpecificOutput.additionalContext, /autoresearch 会话/);
 });
 
 test("permission-gate denies experiment tools without a session, allows with one", () => {

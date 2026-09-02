@@ -16,9 +16,17 @@ export function isGitRepo(cwd: string): boolean {
   }
 }
 
+/**
+ * Whether the working tree has real (non-`.auto/`) changes. Session-file
+ * writes (ledger, config) must not count: e.g. the crash-unresolved gate
+ * would otherwise block forever right after logging the crash itself.
+ */
 export function isDirty(cwd: string): boolean {
   try {
-    return git(cwd, ["status", "--porcelain"]).length > 0;
+    return (
+      git(cwd, ["status", "--porcelain", "--", ".", ":(exclude).auto"]).length >
+      0
+    );
   } catch {
     return false;
   }
@@ -29,14 +37,16 @@ export function shortHash(cwd: string): string {
 }
 
 /**
- * Commit all tracked+untracked changes as one experiment.
+ * Commit all tracked+untracked changes as one experiment, excluding the
+ * `.auto/` session dir (ledger noise must not ride along, and a keep with
+ * only session-file changes must hit the "nothing to commit" path).
  * Returns the short hash, or null when there is nothing to commit.
  */
 export function commitExperiment(
   cwd: string,
   { description, result }: { description: string; result: unknown },
 ): string | null {
-  git(cwd, ["add", "-A"]);
+  git(cwd, ["add", "-A", "--", ".", ":(exclude).auto"]);
   // git diff --cached --quiet exits 0 when there are no staged changes.
   const hasStaged = (() => {
     try {
