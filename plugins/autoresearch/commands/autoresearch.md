@@ -1,5 +1,5 @@
 ---
-description: Enter autoresearch mode — continue an existing session from .auto/prompt.md, or set one up from your goal. Usage: /autoresearch:autoresearch <goal or resume context>
+description: Enter autoresearch mode. Resumes from .auto/prompt.md when a session exists, otherwise sets one up from your goal. Usage: /autoresearch:autoresearch <goal or resume context>
 ---
 
 Enter autoresearch mode for this workspace.

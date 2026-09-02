@@ -120,7 +120,7 @@ test("learnings-journal: appends one markdown line per run", () => {
     }),
   );
   const journal = readFileSync(join(cwd, ".auto", "learnings.md"), "utf8");
-  assert.match(journal, /run 1 \[keep\] metric=42 — first/);
+  assert.match(journal, /run 1 \[keep\] metric=42: first/);
 });
 
 test("auto-tag-winners: tags a new best, silent otherwise", () => {

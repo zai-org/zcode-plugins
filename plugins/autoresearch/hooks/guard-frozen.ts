@@ -41,7 +41,7 @@ process.stdout.write(
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
-      permissionDecisionReason: `[autoresearch] ${rel} is frozen — the benchmark metric must not change during the loop. If you really need a new metric, start over: init_experiment with a new target.`,
+      permissionDecisionReason: `[autoresearch] ${rel} is frozen: the benchmark metric must not change during the loop. If you really need a new metric, start over: init_experiment with a new target.`,
     },
   }),
 );

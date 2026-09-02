@@ -2,7 +2,7 @@
 
 [中文文档](./README_CN.md)
 
-An autonomous experiment loop for ZCode: set a fixed, mechanical metric and let the coding agent iterate — modify code → run the benchmark → keep improvements, revert regressions → repeat.
+Let the ZCode coding agent iterate autonomously on a fixed, mechanical metric: modify code → run the benchmark → keep improvements, revert regressions → repeat.
 
 Based on research into [karpathy/autoresearch](https://github.com/karpathy/autoresearch) and [pi-autoresearch](https://github.com/davebcn87/pi-autoresearch) (see `docs/research/autoresearch-survey.md`). Architecture decisions live in `adr/decisions/`.
 
@@ -16,7 +16,7 @@ This plugin executes code and operates on a git repository. Enabling it grants c
 - **Serves a local HTTP dashboard** on 127.0.0.1 via `export_dashboard`;
 - **Writes session state** to `.auto/` files (`log.jsonl`, `config.json`) in the project directory.
 
-No third-party npm dependencies: the MCP server and hooks are Node-stdlib TypeScript scripts (Node ≥24, types stripped natively — no build step).
+No third-party npm dependencies: the MCP server and hooks are Node-stdlib TypeScript scripts (Node ≥24, types stripped natively, no build step).
 
 ## Install
 
@@ -62,11 +62,11 @@ Or let the skill trigger on its own (descriptions containing "autoresearch", "au
 - **Memory injection**: UserPromptSubmit/SessionStart hooks inject an aggregated summary (progress + deduped tried directions + best trajectory + ASI distillation) so progress survives compaction; repeated/oscillating attempts (doom-loop) trigger a hint to switch direction.
 - **Loop continuation**: the Stop hook blocks (`decision:block`) while a loop is unfinished (zcode platform limit: 3 consecutive windows).
 - **Iteration hooks**: `.auto/hooks/before.sh` (pre-benchmark) and `after.sh` (post-record) run on every experiment (fail-open, 30s timeout, stdout → `*_steer`).
-- **Hook ecosystem**: `skills/autoresearch-hooks` tutorial + 6 ready-to-use examples in `hooks/examples/` (anti-thrash, hypothesis reflection, idea rotator, learnings journal, auto-tag winners, macOS notify) — copy to `.auto/hooks/` and go (parsed with Node, no jq dependency).
+- **Hook ecosystem**: `skills/autoresearch-hooks` tutorial + 6 ready-to-use examples in `hooks/examples/` (anti-thrash, hypothesis reflection, idea rotator, learnings journal, auto-tag winners, macOS notify); copy one to `.auto/hooks/` and go (parsed with Node, no jq dependency).
 - **Stop-loss**: after `consecutiveFailures` in a row (default 3, configurable in `.auto/config.json`) the plugin hints you to stop.
 - **Ledger audit**: `log_experiment` validates invariants before writing (keep must be a real improvement, a discarded real improvement must have failed the guard, event ordering, commit field); violations are rejected; a crashed segment that wasn't rolled back blocks continuation. `auditBypass: true` in `.auto/config.json` explicitly skips it (not recommended).
-- **Benchmark drift detection**: `init_experiment` records hashes of measure.sh/checks.sh; `run_experiment` compares — a mid-run benchmark change returns a `benchmark_drift` warning (prevents "faking the metric by editing the benchmark").
-- **Secondary-metric constraints** (opt-in): `log_experiment` supports `constraints: [{name, maxPct}]` — on keep, secondary metrics are checked not to exceed maxPct% of the first run's value, rejected otherwise (prevents reward hacking like "trading memory for speed").
+- **Benchmark drift detection**: `init_experiment` records hashes of measure.sh/checks.sh; `run_experiment` compares them, and a mid-run benchmark change returns a `benchmark_drift` warning (prevents "faking the metric by editing the benchmark").
+- **Secondary-metric constraints** (opt-in): `log_experiment` supports `constraints: [{name, maxPct}]`. On keep, secondary metrics must stay within maxPct% of the first run's value; anything beyond rejects the keep (prevents reward hacking like "trading memory for speed").
 
 ## Directory structure
 
@@ -112,7 +112,7 @@ Setting `"workingDir": "work/"` in `.auto/config.json` separates the research di
 
 - **No session-injection API**: no overnight unattended runs; rely on the 3-window Stop-hook allowance plus user re-triggering to continue.
 - **Headless mode (`--prompt`) does not run hooks**: guardrails take effect in interactive sessions; run autoresearch in an interactive session.
-- `git add -A` commits unrelated dirty files together (known pi inheritance) — commit a clean baseline during setup.
+- `git add -A` commits unrelated dirty files together (known pi inheritance); commit a clean baseline during setup.
 
 ## Development
 

@@ -13,6 +13,6 @@ const path = require('path');
 const run = p.run_entry;
 const journal = `${p.cwd}/.auto/learnings.md`;
 fs.mkdirSync(path.dirname(journal), { recursive: true });
-const line = `- run ${run.run} [${run.status}] metric=${run.metric ?? '—'} — ${run.description ?? ''}`;
+const line = `- run ${run.run} [${run.status}] metric=${run.metric ?? '—'}: ${run.description ?? ''}`;
 fs.appendFileSync(journal, line + '\n');
 NODE

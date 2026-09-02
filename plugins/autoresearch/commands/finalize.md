@@ -1,5 +1,5 @@
 ---
-description: Finalize the autoresearch session — split kept experiments into clean topic branches you can PR. Usage: /autoresearch:finalize
+description: Split kept experiments into clean topic branches you can PR. Usage: /autoresearch:finalize
 ---
 
 Finalize the experiment session into clean, PR-able topic branches.

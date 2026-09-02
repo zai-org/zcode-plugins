@@ -1,5 +1,5 @@
 ---
-description: Turn off autoresearch auto-resume hints — keep the session but stop being prompted to continue. Resume anytime with /autoresearch:autoresearch. Usage: /autoresearch:off
+description: Stop the auto-resume hints while keeping the session. Resume anytime with /autoresearch:autoresearch. Usage: /autoresearch:off
 ---
 
 Pause autoresearch without wiping the session.

@@ -567,7 +567,7 @@ async function toolInitExperiment(
   if (!isGitRepo(cwd)) {
     return {
       ok: false,
-      error: `research directory is not a git repository — the experiment loop needs git commit/rollback semantics. Run git init there (or point .auto/config.json workingDir at a repo) first.`,
+      error: `research directory is not a git repository; the experiment loop needs git commit/rollback semantics. Run git init there (or point .auto/config.json workingDir at a repo) first.`,
     };
   }
   const state = sessionState();
@@ -614,13 +614,13 @@ async function toolRunExperiment(
   if (lastRun && lastRun.status === "crash" && isDirty(cwd)) {
     return {
       ok: false,
-      error: `audit: last run was ${lastRun.status} with unrolled-back working-tree changes — revert first (or /autoresearch:clear) before starting a new experiment`,
+      error: `audit: last run was ${lastRun.status} with unrolled-back working-tree changes; revert first (or /autoresearch:clear) before starting a new experiment`,
     };
   }
   // Benchmark drift: frozen files changed since the session baseline.
   const drift = checkBenchmarkDrift();
   const driftWarn = drift.drift
-    ? `benchmark_drift: ${drift.reason === "measure" ? "measure.sh" : "checks.sh"} ${drift.deleted ? "was deleted" : "changed"} since session start — metrics are no longer comparable. Start a new segment (init_experiment) or confirm the change.`
+    ? `benchmark_drift: ${drift.reason === "measure" ? "measure.sh" : "checks.sh"} ${drift.deleted ? "was deleted" : "changed"} since session start, so metrics are no longer comparable. Start a new segment (init_experiment) or confirm the change.`
     : null;
   const rawCommand = String(args.command ?? "");
   if (!rawCommand.trim()) return { ok: false, error: "command is required" };
@@ -631,7 +631,7 @@ async function toolRunExperiment(
     if (!unwrapped) {
       return {
         ok: false,
-        error: `.auto/measure.sh exists — run_experiment only executes the benchmark script (e.g. "bash .auto/measure.sh"). The command you gave is not the benchmark script.`,
+        error: `.auto/measure.sh exists; run_experiment only executes the benchmark script (e.g. "bash .auto/measure.sh"). The command you gave is not the benchmark script.`,
       };
     }
   }
@@ -747,7 +747,7 @@ async function toolLogExperiment(
   if (!state.config) {
     return {
       ok: false,
-      error: "no active experiment session — call init_experiment first",
+      error: "no active experiment session; call init_experiment first",
     };
   }
   const status = String(args.status ?? "keep");
@@ -775,7 +775,7 @@ async function toolLogExperiment(
     return {
       ok: false,
       error:
-        "the previous run failed correctness checks — you cannot keep it. use status=checks_failed or discard.",
+        "the previous run failed correctness checks, so you cannot keep it. use status=checks_failed or discard.",
     };
   }
   // keep gate: metric must be present.
@@ -842,9 +842,9 @@ async function toolLogExperiment(
         v.code === "keep_without_improvement"
           ? "use status=discard (or checks_failed) instead of keep for a non-improving metric"
           : v.code === "discarded_improvement"
-            ? "this metric beats the retained value — only status=checks_failed may discard it"
+            ? "this metric beats the retained value; only status=checks_failed may discard it"
             : v.code === "event_order"
-              ? "run numbering/segment is inconsistent — consider /autoresearch:clear"
+              ? "run numbering/segment is inconsistent; consider /autoresearch:clear"
               : v.code === "commit_field"
                 ? "keep rows need a commit, non-keep rows must not have one"
                 : "see message";
@@ -868,7 +868,7 @@ async function toolLogExperiment(
       return {
         ok: false,
         error:
-          "audit: keep with no changes to commit — there is nothing to retain. Make a real change first, or use status=noop.",
+          "audit: keep with no changes to commit; there is nothing to retain. Make a real change first, or use status=noop.",
       };
     }
   } else if (status !== "noop") {
@@ -934,13 +934,13 @@ async function toolLogExperiment(
     next_action_hint:
       nextState.runs.length >=
       (nextState.maxIterations ?? DEFAULT_MAX_ITERATIONS)
-        ? "iteration cap reached — run init_experiment for a new segment, or /autoresearch off"
+        ? "iteration cap reached; run init_experiment for a new segment, or /autoresearch off"
         : detectDoomLoop(nextState.runs)
-          ? "doom loop detected (repeated/oscillating hypotheses) — stop repeating, try a structurally different direction"
+          ? "doom loop detected (repeated/oscillating hypotheses); stop repeating and try a structurally different direction"
           : nextState.consecutiveFailures >= nextState.failureThreshold
-            ? `consecutive failures reached (${nextState.consecutiveFailures}/${nextState.failureThreshold}) — consider a different approach or stopping`
+            ? `consecutive failures reached (${nextState.consecutiveFailures}/${nextState.failureThreshold}); consider a different approach or stopping`
             : nextState.plateau
-              ? `plateau detected (last 5 runs improved < 1%) — consider rerunning with repeat:3 to confirm, opening a new segment, or stopping`
+              ? `plateau detected (last 5 runs improved < 1%); consider rerunning with repeat:3 to confirm, opening a new segment, or stopping`
               : "pick the next hypothesis and run_experiment again",
   };
 }
@@ -1042,7 +1042,7 @@ const TOOLS = [
         metric: {
           type: "number",
           description:
-            "primary metric value from run_experiment (omit for crash — the ledger row records null)",
+            "primary metric value from run_experiment (omit for crash; the ledger row records null)",
         },
         description: {
           type: "string",
@@ -1052,12 +1052,12 @@ const TOOLS = [
         constraints: {
           type: "array",
           description:
-            'optional hard limits on secondary metrics when keeping, e.g. [{name: "memory_mb", maxPct: 105}] — keep is rejected if the secondary metric exceeds maxPct% of the first run\'s value',
+            'optional hard limits on secondary metrics when keeping, e.g. [{name: "memory_mb", maxPct: 105}]. Keep is rejected if the secondary metric exceeds maxPct% of the first run\'s value',
         },
         asi: {
           type: "object",
           description:
-            "Actionable Side Information — survives revert, e.g. {hypothesis, next_action_hint, rollback}",
+            "Actionable Side Information that survives revert, e.g. {hypothesis, next_action_hint, rollback}",
         },
         commit: {
           type: "string",

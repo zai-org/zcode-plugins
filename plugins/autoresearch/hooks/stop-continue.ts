@@ -69,7 +69,7 @@ if (state.plateau) {
     `direction=${dir}，baseline=${state.baseline ?? "—"}，best=${state.best ?? "—"}。` +
     `最近记录：\n${tail}\n` +
     (detectDoomLoop(state.runs)
-      ? `⚠️ 检测到重复/震荡尝试——停止重复同一假设，换一个结构性不同的方向。\n`
+      ? `⚠️ 检测到重复/震荡尝试：请停止重复同一假设，换一个结构性不同的方向。\n`
       : "") +
     `请继续下一个假设：修改代码 → run_experiment → log_experiment（keep/discard）。`;
 

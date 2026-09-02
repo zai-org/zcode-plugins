@@ -6,7 +6,7 @@ Turn a vague goal into a loopable experiment. Do this once per target.
 
 The metric must be:
 
-- **Mechanical**: extracted by the tool from `METRIC name=value` lines — no human judgment.
+- **Mechanical**: extracted by the tool from `METRIC name=value` lines; no human judgment.
 - **Stable**: deterministic inputs, low variance. If noisy, run 3× and use the median.
 - **Directional**: lower or higher is strictly better.
 
@@ -24,7 +24,7 @@ ms=$(( (end - start) / 1000000 ))
 echo "METRIC time_ms=$ms"
 ```
 
-`run_experiment` will refuse to run anything else while this file exists — treat it as frozen.
+`run_experiment` will refuse to run anything else while this file exists, so treat it as frozen.
 
 ## 3. Create `.auto/checks.sh` (optional but recommended)
 
@@ -59,10 +59,10 @@ src/**, .auto/prompt.md
 
 # What's Been Tried
 
-(baseline) no change — 42ms
+(baseline) no change, 42ms
 ```
 
-Update **What's Been Tried** after every experiment — it is your loop memory along with the ledger.
+Update **What's Been Tried** after every experiment; it is your loop memory along with the ledger.
 
 ## 4b. Define secondary-metric constraints (optional)
 
@@ -72,11 +72,11 @@ If optimizing a primary metric must not come at the cost of another dimension (m
 { "constraints": [{ "name": "memory_mb", "maxPct": 105 }] }
 ```
 
-A keep is rejected if `memory_mb` exceeds 105% of the first run's value — "faster but much heavier" is not a valid keep unless you widen the constraint. Without `constraints`, no secondary check runs.
+A keep is rejected if `memory_mb` exceeds 105% of the first run's value; "faster but much heavier" is not a valid keep unless you widen the constraint. Without `constraints`, no secondary check runs.
 
 ## 5. Keep session state out of git
 
-`.auto/` and `autoresearch-dashboard.html` are session state, not code — they must never be committed (`git add -A` in `log_experiment` would otherwise drag the ledger into every experiment commit). Add to your `.gitignore`:
+`.auto/` and `autoresearch-dashboard.html` are session state, not code, and must never be committed (`git add -A` in `log_experiment` would otherwise drag the ledger into every experiment commit). Add to your `.gitignore`:
 
 ```gitignore
 .auto/

@@ -1,9 +1,9 @@
 {
   "name": "autoresearch",
-  "description": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate — measure, keep what works, revert what doesn't, repeat. Provides init/run/log experiment tools (MCP), a loop protocol skill, guardrails (frozen benchmark, checks backpressure, memory injection, Stop continuation), and static + live dashboards.",
+  "description": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate. It measures, keeps what works, reverts what doesn't, and repeats. Provides init/run/log experiment tools (MCP), a loop protocol skill, guardrails (frozen benchmark, checks backpressure, memory injection, Stop continuation), and static + live dashboards.",
   "description_i18n": {
-    "en": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate — measure, keep what works, revert what doesn't, repeat.",
-    "zh-CN": "ZCode 自主实验循环：设定目标与机械度量，让 agent 迭代——测量、保留有效改动、回滚无效改动、循环往复。"
+    "en": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate. It measures, keeps what works, reverts what doesn't, and repeats.",
+    "zh-CN": "ZCode 自主实验循环：设定目标与机械度量，让 agent 迭代。每一轮测量、保留有效改动、回滚无效改动，如此往复。"
   },
   "version": "0.1.0",
   "author": {

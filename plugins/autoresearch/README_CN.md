@@ -20,7 +20,7 @@
 
 启用本插件即授予代码执行信任（官方市场约定）。插件会：
 
-- **执行命令**：`run_experiment` 运行你编写的基准脚本（`.auto/measure.sh`），以及存在时的正确性门禁（`.auto/checks.sh`）；
+- **执行命令**：`run_experiment` 运行你编写的基准脚本 `.auto/measure.sh`，以及存在时的正确性门禁 `.auto/checks.sh`；
 - **自动执行 git 操作**：keep 时自动 `git commit`，非 keep 时自动回滚（`.auto/` 豁免回滚）；
 - **安装 ZCode hooks**：Stop（循环续跑）、PreToolUse（冻结文件写保护）、PermissionRequest（实验工具门禁）、UserPromptSubmit/SessionStart（账本记忆注入）；
 - **启动本地 HTTP dashboard**：`export_dashboard` 监听 127.0.0.1；
@@ -65,8 +65,8 @@
 - **钩子生态**：`skills/autoresearch-hooks` 教学 + `hooks/examples/` 6 个现成示例（防重复失败/换思路/假设反思/学习日志/通知/最优打标），复制到 `.auto/hooks/` 即用（node 解析，无 jq 依赖）。
 - **止损**：连续失败达 `.auto/config.json` 的 `consecutiveFailures`（默认 3，可配）时提示停止。
 - **账本审计**：`log_experiment` 写入前校验不变量（keep 必须真实改进、discard 真改进须 failed guard、事件顺序、commit 字段），违规拒收；crash 未回滚禁止续跑。`.auto/config.json` 的 `auditBypass: true` 可显式跳过（不推荐）。
-- **基准漂移检测**：`init_experiment` 记录 measure.sh/checks.sh 哈希，`run_experiment` 比对——基准中途变更时返回 `benchmark_drift` 警告（防"改基准造假 metric"）。
-- **次级度量约束**（opt-in）：`log_experiment` 支持 `constraints: [{name, maxPct}]`——keep 时校验次级度量不超首轮值的 maxPct%，超界拒收（防"用内存换速度"类 reward hacking）。
+- **基准漂移检测**：`init_experiment` 记录 measure.sh/checks.sh 哈希，`run_experiment` 比对；基准中途变更时返回 `benchmark_drift` 警告（防"改基准造假 metric"）。
+- **次级度量约束**（opt-in）：`log_experiment` 支持 `constraints: [{name, maxPct}]`。keep 时校验次级度量不超首轮值的 maxPct%，超界拒收（防"用内存换速度"类 reward hacking）。
 
 ## 目录结构
 
@@ -112,7 +112,7 @@ plugin/
 
 - **无会话注入 API**：无过夜无人值守；靠 Stop hook 3 次窗口 + 用户再触发续跑。
 - **无头模式（`--prompt`）不执行 hooks**：护栏在交互式会话生效；请用交互式会话跑 autoresearch。
-- `git add -A` 会把无关脏文件一起 commit（继承 pi 的已知弱点）——setup 时先提交干净基线。
+- `git add -A` 会把无关脏文件一起 commit（继承 pi 的已知弱点）；setup 时先提交干净基线。
 
 ## 开发
 
