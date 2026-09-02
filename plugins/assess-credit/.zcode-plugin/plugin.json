@@ -1,0 +1,68 @@
+{
+  "name": "assess-credit",
+  "displayName": "固收研究",
+  "displayName_i18n": {
+    "en": "Fixed Income & Credit",
+    "zh-CN": "固收研究"
+  },
+  "version": "0.1.2",
+  "description": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
+  "description_i18n": {
+    "en": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
+    "zh-CN": "【二级市场】固收研究:债券档案与估值、发行主体信用、收益率曲线与信用利差、信用风险跟踪"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "requiresPaidPlan": true,
+  "keywords": [
+    "fixed-income",
+    "credit-research",
+    "bonds",
+    "yield-curve",
+    "credit-spread"
+  ],
+  "mcpServers": {
+    "hexin-bond": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_bond",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-bond": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_bond",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-economic": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_economic",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "tianyancha": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_tianyancha",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-docs": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_docs",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

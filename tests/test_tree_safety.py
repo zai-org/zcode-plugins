@@ -1,7 +1,9 @@
 """The publish job packages plugin trees on an internal machine and uploads the
-result to a public CDN. These tests pin the two properties that keep that from
+result to a public CDN. These tests pin the properties that keep that from
 becoming a file-disclosure primitive: symlinks are refused (not followed, not
-silently skipped) and plugin sources cannot point outside plugins/.
+silently skipped) and plugin sources cannot point outside plugins/. They also
+pin that interpreter bytecode stays out of the artifact, so a build is
+reproducible whether or not the tree was executed first.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import os
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 
@@ -71,10 +74,90 @@ class SymlinkRefusalTest(unittest.TestCase):
             build_dist.regular_files(link)
 
 
+class BytecodeExclusionTest(unittest.TestCase):
+    """Vendored plugin trees arrive with __pycache__ from whoever ran them.
+
+    git ignores it, but the packager walks the filesystem — so without this
+    exclusion the same plugin version builds to different bytes depending on
+    whether anything executed first, and publish_incremental.py refuses an
+    already-published version whose bytes changed.
+    """
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="bytecode-safety-"))
+        self.plugin = self.root / "my-plugin"
+        scripts = self.plugin / "skills" / "shared" / "scripts"
+        cache = scripts / "__pycache__"
+        cache.mkdir(parents=True)
+        (self.plugin / ".zcode-plugin").mkdir()
+        (self.plugin / ".zcode-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
+        (scripts / "recalc.py").write_text("x = 1\n", encoding="utf-8")
+        (cache / "recalc.cpython-311.pyc").write_bytes(b"\x00\x0f\x0d\x0a")
+        (scripts / "stray.pyc").write_bytes(b"\x00")
+        (scripts / "stray.pyo").write_bytes(b"\x00")
+
+    def test_bytecode_is_not_packaged(self) -> None:
+        packaged = build_dist.regular_files(self.plugin)
+        names = {p.relative_to(self.plugin).as_posix() for p in packaged}
+
+        self.assertIn("skills/shared/scripts/recalc.py", names)
+        self.assertIn(".zcode-plugin/plugin.json", names)
+        for excluded in (
+            "skills/shared/scripts/__pycache__/recalc.cpython-311.pyc",
+            "skills/shared/scripts/stray.pyc",
+            "skills/shared/scripts/stray.pyo",
+        ):
+            self.assertNotIn(excluded, names)
+
+        out = self.root / "plugin.zip"
+        build_dist.build_zip(self.plugin, out)
+        with zipfile.ZipFile(out) as archive:
+            entries = archive.namelist()
+        self.assertEqual([e for e in entries if ".pyc" in e or ".pyo" in e], [])
+        self.assertIn("my-plugin/skills/shared/scripts/recalc.py", entries)
+
+    def test_symlink_inside_pycache_is_still_refused(self) -> None:
+        """The exclusion must not become a blind spot: the walk still visits
+        __pycache__, so a symlink parked there is refused, not skipped."""
+        secret = self.root / "outside-secret.txt"
+        secret.write_text("AKIA-not-for-the-cdn", encoding="utf-8")
+        cache = self.plugin / "skills" / "shared" / "scripts" / "__pycache__"
+        os.symlink(secret, cache / "leak.pyc")
+
+        with self.assertRaises(build_dist.UnsafeTree):
+            build_dist.regular_files(self.plugin)
+        with self.assertRaises(build_dist.UnsafeTree):
+            build_dist.build_zip(self.plugin, self.root / "plugin.zip")
+
+    def test_build_is_reproducible_across_a_bytecode_change(self) -> None:
+        first = self.root / "a.zip"
+        build_dist.build_zip(self.plugin, first)
+        digest = build_dist.sha256_of(first)
+
+        cache = self.plugin / "skills" / "shared" / "scripts" / "__pycache__"
+        (cache / "recalc.cpython-311.pyc").write_bytes(b"\x00\x0f\x0d\x0a" * 64)
+        (cache / "extra.cpython-312.pyc").write_bytes(b"\x99")
+
+        second = self.root / "b.zip"
+        build_dist.build_zip(self.plugin, second)
+        self.assertEqual(digest, build_dist.sha256_of(second))
+
+
 class RepositoryTreeTest(unittest.TestCase):
     def test_current_repository_has_no_symlinks_in_published_trees(self) -> None:
         for name in ("plugins", "assets"):
             self.assertEqual(validate.tree_violations(ROOT / name, name), [])
+
+    def test_no_plugin_artifact_would_ship_bytecode(self) -> None:
+        for plugin in sorted((ROOT / "plugins").iterdir()):
+            if not plugin.is_dir():
+                continue
+            with self.subTest(plugin=plugin.name):
+                packaged = build_dist.regular_files(plugin)
+                self.assertEqual(
+                    [p.name for p in packaged if p.suffix in build_dist.BYTECODE_SUFFIXES],
+                    [],
+                )
 
     def test_github_workflows_pin_read_only_token(self) -> None:
         for wf in ("validate.yml", "pr-title.yml", "publish.yml"):

@@ -1,0 +1,92 @@
+{
+  "name": "write-research",
+  "displayName": "权益研究",
+  "displayName_i18n": {
+    "en": "Equity Research",
+    "zh-CN": "权益研究"
+  },
+  "version": "0.1.1",
+  "description": "End-to-end investment research reports, sector analysis, earnings updates, and valuation models",
+  "description_i18n": {
+    "en": "End-to-end investment research reports, sector analysis, earnings updates, and valuation models",
+    "zh-CN": "【二级市场】研究产出:深度研报、行业分析、财报点评、DCF/LBO/三表估值模型"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "requiresPaidPlan": true,
+  "keywords": [
+    "equity-research",
+    "valuation",
+    "dcf",
+    "lbo",
+    "earnings"
+  ],
+  "mcpServers": {
+    "sec-search": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_sec_search",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "hexin-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "hexin-global-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_global_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "hexin-index": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_index",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "finance-search": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_search",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-economic": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_economic",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-docs": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_docs",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

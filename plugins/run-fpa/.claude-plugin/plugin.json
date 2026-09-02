@@ -1,0 +1,13 @@
+{
+  "name": "run-fpa",
+  "displayName": "经营分析",
+  "version": "0.1.1",
+  "description": "Corporate finance and FP&A: 管理口径 multi-dimensional management reporting off a closed ledger, rolling cash-flow forecasts, budget-versus-actual variance analysis, scenario and break-even analysis off a named base case, incremental business-case support for investment and cost decisions, and peer benchmarking against listed comparables",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Corporate finance and FP&A: 管理口径 multi-dimensional management reporting off a closed ledger, rolling cash-flow forecasts, budget-versus-actual variance analysis, scenario and break-even analysis off a named base case, incremental business-case support for investment and cost decisions, and peer benchmarking against listed comparables",
+    "zh-CN": "【企业财务】财务部与FP&A:管理报表、13周滚动现金流预测、预算差异分析、情景与盈亏平衡、投入决策测算、上市同业对标"
+  }
+}

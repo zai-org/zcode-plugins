@@ -1,0 +1,52 @@
+{
+  "name": "vet-companies",
+  "displayName": "企业尽调",
+  "displayName_i18n": {
+    "en": "Company Due Diligence",
+    "zh-CN": "企业尽调"
+  },
+  "version": "0.1.2",
+  "description": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
+  "description_i18n": {
+    "en": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
+    "zh-CN": "【一级市场与银行】企业排查:尽调报告、关联方与供应链图谱、失信涉诉质押风险快扫"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "requiresPaidPlan": true,
+  "keywords": [
+    "due-diligence",
+    "kyc",
+    "risk-screening",
+    "related-parties",
+    "counterparty"
+  ],
+  "mcpServers": {
+    "tianyancha": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_tianyancha",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "hexin-bond": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_bond",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-docs": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_docs",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

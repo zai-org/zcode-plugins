@@ -1,0 +1,68 @@
+{
+  "name": "watch-positions",
+  "displayName": "持仓跟踪",
+  "displayName_i18n": {
+    "en": "Position Monitoring",
+    "zh-CN": "持仓跟踪"
+  },
+  "version": "0.1.1",
+  "description": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+  "description_i18n": {
+    "en": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+    "zh-CN": "【二级市场】持仓跟踪:自选股清单、带异动归因的盘后复盘、持仓事件分级提醒"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "requiresPaidPlan": true,
+  "keywords": [
+    "portfolio-monitoring",
+    "watchlist",
+    "market-recap",
+    "event-alerts",
+    "attribution"
+  ],
+  "mcpServers": {
+    "hexin-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "hexin-index": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_index",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "finance-search": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_search",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-docs": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_docs",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

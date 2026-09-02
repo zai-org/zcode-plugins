@@ -1,0 +1,13 @@
+{
+  "name": "read-macro",
+  "displayName": "宏观策略",
+  "version": "0.1.1",
+  "description": "Top-down macro and strategy work: macro dashboards across growth/inflation/liquidity/credit, index valuation percentiles and earnings attribution, cross-asset allocation views, and policy and industrial-plan tracking",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Top-down macro and strategy work: macro dashboards across growth/inflation/liquidity/credit, index valuation percentiles and earnings attribution, cross-asset allocation views, and policy and industrial-plan tracking",
+    "zh-CN": "【二级市场】自上而下:宏观仪表盘、指数估值分位与盈利归因、大类资产配置观点、政策与产业规划跟踪"
+  }
+}

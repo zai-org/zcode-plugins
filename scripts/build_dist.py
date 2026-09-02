@@ -64,11 +64,29 @@ class UnsafeTree(RuntimeError):
     """A packaged tree contains something that must never reach the CDN."""
 
 
+# Interpreter bytecode is an artifact of whatever machine last executed the
+# code, not plugin content: it is gitignored, its bytes embed the source path
+# and mtime, and packaging it makes a published zip's sha256 depend on whether
+# anyone happened to run the tests before the build — which
+# publish_incremental.py treats as a changed artifact and refuses.
+BYTECODE_DIR = "__pycache__"
+BYTECODE_SUFFIXES = frozenset({".pyc", ".pyo"})
+
+
+def is_bytecode(path: Path, root: Path) -> bool:
+    rel = path.relative_to(root)
+    return BYTECODE_DIR in rel.parts or path.suffix in BYTECODE_SUFFIXES
+
+
 def regular_files(root: Path) -> list[Path]:
     """Every regular file under *root*, refusing symlinks anywhere in the tree.
 
     validate.py rejects these first; this is the fail-closed backstop for the
     publish job itself, which runs with credentials on an internal machine.
+
+    Bytecode is dropped from the result rather than skipped during the walk:
+    the walk must still visit __pycache__ so a symlink hidden in there is
+    refused instead of silently excluded.
     """
     if root.is_symlink():
         raise UnsafeTree(f"{root} is a symlink")
@@ -77,7 +95,7 @@ def regular_files(root: Path) -> list[Path]:
         if path.is_symlink():
             rel = path.relative_to(root).as_posix()
             raise UnsafeTree(f"refusing to package symlink {rel} in {root.name}")
-        if path.is_file():
+        if path.is_file() and not is_bytecode(path, root):
             out.append(path)
     return out
 

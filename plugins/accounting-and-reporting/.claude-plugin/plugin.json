@@ -1,0 +1,13 @@
+{
+  "name": "accounting-and-reporting",
+  "displayName": "核算与报告",
+  "version": "0.1.1",
+  "description": "Accounting close and statutory reporting off the company's own ledger: month-end close checks with blockers and missing accruals, ledger reconciliation down to transaction-level root cause, account mapping and reclassification for multi-book consolidation, 法定口径 financial statements and note working papers delivered as a draft pending review, and three-statement consistency checking of a set someone else prepared",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Accounting close and statutory reporting off the company's own ledger: month-end close checks with blockers and missing accruals, ledger reconciliation down to transaction-level root cause, account mapping and reclassification for multi-book consolidation, 法定口径 financial statements and note working papers delivered as a draft pending review, and three-statement consistency checking of a set someone else prepared",
+    "zh-CN": "【企业财务】核算与报告:月结关账检查与阻断项、总账与明细账勾稽及交易级差异归因、科目映射与重分类、内部管理报表编制、三表勾稽复核"
+  }
+}

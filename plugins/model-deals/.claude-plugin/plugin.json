@@ -1,0 +1,13 @@
+{
+  "name": "model-deals",
+  "displayName": "交易测算",
+  "version": "0.1.1",
+  "description": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+    "zh-CN": "【一级市场与银行】交易测算:并购增厚/摊薄、资金来源与用途及形式资本结构、可比交易、募投与摊薄"
+  }
+}

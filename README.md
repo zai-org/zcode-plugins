@@ -22,6 +22,27 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
 | [**example-plugin**](./plugins/example-plugin) | `template` | Template demonstrating the recommended plugin structure. Copy it to start a new plugin. |
 
+### Finance plugins
+
+Ten `finance` plugins covering the sell side, the buy side, corporate banking, and the
+corporate finance function. Each pairs one routing agent with domain skills and, except
+`accounting-and-reporting`, remote market-data MCP servers that authenticate through the
+ZCode host — no data-vendor account to configure. All of them require a paid plan except
+`accounting-and-reporting`, which works off your own ledger.
+
+| Plugin | Focus | What it does |
+| --- | --- | --- |
+| [**write-research**](./plugins/write-research) | Equity research | Earnings work, sector and thematic reports, comps, DCF / LBO / three-statement models, morning notes, integrated reports. |
+| [**read-macro**](./plugins/read-macro) | Macro & strategy | Macro state dashboard, index valuation percentiles, cross-asset views, policy and industrial-plan tracking. |
+| [**assess-credit**](./plugins/assess-credit) | Fixed income & credit | Bond profiles with valuation and risk metrics, issuer credit assessment, curve and spread analysis, credit watchlists. |
+| [**pick-funds**](./plugins/pick-funds) | Fund research | Multi-criteria fund screening, fund and manager profiles, holdings and style analysis, shortlist monitoring. |
+| [**watch-positions**](./plugins/watch-positions) | Position monitoring | Persistent watchlists, after-close recaps with move attribution, event alerts, intraday view. |
+| [**model-deals**](./plugins/model-deals) | Deal modeling | Accretion/dilution, sources and uses with pro-forma capital structure, precedent transactions, capital-raise dilution. |
+| [**vet-companies**](./plugins/vet-companies) | Company due diligence | Structured DD reports, related-party and supply-chain mapping, risk-record screens. |
+| [**find-clients**](./plugins/find-clients) | Corporate client acquisition | Prospect screening, park and cluster maps, business-opportunity signals, client portraits. |
+| [**run-fpa**](./plugins/run-fpa) | Corporate FP&A | Management reporting, rolling cash and P&L forecasts, budget variance attribution, scenarios, peer benchmarking. |
+| [**accounting-and-reporting**](./plugins/accounting-and-reporting) | Accounting & reporting | Month-end close review, ledger reconciliation to root cause, account mapping, statutory statements, three-statement tie-out. |
+
 ## Marketplace categories
 
 The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery consistent:
@@ -31,7 +52,7 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 | `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github` |
 | `productivity` | Planning, knowledge work, and personal workflow automation | `video2code` |
 | `utilities` | General-purpose helpers that do not fit another category | — |
-| `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | — |
+| `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
 | `guides` | Documentation, learning, and reference-only plugins | — |
 | `template` | Starter plugins and examples intended to be copied | `example-plugin` |
 | `other` | A plugin that does not fit the categories above | — |

@@ -1,0 +1,60 @@
+{
+  "name": "model-deals",
+  "displayName": "交易测算",
+  "displayName_i18n": {
+    "en": "Deal Modeling",
+    "zh-CN": "交易测算"
+  },
+  "version": "0.1.1",
+  "description": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+  "description_i18n": {
+    "en": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+    "zh-CN": "【一级市场与银行】交易测算:并购增厚/摊薄、资金来源与用途及形式资本结构、可比交易、募投与摊薄"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "requiresPaidPlan": true,
+  "keywords": [
+    "m-and-a",
+    "deal-modeling",
+    "accretion-dilution",
+    "ipo",
+    "capital-structure"
+  ],
+  "mcpServers": {
+    "hexin-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_hexin_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "finance-search": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_search",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-stock": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_stock",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    },
+    "wind-docs": {
+      "type": "http",
+      "url": "${ZCODE_BASE_URL}/api/v1/mcp/server/finance_wind_docs",
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

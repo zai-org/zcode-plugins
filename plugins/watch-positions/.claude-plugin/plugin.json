@@ -1,0 +1,13 @@
+{
+  "name": "watch-positions",
+  "displayName": "持仓跟踪",
+  "version": "0.1.1",
+  "description": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+    "zh-CN": "【二级市场】持仓跟踪:自选股清单、带异动归因的盘后复盘、持仓事件分级提醒"
+  }
+}

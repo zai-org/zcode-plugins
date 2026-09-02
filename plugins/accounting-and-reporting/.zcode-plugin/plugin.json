@@ -1,0 +1,25 @@
+{
+  "name": "accounting-and-reporting",
+  "displayName": "核算与报告",
+  "displayName_i18n": {
+    "en": "Accounting & Reporting",
+    "zh-CN": "核算与报告"
+  },
+  "version": "0.1.1",
+  "description": "Accounting close and statutory reporting off the company's own ledger: month-end close checks, ledger reconciliation to transaction-level root cause, account mapping for consolidation, and statutory statements delivered as review-ready drafts",
+  "description_i18n": {
+    "en": "Accounting close and statutory reporting off the company's own ledger: month-end close checks, ledger reconciliation to transaction-level root cause, account mapping for consolidation, and statutory statements delivered as review-ready drafts",
+    "zh-CN": "【企业财务】核算与报告:月结关账检查与阻断项、总账与明细账勾稽及交易级差异归因、科目映射与重分类、内部管理报表编制、三表勾稽复核"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "keywords": [
+    "accounting",
+    "month-end-close",
+    "reconciliation",
+    "statutory-reporting",
+    "consolidation"
+  ]
+}

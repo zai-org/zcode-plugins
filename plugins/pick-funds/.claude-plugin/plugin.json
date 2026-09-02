@@ -1,0 +1,13 @@
+{
+  "name": "pick-funds",
+  "displayName": "基金研究",
+  "version": "0.1.1",
+  "description": "Fund and fund-manager research: multi-criteria fund screening, fund and manager profiles, holdings and style analysis, and shortlist comparisons for funds, ETFs, and LOFs",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Fund and fund-manager research: multi-criteria fund screening, fund and manager profiles, holdings and style analysis, and shortlist comparisons for funds, ETFs, and LOFs",
+    "zh-CN": "【二级市场】基金选品:多条件筛选、基金与经理画像、持仓风格与重合度分析"
+  }
+}

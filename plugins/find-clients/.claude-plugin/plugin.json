@@ -1,0 +1,13 @@
+{
+  "name": "find-clients",
+  "displayName": "对公获客",
+  "version": "0.1.2",
+  "description": "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk",
+  "author": {
+    "name": "Z.ai"
+  },
+  "description_i18n": {
+    "en": "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk",
+    "zh-CN": "【一级市场与银行】对公营销:按区域/产业链/园区筛选目标客户、园区与集群扫描、商机线索、客户全景画像"
+  }
+}

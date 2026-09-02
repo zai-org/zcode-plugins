@@ -22,25 +22,3 @@ jobs:
         run: python scripts/build_dist.py
       - name: Test distribution contract
         run: python -m unittest discover -s tests
-
-  mimosa-cross-platform-runtime:
-    name: Mimosa runtime (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    steps:
-      - name: Keep signed payload bytes LF-normalized on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Verify signed payload, runtime scan, and pre-write hook
-        run: python -m unittest discover -s tests -p "test_mimosa_plugin.py"

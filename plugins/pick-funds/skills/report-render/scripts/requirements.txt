@@ -1,0 +1,14 @@
+# fin_report dependencies.
+#
+# reportlab   PDF construction
+# matplotlib  charts
+# pypdf       font-resource and link-annotation inspection (verify)
+# pypdfium2   page rasterisation for ink and blank-page checks (verify)
+# pillow      image measurement (pulled in by pypdfium2's to_pil)
+# fonttools   instantiating and repairing static font weights
+reportlab>=4.0
+matplotlib>=3.7
+pypdf>=4.0
+pypdfium2>=4.0
+pillow>=10.0
+fonttools>=4.40

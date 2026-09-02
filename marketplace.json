@@ -106,7 +106,7 @@
         "codespaces"
       ]
     },
-     {
+    {
       "name": "video-agent-kit",
       "source": "./plugins/video-agent-kit",
       "requiresPaidPlan": true,
@@ -166,7 +166,303 @@
         "name": "luochang212"
       },
       "category": "developer-tools",
-      "keywords": ["autoresearch", "experiment", "optimization", "loop", "benchmark", "mcp"]
+      "keywords": [
+        "autoresearch",
+        "experiment",
+        "optimization",
+        "loop",
+        "benchmark",
+        "mcp"
+      ]
+    },
+    {
+      "name": "accounting-and-reporting",
+      "source": "./plugins/accounting-and-reporting",
+      "displayName": "核算与报告",
+      "displayName_i18n": {
+        "en": "Accounting & Reporting",
+        "zh-CN": "核算与报告"
+      },
+      "description": "Accounting close and statutory reporting off the company's own ledger: month-end close checks, ledger reconciliation to transaction-level root cause, account mapping for consolidation, and statutory statements delivered as review-ready drafts",
+      "description_i18n": {
+        "en": "Accounting close and statutory reporting off the company's own ledger: month-end close checks, ledger reconciliation to transaction-level root cause, account mapping for consolidation, and statutory statements delivered as review-ready drafts",
+        "zh-CN": "【企业财务】核算与报告:月结关账检查与阻断项、总账与明细账勾稽及交易级差异归因、科目映射与重分类、内部管理报表编制、三表勾稽复核"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/accounting-reporting/icon.png",
+      "category": "finance",
+      "keywords": [
+        "accounting",
+        "month-end-close",
+        "reconciliation",
+        "statutory-reporting",
+        "consolidation"
+      ]
+    },
+    {
+      "name": "assess-credit",
+      "source": "./plugins/assess-credit",
+      "displayName": "固收研究",
+      "displayName_i18n": {
+        "en": "Fixed Income & Credit",
+        "zh-CN": "固收研究"
+      },
+      "requiresPaidPlan": true,
+      "description": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
+      "description_i18n": {
+        "en": "Fixed-income and credit research: bond profiles with valuation and duration/convexity/spread, issuer credit assessment, yield-curve and credit-spread analysis, and credit-risk watchlists for onshore bonds",
+        "zh-CN": "【二级市场】固收研究:债券档案与估值、发行主体信用、收益率曲线与信用利差、信用风险跟踪"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/fixed-income-research/icon.png",
+      "category": "finance",
+      "keywords": [
+        "fixed-income",
+        "credit-research",
+        "bonds",
+        "yield-curve",
+        "credit-spread"
+      ]
+    },
+    {
+      "name": "find-clients",
+      "source": "./plugins/find-clients",
+      "displayName": "对公获客",
+      "displayName_i18n": {
+        "en": "Corporate Client Acquisition",
+        "zh-CN": "对公获客"
+      },
+      "requiresPaidPlan": true,
+      "description": "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk",
+      "description_i18n": {
+        "en": "Corporate-banking client acquisition: prospect screening by region, industry chain, park and cluster, business-opportunity scanning, and full client portraits combining registry, relationships, opportunity signals and risk",
+        "zh-CN": "【一级市场与银行】对公营销:按区域/产业链/园区筛选目标客户、园区与集群扫描、商机线索、客户全景画像"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/corporate-client-acquisition/icon.png",
+      "category": "finance",
+      "keywords": [
+        "corporate-banking",
+        "prospecting",
+        "client-acquisition",
+        "industry-chain",
+        "kyc"
+      ]
+    },
+    {
+      "name": "model-deals",
+      "source": "./plugins/model-deals",
+      "displayName": "交易测算",
+      "displayName_i18n": {
+        "en": "Deal Modeling",
+        "zh-CN": "交易测算"
+      },
+      "requiresPaidPlan": true,
+      "description": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+      "description_i18n": {
+        "en": "Transaction structuring and modeling: accretion/dilution analysis, sources and uses with pro-forma capital structure, precedent-transaction comps, and capital-raise dilution modeling for M&A, IPO, placements, and rights issues",
+        "zh-CN": "【一级市场与银行】交易测算:并购增厚/摊薄、资金来源与用途及形式资本结构、可比交易、募投与摊薄"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/trade-calculator/icon.png",
+      "category": "finance",
+      "keywords": [
+        "m-and-a",
+        "deal-modeling",
+        "accretion-dilution",
+        "ipo",
+        "capital-structure"
+      ]
+    },
+    {
+      "name": "pick-funds",
+      "source": "./plugins/pick-funds",
+      "displayName": "基金研究",
+      "displayName_i18n": {
+        "en": "Fund Research",
+        "zh-CN": "基金研究"
+      },
+      "requiresPaidPlan": true,
+      "description": "Fund and fund-manager research: multi-criteria fund screening, fund and manager profiles, holdings and style analysis, and shortlist comparisons for funds, ETFs, and LOFs",
+      "description_i18n": {
+        "en": "Fund and fund-manager research: multi-criteria fund screening, fund and manager profiles, holdings and style analysis, and shortlist comparisons for funds, ETFs, and LOFs",
+        "zh-CN": "【二级市场】基金选品:多条件筛选、基金与经理画像、持仓风格与重合度分析"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/fund-research/icon.png",
+      "category": "finance",
+      "keywords": [
+        "funds",
+        "etf",
+        "fund-screening",
+        "manager-research",
+        "holdings-analysis"
+      ]
+    },
+    {
+      "name": "read-macro",
+      "source": "./plugins/read-macro",
+      "displayName": "宏观策略",
+      "displayName_i18n": {
+        "en": "Macro & Strategy",
+        "zh-CN": "宏观策略"
+      },
+      "requiresPaidPlan": true,
+      "description": "Top-down macro and strategy work: macro dashboards across growth/inflation/liquidity/credit, index valuation percentiles and earnings attribution, cross-asset allocation views, and policy and industrial-plan tracking",
+      "description_i18n": {
+        "en": "Top-down macro and strategy work: macro dashboards across growth/inflation/liquidity/credit, index valuation percentiles and earnings attribution, cross-asset allocation views, and policy and industrial-plan tracking",
+        "zh-CN": "【二级市场】自上而下:宏观仪表盘、指数估值分位与盈利归因、大类资产配置观点、政策与产业规划跟踪"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/macro-strategy/icon.png",
+      "category": "finance",
+      "keywords": [
+        "macro",
+        "strategy",
+        "asset-allocation",
+        "index-valuation",
+        "policy-tracking"
+      ]
+    },
+    {
+      "name": "run-fpa",
+      "source": "./plugins/run-fpa",
+      "displayName": "经营分析",
+      "displayName_i18n": {
+        "en": "Corporate FP&A",
+        "zh-CN": "经营分析"
+      },
+      "requiresPaidPlan": true,
+      "description": "Corporate finance and FP&A: management reporting off a closed ledger, rolling cash-flow forecasts, budget-versus-actual variance analysis, scenario and break-even analysis, and peer benchmarking against listed comparables",
+      "description_i18n": {
+        "en": "Corporate finance and FP&A: management reporting off a closed ledger, rolling cash-flow forecasts, budget-versus-actual variance analysis, scenario and break-even analysis, and peer benchmarking against listed comparables",
+        "zh-CN": "【企业财务】财务部与FP&A:管理报表、13周滚动现金流预测、预算差异分析、情景与盈亏平衡、投入决策测算、上市同业对标"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/business-analysis/icon.png",
+      "category": "finance",
+      "keywords": [
+        "fpa",
+        "corporate-finance",
+        "budgeting",
+        "cash-forecast",
+        "management-reporting"
+      ]
+    },
+    {
+      "name": "vet-companies",
+      "source": "./plugins/vet-companies",
+      "displayName": "企业尽调",
+      "displayName_i18n": {
+        "en": "Company Due Diligence",
+        "zh-CN": "企业尽调"
+      },
+      "requiresPaidPlan": true,
+      "description": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
+      "description_i18n": {
+        "en": "Counterparty and company due diligence: structured DD reports, related-party and supply-chain mapping, and risk scans (litigation, dishonesty records, pledges, penalties) for Chinese enterprises",
+        "zh-CN": "【一级市场与银行】企业排查:尽调报告、关联方与供应链图谱、失信涉诉质押风险快扫"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/corporate-due-diligence/icon.png",
+      "category": "finance",
+      "keywords": [
+        "due-diligence",
+        "kyc",
+        "risk-screening",
+        "related-parties",
+        "counterparty"
+      ]
+    },
+    {
+      "name": "watch-positions",
+      "source": "./plugins/watch-positions",
+      "displayName": "持仓跟踪",
+      "displayName_i18n": {
+        "en": "Position Monitoring",
+        "zh-CN": "持仓跟踪"
+      },
+      "requiresPaidPlan": true,
+      "description": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+      "description_i18n": {
+        "en": "Watchlist and portfolio monitoring: after-close recaps, position event alerts (announcements, pledges, lockup expiries), and intraday move attribution for A/H/US names",
+        "zh-CN": "【二级市场】持仓跟踪:自选股清单、带异动归因的盘后复盘、持仓事件分级提醒"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/portfolio-tracking/icon.png",
+      "category": "finance",
+      "keywords": [
+        "portfolio-monitoring",
+        "watchlist",
+        "market-recap",
+        "event-alerts",
+        "attribution"
+      ]
+    },
+    {
+      "name": "write-research",
+      "source": "./plugins/write-research",
+      "displayName": "权益研究",
+      "displayName_i18n": {
+        "en": "Equity Research",
+        "zh-CN": "权益研究"
+      },
+      "requiresPaidPlan": true,
+      "description": "End-to-end investment research reports, sector analysis, earnings updates, and valuation models",
+      "description_i18n": {
+        "en": "End-to-end investment research reports, sector analysis, earnings updates, and valuation models",
+        "zh-CN": "【二级市场】研究产出:深度研报、行业分析、财报点评、DCF/LBO/三表估值模型"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/equity-research/icon.png",
+      "category": "finance",
+      "keywords": [
+        "equity-research",
+        "valuation",
+        "dcf",
+        "lbo",
+        "earnings"
+      ]
     }
   ]
 }
