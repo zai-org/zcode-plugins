@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "qveris": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@qverisai/mcp@0.14.0"
+      ],
+      "enabled": true,
+      "timeoutMs": 60000
+    }
+  }
+}
