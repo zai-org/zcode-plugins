@@ -9,7 +9,8 @@ Checks:
 - each plugin dir has a manifest whose name/version match the marketplace
   entry; lookup order matches the ZCode client:
   .zcode-plugin/plugin.json (preferred) -> .claude-plugin/plugin.json (compat)
-- every directory under plugins/ is registered in the marketplace
+- every directory under plugins/ is registered in the marketplace, except
+  TEMPLATE_DIRS (template sources kept for copying, not published)
 
 Stdlib only. Exit code 0 = pass, 1 = fail.
 """
@@ -35,6 +36,10 @@ MAX_PLUGIN_BYTES = 256 * 1024 * 1024
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
 LOCALE = re.compile(r"^[a-z]{2}(-[A-Za-z0-9]+)*$")
 CATEGORIES = {"developer-tools", "productivity", "utilities", "guides", "finance", "template", "other"}
+
+# Template plugin sources stay in the repo as copy-and-start scaffolding but are
+# deliberately absent from marketplace.json, so the registration check skips them.
+TEMPLATE_DIRS = {"example-plugin"}
 
 errors: list[str] = []
 
@@ -203,7 +208,11 @@ def main() -> int:
         for child in sorted(plugins_root.iterdir()):
             if child.is_symlink():
                 err(f"plugins/{child.name}: symlink (not allowed)")
-            elif child.is_dir() and child.name not in registered_dirs:
+            elif (
+                child.is_dir()
+                and child.name not in registered_dirs
+                and child.name not in TEMPLATE_DIRS
+            ):
                 err(f"plugins/{child.name}: directory not registered in marketplace.json")
 
     # Shared assets are published to the CDN by the same job; same rules apply.

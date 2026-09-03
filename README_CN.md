@@ -20,7 +20,6 @@
 | [**mimosa**](./plugins/mimosa) | `developer-tools` | 本地优先的代码安全防线，提供写入前 Hook、复查与 Git 门禁、安全命令和可选密封深扫。 |
 | [**github**](./plugins/github) | `developer-tools` | 基于 GitHub CLI 的工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库和 Codespaces。 |
 | [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
-| [**example-plugin**](./plugins/example-plugin) | `template` | 推荐插件结构模板，可以复制它开始开发新插件。 |
 
 ### 金融插件
 
@@ -53,7 +52,6 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 | `utilities` | 不属于其他分类的通用工具 | — |
 | `finance` | 金融领域工作流：行情、财务、风险与金融科技集成 | `write-research`、`read-macro`、`assess-credit`、`pick-funds`、`watch-positions`、`model-deals`、`vet-companies`、`find-clients`、`run-fpa`、`accounting-and-reporting` |
 | `guides` | 文档、学习和参考类插件 | — |
-| `template` | 用于复制的起始模板和示例插件 | `example-plugin` |
 | `other` | 不适合以上分类的插件 | — |
 
 ## 安装方式

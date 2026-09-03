@@ -20,7 +20,6 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**mimosa**](./plugins/mimosa) | `developer-tools` | Local-first security guardrails with pre-write hooks, review and Git gates, security commands, and optional sealed deep scans. |
 | [**github**](./plugins/github) | `developer-tools` | GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, and Codespaces. |
 | [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
-| [**example-plugin**](./plugins/example-plugin) | `template` | Template demonstrating the recommended plugin structure. Copy it to start a new plugin. |
 
 ### Finance plugins
 
@@ -54,7 +53,6 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 | `utilities` | General-purpose helpers that do not fit another category | — |
 | `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
 | `guides` | Documentation, learning, and reference-only plugins | — |
-| `template` | Starter plugins and examples intended to be copied | `example-plugin` |
 | `other` | A plugin that does not fit the categories above | — |
 
 ## Installation
