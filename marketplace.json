@@ -419,6 +419,30 @@
         "lbo",
         "earnings"
       ]
+    },
+    {
+      "name": "gitlab",
+      "source": "./plugins/gitlab",
+      "description": "GitLab CLI workflows based on GitLab's official Agent Skills for merge requests, issues, CI/CD, repositories, releases, and API operations.",
+      "description_i18n": {
+        "en": "GitLab CLI workflows based on GitLab's official Agent Skills for merge requests, issues, CI/CD, repositories, releases, and API operations.",
+        "zh-CN": "基于官方 GitLab CLI 的 Merge Request、Issue、CI/CD、仓库、Release 与 API 工作流。"
+      },
+      "version": "0.1.3",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gitlab/icon.png",
+      "category": "developer-tools",
+      "keywords": [
+        "gitlab",
+        "glab",
+        "merge-request",
+        "issue",
+        "ci-cd",
+        "gitlab-api"
+      ]
     }
   ]
 }

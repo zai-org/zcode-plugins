@@ -19,6 +19,7 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**cloudbase-skills**](./plugins/cloudbase-skills) | `developer-tools` | CloudBase development skills and MCP integration for Web, Mini Program, database, cloud functions, CloudRun, storage, and AI projects. |
 | [**mimosa**](./plugins/mimosa) | `developer-tools` | Local-first security guardrails with pre-write hooks, review and Git gates, security commands, and optional sealed deep scans. |
 | [**github**](./plugins/github) | `developer-tools` | GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, and Codespaces. |
+| [**gitlab**](./plugins/gitlab) | `developer-tools` | GitLab CLI workflows for merge requests, issues, CI/CD, repositories, releases, and API operations, including self-managed instances. |
 | [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
 
 ### Finance plugins
@@ -48,7 +49,7 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 
 | Category | Use it for | Current plugins |
 | --- | --- | --- |
-| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github` |
+| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab` |
 | `productivity` | Planning, knowledge work, and personal workflow automation | `video2code` |
 | `utilities` | General-purpose helpers that do not fit another category | — |
 | `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
