@@ -853,10 +853,10 @@
   {
     "name": "gitlab",
     "icon": "gitlab/icon.png",
-    "source": "https://github.com/gitlab-org.png?size=512",
-    "matchedBy": "official-github-organization-avatar",
+    "source": "https://about.gitlab.com/images/press/gitlab-logo-500-rgb.png",
+    "matchedBy": "official-gitlab-press-kit-logomark-resized",
     "mimeType": "image/png",
-    "sha256": "ea2f9a9bd66bd8a520ccc5df06cc788b6fd6f669ee9b7cf0892854d96315614b"
+    "sha256": "f1ba2e843d2b4686b60be31c272f176391285c1ceac365468b9651e5a9b6b046"
   },
   {
     "name": "gopls-lsp",
