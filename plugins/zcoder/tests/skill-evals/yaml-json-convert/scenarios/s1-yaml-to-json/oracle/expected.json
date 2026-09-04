@@ -1,0 +1,1 @@
+{"app": {"name": "skill-forge", "debug": false, "replicas": 3, "ratio": 0.25, "version": "2.0", "tags": ["alpha", "beta-2"], "timeout": null, "host": null, "empty": {}, "release": {"date": "2026-09-03", "channels": ["stable", "nightly"]}}}

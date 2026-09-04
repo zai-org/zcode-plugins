@@ -443,6 +443,30 @@
         "ci-cd",
         "gitlab-api"
       ]
+    },
+    {
+      "name": "zcoder",
+      "source": "./plugins/zcoder",
+      "description": "zCoder — always-on GLM multi-model orchestration for ZCode: routes every task to the right engine (vision / turbo / deep) with pinned thinking effort, plus skill-forge, a measured skill lifecycle with oracle-graded evals, Wilson-scored trials, Pareto acceptance, and 7-gate promotion.",
+      "description_i18n": {
+        "en": "zCoder — always-on GLM multi-model orchestration for ZCode: routes every task to the right engine (vision / turbo / deep) with pinned thinking effort, plus skill-forge, a measured skill lifecycle with oracle-graded evals, Wilson-scored trials, Pareto acceptance, and 7-gate promotion.",
+        "zh-CN": "zCoder —— ZCode 常驻 GLM 多模型编排器:把每个任务路由到合适的引擎(视觉 / 轻量 / 深度)并锁定思考力度;内置 skill-forge 可度量技能生命周期 —— 确定性预言机评分、Wilson 加权试验台账、Pareto 前沿验收与七道门晋升。"
+      },
+      "version": "0.1.4",
+      "author": {
+        "name": "anthonykewl20",
+        "url": "https://github.com/anthonykewl20"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "glm",
+        "orchestration",
+        "multi-model",
+        "routing",
+        "subagents",
+        "skill-evaluation",
+        "agent-swarms"
+      ]
     }
   ]
 }

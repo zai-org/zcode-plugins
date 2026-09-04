@@ -1,0 +1,12 @@
+[
+  { "item": 1, "source_string": "Support Desk", "where": "top bar title" },
+  { "item": 2, "source_string": "Report", "where": "top-right button" },
+  { "item": 3, "source_string": "Chat", "where": "nav pill 1 (active)" },
+  { "item": 4, "source_string": "Calls", "where": "nav pill 3" },
+  { "item": 5, "source_string": "Tickets", "where": "left card title" },
+  { "item": 6, "source_string": "1,348", "where": "left card large value" },
+  { "item": 7, "source_string": "73", "where": "percent figure" },
+  { "item": 8, "source_string": "Agents", "where": "table card title" },
+  { "item": 9, "source_string": "Mia K", "where": "table row 4 name" },
+  { "item": 10, "source_string": "Volume", "where": "chart card title" }
+]

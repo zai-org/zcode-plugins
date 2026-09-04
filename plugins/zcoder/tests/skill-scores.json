@@ -1,0 +1,29 @@
+{
+  "rubric": "tests/skill-grader-rubric.md",
+  "target_hash": "46b615a00ade28137772dffe78635921018149b7",
+  "measurement_note": "grader-to-grader overall variance ±0.4 observed on identical files; compare dimension vectors and defect lists across rounds, never bare overalls",
+  "rounds": [
+    {
+      "date": "2026-09-04", "round": "baseline", "grader": "agent_1ebf0dd3",
+      "scores": {
+        "skills/glm-orchestrator/SKILL.md":    {"overall": 8.3, "d": [8,6,9,9,7,7,9,9],  "defects": ["description model map says GLM-5-Turbo (false)", "description ~110 words over cap", "batch trigger over-fires on trivial batches"]},
+        "commands/orchestrate.md":              {"overall": 8.1, "d": [8,9,8,9,9,9,7,6],  "defects": ["no negative scope of its own", "plan-JSON emission can read as always-emit"]},
+        "commands/route.md":                    {"overall": 8.6, "d": [8,10,9,10,9,9,7,9], "defects": ["no first-match ordering instruction", "turbo plan can print as dispatchable"]}
+      }
+    },
+    {
+      "date": "2026-09-04", "round": "post-fix", "grader": "agent_5d379af3",
+      "verified_fixes": "all three baseline defects verified fixed (cross-checked vs agents/*.md frontmatter + capability-ledger)",
+      "scores": {
+        "skills/glm-orchestrator/SKILL.md":    {"overall": 8.2, "d": [9,9,9,9,9,9,9,9], "defects": []},
+        "commands/orchestrate.md":              {"overall": 8.0, "d": [9,10,8,9,9,9,8,8], "defects": []},
+        "commands/route.md":                    {"overall": 8.2, "d": [9,9,9,9,9,9,9,9], "defects": []}
+      }
+    }
+  ],
+  "pending_polish": [
+    "SKILL description: move /orchestrate//route anchor to final clause (+0.1)",
+    "SKILL effort section: re-date heading vs 09-03/04 evidence span (+0.1)",
+    "route.md: '(from agents/*.md frontmatter, do not re-derive)' on the effort column (+0.1)"
+  ]
+}
