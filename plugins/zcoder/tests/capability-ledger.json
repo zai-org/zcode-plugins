@@ -1,0 +1,39 @@
+{
+  "updated": "2026-09-04",
+  "note": "Ground-truth capability state per engine. Every cluster engine must hold exactly one state: VERIFIED (recent real-work success), CONDITIONAL (unverified, excluded from routing), or REMOVED (deleted). No fourth state exists - zombie lanes are impossible by construction. VERIFIED requires last_success within 7 days. Static check C7 enforces this file; FULL rounds reconcile it.",
+  "engines": {
+    "glm-vision": {
+      "state": "VERIFIED",
+      "last_success": "2026-09-04",
+      "evidence": "D8 10/10 integrity PASS, agent_2c94d72d; series 28/30 items, integrity 3/3",
+      "lifetime": {
+        "success": 5,
+        "attempts": 5
+      }
+    },
+    "glm-main": {
+      "state": "VERIFIED",
+      "last_success": "2026-09-04",
+      "evidence": "D9 Write+Edit chain S2-verified; black-box routing test 5/5; probes; D8 fallback series 96/100",
+      "lifetime": {
+        "success": 9,
+        "attempts": 9
+      }
+    },
+    "glm-turbo": {
+      "state": "CONDITIONAL",
+      "last_success": null,
+      "evidence": "0/0 as the CURRENT slot (glm-5.3-flash@low, never dispatch-verified). Prior glm-5-turbo model lifetime: 3/22 (medium-window accepts before retirement; the model itself is retired \u2014 slot hypothesis remains unverified). Routing-excluded per C6 until a verified PASS.",
+      "routing": "excluded-until-verified",
+      "lifetime": {
+        "success": 3,
+        "attempts": 22
+      }
+    }
+  },
+  "hooks_runtime": {
+    "state": "UNVERIFIED",
+    "gate": "fresh-session self-report quoting <zcoder-routing> + bootstrap hookCount=3",
+    "note": "Registered (hookCount observed) but firing never observed; R2's 'verified' was manual invocation only."
+  }
+}
