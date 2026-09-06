@@ -4,6 +4,8 @@
 
 The plugin installs [wakatime-cli][wakatime-cli] into `~/.wakatime/`, checks for wakatime-cli updates on session start, and syncs AI heartbeats after user prompts and file-edit tool events.
 
+Derived from [wakatime/codex-cli-wakatime][wakatime/codex-cli-wakatime], adapted for ZCode.
+
 ## Install
 
 In ZCode: **Settings → Plugins → Create → Add marketplace** → add `RoiexLee/zcode-wakatime` → install **zcode-wakatime**.
@@ -30,3 +32,4 @@ Logs are written to `~/.wakatime/zcode.log`.
 [wakatime]: https://wakatime.com
 [zcode]: https://zcode.z.ai
 [wakatime-cli]: https://github.com/wakatime/wakatime-cli
+[wakatime/codex-cli-wakatime]: https://github.com/wakatime/codex-cli-wakatime
