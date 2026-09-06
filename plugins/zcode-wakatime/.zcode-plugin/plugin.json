@@ -1,0 +1,19 @@
+{
+  "name": "zcode-wakatime",
+  "version": "0.2.0",
+  "description": "WakaTime plugin for ZCode. Installs wakatime-cli, then syncs AI heartbeats after user prompts and file-edit tool events.",
+  "description_i18n": {
+    "en": "WakaTime plugin for ZCode. Installs wakatime-cli, then syncs AI heartbeats after user prompts and file-edit tool events.",
+    "zh-CN": "ZCode 的 WakaTime 插件：自动安装 wakatime-cli，并在用户提交与文件编辑后同步 AI 编程心跳。"
+  },
+  "author": {
+    "name": "RoiexLee",
+    "url": "https://github.com/RoiexLee"
+  },
+  "keywords": [
+    "zcode",
+    "wakatime",
+    "time-tracking",
+    "ai"
+  ]
+}
