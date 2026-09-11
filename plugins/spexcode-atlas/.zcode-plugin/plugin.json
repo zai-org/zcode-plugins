@@ -1,0 +1,24 @@
+{
+  "name": "spexcode-atlas",
+  "version": "0.1.0",
+  "description": "Read a repository into a SpexCode spec tree, draw an architecture diagram for each part worth one (each checked until it passes), and hand over the whole tree as one browsable page. A whole repository runs as one dynamic workflow.",
+  "description_i18n": {
+    "en": "Read a repository into a SpexCode spec tree, draw an architecture diagram for each part worth one (each checked until it passes), and hand over the whole tree as one browsable page. A whole repository runs as one dynamic workflow.",
+    "zh-CN": "把代码仓库整理成 SpexCode 规格树，给值得配图的部分画架构图（每张图都检查到通过为止），最后交出一个可以浏览的单文件网页。整个仓库的任务作为一个动态工作流运行。"
+  },
+  "author": {
+    "name": "SpexCode",
+    "url": "https://spexcode.net"
+  },
+  "homepage": "https://spexcode.net",
+  "repository": "https://github.com/shuxueshuxue/spexcode",
+  "license": "MIT",
+  "keywords": [
+    "spexcode",
+    "spec",
+    "architecture",
+    "diagrams",
+    "documentation",
+    "dynamic-workflow"
+  ]
+}
