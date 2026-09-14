@@ -532,6 +532,32 @@
         "cli",
         "oauth2"
       ]
+    },
+    {
+      "name": "upkuajing",
+      "version": "1.0.5",
+      "description": "Search B2B companies, contacts and trade data, and enrich leads with UpKuaJing. Paid queries require a quote and confirmation.",
+      "description_i18n": {
+        "en": "Search B2B companies, contacts and trade data, and enrich leads with UpKuaJing. Paid queries require a quote and confirmation.",
+        "zh-CN": "通过跨境魔方搜索 B2B 企业、职业联系人和海关贸易数据，按需补全线索；收费查询执行前报价并确认。"
+      },
+      "source": "./plugins/upkuajing",
+      "author": {
+        "name": "UpKuaJing"
+      },
+      "category": "productivity",
+      "keywords": [
+        "b2b",
+        "trade",
+        "leads",
+        "mcp"
+      ],
+      "icon": "https://www.upkuajing.com/favicon.ico",
+      "displayName": "UpKuaJing",
+      "displayName_i18n": {
+        "en": "UpKuaJing",
+        "zh-CN": "跨境魔方"
+      }
     }
   ]
 }
