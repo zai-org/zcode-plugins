@@ -532,6 +532,24 @@
         "cli",
         "oauth2"
       ]
+    },
+    {
+      "name": "zcode-plugin-langfuse",
+      "source": "./plugins/zcode-plugin-langfuse",
+      "description": "Fail-open Langfuse tracing for ZCode sessions, prompts, tool calls, and assistant responses.",
+      "description_i18n": {
+        "en": "Fail-open Langfuse tracing for ZCode sessions, prompts, tool calls, and assistant responses.",
+        "zh-CN": "为 ZCode 会话、提示词、工具调用和助手回复提供 fail-open 的 Langfuse 追踪。"
+      },
+      "version": "0.2.3",
+      "category": "developer-tools",
+      "tags": [
+        "langfuse",
+        "tracing",
+        "telemetry",
+        "hooks"
+      ],
+      "strict": true
     }
   ]
 }

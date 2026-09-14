@@ -8,3 +8,5 @@ __pycache__/
 mirror-failure.txt
 mirror-result.txt
 publish-failure.txt
+!plugins/zcode-plugin-langfuse/payload/dist/
+!plugins/zcode-plugin-langfuse/payload/dist/**

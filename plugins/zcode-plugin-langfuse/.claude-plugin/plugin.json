@@ -1,0 +1,83 @@
+{
+  "name": "zcode-plugin-langfuse",
+  "description": "Fail-open Langfuse tracing for ZCode sessions, prompts, tool calls, and assistant responses.",
+  "description_i18n": {
+    "en": "Fail-open Langfuse tracing for ZCode sessions, prompts, tool calls, and assistant responses.",
+    "zh-CN": "为 ZCode 会话、提示词、工具调用和助手回复提供 fail-open 的 Langfuse 追踪。"
+  },
+  "version": "0.2.3",
+  "author": {
+    "name": "Community contributor"
+  },
+  "license": "MIT",
+  "keywords": [
+    "langfuse",
+    "observability",
+    "tracing",
+    "telemetry",
+    "hooks"
+  ],
+  "userConfig": {
+    "langfuse_public_key": {
+      "title": "Langfuse public key",
+      "description": "Langfuse project public key. You can also provide LANGFUSE_PUBLIC_KEY in the ZCode process environment.",
+      "type": "string",
+      "required": false
+    },
+    "langfuse_secret_key": {
+      "title": "Langfuse secret key",
+      "description": "Langfuse project secret key. It is used only by the local hook process and is never written to hook output.",
+      "type": "string",
+      "required": false,
+      "sensitive": true
+    },
+    "langfuse_base_url": {
+      "title": "Langfuse base URL",
+      "description": "HTTPS Langfuse host, for example https://cloud.langfuse.com or a self-hosted HTTPS URL. Plain HTTP is rejected.",
+      "type": "string",
+      "default": "https://cloud.langfuse.com"
+    },
+    "langfuse_user_id": {
+      "title": "Langfuse user ID",
+      "description": "Optional stable user identifier attached to traces. Leave empty to omit it.",
+      "type": "string",
+      "required": false
+    },
+    "langfuse_environment": {
+      "title": "Langfuse environment",
+      "description": "Environment label attached to traces.",
+      "type": "string",
+      "default": "development"
+    },
+    "capture_prompts": {
+      "title": "Capture prompts",
+      "description": "Include user prompts and assistant responses in Langfuse. Disable for metadata-only tracing.",
+      "type": "boolean",
+      "default": true
+    },
+    "capture_tool_inputs": {
+      "title": "Capture tool inputs",
+      "description": "Include tool names and inputs in Langfuse spans.",
+      "type": "boolean",
+      "default": true
+    },
+    "capture_tool_outputs": {
+      "title": "Capture tool outputs",
+      "description": "Include tool results and errors in Langfuse spans.",
+      "type": "boolean",
+      "default": true
+    },
+    "max_capture_chars": {
+      "title": "Maximum captured characters",
+      "description": "Maximum characters per captured prompt, tool payload, or response. Larger values are truncated.",
+      "type": "number",
+      "default": 20000
+    },
+    "debug": {
+      "title": "Debug diagnostics",
+      "description": "Write non-sensitive lifecycle diagnostics to stderr. Disabled by default.",
+      "type": "boolean",
+      "default": false
+    }
+  }
+}
