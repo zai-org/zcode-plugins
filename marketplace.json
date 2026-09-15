@@ -86,6 +86,30 @@
       ]
     },
     {
+      "name": "oh-my-zcode-slim",
+      "source": "./plugins/oh-my-zcode-slim",
+      "description": "OMOS-style multi-agent orchestration for ZCode: specialist subagents (coder, explorer, librarian, oracle, designer, observer), a user-configurable multi-model council with a synthesis agent, workflow skills (deepwork, verification-planning, worktrees, clonedeps, reflect, simplify), and an orchestrator doctrine. Ported from oh-my-opencode-slim.",
+      "description_i18n": {
+        "en": "OMOS-style multi-agent orchestration for ZCode: specialist subagents (coder, explorer, librarian, oracle, designer, observer), a user-configurable multi-model council with a synthesis agent, workflow skills (deepwork, verification-planning, worktrees, clonedeps, reflect, simplify), and an orchestrator doctrine. Ported from oh-my-opencode-slim.",
+        "zh-CN": "面向 ZCode 的 OMOS 风格多智能体编排套件：专家子代理（coder、explorer、librarian、oracle、designer、observer）、可由用户自行配置的多模型议会与合成代理、工作流技能（deepwork、verification-planning、worktrees、clonedeps、reflect、simplify），以及 orchestrator 调度守则。移植自 oh-my-opencode-slim。"
+      },
+      "version": "0.2.0",
+      "author": {
+        "name": "MartijnDekkers",
+        "url": "https://github.com/MartijnDekkers"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "agents",
+        "orchestration",
+        "multi-agent",
+        "council",
+        "delegation",
+        "workflow",
+        "opencode"
+      ]
+    },
+    {
       "name": "video-agent-kit",
       "source": "./plugins/video-agent-kit",
       "requiresPaidPlan": true,
