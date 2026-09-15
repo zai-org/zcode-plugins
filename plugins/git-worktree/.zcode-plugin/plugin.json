@@ -1,0 +1,20 @@
+{
+	"name": "git-worktree",
+	"description": "Git worktree management for parallel ZCode sessions: list, create, open, remove, and prune isolated working copies with dirty-state and branch-in-use safeguards.",
+	"description_i18n": {
+		"en": "Git worktree management for parallel ZCode sessions: list, create, open, remove, and prune isolated working copies with dirty-state and branch-in-use safeguards.",
+		"zh-CN": "面向并行 ZCode 会话的 git worktree 管理：列出、创建、打开、移除和清理隔离工作副本，内置脏状态与分支占用防护。"
+	},
+	"version": "0.1.3",
+	"author": {
+		"name": "EtienneLescot",
+		"url": "https://github.com/EtienneLescot"
+	},
+	"keywords": [
+		"git",
+		"worktree",
+		"parallel",
+		"isolation",
+		"branch"
+	]
+}
