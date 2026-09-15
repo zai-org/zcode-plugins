@@ -1,0 +1,28 @@
+{
+  "name": "zcode-remotion",
+  "description": "Create and verify Remotion videos in ZCode with official Agent Skills, environment preflight, autonomous visual QA, verified MP4 output, and compatibility-aware setup.",
+  "description_i18n": {
+    "en": "Create and verify Remotion videos in ZCode with official Agent Skills, environment preflight, autonomous visual QA, verified MP4 output, and compatibility-aware setup.",
+    "zh-CN": "在 ZCode 中可靠创建并校验 Remotion 视频：使用官方 Agent Skills，提供环境预检、自主静帧视觉 QA、MP4 产物校验和兼容性感知的安装流程。"
+  },
+  "version": "0.2.5",
+  "author": {
+    "name": "AIwork4me",
+    "url": "https://github.com/AIwork4me"
+  },
+  "homepage": "https://github.com/AIwork4me/zcode-remotion",
+  "repository": "https://github.com/AIwork4me/zcode-remotion",
+  "license": "MIT",
+  "keywords": [
+    "remotion",
+    "zcode",
+    "video-generation",
+    "programmatic-video",
+    "animation",
+    "visual-qa",
+    "render",
+    "mp4"
+  ],
+  "skills": "skills",
+  "commands": "commands"
+}
