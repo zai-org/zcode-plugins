@@ -57,4 +57,5 @@
 
 服务条款：<https://terraphim-skills.md/legal/terms/>
 
-源代码与许可证：[Terraphim Skills Introduction](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2)，Apache-2.0。
+源代码：[Terraphim Skills Introduction v0.2.2](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2)。
+本插件适用随附的 [LICENSE](./LICENSE) 和 [NOTICE](./NOTICE)。

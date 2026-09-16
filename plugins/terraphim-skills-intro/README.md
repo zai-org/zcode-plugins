@@ -65,4 +65,5 @@ Privacy policy: <https://terraphim-skills.md/legal/privacy/>
 
 Terms of service: <https://terraphim-skills.md/legal/terms/>
 
-Source and licence: [Terraphim Skills Introduction](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2), Apache-2.0.
+Source: [Terraphim Skills Introduction v0.2.2](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2).
+The bundled [LICENSE](./LICENSE) and [NOTICE](./NOTICE) apply to this plugin.
