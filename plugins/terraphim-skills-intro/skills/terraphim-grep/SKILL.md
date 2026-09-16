@@ -20,7 +20,7 @@ terraphim-grep --version
 
 The tap installs the signed, checksummed v1.21.14 archive from the Terraphim
 client release. If Homebrew is unavailable, use the appropriate archive from
-the [v1.21.14 release](https://github.com/terraphim/terraphim-clients/releases/tag/v1.21.14)
+the [Terraphim installation guide](https://terraphim-skills.md/docs/non-technical/)
 and verify it against that release's `SHA256SUMS` before installation.
 
 ## Capability gate

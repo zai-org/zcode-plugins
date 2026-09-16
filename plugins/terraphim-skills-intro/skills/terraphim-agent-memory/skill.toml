@@ -1,6 +1,6 @@
 [skill]
 name = "terraphim-agent-memory"
-version = "1.0.1"
+version = "1.0.2"
 description = "Retrieve, inspect, validate, and govern agentic memory with terraphim-agent memory. Use for role-scoped memory searches, provenance checks, hook previews, reliability evaluation, or explicitly authorized lifecycle changes; use terraphim-agent-learn for individual command failures and corrections."
 tier = "community"
 author = "terraphim"
@@ -8,10 +8,10 @@ license = "Apache-2.0"
 repository = "https://github.com/terraphim/terraphim-cursor-plugin"
 
 [files]
-"SKILL.md" = "fe385d0b32055b3097f9a9f7dad833acfc2eb4c1586798e40a2b6dcf5de9988f"
+"SKILL.md" = "b321987746d4ba633c7cfb6d8817a4b572d4f53685e244843e3c56348e745524"
 "references/command-guide.md" = "9c40a9d20dced973f4d37f2c78e61a88091bae83345c1a86879c3ffb0f9daf62"
 
 [signature]
 public_key = "261c6820525270bfe2a5daaa5bf3f581bd9bc193e1a0148010e870a3a63ad959"
-signature = "22ce696a6ba9922dea8fc6883717ade94beb9fa4c1fb8dd5c9174bd15de25415a87935d4abf4c1b3cd6dddbf09298c8159a12dacff51245c47099c74849f2800"
-timestamp = "1970-01-01T00:00:00Z"
+signature = "360091af52eda05b1869e5590b3b807e951e062ba855389ec63d21c7cdf07d6ca82f7a6c93cf76017f99715e8a7025e6fc398288ab2b4513bb36f78b88353606"
+timestamp = "1789548056Z"

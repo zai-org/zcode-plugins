@@ -23,7 +23,7 @@
         "en": "Search code, capture learning, and retrieve memory with Terraphim command-line tools.",
         "zh-CN": "使用 Terraphim 命令行工具搜索代码、记录经验并检索记忆。"
       },
-      "version": "0.2.2",
+      "version": "0.2.3",
       "author": {
         "name": "Terraphim AI",
         "url": "https://terraphim.ai"

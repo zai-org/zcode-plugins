@@ -25,8 +25,8 @@
 3. 打开 **设置 → 插件管理 → 发现**，选择 **Terraphim Skills Introduction** 并安装。
 4. 新建一个 ZCode 会话，使三个技能可以被智能体发现。
 
-插件不会自动安装软件。没有 Homebrew 时，请从
-[Terraphim Clients v1.21.14](https://github.com/terraphim/terraphim-clients/releases/tag/v1.21.14)
+插件不会自动安装软件。没有 Homebrew 时，请按照
+[Terraphim 安装指南](https://terraphim-skills.md/docs/non-technical/)
 下载适合平台的签名文件，并用该版本的 `SHA256SUMS` 验证。
 
 ## 技能
@@ -57,5 +57,5 @@
 
 服务条款：<https://terraphim-skills.md/legal/terms/>
 
-源代码：[Terraphim Skills Introduction v0.2.2](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2)。
+产品信息：<https://terraphim-skills.md/>。
 本插件适用随附的 [LICENSE](./LICENSE) 和 [NOTICE](./NOTICE)。

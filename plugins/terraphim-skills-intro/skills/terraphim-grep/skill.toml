@@ -1,6 +1,6 @@
 [skill]
 name = "terraphim-grep"
-version = "1.0.1"
+version = "1.0.2"
 description = "Search local source code and documentation with the installed terraphim-grep CLI. Use for bounded text or knowledge-graph-assisted retrieval inside a project; do not use it for internet search or file-name-only lookup."
 tier = "community"
 author = "terraphim"
@@ -8,10 +8,10 @@ license = "Apache-2.0"
 repository = "https://github.com/terraphim/terraphim-cursor-plugin"
 
 [files]
-"SKILL.md" = "10d257bdb93e7c4da3018960d8aa81780230faeabc048ace6fe18de5551075eb"
+"SKILL.md" = "7b3d6a492f1e532648d15ea24bf9610a00ffddc2a180aceac7bd134c5dfe45f6"
 "references/command-guide.md" = "0f8e9e51c7ddf4af363f20423ebcb3328055f4a2de847af2fd4e9063178fed23"
 
 [signature]
 public_key = "261c6820525270bfe2a5daaa5bf3f581bd9bc193e1a0148010e870a3a63ad959"
-signature = "62c420fa91f465e84608136d550720fd5ccc96398a4369d0ac1555fe4ccab6f23ae007e9058d59e99635f89451ad69b9d59d1a93ff68aa3bbe6b597c6b648e09"
-timestamp = "1970-01-01T00:00:00Z"
+signature = "60121d5b0cff90aeb22824962c0439bd3fcf0ec2379d79b2bdd7529364a8dfcf07d1a95da8327a52717a3e3caf41ba197304bb24de83bb45ed7cb2fa161a790f"
+timestamp = "1789548056Z"

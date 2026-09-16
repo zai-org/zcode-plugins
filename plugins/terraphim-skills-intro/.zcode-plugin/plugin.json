@@ -1,7 +1,7 @@
 {
   "name": "terraphim-skills-intro",
   "description": "Search code, capture learning, and retrieve memory with Terraphim command-line tools.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": {
     "name": "Terraphim AI",
     "email": "engineering@terraphim.ai"

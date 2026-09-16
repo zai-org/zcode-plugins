@@ -28,8 +28,8 @@ and agent memory workflows to ZCode.
 4. Start a new ZCode session so the three skills are discoverable.
 
 The plugin never installs software automatically. If Homebrew is unavailable,
-download the appropriate signed archive from
-[Terraphim Clients v1.21.14](https://github.com/terraphim/terraphim-clients/releases/tag/v1.21.14)
+download the appropriate signed archive using the
+[Terraphim installation guide](https://terraphim-skills.md/docs/non-technical/)
 and verify it against that release's `SHA256SUMS`.
 
 ## Skills
@@ -65,5 +65,5 @@ Privacy policy: <https://terraphim-skills.md/legal/privacy/>
 
 Terms of service: <https://terraphim-skills.md/legal/terms/>
 
-Source: [Terraphim Skills Introduction v0.2.2](https://github.com/terraphim/terraphim-cursor-plugin/tree/v0.2.2).
+Product information: <https://terraphim-skills.md/>.
 The bundled [LICENSE](./LICENSE) and [NOTICE](./NOTICE) apply to this plugin.
