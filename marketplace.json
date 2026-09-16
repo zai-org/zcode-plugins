@@ -11,6 +11,33 @@
   },
   "plugins": [
     {
+      "name": "terraphim-skills-intro",
+      "source": "./plugins/terraphim-skills-intro",
+      "displayName": "Terraphim Skills Introduction",
+      "displayName_i18n": {
+        "en": "Terraphim Skills Introduction",
+        "zh-CN": "Terraphim 技能入门"
+      },
+      "description": "Search code, capture learning, and retrieve memory with Terraphim command-line tools.",
+      "description_i18n": {
+        "en": "Search code, capture learning, and retrieve memory with Terraphim command-line tools.",
+        "zh-CN": "使用 Terraphim 命令行工具搜索代码、记录经验并检索记忆。"
+      },
+      "version": "0.2.2",
+      "author": {
+        "name": "Terraphim AI",
+        "url": "https://terraphim.ai"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "terraphim",
+        "code-search",
+        "learning",
+        "memory",
+        "knowledge-graph"
+      ]
+    },
+    {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
       "description": "CloudBase development skills and MCP integration for building, deploying, and troubleshooting Web, WeChat Mini Program, database, cloud function, CloudRun, storage, and AI projects.",
