@@ -133,6 +133,29 @@ Neither runs on its own; they exist for the cases described here.
   parser, so a "my command does not show up" report can come with evidence. It reads files and
   prints a report; it writes nothing.
 
+## Token cost, and the zero-token alternative
+
+A custom command is ultimately a prompt: the body is injected, the agent runs the script, and the
+panel text passes through the model. Measured, one `/quota` costs roughly **390 tokens** — about 100
+for the command body, 80 for the tool call, 180 for the panel text, 40 for the reply. The body is
+deliberately short and the agent is told **not to restate the panel**, because the tool result is
+already visible. (The first version restated it and cost about 680.)
+
+**To spend no tokens at all**, run the panel as a local page and open it in the agent's built-in
+browser pane:
+
+```bash
+node <plugin>/scripts/cc-usage.mjs --serve    # then open http://127.0.0.1:8787/
+```
+
+It refreshes every 30 seconds, shows the same ring gauges, and never touches the model.
+
+ZCode exposes no plugin-contributed in-app widget, and a hook cannot display content either — the
+hook record it renders carries status, duration and name, with no output field. Inline shell expansion
+in command bodies (`!`cmd`` or a fenced `!` block) does exist, but on Windows that shell is `cmd.exe`
+rather than bash, so it would need a hard-coded script path and would fail for marketplace installs.
+Not used here.
+
 ## Troubleshooting
 
 | Symptom | Cause and fix |
