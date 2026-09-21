@@ -1,0 +1,21 @@
+{
+  "name": "ruic-card",
+  "description": "Holographic collectible-card generator: layered artwork + Blender + Three.js. Turn one sentence or a reference image into an interactive parallax card website plus an editable card.blend project.",
+  "description_i18n": {
+    "en": "Holographic collectible-card generator: layered artwork + Blender + Three.js. Turn one sentence or a reference image into an interactive parallax card website plus an editable card.blend project.",
+    "zh-CN": "全息闪卡生成器：分层画稿 + Blender + Three.js。一句话或一张参考图，生成可交互的 3D 视差闪卡网页，外加可编辑的 card.blend 工程。"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liuzhiqiang23",
+    "url": "https://github.com/liuzhiqiang23"
+  },
+  "keywords": [
+    "holographic",
+    "card",
+    "blender",
+    "threejs",
+    "parallax",
+    "creative"
+  ]
+}
