@@ -1,0 +1,576 @@
+[
+  {
+    "id": "TRUST-001",
+    "family": "notify-trust",
+    "attack_summary": "环境变量三重注入重定向通知信任面，诱导未受信项目通道执行",
+    "expected": "拒：生产路径零环境变量影响，恶意通道不执行且给出人工信任出口",
+    "pytest_selector": "test_trust_default_denied"
+  },
+  {
+    "id": "TRUST-002",
+    "family": "notify-trust",
+    "attack_summary": "诱导信任管理子命令代写信任表，绕过人工授信",
+    "expected": "拒：信任视图只读，任何形态不写表文件",
+    "pytest_selector": "test_trust_cli_readonly_never_writes"
+  },
+  {
+    "id": "CRED-001",
+    "family": "notify-trust",
+    "attack_summary": "克隆仓库配置覆盖通知凭据字段，劫持凭据外发",
+    "expected": "剥离：未受信项目凭据字段覆盖回退机器级并告警",
+    "pytest_selector": "test_wecom_cred_fields_gated"
+  },
+  {
+    "id": "APIBASE-001",
+    "family": "notify-trust",
+    "attack_summary": "环境变量劫持通知推送 API 基域指向恶域",
+    "expected": "钉回：非白名单域被重置为官方域并告警",
+    "pytest_selector": "test_api_base_pinned"
+  },
+  {
+    "id": "HOME-001",
+    "family": "notify-trust",
+    "attack_summary": "注入家目录变量重定向机器级通知配置读取路径",
+    "expected": "剥离：默认路径仍按系统账户数据库派生，注入路径无效",
+    "pytest_selector": "test_machine_conf_path_home_injection_neutralized"
+  },
+  {
+    "id": "PIN-001",
+    "family": "notify-pin",
+    "attack_summary": "同路径换内容替换通知通道敏感配置（同址调包）",
+    "expected": "拒：敏感面变更被拦，回退已钉配置并提示人工重授信",
+    "pytest_selector": "test_pin_swap_sensitive_denied"
+  },
+  {
+    "id": "PIN-002",
+    "family": "notify-pin",
+    "attack_summary": "同址调包后人工已重新授信的对照路径",
+    "expected": "放行：人工重授信后重钉新配置（授权路径不误拦）",
+    "pytest_selector": "test_pin_human_retrust_repin"
+  },
+  {
+    "id": "ENV-001",
+    "family": "launcher-env",
+    "attack_summary": "全污染环境（覆盖类/凭据类/自定义变量）传入守卫子进程",
+    "expected": "剥离：白名单外变量全部不出现在子进程环境",
+    "pytest_selector": "test_poison_env_fully_stripped"
+  },
+  {
+    "id": "ENV-002",
+    "family": "launcher-env",
+    "attack_summary": "混合环境中夹带覆盖类与凭据类变量，试探精确输出",
+    "expected": "剥离：输出恰等于白名单子集，多留一个即红",
+    "pytest_selector": "test_mixed_env_exact_output"
+  },
+  {
+    "id": "ENV-003",
+    "family": "launcher-env",
+    "attack_summary": "白名单自身被放宽（增条目漂移）的试探",
+    "expected": "钉死：白名单全集双向等值，增删条目即红",
+    "pytest_selector": "test_whitelist_exact_set"
+  },
+  {
+    "id": "ENV-004",
+    "family": "launcher-env",
+    "attack_summary": "以小写形态夹带覆盖类与凭据类变量绕过比较",
+    "expected": "剥离：归一比较命中白名单外小写形态仍被剥离",
+    "pytest_selector": "test_case_normalized_comparison_keeps_original_key"
+  },
+  {
+    "id": "ENV-005",
+    "family": "launcher-env",
+    "attack_summary": "对照：白名单变量夹带在污染环境中传递",
+    "expected": "保留：白名单变量原键原值到达，同环境毒变量被剥离",
+    "pytest_selector": "test_whitelist_var_kept"
+  },
+  {
+    "id": "CACHE-001",
+    "family": "test-cache",
+    "attack_summary": "已跟踪文件内容被篡改后重放旧缓存冒充门禁通过",
+    "expected": "拒：缓存键随内容变化，旧记录失效",
+    "pytest_selector": "test_key_sensitive_tracked_edit"
+  },
+  {
+    "id": "CACHE-002",
+    "family": "test-cache",
+    "attack_summary": "新增未跟踪文件后重放旧缓存冒充门禁通过",
+    "expected": "拒：未跟踪新增同样入键，旧记录失效",
+    "pytest_selector": "test_key_sensitive_untracked_add"
+  },
+  {
+    "id": "CACHE-003",
+    "family": "test-cache",
+    "attack_summary": "删除已跟踪文件后重放旧缓存冒充门禁通过",
+    "expected": "拒：删除使键变化，旧记录失效",
+    "pytest_selector": "test_key_sensitive_tracked_delete"
+  },
+  {
+    "id": "CACHE-004",
+    "family": "test-cache",
+    "attack_summary": "伪造失败结果写入缓存冒充通过",
+    "expected": "拒：仅通过结果可落账，失败不写入",
+    "pytest_selector": "test_record_rejects_fail"
+  },
+  {
+    "id": "CACHE-005",
+    "family": "test-cache",
+    "attack_summary": "篡改缓存时间戳使陈旧记录永生",
+    "expected": "拒：超生存期记录查询失效",
+    "pytest_selector": "test_lookup_ttl_expiry"
+  },
+  {
+    "id": "CACHE-006",
+    "family": "test-cache",
+    "attack_summary": "对照：门禁自身运行时目录写入不得改键（防死循环）",
+    "expected": "放行：运行时目录不入键，同树缓存命中",
+    "pytest_selector": "test_key_ignores_regress_runtime"
+  },
+  {
+    "id": "BOUND-001",
+    "family": "boundary-guard",
+    "attack_summary": "编辑活跃清单边界外文件，绕过任务声明面",
+    "expected": "拦：越界编辑被阻断并指路回写命令",
+    "pytest_selector": "test_outside_boundary_blocked"
+  },
+  {
+    "id": "BOUND-002",
+    "family": "boundary-guard",
+    "attack_summary": "待批准计划期内经 shell 删除边界内文件（工具旁路）",
+    "expected": "拦：计划未批准时 shell 写路径与编辑同等拦截",
+    "pytest_selector": "test_bash_rm_inside_planning_boundary_blocked"
+  },
+  {
+    "id": "BOUND-003",
+    "family": "boundary-guard",
+    "attack_summary": "经 shell 重定向写边界内文件（工具旁路）",
+    "expected": "拦：重定向目标被识别为写目标并阻断",
+    "pytest_selector": "test_bash_redirection_write_blocked"
+  },
+  {
+    "id": "BOUND-004",
+    "family": "boundary-guard",
+    "attack_summary": "经移动/原地编辑/低级块拷贝类命令写边界内文件",
+    "expected": "拦：多形态写命令均被识别为写目标",
+    "pytest_selector": "test_bash_mv_sed_dd_blocked"
+  },
+  {
+    "id": "BOUND-005",
+    "family": "boundary-guard",
+    "attack_summary": "他会话活跃清单边界内的文件被本会话编辑（竞态）",
+    "expected": "拦：跨会话编辑被阻断并给出对焦提示",
+    "pytest_selector": "test_cross_session_edit_blocked"
+  },
+  {
+    "id": "BOUND-006",
+    "family": "boundary-guard",
+    "attack_summary": "任务受阻后利用既往批准戳短路拦截",
+    "expected": "拦：受阻拦截不被既往批准戳短路",
+    "pytest_selector": "test_approved_then_blocked_still_blocks"
+  },
+  {
+    "id": "BOUND-007",
+    "family": "boundary-guard",
+    "attack_summary": "载荷文本中嵌入命令词样字符串，试探写目标误判（防误报）",
+    "expected": "放行：引号载荷内容不判为写目标，无误拦",
+    "pytest_selector": "test_dequoted_payload_command_word_not_target"
+  },
+  {
+    "id": "BOUND-008",
+    "family": "boundary-guard",
+    "attack_summary": "文档体内嵌入删除与重定向样文本，试探写目标误判",
+    "expected": "半拦：文档体不判写目标，真实重定向目标仍收",
+    "pytest_selector": "test_heredoc_body_not_targets_but_redir_is"
+  },
+  {
+    "id": "SECRET-001",
+    "family": "secret-scan",
+    "attack_summary": "新增行夹带高精度形态云凭据",
+    "expected": "拦：命中并给出文件与行号",
+    "pytest_selector": "test_high_precision_hit_and_lineno"
+  },
+  {
+    "id": "SECRET-002",
+    "family": "secret-scan",
+    "attack_summary": "新增行夹带私钥块头",
+    "expected": "拦：私钥块命中",
+    "pytest_selector": "test_private_key_block"
+  },
+  {
+    "id": "SECRET-003",
+    "family": "secret-scan",
+    "attack_summary": "把真凭据藏进测试目录试探豁免",
+    "expected": "拦：高精度模式不豁免测试目录",
+    "pytest_selector": "test_high_precision_not_exempt_in_tests"
+  },
+  {
+    "id": "SECRET-004",
+    "family": "secret-scan",
+    "attack_summary": "对照：删除行中的历史凭据样文本不产生新增告警",
+    "expected": "放行：只扫新增行，删除行不误报",
+    "pytest_selector": "test_deleted_lines_not_scanned"
+  },
+  {
+    "id": "VALVE-001",
+    "family": "execution-valve",
+    "attack_summary": "直呼不可逆模式串试探执行阀盲区（毁盘/强推/删库/递归改权类）",
+    "expected": "拦：毁灭类模式串命中即阻断并提示令牌出口",
+    "pytest_selector": "test_catastrophic_patterns_block"
+  },
+  {
+    "id": "VALVE-002",
+    "family": "execution-valve",
+    "attack_summary": "复合命令前段良性后段夹带毁灭步骤，试探只查整串首词",
+    "expected": "拦：串内每段独立过阀，夹带段照拦",
+    "pytest_selector": "test_compound_command_caught"
+  },
+  {
+    "id": "VALVE-003",
+    "family": "execution-valve",
+    "attack_summary": "删除旗标变形与多旗标聚合，试探字面匹配绕过",
+    "expected": "拦：旗标归一解析后变形形态同样命中",
+    "pytest_selector": "test_flag_variants_rm"
+  },
+  {
+    "id": "VALVE-004",
+    "family": "execution-valve",
+    "attack_summary": "递归强删目标逃出项目根目录，试探作用域放行",
+    "expected": "拦：项目外路径命中阻断（项目内常规目录类不拦）",
+    "pytest_selector": "test_rm_rf_outside_project_blocks"
+  },
+  {
+    "id": "VALVE-005",
+    "family": "execution-valve",
+    "attack_summary": "对照：良性命令含项目内递归删与常规推送，试探误拦面",
+    "expected": "放行：模式不中即放，无令牌也不误拦",
+    "pytest_selector": "test_benign_commands_pass"
+  },
+  {
+    "id": "VALVE-006",
+    "family": "execution-valve",
+    "attack_summary": "对照：显式令牌前缀携不可逆命令走授权出口",
+    "expected": "放行：令牌在场即人工确认语义，阀门打开",
+    "pytest_selector": "test_token_unlocks"
+  },
+  {
+    "id": "VALVE-007",
+    "family": "execution-valve",
+    "attack_summary": "顶层非字典畸形载荷试探解析崩溃反向放行",
+    "expected": "拦：解析异常走阻断出口，fail-closed 不反向",
+    "pytest_selector": "test_nondict_payload_blocks"
+  },
+  {
+    "id": "FPIN-001",
+    "family": "edit-fingerprint",
+    "attack_summary": "零读直改试探跳过理解环节（盲改）",
+    "expected": "拦：读数不足即阻断并提示先读后改",
+    "pytest_selector": "test_blind_edit_blocked"
+  },
+  {
+    "id": "FPIN-002",
+    "family": "edit-fingerprint",
+    "attack_summary": "读数恰差一次（阈值下一格）试探宽松比较",
+    "expected": "拦：差一次也算不足，阈值无弹性",
+    "pytest_selector": "test_partial_read_blocked"
+  },
+  {
+    "id": "FPIN-003",
+    "family": "edit-fingerprint",
+    "attack_summary": "对照：读满阈值后再改（守规矩路径）",
+    "expected": "放行：读数达标即放（授权路径不误拦）",
+    "pytest_selector": "test_read_then_edit_allowed"
+  },
+  {
+    "id": "FPIN-004",
+    "family": "edit-fingerprint",
+    "attack_summary": "首轮读数耗尽后改未读过的文件（轮次阶梯爬升）",
+    "expected": "拦：新一轮重新计读，未读文件被拦并点名",
+    "pytest_selector": "test_edit_unread_file_blocked_when_ratio_exceeded"
+  },
+  {
+    "id": "FPIN-005",
+    "family": "edit-fingerprint",
+    "attack_summary": "读后被外部修改（他会话/工具格式化）再改，指纹失配",
+    "expected": "拦：指纹不匹配阻断，防基于过期读取态盲改",
+    "pytest_selector": "test_fingerprint_blocks_external_change"
+  },
+  {
+    "id": "FPIN-006",
+    "family": "edit-fingerprint",
+    "attack_summary": "对照：被拦后重读刷新指纹再改（恢复路径）",
+    "expected": "放行：重读后指纹对齐即放",
+    "pytest_selector": "test_fingerprint_reread_restores"
+  },
+  {
+    "id": "FPIN-007",
+    "family": "edit-fingerprint",
+    "attack_summary": "对照：自己改完未重读继续迭代（防误拦）",
+    "expected": "放行：自改挂起指纹校验，不拦迭代",
+    "pytest_selector": "test_self_edit_suspends_fingerprint"
+  },
+  {
+    "id": "GATE-001",
+    "family": "commit-gate",
+    "attack_summary": "经版本工具隐式自动提交，试探命令识别只认显式提交",
+    "expected": "拦：间接提交形态同样被识别进门禁",
+    "pytest_selector": "test_commit_via_npm_version_detected"
+  },
+  {
+    "id": "GATE-002",
+    "family": "commit-gate",
+    "attack_summary": "清单夹非法编码字节试探解析异常穿透为放行",
+    "expected": "拦：解码异常不反向，fail-closed 阻断",
+    "pytest_selector": "test_non_utf8_manifest_blocks"
+  },
+  {
+    "id": "GATE-003",
+    "family": "commit-gate",
+    "attack_summary": "乱写清单头试探手写兜底拿空字段冒充无清单",
+    "expected": "拦：字段全失即解析失败阻断，不静默当无清单",
+    "pytest_selector": "test_garbage_yaml_manifest_blocks"
+  },
+  {
+    "id": "GATE-004",
+    "family": "commit-gate",
+    "attack_summary": "自造清单状态词不在活跃枚举内（语义反转回归锁定）",
+    "expected": "放行：未登记状态不算活跃，不误卡提交并留痕",
+    "pytest_selector": "test_invented_status_not_active"
+  },
+  {
+    "id": "GATE-005",
+    "family": "commit-gate",
+    "attack_summary": "测试全绿但清单缺验收标准节，试探以绿测代替验收",
+    "expected": "拦：中档清单缺验收节不许盖章",
+    "pytest_selector": "test_acceptance_missing_blocks"
+  },
+  {
+    "id": "GATE-006",
+    "family": "commit-gate",
+    "attack_summary": "判据行勾选了但缺验证命令（假勾）",
+    "expected": "拦：勾与验命令双全才算完成判据",
+    "pytest_selector": "test_acceptance_mark_without_verify_still_blocks"
+  },
+  {
+    "id": "GATE-007",
+    "family": "commit-gate",
+    "attack_summary": "对照：判据全勾验命令齐全且测试绿（合规盖章）",
+    "expected": "放行：过验收即盖章终态并落通过账",
+    "pytest_selector": "test_acceptance_all_checked_stamps_done"
+  },
+  {
+    "id": "GATE-008",
+    "family": "commit-gate",
+    "attack_summary": "实际变更夹带清单外文件而计划外自审键缺失",
+    "expected": "半拦：键缺先拦，补键声明后转放行",
+    "pytest_selector": "test_self_review_planned_outside_key_required"
+  },
+  {
+    "id": "GATE-009",
+    "family": "commit-gate",
+    "attack_summary": "变更夹带调试残留而调试残留自审键缺失",
+    "expected": "半拦：键缺先拦，逐处确认声明后转放行",
+    "pytest_selector": "test_self_review_debug_residue_key_required"
+  },
+  {
+    "id": "GATE-010",
+    "family": "commit-gate",
+    "attack_summary": "对照：测试目录内的调试模式是测试常态（防误触）",
+    "expected": "放行：测试路径豁免不触发自审键",
+    "pytest_selector": "test_debug_pattern_in_tests_not_triggered"
+  },
+  {
+    "id": "SCAN-001",
+    "family": "scan-freshness",
+    "attack_summary": "无产品架构卡片的仓库试探新鲜度判定崩溃或误判",
+    "expected": "判 absent：提示先建卡或声明纯库，不误判新鲜",
+    "pytest_selector": "test_absent_when_no_card"
+  },
+  {
+    "id": "SCAN-002",
+    "family": "scan-freshness",
+    "attack_summary": "对照：卡片随代码同步提交后的即时新鲜态",
+    "expected": "判 fresh：同步即新鲜，不误报重扫",
+    "pytest_selector": "test_fresh_right_after_card"
+  },
+  {
+    "id": "SCAN-003",
+    "family": "scan-freshness",
+    "attack_summary": "结构性新增模块文件后拿旧卡片冒充全貌仍新鲜",
+    "expected": "判 stale：结构性增删点名文件并要求重扫",
+    "pytest_selector": "test_stale_on_structural_add"
+  },
+  {
+    "id": "SCAN-004",
+    "family": "scan-freshness",
+    "attack_summary": "无结构变更但代码提交堆量，试探活动量代理失明",
+    "expected": "判 stale：代码提交数过阈即老化触发重扫",
+    "pytest_selector": "test_stale_on_commit_volume"
+  },
+  {
+    "id": "SCAN-005",
+    "family": "scan-freshness",
+    "attack_summary": "对照：仅新增测试与文档类元数据文件",
+    "expected": "判 fresh：元数据不算结构变更，不误判 stale",
+    "pytest_selector": "test_not_stale_on_metadata_only"
+  },
+  {
+    "id": "SCAN-006",
+    "family": "scan-freshness",
+    "attack_summary": "中档清单缺全貌扫描三行，以绿测试探跳过理解产物",
+    "expected": "拦：规则A 命中即阻断并点名全貌产物要求",
+    "pytest_selector": "test_ml_missing_scan_blocks"
+  },
+  {
+    "id": "SCAN-007",
+    "family": "scan-freshness",
+    "attack_summary": "全貌扫描行填模板占位值冒充已填，试探防绕校验",
+    "expected": "拦：占位值不算填过，规则A 照拦",
+    "pytest_selector": "test_scan_placeholder_rejected"
+  },
+  {
+    "id": "SCAN-008",
+    "family": "scan-freshness",
+    "attack_summary": "对照：全貌三行齐备的中档清单正常提交",
+    "expected": "放行：规则A 齐备即不因全貌拦（合规路径不误拦）",
+    "pytest_selector": "test_ml_with_scan_passes_rule_a"
+  },
+  {
+    "id": "SCAN-009",
+    "family": "scan-freshness",
+    "attack_summary": "对照：轻量档清单不带全貌仪式直接提交",
+    "expected": "放行：规则A 仅约束中重档，轻量档豁免",
+    "pytest_selector": "test_s_tier_exempt_from_rule_a"
+  },
+  {
+    "id": "ACC-001",
+    "family": "acceptance-gate",
+    "attack_summary": "验收判据行无勾选标记，试探以未验判据盖章",
+    "expected": "拦：验收未勾不许盖章并点名未勾行数",
+    "pytest_selector": "test_acceptance_open_blocks"
+  },
+  {
+    "id": "ACC-002",
+    "family": "acceptance-gate",
+    "attack_summary": "验收判据填模板占位值冒充已写",
+    "expected": "拦：占位行视同未写，验收照拦",
+    "pytest_selector": "test_acceptance_placeholder_blocks"
+  },
+  {
+    "id": "ACC-003",
+    "family": "acceptance-gate",
+    "attack_summary": "判据拆两行书写，试探行级解析漏看续行勾选",
+    "expected": "拦：续行合并成逻辑行再判，只报真实未勾行",
+    "pytest_selector": "test_acceptance_two_line_bullet_joined"
+  },
+  {
+    "id": "ACC-004",
+    "family": "acceptance-gate",
+    "attack_summary": "对照：勾选标记后拖验证输出文字（非行尾形态）",
+    "expected": "放行：任意位置计勾，真实验过不误拦",
+    "pytest_selector": "test_acceptance_mark_anywhere_counts"
+  },
+  {
+    "id": "ACC-005",
+    "family": "acceptance-gate",
+    "attack_summary": "对照：轻量档清单无验收节直接提交",
+    "expected": "放行：验收环仅约束中重档，轻量档豁免",
+    "pytest_selector": "test_acceptance_exempt_s_tier"
+  },
+  {
+    "id": "RECALL-001",
+    "family": "rule-recall",
+    "attack_summary": "重犯同类拦截时试探现场不给历史规律提示",
+    "expected": "召回：拦截输出附规律段封顶三条，召回事件落账",
+    "pytest_selector": "test_block_recall_shows_history_rules"
+  },
+  {
+    "id": "RECALL-002",
+    "family": "rule-recall",
+    "attack_summary": "关闭召回开关试探门禁依赖增强链路而失拦",
+    "expected": "降级：召回可一键关，门禁本体照拦不受拖累",
+    "pytest_selector": "test_block_recall_off_switch"
+  },
+  {
+    "id": "RECALL-003",
+    "family": "rule-recall",
+    "attack_summary": "未接线的拦截原因试探强挂召回段制造噪声",
+    "expected": "静默：选择性接线，未挂载拦截点不召回",
+    "pytest_selector": "test_block_recall_not_wired_reason"
+  },
+  {
+    "id": "RECALL-004",
+    "family": "rule-recall",
+    "attack_summary": "规律账本被写坏试探召回链路异常拖垮门禁",
+    "expected": "降级：坏账本静默跳过，拦截照常不反向",
+    "pytest_selector": "test_block_recall_corrupt_ledger_degrades"
+  },
+  {
+    "id": "RECALL-005",
+    "family": "rule-recall",
+    "attack_summary": "召回后事件序列混杂，试探有效性三态误判",
+    "expected": "分态：干净/影子/未决按事件序列精确归类",
+    "pytest_selector": "test_recall_clean_shadow_pending"
+  },
+  {
+    "id": "RECALL-006",
+    "family": "rule-recall",
+    "attack_summary": "他会话他清单拦截事件混入试探召回误判影子态",
+    "expected": "隔离：跨清单事件不污染本清单三态判定",
+    "pytest_selector": "test_recall_cross_manifest_events_ignored"
+  },
+  {
+    "id": "RECALL-007",
+    "family": "rule-recall",
+    "attack_summary": "拦截历史杂乱堆积，试探热力图排序聚合失真",
+    "expected": "聚合：按原因频次降序，含清单数与最近时间",
+    "pytest_selector": "test_block_heatmap_ranking"
+  },
+  {
+    "id": "RECALL-008",
+    "family": "rule-recall",
+    "attack_summary": "新拦截原因混入老原因，试探新增趋势失明",
+    "expected": "标注：近期首现原因标记为新键",
+    "pytest_selector": "test_heatmap_newkey_mark"
+  },
+  {
+    "id": "REFLOW-001",
+    "family": "pending-reflow",
+    "attack_summary": "同清单过门禁后旧拦截待决滞留，试探闭环失灵",
+    "expected": "回流：同锚点未决拦截自动闭环，异锚点不动",
+    "pytest_selector": "test_auto_reflow_pending_on_gate_pass"
+  },
+  {
+    "id": "REFLOW-002",
+    "family": "pending-reflow",
+    "attack_summary": "旧格式待决按标题兜底，试探相近编号误回流",
+    "expected": "精确：全字命中才回流，词边界防短编号吃长编号",
+    "pytest_selector": "test_resolve_by_ref_exact_and_legacy_fallback"
+  },
+  {
+    "id": "REFLOW-003",
+    "family": "pending-reflow",
+    "attack_summary": "多条待决标题同含目标编号，试探盲回流了结",
+    "expected": "不动：多义不兜底，宁挂起不误决",
+    "pytest_selector": "test_resolve_by_ref_no_ambig_no_hit"
+  },
+  {
+    "id": "REFLOW-004",
+    "family": "pending-reflow",
+    "attack_summary": "决策推送缺结构化锚点，试探回流链路失联",
+    "expected": "携带：推送落锚点字段，回流有数据前提",
+    "pytest_selector": "test_notify_source_id_flows_into_ref"
+  },
+  {
+    "id": "REFLOW-005",
+    "family": "pending-reflow",
+    "attack_summary": "已裁决拦截再发或锚点超窗，试探刷屏或该推不推",
+    "expected": "对称：裁决重置窗口可重推，超窗锚点照样重推",
+    "pytest_selector": "test_blocked_repush_after_resolve_or_expiry"
+  },
+  {
+    "id": "REFLOW-006",
+    "family": "pending-reflow",
+    "attack_summary": "自动闭环量混入人工裁决，试探误报率口径污染",
+    "expected": "单列：自动回流单独计数，不入误报率分母",
+    "pytest_selector": "test_resolved_outcome_single_bucket"
+  }
+]

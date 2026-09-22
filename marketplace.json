@@ -740,6 +740,31 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "regress-guard",
+      "source": "./plugins/regress-guard",
+      "description": "AI-coding governance gate for ZCode: pre-commit test enforcement, manifest-boundary guard, six-layer trust surface, assumption ledger, and FP-calibrated telemetry.",
+      "description_i18n": {
+        "en": "AI-coding governance gate for ZCode: pre-commit test enforcement, manifest-boundary guard, six-layer trust surface, assumption ledger, and FP-calibrated telemetry.",
+        "zh-CN": "AI 辅助开发治理门禁：提交前测试强制（不信 AI 自报的 done）、清单边界事前拦截、六层信任面、假设账本与误报校准遥测。"
+      },
+      "version": "1.88.0",
+      "author": {
+        "name": "1339190177",
+        "url": "https://github.com/1339190177"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "governance",
+        "hooks",
+        "pre-commit",
+        "testing",
+        "regression",
+        "guardrails",
+        "spec-driven",
+        "telemetry"
+      ]
     }
   ]
 }
