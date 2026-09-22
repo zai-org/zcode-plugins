@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifeed.md/schema/mako-signature/v0.2.json",
+  "title": "AIFeed MAKO Detached Signature v0.2",
+  "type": "object",
+  "required": ["algorithm", "context", "url", "key_fingerprint", "signature", "raw_digest"],
+  "additionalProperties": false,
+  "properties": {
+    "algorithm": {
+      "const": "ed25519"
+    },
+    "context": {
+      "enum": ["mako", "mako-index", "aimd", "aimd-index"]
+    },
+    "url": {
+      "type": "string",
+      "pattern": "^(https://\\S+|http://(127\\.0\\.0\\.1|\\[::1\\]|localhost)(:[0-9]+)?/\\S*)$",
+      "maxLength": 2048
+    },
+    "key_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[A-Za-z0-9_-]{43}$"
+    },
+    "signed_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^base64url:[A-Za-z0-9_-]{86}$"
+    },
+    "raw_digest": {
+      "type": "object",
+      "required": ["sha-256", "applies_to"],
+      "additionalProperties": false,
+      "properties": {
+        "sha-256": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "sha-512": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{86}==$"
+        },
+        "applies_to": {
+          "const": "raw-bytes"
+        }
+      }
+    }
+  }
+}

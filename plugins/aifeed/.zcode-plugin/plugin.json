@@ -1,0 +1,35 @@
+{
+  "name": "aifeed",
+  "description": "Signed content permissions for AI agents: verify a site's AIFeed manifest (Ed25519 + DNS anchor), fetch token-budgeted markdown, and decide whether a use such as retrieval, training, or quoting is allowed.",
+  "description_i18n": {
+    "en": "Signed content permissions for AI agents: verify a site's AIFeed manifest (Ed25519 + DNS anchor), fetch token-budgeted markdown, and decide whether a use such as retrieval, training, or quoting is allowed.",
+    "zh-CN": "面向 AI 智能体的签名内容许可：验证站点的 AIFeed manifest（Ed25519 + DNS 锚点）、按 token 预算抓取 markdown，并判断检索、训练、引用等用途是否被允许。"
+  },
+  "version": "1.0.0-draft.1",
+  "author": {
+    "name": "denyn1",
+    "url": "https://aifeed.md"
+  },
+  "homepage": "https://aifeed.md",
+  "repository": "https://github.com/denyn1/aifeed-protocol",
+  "license": "MIT",
+  "keywords": [
+    "aifeed",
+    "content-permissions",
+    "robots.txt",
+    "ed25519",
+    "mcp",
+    "verification",
+    "markdown"
+  ],
+  "skills": "skills",
+  "mcpServers": ".mcp.json",
+  "userConfig": {
+    "allow_private": {
+      "title": "Allow loopback URLs",
+      "description": "Set to 1 to allow http:// loopback origins during local testing (default 0).",
+      "type": "string",
+      "default": "0"
+    }
+  }
+}
