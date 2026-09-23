@@ -1,6 +1,6 @@
 {
   "name": "command-code-usage",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "See your Command Code plan usage — 5-hour and weekly rolling windows, monthly credits or balance — right inside the conversation, with a remaining-requests estimate and a burn-rate warning. Requires a Command Code plan.",
   "author": {
     "name": "Jovan1666",
