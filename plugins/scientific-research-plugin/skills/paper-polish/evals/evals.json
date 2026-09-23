@@ -1,0 +1,23 @@
+{
+  "skill_name": "paper-polish",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "polish the abstract section in els-cas-templates/manuscript.tex",
+      "expected_output": "Should improve grammar, tighten academic tone, fix any vague language in the abstract while preserving all LaTeX commands like \\textyen{}, $K=2$, \\textit{}, etc.",
+      "files": ["els-cas-templates/manuscript.tex"]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我润色这段话：In order to solve the empty container repositioning problem, we propose a method that can effectively reduce the transportation cost. The experiment results shows that our method is better than other methods. It can be seen that the proposed approach has good performance.",
+      "expected_output": "Should fix: 'In order to' → 'To', 'shows' → 'show', 'better than other methods' → specific improvement claim, 'good performance' → precise metric, remove 'It can be seen that'",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "polish the file els-cas-templates/manuscript.tex, just grammar check",
+      "expected_output": "Should only apply dimension 1 (grammar/correctness) and ask user if they want full polish. Should NOT rewrite for tone or conciseness.",
+      "files": ["els-cas-templates/manuscript.tex"]
+    }
+  ]
+}
