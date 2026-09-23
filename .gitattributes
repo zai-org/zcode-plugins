@@ -14,6 +14,10 @@
 # Protected Mimosa payloads are opaque binary artifacts.
 *.mimosa binary
 
+# zcode-cycle is stored byte-for-byte: the tree must stay identical to its signed,
+# live-certified release archive, whose license files carry CRLF line endings.
+plugins/zcode-cycle/** -text
+
 # Internal operations never reach the public snapshot (git archive honours
 # export-ignore). The public repository keeps the validators, the GitHub
 # workflows, the plugins and the documentation — everything a contributor

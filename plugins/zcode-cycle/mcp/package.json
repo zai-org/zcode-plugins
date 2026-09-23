@@ -1,0 +1,9 @@
+{
+  "name": "@zcode-cycle/mcp",
+  "version": "1.0.11",
+  "private": true,
+  "type": "module",
+  "description": "ZCode Cycle MCP bridge to the workflowd control plane",
+  "license": "FSL-1.1-MIT",
+  "author": "Gianluca Iannotta"
+}
