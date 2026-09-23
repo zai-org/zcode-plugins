@@ -1,6 +1,6 @@
 ---
 name: figure-plot
-description: 数据可视化与绘图技能。用户要求画图、绘图、出图、作图、重画，或提到 figure、plot、matplotlib、数据图、示意图、算法流程图、框架图、拓扑图、柱状图、折线图、热力图、帕累托前沿、网络图、收敛曲线、中文图、学位论文图、海运航线、地理网络、世界地图、避陆，或问 drawio/math/数学公式/数学符号/LaTeX 渲染等任何图形与公式渲染问题时使用。覆盖数据图（Python/matplotlib）与示意图/流程图（drawio/TikZ）的完整规范：图契约、Times New Roman 字体（中文宋体回退）、色盲安全配色、矢量 PDF 导出与字体嵌入验证、脚本落盘与迭代约定、海运航线 searoute 避陆生成与穿陆检测。
+description: 数据可视化与绘图技能。用户要求画图、绘图、出图、作图、重画，或提到 figure、plot、matplotlib、数据图、示意图、算法流程图、框架图、拓扑图、柱状图、折线图、热力图、帕累托前沿、网络图、收敛曲线、中文图、学位论文图、海运航线、地理网络、世界地图、避陆，或问 drawio/math/数学公式/数学符号/LaTeX 渲染等任何图形与公式渲染问题时使用。覆盖数据图（Python/matplotlib）与示意图/流程图（drawio/TikZ）的完整规范：图契约、Times New Roman 字体（中文宋体回退）、色盲安全配色、图例强制审计（序列缺图例导出即报错）、矢量 PDF 导出与字体嵌入验证、脚本落盘与迭代约定、海运航线 searoute 避陆生成与穿陆检测。
 license: MIT
 ---
 
@@ -84,6 +84,7 @@ uv run --project <drawio-programmatic 路径> drawio-toolkit upsert-buffered-reg
 1. **矢量 PDF**：默认导出 PDF（出版质量）；仅用户明确要求时才用 SVG（网页用途）或 PNG。
 2. **字体**：Times New Roman，缺字体环境按回退链 `Times New Roman → Times → Liberation Serif → Nimbus Roman`（样式文件已内置，WSL/Linux 不再静默换成 DejaVu）。中文图（中文期刊/学位论文）用 `load_style(zh=True)`：拉丁字符与数字走 Times，中文走宋体（`SimSun → Songti SC → Noto Serif CJK SC` 按平台回退）。
 3. **标签默认英文**（国际投稿），即使数据包含中文；中文论文场景用户明说后才切中文模式，中文一律宋体，不混入黑体/楷体。
+4. **图例**：同一子图内 ≥2 组视觉可分的序列（靠颜色 / 线型 / marker / 填充任一维度区分）必须配图例且逐组完整；`save_fig` 内置图例审计，缺失或不完整会报错拒绝导出。
 
 ## 尺寸与字号（按最终印刷尺寸设计）
 
@@ -101,8 +102,9 @@ uv run --project <drawio-programmatic 路径> drawio-toolkit upsert-buffered-reg
 ## 版面细节
 
 - 去掉上、右边框（`spines['top'/'right'].set_visible(False)`），图例无边框（`frameon=False`）。
-- 类别在空间上固定时优先直接标注在数据旁，其次才用图例。
-- **分类标记必须有图例**：凡用实心/空心、marker 形状、颜色区分类别的子图，必须配图例逐项说明每种标记的语义；轴标签、行标签（如 y 轴刻度写行名）只定位不释义，不能替代图例（实测教训：fsm Figure 4 面板 b 双行散点只有行标签、实心/空心语义无图例，被用户退回补加，且两状态合并成两entry仍被要求拆全四项——每个 (形状×填充) 组合一个 entry，不要合并语义）。多面板图各图例的位置与样式跨面板一致（如统一轴内右上、顶边同高）。窄面板放多列图例极易横向越界压到纵轴（相邻面板的轴）：导出前在脚本内 `fig.canvas.draw()` 后用 `legend.get_window_extent()` 与 `ax.get_window_extent()` 比对四边 slack，为负即 fail 报错（fsm fig5 实测：单行四项越界约 4pt 被用户发现；收敛方案是改 2×2 按 marker 形状分组——上圆下方对应数据行——而非缩字号）。
+- **图例是默认要求，不是可选项**：凡靠颜色、线型、marker 形状、实心/空心、填充任一维度区分出 ≥2 组序列的子图，必须配图例逐项说明每组的语义；只有全部序列都已在数据旁就地标注（direct label）时才可免图例。轴标签、行标签（如 y 轴刻度写行名）只定位不释义，不能替代图例（实测教训：fsm Figure 4 面板 b 双行散点只有行标签、实心/空心语义无图例，被用户退回补加，且两状态合并成两 entry 仍被要求拆全四项——每个 (形状×填充) 组合一个 entry，不要合并语义）。
+- **写法约定**：每条 `plot` / `scatter` / `bar` / `fill_between` 调用都带 `label=`；不进图例的辅助元素（参考线、显著性括号、误差棒帽）显式 `label="_nolegend_"`；收尾统一 `ax.legend(loc=...)`。多面板共享一套序列语义时，图例可只放主角面板一个，其余面板不重复——`save_fig` 的图例审计按全图颜色/款式匹配识别这种共享图例，不会误报。图例位置与样式跨面板一致（如统一轴内右上、顶边同高）。
+- 窄面板放多列图例极易横向越界压到纵轴（相邻面板的轴）：导出前在脚本内 `fig.canvas.draw()` 后用 `legend.get_window_extent()` 与 `ax.get_window_extent()` 比对四边 slack，为负即 fail 报错（fsm fig5 实测：单行四项越界约 4pt 被用户发现；收敛方案是改 2×2 按 marker 形状分组——上圆下方对应数据行——而非缩字号）。
 - 多面板：用 `GridSpec` 对齐；每个面板左上角加粗体字母 A、B、C…；各面板样式保持一致。
 - 轴标签必须带单位，如 `Cost ($10^6$ USD)`、`Time (h)`。
 
@@ -135,18 +137,23 @@ sys.path.insert(0, str(Path.home() / ".agents/skills/figure-plot/scripts"))
 from figstyle import load_style, save_fig
 
 load_style()            # 中文图：load_style(zh=True)
-# ... 绘图 ...
+# 绘图：每条序列带 label=；辅助元素显式 label="_nolegend_"
+ax.plot(iters, ddro, color="#0072B2", marker="o", markevery=10, label="DDRO")
+ax.plot(iters, saa, color="#D55E00", marker="s", markevery=10, label="SAA")
+ax.set_xlabel("Iteration")
+ax.set_ylabel("Optimality gap (%)")
+ax.legend(loc="upper right")
 save_fig(fig, "fig5_convergence", outdir="figures")
 ```
 
-- `save_fig` 导出 `figures/<name>.pdf`、校验非空、核对字体全部嵌入（pdffonts emb=yes），通过后回显绝对路径。
+- `save_fig` 导出前先做**图例审计**：同轴 ≥2 组视觉可分的序列无图例、或图例缺 entry（有序列没写 `label=`）都报错拒绝导出；`check_legends=False` 豁免仅限单序列或全部序列已就地标注的图。随后导出 `figures/<name>.pdf`、校验非空、核对字体全部嵌入（pdffonts emb=yes），通过后回显绝对路径。
 - 论文仓库需脱离本机自包含（合作者复现/投稿）时，把 `figstyle.py` 与 `publication.mplstyle` 拷入仓库 `figures/` 目录，此后以仓库内副本为该论文的唯一事实源。
 
 ## 执行约定
 
 - **脚本落盘**：生成脚本保存到项目内 `figures/scripts/<fig_name>.py`，不要只在临时目录跑一次性命令。
 - **运行方式**：项目内有 pyproject.toml 用 `uv run --no-sync python figures/scripts/<fig_name>.py`；否则用 `python3`。
-- **输出验证**：数据图统一走 `save_fig`（内置非空与字体嵌入校验）；drawio/TikZ 导出后须 `ls -la` 确认存在且非空，drawio 图另走上方工作流的视觉验收闭环。两类都在回复中报告**绝对路径**，再让用户查看。
+- **输出验证**：数据图统一走 `save_fig`（内置图例审计、非空与字体嵌入校验）；drawio/TikZ 导出后须 `ls -la` 确认存在且非空，drawio 图另走上方工作流的视觉验收闭环。两类都在回复中报告**绝对路径**，再让用户查看。
 - **迭代请求**（改字号、配色、图例位置等）：先读 `figures/scripts/` 下的原脚本 → 修改 → 重跑；文件名保持不变，保证 LaTeX 中的 `\includegraphics` 引用稳定。
 
 ## 交付前检查清单
@@ -160,5 +167,6 @@ save_fig(fig, "fig5_convergence", outdir="figures")
 - [ ] 误差棒 / 置信带有定义
 - [ ] 多面板有 A/B/C 标签且样式一致
 - [ ] 每个子图的分类标记（实心/空心、形状、颜色）都有图例逐项说明语义
+- [ ] 图例审计通过（`save_fig` 导出即验证）：每个含 ≥2 组可分序列的子图都有完整图例，辅助元素已标 `_nolegend_`
 - [ ] 无 3D 效果、无多余网格线和装饰
 - [ ] 图的内容能独立支撑图契约中的核心结论
