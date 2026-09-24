@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifeed.md/schema/mako/v0.2.json",
+  "title": "AIFeed MAKO Frontmatter v0.2",
+  "description": "MAKO frontmatter with the AIFeed extension block. Unknown top-level keys are allowed for MAKO/third-party extensions; the 'aifeed' block is strict.",
+  "type": "object",
+  "required": ["mako"],
+  "properties": {
+    "mako": {
+      "const": "1.0"
+    },
+    "type": {
+      "enum": ["product", "article", "docs", "landing", "profile", "listing", "event", "recipe", "faq", "custom"]
+    },
+    "entity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "updated": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}:[0-9]{2}Z)?$"
+    },
+    "tokens": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"
+    },
+    "embedding-model": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "canonical": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/action" }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "internal": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/link" }
+        },
+        "external": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/link" }
+        }
+      }
+    },
+    "related": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "minLength": 1, "maxLength": 2048 }
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 50,
+      "items": { "type": "string", "minLength": 1, "maxLength": 64 }
+    },
+    "audience": {
+      "type": "string",
+      "maxLength": 128
+    },
+    "freshness": {
+      "enum": ["realtime", "hourly", "daily", "weekly", "monthly", "static"]
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cover": {
+          "type": "object",
+          "required": ["url", "alt"],
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
+            "alt": { "type": "string", "minLength": 1, "maxLength": 500 }
+          }
+        },
+        "images": { "type": "integer", "minimum": 0 },
+        "video": { "type": "integer", "minimum": 0 },
+        "audio": { "type": "integer", "minimum": 0 },
+        "interactive": { "type": "integer", "minimum": 0 },
+        "downloads": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "aifeed": { "$ref": "#/$defs/aifeed" }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "required": ["name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "endpoint": { "type": "string", "pattern": "^/\\S*$", "maxLength": 1024 },
+        "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        "webmcp": { "type": "boolean" },
+        "params": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+              "type": { "enum": ["string", "integer", "boolean"] },
+              "required": { "type": "boolean" },
+              "description": { "type": "string", "maxLength": 300 }
+            }
+          }
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["url", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "context": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "type": {
+          "enum": ["parent", "child", "sibling", "source", "competitor", "reference"]
+        }
+      }
+    },
+    "aifeed": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x_": {}
+      },
+      "properties": {
+        "policy_version": { "const": "0.2" },
+        "usage": { "$ref": "#/$defs/usage" },
+        "attribution": { "enum": ["required", "optional", "none"] },
+        "attribution_url": { "type": "string", "pattern": "^https://\\S+$", "maxLength": 512 },
+        "attribution_text": { "type": "string", "maxLength": 256 },
+        "limits": { "$ref": "#/$defs/limits" },
+        "license": { "$ref": "#/$defs/license" },
+        "assets": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": ["url", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
+              "type": { "enum": ["image", "video", "audio", "document", "archive", "file"] },
+              "mime": { "type": "string", "maxLength": 128 },
+              "size": { "type": "integer", "minimum": 0 },
+              "sha-256": { "type": "string", "pattern": "^[A-Za-z0-9+/]{43}=$" },
+              "title": { "type": "string", "maxLength": 500 },
+              "alt": { "type": "string", "maxLength": 500 }
+            }
+          }
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x_": {}
+      },
+      "properties": {
+        "search": { "enum": ["allow", "deny"] },
+        "retrieval": { "enum": ["allow", "deny"] },
+        "input": { "enum": ["allow", "deny"] },
+        "training": { "enum": ["allow", "deny"] },
+        "quote": { "enum": ["allow", "deny"] },
+        "summarize": { "enum": ["allow", "deny"] },
+        "reproduce": { "enum": ["allow", "deny"] },
+        "translate": { "enum": ["allow", "deny"] },
+        "modify": { "enum": ["allow", "deny"] },
+        "embed": { "enum": ["allow", "deny"] },
+        "commercial_use": { "enum": ["allow", "deny"] }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x_": {}
+      },
+      "properties": {
+        "requests_per_minute": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "concurrent": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "crawl_delay_seconds": { "type": "integer", "minimum": 0, "maximum": 3600 }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^x_": {}
+      },
+      "properties": {
+        "name": { "type": "string", "maxLength": 128 },
+        "url": { "type": "string", "pattern": "^https://\\S+$", "maxLength": 512 },
+        "rsl_url": { "type": "string", "pattern": "^https://\\S+$", "maxLength": 512 },
+        "contact": { "type": "string", "pattern": "^(mailto:|https://)\\S+$", "maxLength": 512 },
+        "price": {
+          "type": "object",
+          "required": ["amount", "currency"],
+          "additionalProperties": false,
+          "properties": {
+            "amount": { "type": "integer", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "per": { "enum": ["page", "crawl", "month", "year"] }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aifeed.md/schema/ai-signature/v0.1.json",
+  "title": "AIFeed Detached Signature v0.1",
+  "type": "object",
+  "required": ["algorithm", "canonicalization", "signature"],
+  "properties": {
+    "algorithm": {
+      "const": "ed25519"
+    },
+    "canonicalization": {
+      "const": "jcs-rfc8785"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^base64url:[A-Za-z0-9_-]{86}$"
+    },
+    "raw_digest": {
+      "type": "object",
+      "required": ["sha-256", "applies_to"],
+      "additionalProperties": false,
+      "properties": {
+        "sha-256": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "sha-512": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{86}==$"
+        },
+        "applies_to": {
+          "const": "raw-bytes"
+        }
+      }
+    }
+  }
+}

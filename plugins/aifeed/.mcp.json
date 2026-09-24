@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "aifeed": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/engine/server.js"
+      ],
+      "env": {
+        "AIFEED_MCP_ALLOW_PRIVATE": "${user_config.allow_private}"
+      },
+      "enabled": true,
+      "timeoutMs": 60000
+    }
+  }
+}
