@@ -5,6 +5,11 @@
 
 小时候买不起的闪卡，现在你想印谁就印谁。这是你的私人卡牌工坊。
 
+**两条路线，同一张卡**：
+
+- **画出来**（`ruic-card` 技能）：给一句话或一张参考图，四层图由 agent 画。
+- **拍出来**（`photo-card` 技能）：你给一张已有照片，用 rembg 把四层从照片里抠出来，可先去水印，再渲出动画与 MP4 / 微信规格 GIF。
+
 **它是一台全自动闪卡生产线**：你给一句话或一张参考图，剩下全交给 Codex——
 
 1. **画四层图**：主体、背景、线稿、文字，画在同一块画布、同一套坐标里
@@ -55,7 +60,8 @@
 
 ### 安装
 
-在 ZCode 插件市场搜索 `ruic-card` 安装并启用；插件内的技能 `skills/ruic-card/` 会随插件一起加载，无需手工拷贝目录。
+在 ZCode 插件市场搜索 `ruic-card` 安装并启用；插件内的两个技能会随插件一起加载——
+`ruic-card`（画出来）与 `photo-card`（拍出来），无需手工拷贝目录。
 
 ### 环境
 
@@ -139,29 +145,45 @@ flowchart LR
 
 ---
 
+## 📸 照片路线（`photo-card` 技能）
+
+"把这张照片做成全息闪卡"——照片不用先画，直接切成四层：
+
+1. `ocr_boxes.ps1 -img <照片>` 用 Windows OCR 定位水印（其他平台自己给坐标），`remove_watermark.py <照片> x0 y0 x1 y1 <out.jpg>` 只填那一块。
+2. `prepare_card_layers.py <照片> <输出目录> [x0 y0 x1 y1] [--native]` 抠出 `subject/background/lineart/text.png`，共用一块画布——**主体用的是照片自己的像素**，被擦掉的区域作为 alpha。
+3. 交给 `ruic-card` 技能的流水线建 `card.blend`、导 GLB、组装查看器。
+4. `render_anim.py`（走 Blender）渲 240 帧；`encode_mp4.py` 出原生尺寸 MP4，`encode_wx_gif.py` 出微信能直接发的 GIF + 小 MP4。
+
+验收用数值，不靠肉眼：合成图与原图在水印框外一致、渲染帧与原图亮度差在几级内、水印区高亮像素归零、GIF 体积 <10MB 且宽 ≤1000px。细节见 `skills/photo-card/references/photo-card.md`。
+
+---
+
 ## 📁 目录一览
 
 ```
 plugins/ruic-card/                 # 插件根：清单、许可、双语文档、演示媒体
 ├── .zcode-plugin/plugin.json
 ├── assets/                        # README 用的演示 GIF / MP4
-└── skills/ruic-card/              # 技能本体（SKILL.md 所在目录即技能名）
-    ├── SKILL.md                   # Agent 读的"操作手册"
-    ├── references/
-    │   ├── art-direction.md       # 分层画图的提示词写法、参考图处理
-    │   ├── config.example.json    # 卡片配置示例
-    │   └── verification.md        # 交付前的验收清单
-    ├── scripts/
-    │   ├── ensure_blender.py      # 自动获取官方 Blender 便携版
-    │   ├── build_card.py          # 生成可编辑的 Blender 场景
-    │   ├── export_web.py          # 导出卡片几何
-    │   ├── generate_typography.py # 精确的透明文字层
-    │   ├── validate_assets.py     # 四层图体检（棋盘格假透明图自动转真 alpha）
-    │   ├── checkerboard_to_alpha.py # 棋盘格底确定性抠透明（附回归测试）
-    │   ├── run_pipeline.py        # 一键流水线
-    │   └── package_skill.py       # 纯文本打包成可分享的 ZIP
-    └── assets/
-        └── web-template/          # 响应式 Three.js 查看器
+└── skills/
+    ├── ruic-card/                 # 路线一：画出来（SKILL.md 所在目录即技能名）
+    │   ├── SKILL.md               # Agent 读的"操作手册"
+    │   ├── references/
+    │   │   ├── art-direction.md   # 分层画图的提示词写法、参考图处理
+    │   │   ├── config.example.json# 卡片配置示例
+    │   │   └── verification.md    # 交付前的验收清单
+    │   ├── scripts/               # 建卡流水线（ensure_blender / build_card / export_web /
+    │   │                          #   generate_typography / validate_assets /
+    │   │                          #   checkerboard_to_alpha / run_pipeline / package_skill）
+    │   └── assets/web-template/   # 响应式 Three.js 查看器
+    └── photo-card/                # 路线二：拍出来（照片 → 四层 → 动画 → 视频）
+        ├── SKILL.md
+        ├── references/photo-card.md
+        └── scripts/
+            ├── prepare_card_layers.py  # rembg 抠四层（滞后生长蒙版、板图恒等擦除）
+            ├── remove_watermark.py     # 水印框逐列梯度填充
+            ├── ocr_boxes.ps1           # Windows OCR 定位水印框
+            ├── render_anim.py          # 240 帧动画渲染（native / clean / still）
+            └── encode_mp4.py / encode_wx_gif.py   # 原生 MP4 / 微信规格 GIF+MP4
 ```
 
 技能本体只有代码和文字，轻得很。你生成的画作、`.blend`、模型都待在你自己的输出项目里。
@@ -186,18 +208,21 @@ python skills/ruic-card/scripts/package_skill.py skills/ruic-card --out ~/Deskto
 
 ## 📦 安装要求与副作用声明
 
-- **可执行文件**：Python 3（含 Pillow）、Node.js（含 npm）。Blender 无需预装——首次运行时流水线会把官方便携版下载到**输出项目的** `tools/` 目录，不碰系统安装。
-- **网络访问**：首次运行的 Blender 下载（blender.org）、查看器 npm 依赖安装、验证脚本的无头 Chromium 获取。除此之外不访问任何主机。
-- **API 密钥**：无需任何密钥。图层用宿主 agent 已有的图像能力生成，或手绘。
-- **文件写入**：只写入你指定的输出项目目录；技能本体运行时只读。
-- **命令执行**：Python 流水线、`blender`（便携副本）、`node`（查看器服务与验证）。
+- **可执行文件**：Python 3（含 Pillow；照片路线另需 numpy、scipy、rembg）、Node.js（含 npm），动画渲染需要 Blender。Blender 无需预装——首次运行时流水线会把官方便携版下载到**输出项目的** `tools/` 目录，不碰系统安装。
+- **网络访问**：首次运行的 Blender 下载（blender.org）、查看器 npm 依赖安装、验证脚本的无头 Chromium 获取，以及 **rembg 首次使用时下载的分割模型**（来自 rembg 的 release 附件，约 180 MB）。除此之外不访问任何主机。
+- **API 密钥**：无需任何密钥。画出来的路线上，四层图用宿主 agent 已有的图像能力生成或手绘；照片路线除模型下载外全程离线。
+- **文件写入**：只写入你指定的输出项目目录，以及你在照片路线脚本里传入的路径；插件本体运行时只读。
+- **命令执行**：Python 流水线、`blender`（便携副本）、`node`（查看器服务与验证）、`powershell`（仅 Windows 的水印定位）。
+- **平台差异**：水印定位脚本 `skills/photo-card/scripts/ocr_boxes.ps1` 用的是 Windows OCR；macOS / Linux 上请自行给出水印框坐标，或跳过这一步。
 - **无遥测、无 Hook、无 MCP 服务。**
 
 ## 📄 第三方代码、素材与服务来源
 
 - **RuiC-card-skill**（上游原作）— <https://github.com/HRuiCcc/RuiC-card-skill>，MIT License，Copyright (c) 2026 HRuiCcc。
-  本插件的技能工作流、Blender 场景脚本、Three.js 查看器模板与 `references/` 文档均源自该项目（含少量适配补丁），
+  "画出来"这条路线的技能工作流、Blender 场景脚本、Three.js 查看器模板与 `references/` 文档均源自该项目（含少量适配补丁），
   `LICENSE` 保留原作者版权声明；`assets/demo-before.*` 与 `assets/demo-after.*` 四个演示文件同样来自上游仓库。
+- **rembg** — MIT License，照片路线用它做主体分割；其模型权重在运行时从 rembg 的 release 附件下载，遵循各自上游项目（U²-Net / IS-Net）的条款。
+- **imageio** 与 **imageio-ffmpeg** — BSD-2-Clause 包；`imageio-ffmpeg` 安装的 FFmpeg 可执行文件按其自身许可（GPL）分发。二者都不随本插件打包。
 - **Blender** — 运行时从 blender.org 获取（GPL 程序；本插件不打包任何 Blender 代码）。
 - **Three.js** — MIT License，随网页模板打包（已内联进 `app.bundle.js`）。
 - 其余内容为原创代码与文字（MIT，见 `LICENSE`）。生成的画作永远留在你自己的项目目录，绝不随插件打包。

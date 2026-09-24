@@ -744,16 +744,17 @@
     {
       "name": "ruic-card",
       "source": "./plugins/ruic-card",
-      "description": "Holographic collectible-card generator: layered artwork + Blender + Three.js. Turn one sentence or a reference image into an interactive parallax card website plus an editable card.blend project.",
+      "description": "Holographic collectible-card generator: layered artwork + Blender + Three.js, in two routes - paint the four layers from a description or reference image, or derive them from a photo you already have (rembg cutout, optional watermark removal, animation render and MP4 / WeChat-sized GIF deliverables). Outputs an interactive parallax card website plus an editable card.blend project.",
       "description_i18n": {
-        "en": "Holographic collectible-card generator: layered artwork + Blender + Three.js. Turn one sentence or a reference image into an interactive parallax card website plus an editable card.blend project.",
-        "zh-CN": "全息闪卡生成器：分层画稿 + Blender + Three.js。一句话或一张参考图，生成可交互的 3D 视差闪卡网页，外加可编辑的 card.blend 工程。"
+        "en": "Holographic collectible-card generator: layered artwork + Blender + Three.js, in two routes - paint the four layers from a description or reference image, or derive them from a photo you already have (rembg cutout, optional watermark removal, animation render and MP4 / WeChat-sized GIF deliverables). Outputs an interactive parallax card website plus an editable card.blend project.",
+        "zh-CN": "全息闪卡生成器：分层画稿 + Blender + Three.js，两条路线——用描述或参考图绘制四层图，或直接把已有照片切成四层（rembg 抠图、可选去水印，附动画渲染与 MP4 / 微信动图交付）。产出可交互的 3D 视差闪卡网页与可编辑的 card.blend 工程。"
       },
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "liuzhiqiang23",
         "url": "https://github.com/liuzhiqiang23"
       },
+      "license": "MIT",
       "category": "utilities",
       "keywords": [
         "holographic",
@@ -761,7 +762,11 @@
         "blender",
         "threejs",
         "parallax",
-        "creative"
+        "creative",
+        "photo",
+        "rembg",
+        "watermark",
+        "video"
       ]
     }
   ]
