@@ -55,11 +55,7 @@
 
 ### 安装
 
-把这个目录放进 Codex 的 skills 目录（目录名即 skill 名）：
-
-```
-~/.codex/skills/RuiC-card-skill/
-```
+在 ZCode 插件市场搜索 `ruic-card` 安装并启用；插件内的技能 `skills/ruic-card/` 会随插件一起加载，无需手工拷贝目录。
 
 ### 环境
 
@@ -69,13 +65,13 @@
 
 ### 开口
 
-> "用 RuiC-card-skill 给我做一张水墨风的锦鲤闪卡，文字用书法体，编号 No.001"
+> "用 ruic-card 给我做一张水墨风的锦鲤闪卡，文字用书法体，编号 No.001"
 
 或者上传参考图：
 
 > "照这张图做一张闪卡，保留人物和构图，背景换成星空"
 
-Codex 会先把卡片规格说给你听，然后开工：画四层图 → 生成文字层 → 写配置 → 跑流水线 → 起本地服务 → 打开页面实测拖拽、翻面、滑块和手机布局 → 交付。
+Agent 会先把卡片规格说给你听，然后开工：画四层图 → 生成文字层 → 写配置 → 跑流水线 → 起本地服务 → 打开页面实测拖拽、翻面、滑块和手机布局 → 交付。
 
 ### 你会收到
 
@@ -146,47 +142,45 @@ flowchart LR
 ## 📁 目录一览
 
 ```
-RuiC-card-skill/
-├── SKILL.md                    # Codex 读的"操作手册"
-├── references/
-│   ├── art-direction.md        # 分层画图的提示词写法、参考图处理
-│   ├── config.example.json     # 卡片配置示例
-│   └── verification.md         # 交付前的验收清单
-├── scripts/
-│   ├── ensure_blender.py       # 自动获取官方 Blender 便携版
-│   ├── build_card.py           # 生成可编辑的 Blender 场景
-│   ├── export_web.py           # 导出卡片几何
-│   ├── generate_typography.py  # 精确的透明文字层
-│   ├── validate_assets.py      # 四层图体检（棋盘格假透明图自动转真 alpha）
-│   ├── checkerboard_to_alpha.py # 棋盘格底确定性抠透明（附回归测试）
-│   ├── run_pipeline.py         # 一键流水线
-│   └── package_skill.py        # 纯文本打包成可分享的 ZIP
-└── assets/
-    └── web-template/           # 响应式 Three.js 查看器
+plugins/ruic-card/                 # 插件根：清单、许可、双语文档、演示媒体
+├── .zcode-plugin/plugin.json
+├── assets/                        # README 用的演示 GIF / MP4
+└── skills/ruic-card/              # 技能本体（SKILL.md 所在目录即技能名）
+    ├── SKILL.md                   # Agent 读的"操作手册"
+    ├── references/
+    │   ├── art-direction.md       # 分层画图的提示词写法、参考图处理
+    │   ├── config.example.json    # 卡片配置示例
+    │   └── verification.md        # 交付前的验收清单
+    ├── scripts/
+    │   ├── ensure_blender.py      # 自动获取官方 Blender 便携版
+    │   ├── build_card.py          # 生成可编辑的 Blender 场景
+    │   ├── export_web.py          # 导出卡片几何
+    │   ├── generate_typography.py # 精确的透明文字层
+    │   ├── validate_assets.py     # 四层图体检（棋盘格假透明图自动转真 alpha）
+    │   ├── checkerboard_to_alpha.py # 棋盘格底确定性抠透明（附回归测试）
+    │   ├── run_pipeline.py        # 一键流水线
+    │   └── package_skill.py       # 纯文本打包成可分享的 ZIP
+    └── assets/
+        └── web-template/          # 响应式 Three.js 查看器
 ```
 
-skill 本体只有代码和文字，轻得很。你生成的画作、`.blend`、模型都待在你自己的输出项目里。
+技能本体只有代码和文字，轻得很。你生成的画作、`.blend`、模型都待在你自己的输出项目里。
+
+查看器随包提供 `skills/ruic-card/assets/web-template/app.bundle.js`（约 1.3 MB，**未压缩、可读**的打包结果）：
+查看器按单文件加载，这样逐模块 URL 不会被广告拦截插件拦掉；没有 bun/esbuild 的机器也能直接跑。
+改了 `app.js` 后用同目录 `bundle.sh` 重新打包即可。
 
 ---
 
 ## 📦 打包分享
 
-想发给朋友或放进仓库：
+想把技能单独发给朋友：
 
 ```bash
-python scripts/package_skill.py RuiC-card-skill --out ~/Desktop/RuiC-card-skill.zip
+python skills/ruic-card/scripts/package_skill.py skills/ruic-card --out ~/Desktop/ruic-card-skill.zip
 ```
 
 按白名单只打包文本文件，打出来的 ZIP 干干净净，拿走就能用。
-
----
-
-## 赞赏支持
-
-<div align="center">
-  <img src="assets/wechat-donate.png" width="300" alt="微信赞赏码" />
-  <p><strong>微信扫码赞赏</strong></p>
-</div>
 
 ---
 
@@ -199,8 +193,11 @@ python scripts/package_skill.py RuiC-card-skill --out ~/Desktop/RuiC-card-skill.
 - **命令执行**：Python 流水线、`blender`（便携副本）、`node`（查看器服务与验证）。
 - **无遥测、无 Hook、无 MCP 服务。**
 
-## 📄 第三方素材来源
+## 📄 第三方代码、素材与服务来源
 
+- **RuiC-card-skill**（上游原作）— <https://github.com/HRuiCcc/RuiC-card-skill>，MIT License，Copyright (c) 2026 HRuiCcc。
+  本插件的技能工作流、Blender 场景脚本、Three.js 查看器模板与 `references/` 文档均源自该项目（含少量适配补丁），
+  `LICENSE` 保留原作者版权声明；`assets/demo-before.*` 与 `assets/demo-after.*` 四个演示文件同样来自上游仓库。
 - **Blender** — 运行时从 blender.org 获取（GPL 程序；本插件不打包任何 Blender 代码）。
-- **Three.js** — MIT License，网页模板引用。
-- 其余内容均为原创代码与文字（MIT，见 `LICENSE`）。生成的画作永远留在你自己的项目目录，绝不随插件打包。
+- **Three.js** — MIT License，随网页模板打包（已内联进 `app.bundle.js`）。
+- 其余内容为原创代码与文字（MIT，见 `LICENSE`）。生成的画作永远留在你自己的项目目录，绝不随插件打包。
