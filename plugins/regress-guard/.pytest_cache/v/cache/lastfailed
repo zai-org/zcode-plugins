@@ -1,0 +1,3 @@
+{
+  "tests/test_facts.py::test_record_creates_card_with_frontmatter": true
+}
