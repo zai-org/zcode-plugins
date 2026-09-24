@@ -1,0 +1,42 @@
+# figure-plotter 出版样式（唯一事实源）
+# 修改样式只改本文件；图脚本一律经 scripts/figstyle.py 加载，禁止复制 rcParams 到图脚本。
+# 字体回退链：Times New Roman → Times（macOS 备选）→ Liberation Serif / Nimbus Roman（Linux 度量兼容），
+# 保证 WSL/Linux 上不再静默替换为 DejaVu。中文模式（宋体回退）见 figstyle.load_style(zh=True)。
+
+# 字体与字号（按最终印刷尺寸设计：轴标签 8pt、刻度 7pt，符合 7–9 / 6–8 pt 规范）
+font.family: serif
+font.serif: Times New Roman, Times, Liberation Serif, Nimbus Roman
+font.size: 8.0
+axes.titlesize: 8.0
+axes.labelsize: 8.0
+xtick.labelsize: 7.0
+ytick.labelsize: 7.0
+legend.fontsize: 7.0
+mathtext.fontset: stix
+
+# 导出（TrueType 42 嵌入，避免 Type 3——期刊硬要求）
+axes.unicode_minus: False
+pdf.fonttype: 42
+ps.fonttype: 42
+figure.dpi: 300
+savefig.dpi: 300
+savefig.format: pdf
+
+# 线型与刻度
+axes.linewidth: 0.6
+lines.linewidth: 1.2
+lines.markersize: 4.0
+xtick.direction: in
+ytick.direction: in
+xtick.major.size: 3.0
+ytick.major.size: 3.0
+
+# 版面
+legend.frameon: False
+axes.spines.top: False
+axes.spines.right: False
+axes.grid: False
+
+# Okabe-Ito 色盲安全色板（离散类别默认）
+# 注意：mplstyle 中 # 是行注释符，hex 颜色一律不带 # 前缀（matplotlib 同样接受）
+axes.prop_cycle: cycler('color', ['0072B2', 'D55E00', '009E73', 'E69F00', '56B4E9', 'CC79A7', '000000'])
