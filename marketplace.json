@@ -740,6 +740,34 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "zcode-cycle",
+      "source": "./plugins/zcode-cycle",
+      "displayName": "ZCode Cycle",
+      "displayName_i18n": {
+        "en": "ZCode Cycle",
+        "zh-CN": "ZCode Cycle"
+      },
+      "description": "Evidence-gated software delivery for ZCode with an architect, executor, two independent reviewers and final arbiter.",
+      "description_i18n": {
+        "en": "Evidence-gated software delivery for ZCode with an architect, executor, two independent reviewers and final arbiter.",
+        "zh-CN": "面向 ZCode 的证据门控软件交付：架构师、执行器、两名独立审查者和最终裁决者。"
+      },
+      "version": "1.0.11",
+      "author": {
+        "name": "Gianluca Iannotta",
+        "url": "https://github.com/jannotix"
+      },
+      "homepage": "https://github.com/jannotix/zcode-cycle-plugin",
+      "category": "developer-tools",
+      "keywords": [
+        "delivery",
+        "verification",
+        "quality-gates",
+        "multi-agent",
+        "zcode"
+      ]
     }
   ]
 }

@@ -1,0 +1,45 @@
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [
+    {
+      "name": "bin/linux-x64/workflowd",
+      "digest": {
+        "sha256": "90f87f8e2c80d9823eb06e4e52fd4a1fa19ec99280d4ba7a2d09b2e7522e73a0"
+      }
+    },
+    {
+      "name": "bin/win32-x64/workflowd.exe",
+      "digest": {
+        "sha256": "e83576dead4e8721e4baa39855632055ff0eb86b38f509ff0e80f6dab8fcafbb"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://github.com/jannotix/zcode-cycle-plugin/assemble-plugin/v1",
+      "externalParameters": {
+        "product_version": "1.0.11"
+      },
+      "internalParameters": {
+        "source_git_sha": "b1536e2f7cf7faa3f4f8f7d3e373cb6c16ad1ae4"
+      },
+      "resolvedDependencies": [
+        {
+          "uri": "git+https://github.com/jannotix/zcode-cycle-plugin.git",
+          "digest": {
+            "gitCommit": "b1536e2f7cf7faa3f4f8f7d3e373cb6c16ad1ae4"
+          }
+        }
+      ]
+    },
+    "runDetails": {
+      "builder": {
+        "id": "https://github.com/jannotix/zcode-cycle-plugin/actions/runs/35849686091"
+      },
+      "metadata": {
+        "invocationId": "35849686091"
+      }
+    }
+  }
+}

@@ -1,0 +1,4402 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "zcode-cycle",
+      "version": "1.0.11",
+      "licenses": [
+        {
+          "license": {
+            "name": "FSL-1.1-MIT"
+          }
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cycle:source_git_sha",
+        "value": "b1536e2f7cf7faa3f4f8f7d3e373cb6c16ad1ae4"
+      },
+      {
+        "name": "cycle:artifact_scope",
+        "value": "official ZCode plugin directory"
+      }
+    ]
+  },
+  "components": [
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "aho-corasick",
+      "version": "1.1.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/aho-corasick@1.1.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/aho-corasick"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ambient-authority",
+      "version": "0.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/ambient-authority@0.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e9d4ee0d472d1cd2e28c97dfa124b3d8d992e10eb0a035f33f5d12e3a177ba3b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/ambient-authority"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "bitflags",
+      "version": "2.13.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/bitflags@2.13.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b588b76d00fde79687d7646a9b5bdf3cc0f655e0bbd080335a95d7e96f3587da"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/bitflags/bitflags"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "block-buffer",
+      "version": "0.12.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/block-buffer@0.12.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d2f6c7dbe95a6ed67ad9f18e57daf93a2f034c524b99fd2b76d18fdfeb6660aa"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "bstr",
+      "version": "1.13.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/bstr@1.13.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6bb31b46c14244e20ee9984b11bf5c992b91fb6939fea616e3512c8baecdbe5f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/bstr"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "bytes",
+      "version": "1.12.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/bytes@1.12.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/bytes"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cap-primitives",
+      "version": "4.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/cap-primitives@4.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cdadbd7c002d3a484b35243669abdae85a0ebaded5a61117169dc3400f9a7ff0"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/bytecodealliance/cap-std"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cap-std",
+      "version": "4.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/cap-std@4.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7281235d6e96d3544ca18bba9049be92f4190f8d923e3caef1b5f66cfa752608"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/bytecodealliance/cap-std"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cc",
+      "version": "1.2.67",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/cc@1.2.67",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e17dd265a7d0f31ef544e1b20e03add05d3b45b491b633b10d67145d2acc1a38"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/cc-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cfg_aliases",
+      "version": "0.2.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/cfg_aliases@0.2.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/katharostech/cfg_aliases"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/cfg-if@1.0.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/cfg-if"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cmov",
+      "version": "0.5.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/cmov@0.5.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "const-oid",
+      "version": "0.10.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/const-oid@0.10.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/formats"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "cpufeatures",
+      "version": "0.3.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/cpufeatures@0.3.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "crossbeam-deque",
+      "version": "0.8.7",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/crossbeam-deque@0.8.7",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5181e0de7b61eb03a81e347d6dd8797bae9da5146707b51077e2d71a54ec0ceb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "crossbeam-epoch",
+      "version": "0.9.20",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/crossbeam-epoch@0.9.20",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2d6914041f254d6e9176c01941b21115dcfb7089e55135a35411081bd106ef3f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "crossbeam-utils",
+      "version": "0.8.22",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/crossbeam-utils@0.8.22",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "crypto-common",
+      "version": "0.2.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/crypto-common@0.2.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/traits"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ctutils",
+      "version": "0.4.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/ctutils@0.4.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "curve25519-dalek-derive",
+      "version": "0.1.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/curve25519-dalek-derive@0.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dalek-cryptography/curve25519-dalek"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "curve25519-dalek",
+      "version": "5.0.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:cargo/curve25519-dalek@5.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b5eed333089e2e1c1ac8c6c0398e5e2497b4c9926ca6d0365ed1e099afa5bc23"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dalek-cryptography/curve25519-dalek/tree/main/curve25519-dalek"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "deranged",
+      "version": "0.5.8",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/deranged@0.5.8",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/jhpratt/deranged"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "digest",
+      "version": "0.11.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/digest@0.11.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/traits"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ed25519-dalek",
+      "version": "3.0.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:cargo/ed25519-dalek@3.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6ebaa1a2bf1290ab3bfe5a7b771d050ebffab2711c19a81691c683a5144a25de"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ed25519",
+      "version": "3.0.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/ed25519@3.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "29fcf32e6c73d1079f83ab4d782de2d81620346a5f38c6237a86a22f8368980a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/signatures"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "equivalent",
+      "version": "1.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/equivalent@1.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/indexmap-rs/equivalent"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "errno",
+      "version": "0.3.14",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/errno@0.3.14",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/lambda-fairy/rust-errno"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "fallible-iterator",
+      "version": "0.3.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/fallible-iterator@0.3.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sfackler/rust-fallible-iterator"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "fallible-streaming-iterator",
+      "version": "0.1.9",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/fallible-streaming-iterator@0.1.9",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7360491ce676a36bf9bb3c56c1aa791658183a54d2744120f27285738d90465a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sfackler/fallible-streaming-iterator"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "fastrand",
+      "version": "2.5.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/fastrand@2.5.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/smol-rs/fastrand"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "find-msvc-tools",
+      "version": "0.1.10",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/find-msvc-tools@0.1.10",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "26b73573e6edcd2af0cdf47bd6cb58f0b3839491263c314eaad1ccf24430e1de"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/cc-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "foldhash",
+      "version": "0.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Zlib"
+        }
+      ],
+      "purl": "pkg:cargo/foldhash@0.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/orlp/foldhash"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "fs-set-times",
+      "version": "0.20.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/fs-set-times@0.20.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "94e7099f6313ecacbe1256e8ff9d617b75d1bcb16a6fddef94866d225a01a14a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/bytecodealliance/fs-set-times"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "getrandom",
+      "version": "0.4.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/getrandom@0.4.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "300e883d756b2e4ec94e02791f39b04b522276138852cfc41d9fb7e904106099"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-random/getrandom"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "globset",
+      "version": "0.4.20",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/globset@0.4.20",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "07c34a9410465b45bd9787443bc7370f37735bad04b0f0cd57ff1a3186c98988"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/globset"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "hashbrown",
+      "version": "0.17.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/hashbrown@0.17.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/hashbrown"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "hashlink",
+      "version": "0.12.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/hashlink@0.12.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32069d97bb81e38fa67eab65e3393bf804bb85969f2bc06bf13f64aef5aba248"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/djc/hashlink"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "hmac",
+      "version": "0.13.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/hmac@0.13.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6303bc9732ae41b04cb554b844a762b4115a61bfaa81e3e83050991eeb56863f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/MACs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "hybrid-array",
+      "version": "0.4.14",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/hybrid-array@0.4.14",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "707114b52a152fa7bdb290cd7cd5912d9467273b6d74e21b8d81aca1f8533f6b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/hybrid-array"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ignore",
+      "version": "0.4.33",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/ignore@0.4.33",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "00b69833ed729dc5aa7d19541d96d6cf8e9137194207a04916d658e43168402f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/ripgrep/tree/master/crates/ignore"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "indexmap",
+      "version": "2.14.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/indexmap@2.14.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/indexmap-rs/indexmap"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "inotify-sys",
+      "version": "0.1.8",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:cargo/inotify-sys@0.1.8",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c033f80b2c113cdf91ab7a33faa9cbc014726dcad99880c8609af2a370edf37d"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/hannobraun/inotify-sys"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "inotify",
+      "version": "0.11.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:cargo/inotify@0.11.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "153be1941a183ec9ccd095ddbe17a8b8d435ef6c76e9e02451b933c3999af2c8"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/hannobraun/inotify-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "io-extras",
+      "version": "0.19.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/io-extras@0.19.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "20fd6de4ccfcc187e38bc21cfa543cb5a302cb86a8b114eb7f0bf0dc9f8ac00f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/io-extras"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "io-lifetimes",
+      "version": "2.0.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/io-lifetimes@2.0.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "06432fb54d3be7964ecd3649233cddf80db2832f47fec34c01f65b3d9d774983"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/io-lifetimes"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "io-lifetimes",
+      "version": "3.0.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/io-lifetimes@3.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2f0fb0570afe1fed943c5c3d4102d5358592d8625fda6a0007fdbe65a92fba96"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/io-lifetimes"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ipnet",
+      "version": "2.12.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/ipnet@2.12.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/krisprice/ipnet"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "itoa",
+      "version": "1.0.18",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/itoa@1.0.18",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/itoa"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "libc",
+      "version": "0.2.189",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/libc@0.2.189",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/libc"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "libsqlite3-sys",
+      "version": "0.38.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/libsqlite3-sys@0.38.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f1d20bef17f513b9b3004532233187769cd072d790971f4e4da0e346eb6401e8"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rusqlite/rusqlite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "linux-raw-sys",
+      "version": "0.12.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/linux-raw-sys@0.12.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/linux-raw-sys"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "log",
+      "version": "0.4.33",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/log@0.4.33",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/log"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "maybe-owned",
+      "version": "0.3.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/maybe-owned@0.3.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4facc753ae494aeb6e3c22f839b158aebd4f9270f55cd3c79906c45476c47ab4"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rustonaut/maybe-owned"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "memchr",
+      "version": "2.8.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/memchr@2.8.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/memchr"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "mio",
+      "version": "1.2.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/mio@1.2.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "30d65c71f1ce40ab09135ce117d742b9f8a19ff91a41a8b57ed50bc2de59c427"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/mio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "nix",
+      "version": "0.31.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/nix@0.31.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/nix-rust/nix"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "notify-types",
+      "version": "2.1.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/notify-types@2.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "42b8cfee0e339a0337359f3c88165702ac6e600dc01c0cc9579a92d62b08477a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/notify-rs/notify.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "notify",
+      "version": "8.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "CC0-1.0"
+        }
+      ],
+      "purl": "pkg:cargo/notify@8.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/notify-rs/notify.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "ntapi",
+      "version": "0.4.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/ntapi@0.4.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c3b335231dfd352ffb0f8017f3b6027a4917f7df785ea2143d8af2adc66980ae"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/MSxDOS/ntapi"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "num-conv",
+      "version": "0.2.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/num-conv@0.2.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/jhpratt/num-conv"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "once_cell",
+      "version": "1.21.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/once_cell@1.21.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/matklad/once_cell"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "pin-project-lite",
+      "version": "0.2.17",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/pin-project-lite@0.2.17",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/taiki-e/pin-project-lite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "pkg-config",
+      "version": "0.3.33",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/pkg-config@0.3.33",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "19f132c84eca552bf34cab8ec81f1c1dcc229b811638f9d283dceabe58c5569e"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/pkg-config-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "powerfmt",
+      "version": "0.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/powerfmt@0.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/jhpratt/powerfmt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/proc-macro2@1.0.107",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/proc-macro2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "quote",
+      "version": "1.0.47",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/quote@1.0.47",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/quote"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "regex-automata",
+      "version": "0.4.18",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/regex-automata@0.4.18",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ad8553b9b26413251cbf30e620595c7a41b3887f03da04579c0e6b0d6a06b4b2"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/regex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "regex-syntax",
+      "version": "0.8.11",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/regex-syntax@0.8.11",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/regex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "regex",
+      "version": "1.13.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/regex@1.13.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f020237b6c8eed93db2e2cb53c00c60a8e1bc73da7d073199a1180401450218d"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/regex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "rusqlite",
+      "version": "0.40.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/rusqlite@0.40.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "23f2a97da3e3873c73cb2a2e71b35c40ff95e0b1eefa8d72d8499a6928c3b5b3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rusqlite/rusqlite"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "rustc_version",
+      "version": "0.4.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/rustc_version@0.4.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/djc/rustc-version-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "rustix-linux-procfs",
+      "version": "0.1.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/rustix-linux-procfs@0.1.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2fc84bf7e9aa16c4f2c758f27412dc9841341e16aa682d9c7ac308fe3ee12056"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/rustix-linux-procfs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "rustix",
+      "version": "1.1.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/rustix@1.1.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/bytecodealliance/rustix"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "same-file",
+      "version": "1.0.6",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/same-file@1.0.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/same-file"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "semver",
+      "version": "1.0.28",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/semver@1.0.28",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/semver"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "serde_core",
+      "version": "1.0.229",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/serde_core@1.0.229",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/serde-rs/serde"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "serde_derive",
+      "version": "1.0.229",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/serde_derive@1.0.229",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/serde-rs/serde"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "serde_json",
+      "version": "1.0.151",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/serde_json@1.0.151",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/serde-rs/json"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "serde",
+      "version": "1.0.229",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/serde@1.0.229",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/serde-rs/serde"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "sha2",
+      "version": "0.11.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/sha2@0.11.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/hashes"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "shlex",
+      "version": "2.0.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/shlex@2.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/comex/rust-shlex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "signal-hook-registry",
+      "version": "1.4.8",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/signal-hook-registry@1.4.8",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/vorner/signal-hook"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "signature",
+      "version": "3.0.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/signature@3.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "28d567dcbaf0049cb8ac2608a76cd95ff9e4412e1899d389ee400918ca7537f5"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/traits"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "smallvec",
+      "version": "1.15.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/smallvec@1.15.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/servo/rust-smallvec"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "socket2",
+      "version": "0.6.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/socket2@0.6.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/rust-lang/socket2"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "streaming-iterator",
+      "version": "0.1.9",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/streaming-iterator@0.1.9",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2b2231b7c3057d5e4ad0156fb3dc807d900806020c5ffa3ee6ff2c8c76fb8520"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sfackler/streaming-iterator"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "subtle",
+      "version": "2.6.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:cargo/subtle@2.6.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dalek-cryptography/subtle"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "syn",
+      "version": "2.0.119",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/syn@2.0.119",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/syn"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "syn",
+      "version": "3.0.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/syn@3.0.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "53e9bae58849f64dfa4f5d5ae372c8341f7305f82a3868709269343628b659a3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/syn"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "sysinfo",
+      "version": "0.39.6",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/sysinfo@0.39.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d2071df9448915b71c4fe6d25deaf1c22f12bd234f01540b77312bb8e41361e6"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/GuillaumeGomez/sysinfo"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tempfile",
+      "version": "3.27.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/tempfile@3.27.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/Stebalien/tempfile"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "time-core",
+      "version": "0.1.9",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/time-core@0.1.9",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/time-rs/time"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "time-macros",
+      "version": "0.2.32",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/time-macros@0.2.32",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7e689342a48d2ea927c87ea50cabf8594854bf940e9310208848d680d668ed85"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/time-rs/time"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "time",
+      "version": "0.3.55",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/time@0.3.55",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cdb87b95ec50ddfa440816d227a17b2ccbdda963a316a727fda0fc4334f7d134"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/time-rs/time"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tokio-macros",
+      "version": "2.7.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tokio-macros@2.7.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tokio",
+      "version": "1.53.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tokio@1.53.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tokio-rs/tokio"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-bash",
+      "version": "0.25.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-bash@0.25.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9e5ec769279cc91b561d3df0d8a5deb26b0ad40d183127f409494d6d8fc53062"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-bash"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-c-sharp",
+      "version": "0.23.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-c-sharp@0.23.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c1aac67f1ad71de1d6d39708d34811081c26dfa495658de6c14c34200849357c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-c-sharp"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-c",
+      "version": "0.24.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-c@0.24.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a9b2eb57a55fed6b00812912e730b7a275cf4fe98bfd6a5d76263d4438371728"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-c"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-cpp",
+      "version": "0.23.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-cpp@0.23.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "df2196ea9d47b4ab4a31b9297eaa5a5d19a0b121dceb9f118f6790ad0ab94743"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-cpp"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-css",
+      "version": "0.25.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-css@0.25.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "a5cbc5e18f29a2c6d6435891f42569525cf95435a3e01c2f1947abcde178686f"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-css"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-dart",
+      "version": "0.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-dart@0.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "325dd1e24ee9ee21111e9c43680ae7d6010aaa9f282b048a99b9c7163c1cf553"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/nielsenko/tree-sitter-dart"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-go",
+      "version": "0.25.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-go@0.25.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c8560a4d2f835cc0d4d2c2e03cbd0dde2f6114b43bc491164238d333e28b16ea"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-go"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-html",
+      "version": "0.23.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-html@0.23.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "261b708e5d92061ede329babaaa427b819329a9d427a1d710abb0f67bbef63ee"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-html"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-java",
+      "version": "0.23.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-java@0.23.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0aa6cbcdc8c679b214e616fd3300da67da0e492e066df01bcf5a5921a71e90d6"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-java"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-json",
+      "version": "0.24.8",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-json@0.24.8",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4d727acca406c0020cffc6cf35516764f36c8e3dc4408e5ebe2cb35a947ec471"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-json"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-kotlin-ng",
+      "version": "1.1.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-kotlin-ng@1.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e800ebbda938acfbf224f4d2c34947a31994b1295ee6e819b65226c7b51b4450"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter-grammars/tree-sitter-kotlin"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-language",
+      "version": "0.1.7",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-language@0.1.7",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "009994f150cc0cd50ff54917d5bc8bffe8cad10ca10d81c34da2ec421ae61782"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-php",
+      "version": "0.24.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-php@0.24.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "0d8c17c3ab69052c5eeaa7ff5cd972dd1bc25d1b97ee779fec391ad3b5df5592"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-php"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-powershell",
+      "version": "0.26.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-powershell@0.26.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3faf304d44b9ddd4a7d97804bb8de7daf564336dd5a526dc6de5b39238243022"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/airbus-cert/tree-sitter-powershell"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-python",
+      "version": "0.25.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-python@0.25.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6bf85fd39652e740bf60f46f4cda9492c3a9ad75880575bf14960f775cb74a1c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-python"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-ruby",
+      "version": "0.23.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-ruby@0.23.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "be0484ea4ef6bb9c575b4fdabde7e31340a8d2dbc7d52b321ac83da703249f95"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-ruby"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-rust",
+      "version": "0.24.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-rust@0.24.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "439e577dbe07423ec2582ac62c7531120dbfccfa6e5f92406f93dd271a120e45"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-rust"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-sequel",
+      "version": "0.3.11",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-sequel@0.3.11",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9d198ad3c319c02e43c21efa1ec796b837afcb96ffaef1a40c1978fbdcec7d17"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/derekstride/tree-sitter-sql.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-swift",
+      "version": "0.7.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-swift@0.7.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fe36052155b9dd69ca82b3b8f1b4ccfb2d867125ac1a4db1dd7331829242668c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/alex-pinkus/tree-sitter-swift"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-toml-ng",
+      "version": "0.7.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-toml-ng@0.7.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e9adc2c898ae49730e857d75be403da3f92bb81d8e37a2f918a08dd10de5ebb1"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter-grammars/tree-sitter-toml"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-typescript",
+      "version": "0.23.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-typescript@0.23.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6c5f76ed8d947a75cc446d5fccd8b602ebf0cde64ccf2ffa434d873d7a575eff"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter-typescript"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-xml",
+      "version": "0.7.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-xml@0.7.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e670041f591d994f54d597ddcd8f4ebc930e282c4c76a42268743b71f0c8b6b3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter-grammars/tree-sitter-xml"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter-yaml",
+      "version": "0.7.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter-yaml@0.7.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "53c223db85f05e34794f065454843b0668ebc15d240ada63e2b5939f43ce7c97"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter-grammars/tree-sitter-yaml"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "tree-sitter",
+      "version": "0.26.12",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/tree-sitter@0.26.12",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "83c567a8e18ae93f20982c90370b16fd24023aeaf52f6052b96957ab253a0fec"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/tree-sitter/tree-sitter"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "typenum",
+      "version": "1.20.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/typenum@1.20.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/paholg/typenum"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "(MIT OR Apache-2.0) AND Unicode-3.0"
+        }
+      ],
+      "purl": "pkg:cargo/unicode-ident@1.0.24",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/unicode-ident"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "uuid",
+      "version": "1.24.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/uuid@1.24.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "bf3923a6f5c4c6382e0b653c4117f48d631ea17f38ed86e2a828e6f7412f5239"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/uuid-rs/uuid"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "vcpkg",
+      "version": "0.2.15",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/vcpkg@0.2.15",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/mcgoo/vcpkg-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "walkdir",
+      "version": "2.5.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/walkdir@2.5.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/walkdir"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "winapi-util",
+      "version": "0.1.11",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Unlicense OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/winapi-util@0.1.11",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/BurntSushi/winapi-util"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "winapi",
+      "version": "0.3.9",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/winapi@0.3.9",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/retep998/winapi-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows_x86_64_msvc",
+      "version": "0.52.6",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows_x86_64_msvc@0.52.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows_x86_64_msvc",
+      "version": "0.53.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows_x86_64_msvc@0.53.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-collections",
+      "version": "0.3.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-collections@0.3.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "23b2d95af1a8a14a3c7367e1ed4fc9c20e0a26e79551b1454d72583c97cc6610"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-core",
+      "version": "0.62.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-core@0.62.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-future",
+      "version": "0.3.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-future@0.3.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e1d6f90251fe18a279739e78025bd6ddc52a7e22f921070ccdc67dde84c605cb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-implement",
+      "version": "0.60.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-implement@0.60.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-interface",
+      "version": "0.59.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-interface@0.59.3",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3f316c4a2570ba26bbec722032c4099d8c8bc095efccdc15688708623367e358"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-link",
+      "version": "0.2.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-link@0.2.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-numerics",
+      "version": "0.3.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-numerics@0.3.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "6e2e40844ac143cdb44aead537bbf727de9b044e107a0f1220392177d15b0f26"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-result",
+      "version": "0.4.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-result@0.4.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-strings",
+      "version": "0.5.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-strings@0.5.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "7837d08f69c77cf6b07689544538e017c1bfcf57e34b4c0ff58e6c2cd3b37091"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-sys",
+      "version": "0.59.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-sys@0.59.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1e38bc4d79ed67fd075bcc251a1c39b32a1776bbe92e5bef1f0bf1f8c531853b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-sys",
+      "version": "0.60.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-sys@0.60.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f2f500e4d28234f72040990ec9d39e3a6b950f9f22d3dba18416c35882612bcb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-sys@0.61.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-targets",
+      "version": "0.52.6",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-targets@0.52.6",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "9b724f72796e036ab90c1021d4780d4d3d648aca59e491e6b98e725b84e99973"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-targets",
+      "version": "0.53.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-targets@0.53.5",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "4945f9f551b88e0d65f3db0bc25c33b8acea4d9e41163edf90dcd0b19f9069f3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows-threading",
+      "version": "0.2.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows-threading@0.2.1",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3949bd5b99cafdf1c7ca86b43ca564028dfe27d66958f2470940f73d86d75b37"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "windows",
+      "version": "0.62.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "purl": "pkg:cargo/windows@0.62.2",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "527fadee13e0c05939a6a05d5bd6eec6cd2e3dbd648b9f8e447c6518133d8580"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/windows-rs"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "winx",
+      "version": "0.36.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 WITH LLVM-exception"
+        }
+      ],
+      "purl": "pkg:cargo/winx@0.36.4",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3f3fd376f71958b862e7afb20cfe5a22830e1963462f3a17f49d82a6c1d1f42d"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/sunfishcode/winx"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "zeroize_derive",
+      "version": "1.5.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/zeroize_derive@1.5.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "3c50655cbb0fe3fc43170059e702f1ce5e19b84cec58dc87b037a09935c2f328"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "zeroize",
+      "version": "1.9.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0 OR MIT"
+        }
+      ],
+      "purl": "pkg:cargo/zeroize@1.9.0",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/RustCrypto/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "cargo",
+      "name": "zmij",
+      "version": "1.0.23",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:cargo/zmij@1.0.23",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/dtolnay/zmij"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "group": "native",
+      "name": "workflowd-linux-x64",
+      "version": "1.0.11",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "90f87f8e2c80d9823eb06e4e52fd4a1fa19ec99280d4ba7a2d09b2e7522e73a0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cycle:path",
+          "value": "bin/linux-x64/workflowd"
+        },
+        {
+          "name": "cycle:size",
+          "value": "39222904"
+        }
+      ]
+    },
+    {
+      "type": "file",
+      "group": "native",
+      "name": "workflowd-win32-x64",
+      "version": "1.0.11",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "e83576dead4e8721e4baa39855632055ff0eb86b38f509ff0e80f6dab8fcafbb"
+        }
+      ],
+      "properties": [
+        {
+          "name": "cycle:path",
+          "value": "bin/win32-x64/workflowd.exe"
+        },
+        {
+          "name": "cycle:size",
+          "value": "38050304"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "@puppeteer/browsers",
+      "version": "3.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/%40puppeteer%2Fbrowsers@3.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "2e506b13ca2a19f53b6f5364d9de50d526ee3e16714e3d1c2443033c4c2cdbc3a334c10b95f95e9263cfb9fe059cad37c746518ca698c0912551c28ae24caa24"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/puppeteer/puppeteer/tree/main/packages/browsers"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "ansi-regex",
+      "version": "6.3.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/ansi-regex@6.3.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5a90df2fb34eea3eed1fcf080c13557542710e1f67982b5e0155bd76c7a9f38e977701789da0812befed18b5f728981ca603115c21654ccda1286a0af45b1dad"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "chalk/ansi-regex"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "ansi-styles",
+      "version": "6.2.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/ansi-styles@6.2.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e038fa336f0907ea001fc9059132d4a3e6b68f038592ea9bdf2b9c53408035c45151bc52d1c3f49d96021a371cdc1357c1122c5159831a0cdac267bbcef247be"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "chalk/ansi-styles"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "chromium-bidi",
+      "version": "17.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/chromium-bidi@17.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e6ff4640585392d16fa2d9ff38534906628b29101bea7f6bd1b542c1feec1e059cdff26bc8ad1b8f59e7f772f7a4716b7e072cbba05ee845ac0e2fb55c74c60e"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/GoogleChromeLabs/chromium-bidi.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "cliui",
+      "version": "9.0.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/cliui@9.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "93b9dd80a870a10bde04bfbfd6da86258373d3dec8ed63afc1b9a6536011e7e99a82d6e33d64134b50b9bf31a4042f189bc5164737ca533514a852f2a58e10fb"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "yargs/cliui"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "devtools-protocol",
+      "version": "0.0.1653615",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "BSD-3-Clause"
+        }
+      ],
+      "purl": "pkg:npm/devtools-protocol@0.0.1653615",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "a465646374ffa97c40a769c53e877062a39ebe4ea770d3129af2fc41f442c7965619de95a2bec014d9b2680f19b3ab89c8fd5001f8ee2da9dd0a0bd28b1d4134"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/ChromeDevTools/devtools-protocol"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "emoji-regex",
+      "version": "10.6.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/emoji-regex@10.6.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b68508f38612e589b15b6d7d7ab9e2583d022153a8e3ac46282a2578d41180ecc3a2b8018b5bf80fbd7f385ce00fd18ed9418a22fd42dd2a7c0c09f4fa3e70ec"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/mathiasbynens/emoji-regex.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "escalade",
+      "version": "3.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/escalade@3.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "5948f6aa5c5a42d3b883a3eae5cdbd193716183c9df22b4bf334e58a98040b3dc97ac02288e2a8b5df0953aa2d0773c00a01bac64254c9585ba0c4be6e37bf8c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "lukeed/escalade"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "get-caller-file",
+      "version": "2.0.5",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/get-caller-file@2.0.5",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "0f214fdc133fdd81d340e0942ffc343991d1d25a4a786af1a2d70759ca8d11d9e5b6a1705d57e110143de1e228df801f429a34ac6922e1cc8889fb58d3a87616"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/stefanpenner/get-caller-file.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "get-east-asian-width",
+      "version": "1.6.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/get-east-asian-width@1.6.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "4116ef0c86f1e9892551ee91c5e4de95e311d32bf77181fa3ec3d91dc9d59fbc6fef33b504737caf45c44eef27e987b743e6a1b526ab7375a0b4d5a67a12017c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "sindresorhus/get-east-asian-width"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "mitt",
+      "version": "3.0.1",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/mitt@3.0.1",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "bca8af0137ebf7b976fd00426009176036eb2163ccd8820a125ed83e18c2bca946de4136826fae068ea71172b7339fc57e1fc52e9284c73390dc926824614a07"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "developit/mitt"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "modern-tar",
+      "version": "0.8.4",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/modern-tar@0.8.4",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "80de7875d9b2cc4835d28af0676bb838ebfe6e3a4c59d225e63224a1d2bdedb32af100522f97340fb617d254f53a8cfef7d4bbf8fbc56e7c73763807a35af8d6"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/ayuhito/modern-tar.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "puppeteer-core",
+      "version": "25.6.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/puppeteer-core@25.6.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "189ebbae365d550cd9983d806f4720b6d7d037d8f7f3b41832fdede8c377ff89e68eeaec36de8ce54b63e3f4ffe32d00c0dad2c09ce3c3a43fcee5851088b33a"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer-core"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "string-width",
+      "version": "7.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/string-width@7.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "b6c693224296f5be0df80123f92540f96849cd5effccc85c4aeefc98b2964a4edc5cc3921ec04a15652cd1f5b0abc4322b73202414115fa19b8b89186ddbc691"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "sindresorhus/string-width"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "string-width",
+      "version": "8.2.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/string-width@8.2.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "19a3d487981f76b633a9e54d66f51f4f6def618c57cca62275472732d260ff7af1455eb7105672de4eb17ca9667de243d35efa967515fd4b2bdd77304af173a6"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "sindresorhus/string-width"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "strip-ansi",
+      "version": "7.2.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/strip-ansi@7.2.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "c833cc363a785b27d80641e78c844b7dc6b58ba28cc860adb1582829eff3d7eeafba481a10d76018166df9998a3dce206afbc46793a01df1ddadace180dc86ef"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "chalk/strip-ansi"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "typed-query-selector",
+      "version": "2.12.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/typed-query-selector@2.12.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "10e3c56f222e6f89e09c476a8b6c8e70d7832da5ffd23704d49a005d00c3308b616a9ec5a0defde6573f4877c8ab6778d7a56e7d7a4cf33fe50fe5919b681f39"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "g-plane/typed-query-selector"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "webdriver-bidi-protocol",
+      "version": "0.4.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/webdriver-bidi-protocol@0.4.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "55257e7f37c2862acbddeee36b2db2502ec1e074021ad116120fcc49241b2bea966ea7869512e55d3ccfa58af75c652f6e90c7ba6599049c607ac83837b75bb4"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/GoogleChromeLabs/webdriver-bidi-protocol.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "wrap-ansi",
+      "version": "9.0.2",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/wrap-ansi@9.0.2",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "e3602d9a0aa357e5f556974e7f24c6398462d3fceca0baad5d07244e6a937b26d3f810c86ccfc6bb1a3bc77a44dafb69af5a24eb146a33d3a905ef89ca8ab2c3"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "chalk/wrap-ansi"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "ws",
+      "version": "8.21.3",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/ws@8.21.3",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "db4d5367f90f5b1a0faff38a5a3aae651d5258a5dcbf1747f9ed71af1f3d6f761b9b32cc1422df9da1b51c52205b324e11667b32fa4afbea1d66e7e0611e7447"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/websockets/ws.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "y18n",
+      "version": "5.0.8",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/y18n@5.0.8",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d297c5cde81e0d62472480264cb44fd83c078dd179b3b8e8f6dbb3b5d43102120d09dbd2fb79c620da8f774d00a61a8947fd0b8403544baffeed209bf7c60e7c"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "yargs/y18n"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "yargs-parser",
+      "version": "22.0.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "ISC"
+        }
+      ],
+      "purl": "pkg:npm/yargs-parser@22.0.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "af0bbf0a535d48ca644ab51bf9de8146c4a42d4ab57e67ec63a4cea58cd3c2fc24835fcd446f39281cb792afbe03c2ca4305fa96cbbe69669dfb6921bee5ebab"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/yargs/yargs-parser.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "yargs",
+      "version": "18.1.0",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/yargs@18.1.0",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "dab02044abb9e15b0792a234fed6249a5b865c70f8296ef2668c9cbaa0d0d7940e4e77365557f2d2737fd5e3219d02ced3403e770b4adb4c6e0a7735606794ca"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/yargs/yargs.git"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "group": "npm",
+      "name": "zod",
+      "version": "3.25.76",
+      "scope": "required",
+      "licenses": [
+        {
+          "expression": "MIT"
+        }
+      ],
+      "purl": "pkg:npm/zod@3.25.76",
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "83352dfeab7cd675ec14628815c0b76277c4031e4d92e9c27e70e5bee0524854b4d9b717bb82e679ad001485306cb5b158fc7777da7c4b94286ae8ca70d43171"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/colinhacks/zod.git"
+        }
+      ]
+    }
+  ]
+}

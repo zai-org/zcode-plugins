@@ -1,0 +1,32 @@
+{
+  "description": "Main-session enforcement for Cycle: denies mutation while a workflow is locked, denies a role dispatch without a unique registration, and audits governed calls. Managed project profiles are what bound a dispatched role, because ZCode does not run PreToolUse inside a dispatched agent; the role-scoped guards here are reached only when the main session makes the call itself.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|ApplyPatch|NotebookEdit|Bash|Shell|Task|Agent|SubAgent",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/pre-tool-use.js"],
+            "timeoutMs": 5000,
+            "statusMessage": "ZCode Cycle: checking role boundaries"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/post-tool-use.js"],
+            "timeoutMs": 5000,
+            "statusMessage": "ZCode Cycle: recording tool audit"
+          }
+        ]
+      }
+    ]
+  }
+}

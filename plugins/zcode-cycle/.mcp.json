@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "zcode-cycle": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/dist/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {},
+      "enabled": true,
+      "timeoutMs": 1800000
+    }
+  }
+}
