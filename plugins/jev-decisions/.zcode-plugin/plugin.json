@@ -1,0 +1,29 @@
+{
+  "name": "jev-decisions",
+  "description": "Calibrated judgment tools for ZCode agents via the community jev-mcp server: verify claims against evidence, screen untrusted text, classify, decide, and gate task completion. Ships a skill that teaches when to reach for a judgment tool instead of answering directly.",
+  "description_i18n": {
+    "en": "Calibrated judgment tools for ZCode agents via the community jev-mcp server: verify claims against evidence, screen untrusted text, classify, decide, and gate task completion. Ships a skill that teaches when to reach for a judgment tool instead of answering directly.",
+    "zh-CN": "通过社区版 jev-mcp 服务为 ZCode 智能体提供校准判断工具：对照证据核实结论、筛查不可信文本、批量分类、多候选择优、任务完成门禁。内置一个 Skill，教会智能体何时应调用判断工具而不是直接凭阅读作答。"
+  },
+  "version": "0.1.0",
+  "author": {
+    "name": "kittimzhe",
+    "url": "https://github.com/kittimzhe"
+  },
+  "keywords": [
+    "jev",
+    "judgment",
+    "decision",
+    "guardrails",
+    "mcp",
+    "verification"
+  ],
+  "userConfig": {
+    "typesafeApiKey": {
+      "title": "TypeSafe API key",
+      "description": "API key for the TypeSafe Jev service used by the bundled jev-mcp server. Required only when the jev MCP server is enabled.",
+      "type": "string",
+      "default": ""
+    }
+  }
+}

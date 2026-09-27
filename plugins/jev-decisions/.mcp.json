@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "jev": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@jkudish/jev-mcp@0.10.0"],
+      "env": {
+        "TYPESAFE_API_KEY": "${user_config.typesafeApiKey}"
+      },
+      "enabled": false,
+      "timeoutMs": 60000
+    }
+  }
+}
