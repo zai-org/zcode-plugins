@@ -24,6 +24,7 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login. |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | DingTalk Workspace CLI workflows with OAuth/device authorization, profile checks, and optional upstream Skills. |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | WeCom CLI workflows for messages, docs, sheets, mail, calendar, meetings, contacts, and todos with QR authentication. |
+| [**prism**](./plugins/prism) | `developer-tools` | Per-project colors, icons, aliases and recency ordering for the desktop sidebar. |
 | [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
 
 ### Finance plugins

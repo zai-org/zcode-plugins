@@ -24,6 +24,7 @@
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI 工作流：覆盖文档、表格、多维表格、日历、消息等 SaaS 资源，并引导应用配置与 OAuth 登录。 |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | 钉钉 Workspace CLI 工作流：OAuth/设备授权、验证组织账号，并按需安装上游 Skills。 |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | 企业微信 CLI 工作流：覆盖消息、文档、表格、邮件、日历、会议、通讯录和待办，并支持扫码授权与状态检查。 |
+| [**prism**](./plugins/prism) | `developer-tools` | 桌面端侧边栏个性化：项目颜色、图标、显示名与按最近活跃排序。 |
 | [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
 
 ### 金融插件
