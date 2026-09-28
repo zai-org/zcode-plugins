@@ -14,7 +14,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 
-const VERSION = "v10";
+const VERSION = "v11";
 const INJECT_RE = /<script>\/\* zc-[a-z-]+[\s\S]*?<\/script>\n?/g;
 const LEGACY_ENVELOPE_RE = /<script>\/\* zc-(?:project-tint|prism)\b/;
 const STATE_FILE = path.join(os.homedir(), ".zcode", "prism-state.json");
@@ -55,17 +55,65 @@ function shimHash() {
     .digest("hex")
     .slice(0, 16);
 }
+// The manifest's userConfig fields (rendered by the client's plugin settings
+// page) have no documented channel into hooks, so this is best-effort: probe
+// every plausible source and keep only our known boolean keys. Whatever is
+// found is baked into the injected envelope as window.__zcPrismConfig; the
+// renderer treats it as the middle layer (localStorage overrides > config >
+// defaults).
+const CONFIG_KEYS = ["dimTitles", "brightenThinking", "autoColor", "groupRecency"];
+function readPluginConfig() {
+  const raw = {};
+  try {
+    for (const [k, v] of Object.entries(process.env)) {
+      const m = /^(?:ZCODE_PLUGIN_CONFIG|USER_CONFIG)[_-](.+)$/.exec(k);
+      if (m) raw[m[1].replace(/[_-](\w)/g, (_, c) => c.toUpperCase()).toLowerCase()] = v;
+    }
+  } catch (_) {}
+  try {
+    const dataDir = process.env.ZCODE_PLUGIN_DATA;
+    const candidates = [];
+    if (dataDir) candidates.push(path.join(dataDir, "user-config.json"), path.join(dataDir, "config.json"));
+    if (process.env.ZCODE_PLUGIN_ROOT)
+      candidates.push(path.join(process.env.ZCODE_PLUGIN_ROOT, "user-config.json"));
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        Object.assign(raw, JSON.parse(fs.readFileSync(p, "utf8")));
+        break;
+      }
+    }
+  } catch (_) {}
+  const cfg = {};
+  for (const k of CONFIG_KEYS) {
+    if (k in raw) cfg[k] = raw[k] === true || raw[k] === "true";
+  }
+  return cfg;
+}
+function configSig(cfg) {
+  return crypto.createHash("sha256").update(JSON.stringify(cfg)).digest("hex").slice(0, 8);
+}
 function envelopeOf(shim) {
+  const cfg = readPluginConfig();
+  const cfgLine = Object.keys(cfg).length
+    ? "\nwindow.__zcPrismConfig=" + JSON.stringify(cfg) + ";\n"
+    : "";
   return (
-    "<script>/* zc-prism " + VERSION + " hash=" + shimHash() + " (Prism plugin for ZCode) */\n" +
+    "<script>/* zc-prism " +
+    VERSION +
+    " hash=" +
+    shimHash() +
+    " cfg=" +
+    configSig(cfg) +
+    " (Prism plugin for ZCode) */\n" +
     shim +
+    cfgLine +
     "</script>\n"
   );
 }
 
 function isCurrent(html) {
-  const m = html.match(/\/\* zc-prism v\d+ hash=([0-9a-f]{16})/);
-  return Boolean(m && m[1] === shimHash());
+  const m = html.match(/\/\* zc-prism v\d+ hash=([0-9a-f]{16}) cfg=([0-9a-f]{8})/);
+  return Boolean(m && m[1] === shimHash() && m[2] === configSig(readPluginConfig()));
 }
 function readIndex(asarPath) {
   return asar.extractFile(asarPath, "out/renderer/index.html").toString("utf8");
@@ -138,6 +186,22 @@ if (process.argv.includes("--apply")) {
   // quick check
   try {
     if (!fs.existsSync(ASAR)) process.exit(0);
+    // one-shot diagnostics: which plugin variables does the host actually
+    // give this hook, and does a readable config file exist anywhere —
+    // recorded so the marketplace settings-page bridge can be tightened
+    // (or dropped) based on facts instead of documentation
+    const envKeys = Object.keys(process.env).filter((k) =>
+      /^(ZCODE|USER_CONFIG|CLAUDE)/i.test(k),
+    );
+    writeState({
+      configProbe: {
+        at: new Date().toISOString(),
+        env: envKeys.reduce((o, k) => ((o[k] = process.env[k] || ""), o), {}),
+        argv: process.argv.slice(1),
+        dataDir: process.env.ZCODE_PLUGIN_DATA || null,
+        configFound: Object.keys(readPluginConfig()),
+      },
+    });
     if (isCurrent(readIndex(ASAR))) {
       writeState({ lastResult: "ok" });
       process.exit(0);

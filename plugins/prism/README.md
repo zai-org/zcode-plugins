@@ -29,6 +29,20 @@
 
 All settings apply immediately and are stored in the renderer's `localStorage` (`zcProjectTint.*` / `zcPrism.settings.v1`). Run `/status` inside a session to check the shim's installation state.
 
+## Settings
+
+Prism declares four global toggles through the manifest's `userConfig`, so they appear in ZCode's plugin settings page (Plugin management → Prism → Configure):
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| Dim conversation titles | on | Titles render at 60% opacity |
+| Brighten thinking shimmer | on | Improve shimmer visibility on dark themes |
+| Auto colors for unpicked projects | off | Hash-based hue for projects without a manual pick |
+| Order sidebar by recent activity | on | Display-only recency ordering, never touches manual drag order |
+
+The plugin settings page provides the defaults and is applied when a session starts; the toggles inside the color picker are immediate overrides stored per client and win over the settings page.
+
+
 ## Side effects, permissions and safety
 
 Read this before installing — Prism modifies the application bundle, which is the only way a plugin can restyle the desktop UI today.

@@ -754,7 +754,7 @@
         "en": "Give every project in the ZCode desktop sidebar its own color, icon and display name, recolor individual conversations, and keep the sidebar ordered by the most recently active conversation. A SessionStart hook installs a small renderer shim into the ZCode.app bundle (macOS) and re-applies it after app updates.",
         "zh-CN": "为 ZCode 桌面端侧边栏的每个项目提供专属颜色、图标与显示名，支持单条对话换色，并可让侧边栏按最近活跃自动排序。SessionStart 钩子会向 ZCode.app 包内安装一个轻量渲染层 shim（仅限 macOS），并在应用更新后自动重装。"
       },
-      "version": "0.3.2",
+      "version": "0.4.0",
       "author": {
         "name": "Carlos",
         "url": "https://github.com/saralaaga"

@@ -1,4 +1,4 @@
-// zc-prism v10 (installed by the Prism plugin for ZCode)
+// zc-prism v11 (installed by the Prism plugin for ZCode)
 // Per-project AND per-conversation color + icon for the ZCode desktop
 // sidebar, a right-click picker on project headers, and an opt-out recency
 // ordering for every sidebar view. Everything here runs inside the production
@@ -142,11 +142,18 @@
     // default, a hue is only ever applied when explicitly picked or opted in.
     // groupRecency: display-only recency ordering for the grouped view.
     const DEFAULT_SETTINGS = { dimTitles: true, brightenThinking: true, autoColor: false, groupRecency: true };
+    // precedence: picker toggles (localStorage) > plugin settings page
+    // (window.__zcPrismConfig, baked in by the SessionStart hook) > defaults
     function readSettings() {
       try {
-        return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"));
+        return Object.assign(
+          {},
+          DEFAULT_SETTINGS,
+          window.__zcPrismConfig || {},
+          JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"),
+        );
       } catch (_) {
-        return Object.assign({}, DEFAULT_SETTINGS);
+        return Object.assign({}, DEFAULT_SETTINGS, window.__zcPrismConfig || {});
       }
     }
     function writeSettings(s) {
@@ -1248,7 +1255,7 @@
       pass(document);
       observer.observe(document.body, { childList: true, subtree: true });
       try {
-        console.info("[zc-prism] v8 loaded");
+        console.info("[zc-prism] renderer shim loaded");
       } catch (_) {}
       // remember what was last interacted with, so the native menus can be
       // enhanced with our entries when they open (project header "..." menu →
@@ -1280,7 +1287,7 @@
         true,
       );
       window.__zcPrism = {
-        version: 10,
+        version: 11,
         pass,
         openPicker,
         openTaskPicker,

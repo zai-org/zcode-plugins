@@ -5,7 +5,7 @@
     "en": "Give every project in the ZCode desktop sidebar its own color, icon and display name, recolor individual conversations, and keep the sidebar ordered by the most recently active conversation. A SessionStart hook installs a small renderer shim into the ZCode.app bundle (macOS) and re-applies it after app updates.",
     "zh-CN": "为 ZCode 桌面端侧边栏的每个项目提供专属颜色、图标与显示名，支持单条对话换色，并可让侧边栏按最近活跃自动排序。SessionStart 钩子会向 ZCode.app 包内安装一个轻量渲染层 shim（仅限 macOS），并在应用更新后自动重装。"
   },
-  "version": "0.3.2",
+  "version": "0.4.0",
   "author": {
     "name": "Carlos",
     "url": "https://github.com/saralaaga"
@@ -18,5 +18,31 @@
     "rename",
     "appearance",
     "customization"
-  ]
+  ],
+  "userConfig": {
+    "dimTitles": {
+      "title": "压暗对话标题",
+      "description": "会话标题以 60% 不透明度显示；取色盘里的开关可临时覆盖此设置",
+      "type": "boolean",
+      "default": true
+    },
+    "brightenThinking": {
+      "title": "调亮思考扫光",
+      "description": "提升思考/流式动画在深色主题下的可见度；取色盘开关可临时覆盖",
+      "type": "boolean",
+      "default": true
+    },
+    "autoColor": {
+      "title": "自动配色（未指定的项目）",
+      "description": "未手动指定颜色的项目按路径哈希自动分配色相；默认关闭，只有手动指定的项目染色",
+      "type": "boolean",
+      "default": false
+    },
+    "groupRecency": {
+      "title": "侧边栏按最近活跃排序",
+      "description": "对话按最后活跃时间排序、项目/分组按最新对话排序；纯显示层重排，不影响手动拖拽顺序",
+      "type": "boolean",
+      "default": true
+    }
+  }
 }
