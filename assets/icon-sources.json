@@ -2097,5 +2097,13 @@
     "homepage": "https://www.zyte.com",
     "mimeType": "image/png",
     "sha256": "8613b1dc383a3b6090a8a81aefc13f4867667fbf1902dc35471f8d554e69a1cd"
+  },
+  {
+    "name": "prism",
+    "icon": "prism/icon.png",
+    "source": "https://raw.githubusercontent.com/saralaaga/prism/main/prism/assets/icon.svg",
+    "matchedBy": "official-repository-asset",
+    "mimeType": "image/png",
+    "sha256": "a8d57df3856a7e0088f9f7a42d7daa588c3c729b94841ec9c96000bb75233cfa"
   }
 ]
