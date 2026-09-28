@@ -1,4 +1,4 @@
-// zc-prism v9 (installed by the Prism plugin for ZCode)
+// zc-prism v10 (installed by the Prism plugin for ZCode)
 // Per-project AND per-conversation color + icon for the ZCode desktop
 // sidebar, a right-click picker on project headers, and an opt-out recency
 // ordering for every sidebar view. Everything here runs inside the production
@@ -391,17 +391,19 @@
       }
       if (segments.length < 2 && segments[0] && !segments[0].headIsBlock) return false;
       const keyed = [];
-      const pinnedTop = [];
-      for (const seg of segments) {
+      const pinned = []; // rowless non-header blocks: leading → top, trailing → bottom
+      segments.forEach((seg, si) => {
         if (!seg.headIsBlock) {
           seg.rows.forEach((r, i) => {
             keyed.push({ el: r, time: taskTimeOf(r), seg, pos: i });
           });
-          continue;
+          return;
         }
         if (!seg.head.matches(HEADER_SELECTOR) && seg.rows.length === 0) {
-          pinnedTop.push(seg.head); // separators/drafts with no rows: keep on top
-          continue;
+          // separators / draft rows / trailing footers with no rows — keep out
+          // of the ranked flow, on the side of the list they came from
+          pinned.push({ el: seg.head, top: si < segments.length - 1 });
+          return;
         }
         let best = NaN;
         seg.rows.forEach((r, i) => {
@@ -410,7 +412,7 @@
           if (Number.isFinite(t) && (Number.isNaN(best) || t > best)) best = t;
         });
         keyed.push({ el: seg.head, time: best, seg });
-      }
+      });
       let anyTime = false;
       for (const k of keyed) if (Number.isFinite(k.time) && k.el !== k.seg.head) anyTime = true;
       if (!anyTime) return false;
@@ -429,7 +431,7 @@
       });
       const rank = new Map(sortedSegs.map((s, i) => [s, i * 1000]));
       flexColumn(container);
-      for (const el of pinnedTop) setOrder(el, "-1");
+      for (const p of pinned) setOrder(p.el, p.top ? "-1" : "9999");
       // rows within a segment ranked by their own recency, newest first
       const rowsBySeg = new Map();
       for (const k of keyed) {
@@ -551,14 +553,15 @@
         if (list.length < 2) continue;
         const kids = Array.prototype.slice.call(parent.children);
         const rowSet = new Set(list);
-        const hasHeaderKid = kids.some((k) => !rowSet.has(k) && k.matches && k.matches(HEADER_SELECTOR));
-        if (anchor && !hasHeaderKid) continue; // grouped top level already handled
         let allRows = true;
         for (const k of kids) {
           if (!rowSet.has(k) && (k.matches ? !k.matches(ROW_SELECTOR) : true)) { allRows = false; break; }
         }
         let ok = false;
         try {
+          // all-row containers sort directly; anything else (headers, footers,
+          // separators, drafts) goes through the segment model so stray blocks
+          // no longer disqualify the whole list
           ok = allRows ? orderChildren(parent, list.map((el, i) => ({ el, time: taskTimeOf(el), pos: i }))) : orderSegments(parent, kids);
         } catch (_) {}
         if (ok) applied++;
@@ -600,10 +603,15 @@
           if (anyTime && orderChildren(p, keyed)) sectionsRanked++;
         }
       }
+      const shape =
+        "gw=" + root.querySelectorAll("[data-grouped-layout-key]").length +
+        " li=" + root.querySelectorAll("li[data-task-item-key]").length +
+        " div=" + root.querySelectorAll("div[data-grouped-task-key]").length +
+        " hdr=" + root.querySelectorAll(HEADER_SELECTOR).length;
       if (applied || sectionsRanked) {
-        setRecencyState("applied: containers=" + applied + " sections=" + sectionsRanked);
+        setRecencyState("applied: containers=" + applied + " sections=" + sectionsRanked + " (" + shape + ")");
       } else {
-        setRecencyState("no-recognizable-list");
+        setRecencyState("no-recognizable-list (" + shape + ")");
         if (recencyFlex.size) removeGroupRecency();
       }
     }
@@ -1272,7 +1280,7 @@
         true,
       );
       window.__zcPrism = {
-        version: 9,
+        version: 10,
         pass,
         openPicker,
         openTaskPicker,
