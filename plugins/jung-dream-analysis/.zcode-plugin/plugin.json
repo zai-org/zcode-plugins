@@ -1,0 +1,24 @@
+{
+  "name": "jung-dream-analysis",
+  "description": "Guided dream interpretation using C.G. Jung's method: dramatic dream structure, personal association, archetypal amplification, compensation, and individuation — via a /dream command, an auto-triggering skill, and reference material on archetypes and common dream motifs.",
+  "description_i18n": {
+    "en": "Guided dream interpretation using C.G. Jung's method: dramatic dream structure, personal association, archetypal amplification, compensation, and individuation — via a /dream command, an auto-triggering skill, and reference material on archetypes and common dream motifs.",
+    "zh-CN": "使用 C.G. 荣格的方法进行引导式释梦：梦的戏剧结构、个人联想、原型放大、补偿与自性化分析。提供 /dream 命令、可自动触发的技能，以及关于原型与常见梦境意象的参考资料。"
+  },
+  "version": "0.1.0",
+  "author": {
+    "name": "Nikita Dmitriev"
+  },
+  "keywords": [
+    "dreams",
+    "jung",
+    "psychology",
+    "archetypes",
+    "symbols",
+    "self-reflection",
+    "individuation",
+    "dream-journal"
+  ],
+  "skills": "./skills",
+  "commands": "./commands"
+}
