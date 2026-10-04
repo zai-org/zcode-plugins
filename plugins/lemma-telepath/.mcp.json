@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "telepath": {
+      "type": "http",
+      "url": "https://telepath.lemma.company/mcp"
+    }
+  }
+}

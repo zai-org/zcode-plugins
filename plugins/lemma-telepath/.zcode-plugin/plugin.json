@@ -1,0 +1,29 @@
+{
+  "name": "lemma-telepath",
+  "description": "Connect your Telegram to ZCode: search your chat archive, read the documents, photos and transcribed voice inside it, and reply as yourself — through a hosted MCP server.",
+  "description_i18n": {
+    "en": "Connect your Telegram to ZCode: search your chat archive, read the documents, photos and transcribed voice inside it, and reply as yourself — through a hosted MCP server.",
+    "zh-CN": "将你的 Telegram 接入 ZCode：全文检索聊天归档，读取其中的文档、图片与语音转写，并以你本人的身份回复——通过托管的 MCP 服务器。"
+  },
+  "version": "0.1.0",
+  "author": {
+    "name": "Lemma",
+    "url": "https://lemma.company"
+  },
+  "homepage": "https://telepath.lemma.company",
+  "repository": "https://github.com/Lemma-Company/telepath-plugin",
+  "license": "MIT",
+  "keywords": [
+    "telegram",
+    "telepath",
+    "mcp",
+    "messaging",
+    "search"
+  ],
+  "displayName": "Telepath",
+  "displayName_i18n": {
+    "en": "Telepath",
+    "zh-CN": "Telepath"
+  },
+  "mcpServers": ".mcp.json"
+}
