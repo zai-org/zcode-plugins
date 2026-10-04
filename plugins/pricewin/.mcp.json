@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "pricewin": {
+      "type": "http",
+      "url": "https://mcp.price.win/mcp",
+      "timeoutMs": 60000
+    }
+  }
+}
