@@ -740,6 +740,22 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "command-code-usage",
+      "source": "./plugins/command-code-usage",
+      "description": "See your Command Code plan usage — 5-hour and weekly rolling windows, monthly credits or balance — right inside the conversation, with a remaining-requests estimate and a burn-rate warning. Requires a Command Code plan.",
+      "description_i18n": {
+        "en": "See your Command Code plan usage — 5-hour and weekly rolling windows, monthly credits or balance — right inside the conversation, with a remaining-requests estimate and a burn-rate warning. Requires a Command Code plan.",
+        "zh-CN": "在对话里直接查看 Command Code 套餐用量——5 小时与每周滚动窗口、月度额度或余额，含剩余次数估算与超限预警。需要 Command Code 套餐。"
+      },
+      "version": "1.3.2",
+      "author": {
+        "name": "Jovan1666",
+        "url": "https://github.com/Jovan1666"
+      },
+      "category": "utilities",
+      "keywords": ["command-code", "quota", "usage", "credits", "plan"]
     }
   ]
 }
