@@ -740,6 +740,33 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "lemma-telepath",
+      "displayName": "Telepath",
+      "displayName_i18n": {
+        "en": "Telepath",
+        "zh-CN": "Telepath"
+      },
+      "source": "./plugins/lemma-telepath",
+      "description": "Connect your Telegram to ZCode: search your chat archive, read the documents, photos and transcribed voice inside it, and reply as yourself \u2014 through a hosted MCP server.",
+      "description_i18n": {
+        "en": "Connect your Telegram to ZCode: search your chat archive, read the documents, photos and transcribed voice inside it, and reply as yourself \u2014 through a hosted MCP server.",
+        "zh-CN": "\u5c06\u4f60\u7684 Telegram \u63a5\u5165 ZCode\uff1a\u5168\u6587\u68c0\u7d22\u804a\u5929\u5f52\u6863\uff0c\u8bfb\u53d6\u5176\u4e2d\u7684\u6587\u6863\u3001\u56fe\u7247\u4e0e\u8bed\u97f3\u8f6c\u5199\uff0c\u5e76\u4ee5\u4f60\u672c\u4eba\u7684\u8eab\u4efd\u56de\u590d\u2014\u2014\u901a\u8fc7\u6258\u7ba1\u7684 MCP \u670d\u52a1\u5668\u3002"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Lemma",
+        "url": "https://lemma.company"
+      },
+      "category": "productivity",
+      "keywords": [
+        "telegram",
+        "telepath",
+        "mcp",
+        "messaging",
+        "search"
+      ]
     }
   ]
 }
