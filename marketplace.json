@@ -740,6 +740,35 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "atlassian-jira",
+      "displayName": "Atlassian Jira",
+      "displayName_i18n": {
+        "en": "Atlassian Jira",
+        "zh-CN": "Atlassian Jira"
+      },
+      "source": "./plugins/atlassian-jira",
+      "description": "Connect ZCode to Jira and Confluence on Atlassian Cloud through Atlassian's official remote MCP server (Rovo): search issues with JQL, create, edit, transition, and comment on issues, with a guided Jira skill.",
+      "description_i18n": {
+        "en": "Connect ZCode to Jira and Confluence on Atlassian Cloud through Atlassian's official remote MCP server (Rovo): search issues with JQL, create, edit, transition, and comment on issues, with a guided Jira skill.",
+        "zh-CN": "通过 Atlassian 官方远程 MCP 服务器（Rovo）把 ZCode 接入 Atlassian Cloud 的 Jira 与 Confluence：支持 JQL 检索、创建、编辑、流转和评论 Issue，并附带 Jira 使用技能。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Juan Carracedo"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "jira",
+        "atlassian",
+        "confluence",
+        "mcp",
+        "issue-tracking",
+        "sprint",
+        "backlog",
+        "oauth"
+      ]
     }
   ]
 }
