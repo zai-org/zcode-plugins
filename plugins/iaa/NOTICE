@@ -1,0 +1,17 @@
+İAA — İştirak-i A‘mâl-i Ajanîye
+Copyright (c) 2026 isakli05
+
+This product includes software and documentation provided under the MIT
+License (see LICENSE).
+
+Acknowledgements (courtesy; no license obligation is attached to these
+items):
+
+- The test fixture `tests/fixtures/generated-PLAN.md` (and its eval-case
+  copies) was generated with the Superpowers plugin's `writing-plans` skill
+  during compatibility testing in August 2026; its plan-header directive
+  line originates from Superpowers (github.com/obra/superpowers, MIT,
+  Copyright (c) 2025 Jesse Vincent).
+- The ZCode package validation step fetches the official validator from
+  zai-org/zcode-plugins (Apache-2.0) at validation time; that script is not
+  redistributed with İAA.
