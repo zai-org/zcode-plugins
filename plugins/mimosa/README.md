@@ -8,7 +8,7 @@ Mimosa adds local-first code-security guardrails to ZCode. It checks candidate e
 
 This package is a pure Node.js build with no native executables. It is intended for current ZCode releases on macOS, Linux, and Windows, and requires `node` to be available in `PATH`. No separate model API key is required for the local hooks or native scan engine.
 
-The vendor payload is stored unchanged under `payload/`. Its Ed25519-signed inventory is verified before protected code is loaded; the outer directory only supplies ZCode-standard manifests and cross-platform process hook definitions.
+The vendor payload is stored unchanged under `payload/`. Its Ed25519-signed inventory is verified before protected code is loaded; the outer directory only supplies ZCode-standard manifests and cross-platform process hook definitions and a stdout transport adapter.
 
 ## Included capabilities
 
@@ -59,3 +59,7 @@ Hooks execute local code with the user's permissions. Review third-party plugins
 ## License
 
 MIT. See [LICENSE](./LICENSE).
+
+## 1.0.4 — reliable hook decisions
+
+Hook commands now run through a small Node.js transport adapter. The unchanged signed vendor payload writes its decision to a private temporary file; the adapter waits for the complete JSON to reach the host pipe before exiting. This prevents immediate process exit from dropping a security decision under stdout backpressure. Adapter failures block PreToolUse instead of reporting a successful empty result. Temporary output files are removed after each run. Start a new ZCode task after upgrading so the new hook entry points take effect.

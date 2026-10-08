@@ -46,7 +46,7 @@
         "en": "Local-first security guardrails for ZCode with pre-write hooks, end-of-turn review, Git gates, commands, a security-scan skill, and an optional MCP server for sealed deep scans.",
         "zh-CN": "面向 ZCode 的本地优先代码安全防线，提供写入前 Hook、任务收尾复查、Git 门禁、命令、安全扫描 Skill，以及用于密封深扫的可选 MCP 服务。"
       },
-      "version": "1.0.3",
+      "version": "1.0.4",
       "author": {
         "name": "Mimosa"
       },
