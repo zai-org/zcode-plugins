@@ -740,6 +740,38 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "hyper3d-rodin",
+      "displayName": "Hyper3D Rodin",
+      "displayName_i18n": {
+        "en": "Hyper3D Rodin",
+        "zh-CN": "Hyper3D Rodin"
+      },
+      "description": "Generate 3D models from text or reference images with Hyper3D Rodin Gen-2.5, split completed models with BANG, and retrieve results.",
+      "description_i18n": {
+        "en": "Generate 3D models from text or reference images with Hyper3D Rodin Gen-2.5, split completed models with BANG, and retrieve results.",
+        "zh-CN": "通过文字或参考图片生成 Hyper3D Rodin Gen-2.5 三维模型，使用 BANG 拆分已完成模型，并获取生成结果。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Deemos",
+        "url": "https://hyper3d.ai"
+      },
+      "homepage": "https://hyper3d.ai",
+      "license": "MIT",
+      "keywords": [
+        "hyper3d",
+        "rodin",
+        "3d",
+        "text-to-3d",
+        "image-to-3d",
+        "bang",
+        "mcp"
+      ],
+      "source": "./plugins/hyper3d-rodin",
+      "category": "developer-tools",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.jpg"
     }
   ]
 }

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hyper3d-rodin": {
+      "type": "http",
+      "url": "https://api.hyper3d.com/api/mcp",
+      "timeoutMs": 60000
+    }
+  }
+}
