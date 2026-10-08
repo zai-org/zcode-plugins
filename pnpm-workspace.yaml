@@ -1,0 +1,4 @@
+packages:
+  - ui-plugins/*
+allowBuilds:
+  esbuild: true

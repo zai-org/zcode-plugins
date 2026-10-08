@@ -1,0 +1,13 @@
+{
+  "Lute-LICENSE.txt": "https://github.com/88250/lute/blob/master/LICENSE",
+  "KaTeX-LICENSE.txt": "https://github.com/KaTeX/KaTeX/blob/v0.16.9/LICENSE",
+  "Mermaid-LICENSE.txt": "https://raw.githubusercontent.com/mermaid-js/mermaid/mermaid%4011.6.0/LICENSE",
+  "Highlight-LICENSE.txt": "https://github.com/highlightjs/highlight.js/blob/11.7.0/LICENSE",
+  "Ant-Design-Icons-LICENSE.txt": "https://raw.githubusercontent.com/ant-design/ant-design-icons/master/LICENSE",
+  "mhchem-LICENSE.txt": "https://github.com/mhchem/mhchemParser/blob/master/LICENSE.txt",
+  "DOMPurify-LICENSE.txt": "https://github.com/cure53/DOMPurify/blob/3.2.4/LICENSE",
+  "js-yaml-LICENSE.txt": "https://github.com/nodeca/js-yaml/blob/4.1.0/LICENSE",
+  "lodash-LICENSE.txt": "https://github.com/lodash/lodash/blob/4.17.21/LICENSE",
+  "Cytoscape-LICENSE.txt": "https://github.com/cytoscape/cytoscape.js/blob/v3.31.0/LICENSE",
+  "diff-match-patch-LICENSE.txt": "https://www.npmjs.com/package/diff-match-patch/v/1.0.5"
+}

@@ -1,0 +1,43 @@
+{
+  "name": "markdown",
+  "version": "0.3.5",
+  "description": "Typora 式 Markdown 编辑器：直接编辑工作区 .md 文件，Agent 与页面协同，自动保存与冲突保护。",
+  "description_i18n": {
+    "en": "A Typora-style markdown editor: edit workspace .md files directly, collaborate with the agent, with autosave and conflict protection.",
+    "zh-CN": "Typora 式 Markdown 编辑器：直接编辑工作区 .md 文件，Agent 与页面协同，自动保存与冲突保护。"
+  },
+  "author": {
+    "name": "ZCode"
+  },
+  "license": "Apache-2.0",
+  "mcpServers": {
+    "markdown": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "--max-old-space-size=256",
+        "--expose-gc",
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "Markdown 编辑器",
+          "en-US": "Markdown Editor"
+        },
+        "server": "markdown",
+        "resourceUri": "ui://markdown/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

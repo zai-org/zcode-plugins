@@ -1,0 +1,267 @@
+/* 格式工具栏展开后固定占位，正文独立滚动；窄屏换行且不遮挡内容。 */
+#editor.vditor .vditor-toolbar {
+  display: none;
+  position: relative;
+  flex: none;
+  z-index: 25;
+  width: 100%;
+  max-width: 100%;
+  padding: 4px 8px !important;
+  border: 0;
+  border-bottom: 1px solid var(--md-line);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--md-bg);
+  flex-wrap: wrap;
+  gap: 2px;
+  overflow: visible;
+}
+body.format-open #editor.vditor .vditor-toolbar {
+  display: flex;
+}
+#format::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 7px;
+  margin-bottom: 2px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+#format[aria-expanded="true"]::after {
+  margin-bottom: -1px;
+  transform: rotate(225deg);
+}
+#editor.vditor .vditor-toolbar__item {
+  padding: 0;
+  flex: none;
+}
+#editor.vditor .vditor-toolbar__item > button {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  font-size: 16px;
+  border-radius: 4px;
+}
+#editor.vditor .vditor-toolbar__item > button svg {
+  width: 16px;
+  height: 16px;
+}
+#editor.vditor .vditor-toolbar .vditor-tooltipped::before,
+#editor.vditor .vditor-toolbar .vditor-tooltipped::after {
+  display: none;
+}
+.format-tooltip {
+  position: fixed;
+  z-index: 70;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 5px 8px;
+  border-radius: var(--md-radius);
+  background: var(--md-fg);
+  color: var(--md-bg);
+  font: 12px/1.5 var(--md-font);
+  overflow-wrap: anywhere;
+  box-shadow: var(--md-shadow);
+  pointer-events: none;
+}
+#editor.vditor .vditor-toolbar__item > button:focus-visible {
+  outline: 2px solid var(--md-brand);
+  outline-offset: 1px;
+}
+#editor.vditor .vditor-toolbar__divider,
+#editor.vditor .vditor-toolbar__item:has(> [data-type="outline"]),
+#editor.vditor .vditor-toolbar__item:has(> [data-type="edit-mode"]) {
+  display: none !important;
+}
+#editor.vditor .vditor-hint {
+  z-index: 50;
+  max-width: calc(100vw - 16px);
+}
+#editor.vditor .vditor-hint button {
+  min-height: 30px;
+}
+#editor.vditor .vditor-content {
+  min-height: 0;
+  min-width: 0;
+}
+#editor.vditor .vditor-ir,
+#editor.vditor .vditor-wysiwyg {
+  min-width: 0;
+}
+#editor.vditor .vditor-reset {
+  font: 16px/1.85 var(--md-font);
+  color: var(--md-fg);
+  padding: 40px max(28px, calc((100% - 720px) / 2)) 96px !important;
+  caret-color: var(--md-brand);
+  overflow-wrap: anywhere;
+}
+#editor.vditor .vditor-reset h1 {
+  font-size: 1.9em;
+  line-height: 1.35;
+  margin: 0 0 1em;
+}
+#editor.vditor .vditor-reset h2 {
+  font-size: 1.45em;
+  margin-top: 1.8em;
+}
+#editor.vditor .vditor-reset h1,
+#editor.vditor .vditor-reset h2 {
+  border-bottom: 0;
+}
+#editor.vditor .vditor-reset h1::before,
+#editor.vditor .vditor-reset h2::before,
+#editor.vditor .vditor-reset h3::before,
+#editor.vditor .vditor-reset h4::before,
+#editor.vditor .vditor-reset h5::before,
+#editor.vditor .vditor-reset h6::before {
+  display: none;
+}
+#editor.vditor .vditor-reset pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+#editor.vditor .vditor-reset table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+#editor.vditor .vditor-reset img,
+#editor.vditor .vditor-reset svg {
+  max-width: 100%;
+}
+#editor.vditor .vditor-sv {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+}
+.outline-panel {
+  width: 200px;
+  flex: none;
+  padding: 16px 8px;
+  font-size: 13px;
+  border-right: 1px solid var(--md-line);
+  background: var(--md-bg-soft);
+  overflow: auto;
+}
+#editor.vditor .vditor-counter {
+  display: none;
+}
+@media (max-width: 760px) {
+  .outline-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 10;
+    width: 220px;
+    max-width: 75%;
+    box-shadow: var(--md-shadow);
+  }
+  #editor.vditor .vditor-reset {
+    padding: 28px 24px 80px !important;
+  }
+}
+@media (max-width: 440px) {
+  header {
+    gap: 8px;
+    padding: 5px 10px;
+  }
+  header button {
+    padding: 4px 7px;
+  }
+  #editor.vditor .vditor-reset {
+    padding: 24px 20px 64px !important;
+  }
+  footer {
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  #word-count {
+    display: none;
+  }
+}
+@media (max-height: 360px) {
+  .placeholder {
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .empty-content h1 {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .empty-content p {
+    margin-bottom: 12px;
+  }
+}
+
+.outline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 8px;
+  color: var(--md-fg-soft);
+  font-size: 12px;
+}
+#outline-close {
+  font-size: 18px;
+  padding: 0 8px;
+}
+#outline-items button {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--md-fg);
+  font-size: 13px;
+}
+#outline-empty {
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--md-fg-soft);
+}
+
+/* Vditor 内容主题可能晚于页面样式加载，表格/引用必须显式继承宿主色。 */
+#editor.vditor .vditor-reset table tr {
+  background: var(--md-bg);
+  color: var(--md-fg);
+}
+#editor.vditor .vditor-reset table th,
+#editor.vditor .vditor-reset table td {
+  border-color: var(--md-line-strong);
+  color: var(--md-fg);
+}
+#editor.vditor .vditor-reset table th {
+  background: var(--md-bg-soft);
+}
+#editor.vditor .vditor-reset blockquote {
+  color: var(--md-fg-soft);
+  border-left-color: var(--md-line-strong);
+}
+#editor.vditor .vditor-reset blockquote p {
+  color: inherit;
+}
+#editor.vditor .vditor-reset a {
+  color: var(--md-brand);
+}
+.selection-format {
+  display: flex;
+  align-items: center;
+}
+.selection-format button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 6px;
+}
+.selection-format svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+.selection-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--md-line-strong);
+}

@@ -1,0 +1,30 @@
+/* Preserve editor measurements while keeping partial initialization out of view. */
+body[data-boot] > :not(#boot) {
+  visibility: hidden !important;
+  opacity: 0;
+  pointer-events: none;
+}
+body[data-boot="connecting"] {
+  background: transparent;
+}
+body[data-boot="connecting"] #boot {
+  visibility: hidden;
+}
+#boot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  color: var(--md-fg-soft);
+  text-align: center;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+#boot-retry {
+  border: 1px solid var(--md-line-strong);
+  color: var(--md-fg);
+}

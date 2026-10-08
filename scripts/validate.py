@@ -109,6 +109,41 @@ def plugin_manifest_path(plugin_dir: Path) -> Path:
     return plugin_dir / ".claude-plugin" / "plugin.json"
 
 
+def validate_ui_surfaces(manifest: dict, label: str) -> None:
+    """Validate the ZCode extension without duplicating the standard MCP schema."""
+    ui = manifest.get("ui")
+    if ui is None:
+        return
+    if not isinstance(ui, dict) or not isinstance(ui.get("surfaces", []), list):
+        err(f"{label}: ui.surfaces must be a list")
+        return
+    servers = manifest.get("mcpServers", {})
+    ids: set[str] = set()
+    for surface in ui.get("surfaces", []):
+        if not isinstance(surface, dict):
+            err(f"{label}: each surface must be an object")
+            continue
+        identity = surface.get("id")
+        if not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", identity):
+            err(f"{label}: invalid surface id")
+        elif identity in ids:
+            err(f"{label}: duplicate surface id {identity}")
+        else:
+            ids.add(identity)
+        server = surface.get("server")
+        if not isinstance(server, str) or not isinstance(servers, dict) or server not in servers:
+            err(f"{label}: surface server must name a declared mcpServers entry")
+        uri = surface.get("resourceUri")
+        if not isinstance(uri, str) or not uri.startswith("ui://") or len(uri) <= 5:
+            err(f"{label}: surface resourceUri must be a ui:// resource")
+        title = surface.get("title")
+        if not ((isinstance(title, str) and title.strip()) or
+                (isinstance(title, dict) and title and all(isinstance(v, str) and v.strip() for v in title.values()))):
+            err(f"{label}: surface title must be non-empty text or translations")
+        if surface.get("availability", "session") != "session":
+            err(f"{label}: surface availability must be session")
+
+
 def main() -> int:
     marketplace = load_json(ROOT / "marketplace.json")
     if marketplace is None:
@@ -202,6 +237,7 @@ def main() -> int:
         validate_i18n(f"{label}: plugin.json", manifest, "description_i18n", ("en", "zh-CN"))
         if manifest.get("description_i18n") != entry.get("description_i18n"):
             err(f"{label}: plugin.json description_i18n does not match marketplace entry")
+        validate_ui_surfaces(manifest, label)
 
     plugins_root = ROOT / "plugins"
     if plugins_root.is_dir():

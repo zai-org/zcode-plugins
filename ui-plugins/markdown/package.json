@@ -1,0 +1,29 @@
+{
+  "name": "@zcode/plugin-markdown",
+  "version": "0.3.5",
+  "private": true,
+  "description": "ZCode UI Plugin：Typora 式 Markdown 编辑器（Vditor 内核），直接编辑工作区 .md 文件，Agent 与页面协同。",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/server.mjs",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e.mjs && node scripts/e2e-narrow.mjs && node scripts/e2e-reliability.mjs && node scripts/e2e-writing-ui.mjs && node scripts/e2e-selection-format.mjs && node scripts/e2e-toolbar-tooltip.mjs && node scripts/e2e-startup.mjs",
+    "test:perf": "node scripts/perf.mjs",
+    "preview": "node scripts/preview.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "esbuild": "0.25.12",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.2",
+    "vditor": "3.11.1"
+  }
+}

@@ -1,0 +1,321 @@
+/*
+ * 风格约定：颜色/字体/圆角/阴影优先消费宿主注入的标准 token
+ * （pluginUiStyleVariables.ts 提供，applyTheme 已挂到 documentElement），
+ * 兜底值仅保证脱离宿主（如浏览器测试）时可读。Vditor 自身的 CSS 变量
+ * 在 .vditor 作用域内映射到同一套 token，保证编辑器与 ZCode 视觉一致。
+ */
+:root {
+  color-scheme: light dark;
+  --md-bg: var(--color-background-primary, #ffffff);
+  --md-bg-soft: var(--color-background-secondary, #f5f5f5);
+  --md-bg-hover: var(--color-background-ghost, rgba(0 0 0 / 6%));
+  --md-fg: var(--color-text-primary, #404040);
+  --md-fg-soft: var(--color-text-secondary, #737373);
+  --md-fg-faint: var(--color-text-tertiary, #a3a3a3);
+  --md-brand: var(--color-text-info, #2563eb);
+  --md-danger: var(--color-text-danger, #dc2626);
+  --md-warn: var(--color-text-warning, #ca8a04);
+  --md-line: var(--color-border-primary, rgba(10 10 10 / 10%));
+  --md-line-strong: var(--color-border-secondary, rgba(10 10 10 / 20%));
+  --md-radius: var(--border-radius-md, 6px);
+  --md-radius-lg: var(--border-radius-lg, 8px);
+  --md-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 10%));
+  --md-font: var(
+    --font-sans,
+    ui-sans-serif,
+    system-ui,
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif
+  );
+  --md-font-sm: var(--font-text-sm-size, 12px);
+  --md-font-md: var(--font-text-md-size, 14px);
+}
+/* 暗色兜底：宿主 token 缺失（浏览器测试、注入完成前）时保持可读。 */
+html[data-theme="dark"] {
+  --md-brand: var(--color-text-info, #79c0ff);
+  --md-danger: var(--color-text-danger, #ff7b72);
+  --md-warn: var(--color-text-warning, #e3b341);
+  --md-bg: var(--color-background-primary, #1b1f24);
+  --md-bg-soft: var(--color-background-secondary, #23282e);
+  --md-bg-hover: var(--color-background-ghost, rgba(255 255 255 / 8%));
+  --md-fg: var(--color-text-primary, #e6edf3);
+  --md-fg-soft: var(--color-text-secondary, #9aa4b2);
+  --md-fg-faint: var(--color-text-tertiary, #6e7781);
+  --md-line: var(--color-border-primary, rgba(230 237 243 / 14%));
+  --md-line-strong: var(--color-border-secondary, rgba(230 237 243 / 24%));
+}
+#editor.vditor {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  --panel-background-color: var(--md-bg);
+  --panel-shadow: var(--md-shadow);
+  --toolbar-background-color: var(--md-bg-soft);
+  --toolbar-icon-color: var(--md-fg-soft);
+  --toolbar-icon-hover-color: var(--md-fg);
+  --textarea-background-color: var(--md-bg);
+  --textarea-text-color: var(--md-fg);
+  --border-color: var(--md-line);
+  --second-color: var(--md-fg-soft);
+  --ir-title-color: var(--md-fg);
+  --ir-heading-color: var(--md-fg);
+  --ir-bi-color: var(--md-fg);
+  --ir-bracket-color: var(--md-fg-faint);
+  --ir-paren-color: var(--md-fg-faint);
+  --ir-link-color: var(--md-brand);
+  --blockquote-color: var(--md-fg-soft);
+  --heading-border-color: var(--md-line);
+  --count-background-color: var(--md-bg-hover);
+  font-family: var(--md-font);
+}
+* {
+  box-sizing: border-box;
+}
+[hidden] {
+  display: none !important;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--md-bg);
+  color: var(--md-fg);
+  font: 14px/1.5 var(--md-font);
+}
+button {
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--md-radius);
+  background: transparent;
+  color: var(--md-fg-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+button:hover:not(:disabled),
+button[aria-pressed="true"],
+button[aria-expanded="true"] {
+  background: var(--md-bg-hover);
+  color: var(--md-fg);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--md-brand);
+  outline-offset: 2px;
+}
+/* 始终单行的文档栏。长文件名让位，操作不换行挤压正文。 */
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  height: 46px;
+  flex: none;
+  border-bottom: 1px solid var(--md-line);
+  background: var(--md-bg);
+}
+header button {
+  min-height: 32px;
+  flex: none;
+}
+header .path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--md-fg);
+  font-size: 13px;
+  font-weight: 500;
+}
+.view-actions {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+#switch {
+  position: relative;
+  margin-right: 5px;
+}
+#switch::after {
+  content: "";
+  position: absolute;
+  right: -9px;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--md-line);
+  pointer-events: none;
+}
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.editor {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+/* 状态栏只表达保存结果；源码和字数是次级信息。 */
+footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  min-height: 32px;
+  padding: 2px 12px;
+  border-top: 1px solid var(--md-line);
+  color: var(--md-fg-soft);
+  font-size: 11px;
+}
+footer .status {
+  min-width: 0;
+  margin-right: auto;
+  overflow-wrap: anywhere;
+}
+footer .status[data-phase="error"],
+footer .status[data-phase="conflict"] {
+  color: var(--md-danger);
+}
+footer button {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+#word-count {
+  white-space: nowrap;
+}
+#save {
+  color: var(--md-danger);
+}
+/* 空态仍保留编辑器布局，避免 Vditor 在零尺寸容器初始化。 */
+.placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 24px;
+  background: var(--md-bg);
+  text-align: center;
+  overflow: auto;
+}
+.stage.no-doc #editor {
+  visibility: hidden;
+}
+.empty-content {
+  max-width: 360px;
+}
+.empty-content h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.empty-content p {
+  color: var(--md-fg-soft);
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0 0 24px;
+}
+.empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.empty-actions button {
+  padding: 9px 16px;
+  border: 1px solid var(--md-line-strong);
+  color: var(--md-fg);
+}
+#empty-new {
+  background: var(--md-fg);
+  color: var(--md-bg);
+}
+.drop-overlay {
+  position: absolute;
+  inset: 12px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--md-brand);
+  border-radius: var(--md-radius-lg);
+  background: color-mix(in srgb, var(--md-bg) 92%, transparent);
+  color: var(--md-brand);
+  pointer-events: none;
+}
+.conflict {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--md-warn) 10%, transparent);
+  border-bottom: 1px solid var(--md-line);
+  font-size: 12px;
+  flex: none;
+}
+.conflict[data-visible="true"] {
+  display: flex;
+}
+.conflict .actions {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 6px;
+}
+.conflict button {
+  min-height: 32px;
+}
+.selection-actions {
+  display: flex;
+  align-items: center;
+  position: fixed;
+  z-index: 60;
+  padding: 4px;
+  border: 1px solid var(--md-line-strong);
+  border-radius: var(--md-radius-lg);
+  background: var(--md-bg);
+  box-shadow: var(--md-shadow);
+  max-width: calc(100vw - 16px);
+}
+.selection-actions button {
+  color: var(--md-fg);
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.toast {
+  position: fixed;
+  z-index: 65;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: var(--md-radius-lg);
+  background: var(--md-fg);
+  color: var(--md-bg);
+  box-shadow: var(--md-shadow);
+  font-size: 12px;
+  text-align: center;
+  pointer-events: none;
+}

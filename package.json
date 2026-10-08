@@ -1,0 +1,20 @@
+{
+  "name": "zcode-plugins-build",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-plugins.mjs",
+    "test": "vitest run tests/local-marketplace.test.ts && pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "oxlint ui-plugins scripts/*.mjs",
+    "marketplace:local": "node scripts/build-local-marketplace.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.0",
+    "oxlint": "1.57.0",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

@@ -740,6 +740,25 @@
         "visualization"
       ],
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/obsidian/icon.png"
+    },
+    {
+      "name": "markdown",
+      "displayName": "Markdown Editor",
+      "displayName_i18n": {
+        "en": "Markdown Editor",
+        "zh-CN": "Markdown 编辑器"
+      },
+      "version": "0.3.5",
+      "source": "./plugins/markdown",
+      "description": "Typora 式 Markdown 编辑器：直接编辑工作区 .md 文件，Agent 与页面协同，自动保存与冲突保护。",
+      "description_i18n": {
+        "en": "A Typora-style markdown editor: edit workspace .md files directly, collaborate with the agent, with autosave and conflict protection.",
+        "zh-CN": "Typora 式 Markdown 编辑器：直接编辑工作区 .md 文件，Agent 与页面协同，自动保存与冲突保护。"
+      },
+      "category": "productivity",
+      "author": {
+        "name": "ZCode"
+      }
     }
   ]
 }
