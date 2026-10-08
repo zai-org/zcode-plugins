@@ -1903,6 +1903,15 @@
     "sha256": "fae7e309cbc0bde28eab6ea19403cdf78722e543ab630d98c8694703b7d38d82"
   },
   {
+    "name": "tripo-3d",
+    "icon": "tripo-3d/icon.png",
+    "source": "https://github.com/vast-enterprise/Tripo-Api-Plugin-Kimi/blob/master/plugin/icon.png",
+    "matchedBy": "official-repository-asset",
+    "homepage": "https://www.tripo3d.ai",
+    "mimeType": "image/png",
+    "sha256": "4bb8e9833b844aea43a4d4f7d548a61ac24325059c0066e40765ae09511e09cb"
+  },
+  {
     "name": "twilio-developer-kit",
     "icon": "twilio-developer-kit/icon.png",
     "source": "/plugins/twilio-developer-kit/assets/logo.svg",

@@ -1,0 +1,27 @@
+{
+  "name": "tripo-3d",
+  "version": "0.1.2",
+  "description": "Generate textured, rig-ready 3D models from a text prompt or a reference image with Tripo, and export GLB/FBX/OBJ/STL/USDZ/3MF straight into your project. Connect your China-mainland Tripo account once in the browser (OAuth), no API key pasting.",
+  "description_i18n": {
+    "en": "Generate textured, rig-ready 3D models from a text prompt or a reference image with Tripo, and export GLB/FBX/OBJ/STL/USDZ/3MF straight into your project. Connect your China-mainland Tripo account once in the browser (OAuth), no API key pasting.",
+    "zh-CN": "用 Tripo 从一句话或一张图生成带贴图、可绑骨的 3D 模型，支持动画、减面与 GLB/FBX/OBJ/STL/USDZ/3MF 导出，文件直接落到项目里。浏览器里授权一次国内站 Tripo 账号即可使用，无需粘贴 API Key。"
+  },
+  "author": {
+    "name": "VAST",
+    "url": "https://www.tripo3d.ai"
+  },
+  "homepage": "https://www.tripo3d.ai",
+  "license": "MIT",
+  "keywords": [
+    "3d",
+    "asset-generation",
+    "game-development",
+    "glb",
+    "fbx",
+    "text-to-3d",
+    "image-to-3d",
+    "3d-printing",
+    "rigging",
+    "mcp"
+  ]
+}
