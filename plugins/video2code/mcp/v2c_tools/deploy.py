@@ -96,9 +96,21 @@ def _spawn_httpd(dst: Path, port: int) -> subprocess.Popen:
     return proc
 
 
+def _check_deploy_paths(dst: Path, src: Path) -> bool:
+    """Return whether copying is needed; reject overlapping directory trees."""
+    dst, src = dst.resolve(), src.resolve()
+    if dst == src:
+        return False
+    if dst in src.parents or src in dst.parents:
+        raise ValueError("local_dir and serving directory must not contain each other")
+    return True
+
+
 def _swap_dir_contents(dst: Path, src: Path) -> None:
     """原地替换 dst 的内容为 src 的内容。dst 目录本身保留 —— http.server 按
     启动时记录的路径字符串逐请求解析文件, 目录路径不变即无缝切到新构建。"""
+    if not _check_deploy_paths(dst, src):
+        return
     for child in dst.iterdir():
         if child.is_dir():
             shutil.rmtree(child)
@@ -179,9 +191,15 @@ def deploy_website(args: dict, ctx: RunContext) -> str:
         return f"[ERROR] local_dir not found: {local_dir}"
 
     serve_root = ctx.work_dir / "serve"
-    serve_root.mkdir(parents=True, exist_ok=True)
-
     srv = _live_server(ctx)
+    prev = _last_server(ctx) if srv is None else None
+    slug = uuid.uuid4().hex[:10] if srv is None and prev is None else None
+    dst = (srv or prev)["dst"] if srv or prev else serve_root / slug
+    try:
+        _check_deploy_paths(dst, src)
+    except ValueError as exc:
+        return f"[ERROR] {exc}; deployment unchanged. Use a separate build directory."
+    serve_root.mkdir(parents=True, exist_ok=True)
     reused = srv is not None
     same_url = reused
     if reused:
@@ -189,7 +207,6 @@ def deploy_website(args: dict, ctx: RunContext) -> str:
         _swap_dir_contents(dst, src)
         port = srv["port"]
     else:
-        prev = _last_server(ctx)
         if prev is not None:
             # F10: 上个 server 进程死了 → 原端口/原目录重启, URL 不漂移
             # (13 任务曾因死进程换新端口, agent 拿旧 URL 验证全失败)
@@ -199,8 +216,6 @@ def deploy_website(args: dict, ctx: RunContext) -> str:
             prev["proc"] = _spawn_httpd(dst, port)
             same_url = True
         else:
-            slug = uuid.uuid4().hex[:10]
-            dst = serve_root / slug
             shutil.copytree(src, dst)
 
             # 选端口 (尽量避免和已 deploy 的撞)
