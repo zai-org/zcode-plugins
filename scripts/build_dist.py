@@ -100,7 +100,52 @@ def regular_files(root: Path) -> list[Path]:
     return out
 
 
+def validate_local_mcp_paths(plugin_dir: Path, manifest: dict) -> None:
+    def resolve_declaration(declaration):
+        if isinstance(declaration, str):
+            path = local_path(declaration)
+            contents = json.loads(path.read_text(encoding="utf-8"))
+            return contents.get("mcpServers", contents)
+        if isinstance(declaration, list):
+            merged = {}
+            for item in declaration:
+                merged.update(resolve_declaration(item))
+            return merged
+        return declaration or {}
+
+    def local_path(value):
+        path = plugin_dir / value
+        if not path.resolve().is_relative_to(plugin_dir.resolve()):
+            raise UnsafeTree(f"{plugin_dir.name}: MCP path escapes installation: {value}")
+        return path
+
+    declaration = manifest.get("mcpServers")
+    if declaration is None and (plugin_dir / ".mcp.json").is_file():
+        declaration = ".mcp.json"
+    prefix = "${ZCODE_PLUGIN_ROOT}/"
+    for server in resolve_declaration(declaration).values():
+        for value in [server.get("command"), *server.get("args", [])]:
+            if not isinstance(value, str) or not value.startswith(prefix):
+                continue
+            relative = value[len(prefix):]
+            if "${" not in relative and not local_path(relative).exists():
+                raise UnsafeTree(f"{plugin_dir.name}: missing MCP path {relative}; run pnpm build first")
+
+
 def build_zip(plugin_dir: Path, out_path: Path) -> None:
+    # Both full and incremental publication call this boundary. An unbuilt MCP
+    # App must never be published as a metadata-only installation.
+    source_package = ROOT / "ui-plugins" / plugin_dir.name / "package.json"
+    if source_package.is_file():
+        complete = plugin_dir / "dist" / "build-info.json"
+        if not complete.is_file():
+            raise UnsafeTree(f"{plugin_dir.name}: incomplete build; run pnpm build first")
+        built = json.loads(complete.read_text(encoding="utf-8"))
+        source = json.loads(source_package.read_text(encoding="utf-8"))
+        manifest = json.loads((plugin_dir / ".zcode-plugin/plugin.json").read_text(encoding="utf-8"))
+        if built != {"name": manifest["name"], "version": manifest["version"]} or source["version"] != manifest["version"]:
+            raise UnsafeTree(f"{plugin_dir.name}: build version mismatch; run pnpm build first")
+        validate_local_mcp_paths(plugin_dir, manifest)
     files = regular_files(plugin_dir)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
