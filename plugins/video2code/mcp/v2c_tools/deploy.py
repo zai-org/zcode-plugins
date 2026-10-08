@@ -16,6 +16,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -88,7 +89,7 @@ def _last_server(ctx: RunContext) -> dict | None:
 def _spawn_httpd(dst: Path, port: int) -> subprocess.Popen:
     """起 http.server (allow_reuse_address 默认开, 原端口进程死后可立即重绑)。"""
     proc = subprocess.Popen(
-        ["python3", "-m", "http.server", str(port), "--bind", "127.0.0.1"],
+        [sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"],
         cwd=str(dst),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
