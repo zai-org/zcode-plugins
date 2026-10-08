@@ -76,7 +76,7 @@ class ManifestTest(unittest.TestCase):
 
         self.assertEqual(zcode, claude)
         self.assertEqual(zcode["name"], "video2code")
-        self.assertEqual(zcode["version"], "0.6.0")
+        self.assertEqual(zcode["version"], "0.6.1")
         self.assertEqual(zcode["license"], "MIT")
         self.assertEqual(zcode["author"], {"name": "Z.ai", "url": "https://z.ai"})
         self.assertEqual(set(zcode["description_i18n"]), {"en", "zh-CN"})
