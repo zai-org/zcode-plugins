@@ -12,6 +12,7 @@ import threading
 import time
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 
 
@@ -27,6 +28,14 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def runtime_test_env() -> dict[str, str]:
+    # 安全回归必须使用原生引擎和默认 graded 策略，不能继承 runner 的演示/降级开关。
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("MIMOSA_") and key not in {"NODE_OPTIONS", "NODE_PATH"}}
+    env["MIMOSA_ENGINE"] = "native"
+    return env
+
+
 def run_node(*args: str, cwd: Path | None = None, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
     node = shutil.which("node")
     if node is None:
@@ -34,6 +43,7 @@ def run_node(*args: str, cwd: Path | None = None, input_text: str | None = None)
     return subprocess.run(
         [node, *args],
         cwd=cwd,
+        env=runtime_test_env(),
         input=input_text,
         capture_output=True,
         text=True,
@@ -59,8 +69,7 @@ class McpStdioClient:
         node = shutil.which("node")
         if node is None:
             raise AssertionError("node must be available in PATH to validate Mimosa")
-        env = os.environ.copy()
-        env["MIMOSA_ENGINE"] = "native"
+        env = runtime_test_env()
         self.process = subprocess.Popen(
             [node, str(server)],
             cwd=cwd,
@@ -166,6 +175,14 @@ def assert_signed_inventory(test: unittest.TestCase, root: Path) -> None:
 
 
 class MimosaPluginTest(unittest.TestCase):
+    def test_runtime_env_does_not_inherit_hook_overrides(self) -> None:
+        with mock.patch.dict(os.environ, {"MIMOSA_HOOK_BLOCK": "warn", "MIMOSA_NO_GIT_GATE": "1", "NODE_OPTIONS": "--invalid"}):
+            env = runtime_test_env()
+        self.assertNotIn("MIMOSA_HOOK_BLOCK", env)
+        self.assertNotIn("MIMOSA_NO_GIT_GATE", env)
+        self.assertNotIn("NODE_OPTIONS", env)
+        self.assertEqual(env["MIMOSA_ENGINE"], "native")
+
     def test_marketplace_listing_uses_localized_product_name_and_published_icon(self) -> None:
         marketplace = load_json(ROOT / "marketplace.json")
         entry = next(item for item in marketplace["plugins"] if item["name"] == "mimosa")
@@ -417,7 +434,12 @@ class MimosaPluginTest(unittest.TestCase):
                 input_text=json.dumps(request),
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            response = json.loads(result.stdout)
+            self.assertTrue(result.stdout.strip(),
+                            f"PreToolUse returned no decision JSON; stderr={result.stderr[-2000:]!r}")
+            try:
+                response = json.loads(result.stdout)
+            except json.JSONDecodeError as error:
+                self.fail(f"PreToolUse returned invalid JSON: {error}; stderr={result.stderr[-2000:]!r}")
             decision = response["hookSpecificOutput"]
             self.assertEqual(decision["hookEventName"], "PreToolUse")
             self.assertEqual(decision["permissionDecision"], "deny")
