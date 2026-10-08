@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "upkuajing": {
+      "type": "http",
+      "url": "https://mcp.upkuajing.com/mcp"
+    }
+  }
+}
