@@ -1,0 +1,13 @@
+{
+  "version": "1.1",
+  "task_id": "TASK-BOOT-1",
+  "worker": "any",
+  "model": "任一员工窗口（模型由用户在客户端选择）",
+  "effort": "low",
+  "session_mode": "local",
+  "prompt": "这是会话中继（Session Relay）员工自举卡模板。领导复制本文件为 relay/inbox/<task_id>.json 后按需定向（worker 改 sess:<会话id> 或保留 any），并把 <短标识> 占位替换为实际目标或保留通用表述。内容要点：1) 领取本卡到 claimed（文件名带 .by-<短标识>）；2) CronList 检查无『relay 取件值班-<短标识>』条目则 CronCreate（intervalUnit=minute、interval=5、recurring=true，prompt 原文=『relay 取件值班轮：按 .zcode/skills/relay-next/SKILL.md 第 0 步自查 relay/chat/ 与 relay/inbox/。有消息按【消息模式】处理；有卡按取件五步领取执行并回报（排空式）。无事立即静默结束，不输出多余内容、不写任何文件。绝不修改项目共享文档。』）；3) 写 nonce 证据文件（格式 RELAY-NONCE-BOOT-<8hex>）到约定 artifacts 目录；4) 按 README 回报合同写 relay/outbox/<task_id>.report.json；5) 用 chat 通知领导 BOOT 完成。",
+  "authorized_write_paths": ["relay/outbox/", "relay/chat/"],
+  "created_by": "<领导标识>",
+  "created_at": "<UTC ISO>",
+  "prompt_sha256": "<部署时由领导重算：prompt 的 UTF-8 SHA256 hex；改写 prompt 后必须重算>"
+}

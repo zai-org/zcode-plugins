@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updated_at": "<部署时填写UTC日期>",
+  "leader_interval_min": 10,
+  "employee_watcher": {
+    "title_pattern": "relay 取件值班-<短标识>（每5分钟）",
+    "intervalUnit": "minute",
+    "interval": 5,
+    "recurring": true,
+    "note": "标题必须带本会话短标识；SHUTDOWN 时按前缀『relay 取件值班-』匹配自己的那一条"
+  },
+  "idle_shutdown_threshold": 12,
+  "standby_schedule": "hourly",
+  "note": "终局治理：领导值班连续 N 轮完全空闲 -> 自动 SHUTDOWN 各员工 + 领导自降频为每小时值守（不自我删除）。恢复=对领导会话说一句话。"
+}

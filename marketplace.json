@@ -60,6 +60,36 @@
       ]
     },
     {
+      "name": "relay-up",
+      "source": "./plugins/relay-up",
+      "displayName": "Session Relay",
+      "displayName_i18n": {
+        "en": "Session Relay",
+        "zh-CN": "会话中继"
+      },
+      "description": "Session Relay: a fully automated cross-session task & chat relay for ZCode. One leader session dispatches relay-task cards over a file mailbox, worker windows (any model) self-wake on a watcher cron, plugin hooks inject pending cards and chat messages automatically, and a 7-check acceptance loop reviews every report. /relay-up scaffolds everything into any project.",
+      "description_i18n": {
+        "en": "Session Relay: a fully automated cross-session task & chat relay for ZCode. One leader session dispatches relay-task cards over a file mailbox, worker windows (any model) self-wake on a watcher cron, plugin hooks inject pending cards and chat messages automatically, and a 7-check acceptance loop reviews every report. /relay-up scaffolds everything into any project.",
+        "zh-CN": "会话中继（Session Relay）：ZCode 会话间全自动任务与消息中继。领导会话经文件信箱派发任务卡，员工窗口（任意模型）靠值班定时器自醒取件，插件 hook 自动注入待办卡与消息，七项核验验收每份回报。/relay-up 一键装入任意项目。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Great-us",
+        "url": "https://github.com/Great-us"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "session-relay",
+        "multi-session",
+        "orchestration",
+        "hooks",
+        "automation",
+        "mailbox",
+        "task-queue"
+      ],
+      "repository": "https://github.com/Great-us/relay-up"
+    },
+    {
       "name": "github",
       "source": "./plugins/github",
       "description": "GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, Codespaces, and other GitHub resources.",
