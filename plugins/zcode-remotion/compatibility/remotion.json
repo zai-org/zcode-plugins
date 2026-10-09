@@ -1,0 +1,29 @@
+{
+  "remotion": {
+    "tested": "4.0.520"
+  },
+  "skills": {
+    "tested": "4.0.520",
+    "count": 12,
+    "names": [
+      "remotion-best-practices",
+      "remotion-captions",
+      "remotion-create",
+      "remotion-docs",
+      "remotion-interactivity",
+      "remotion-maps",
+      "remotion-markup",
+      "remotion-multimedia",
+      "remotion-render",
+      "remotion-saas",
+      "remotion-studio",
+      "remotion-upgrade"
+    ]
+  },
+  "mediabunny": {
+    "tested": "1.55.5",
+    "source": "https://www.remotion.dev/docs/mediabunny/version"
+  },
+  "verifiedAt": "2026-09-01",
+  "source": "https://github.com/remotion-dev/skills"
+}
