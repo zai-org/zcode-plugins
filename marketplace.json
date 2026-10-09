@@ -772,6 +772,51 @@
       "source": "./plugins/hyper3d-rodin",
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.jpg"
+    },
+    {
+      "name": "tripo-3d",
+      "source": "./plugins/tripo-3d",
+      "displayName": "Tripo 3D",
+      "displayName_i18n": {
+        "en": "Tripo 3D",
+        "zh-CN": "Tripo 3D"
+      },
+      "description": "Generate textured, rig-ready 3D models from a text prompt or a reference image with Tripo, and export GLB/FBX/OBJ/STL/USDZ/3MF straight into your project. Connect your China-mainland Tripo account once in the browser (OAuth), no API key pasting.",
+      "description_i18n": {
+        "en": "Generate textured, rig-ready 3D models from a text prompt or a reference image with Tripo, and export GLB/FBX/OBJ/STL/USDZ/3MF straight into your project. Connect your China-mainland Tripo account once in the browser (OAuth), no API key pasting.",
+        "zh-CN": "用 Tripo 从一句话或一张图生成带贴图、可绑骨的 3D 模型，支持动画、减面与 GLB/FBX/OBJ/STL/USDZ/3MF 导出，文件直接落到项目里。浏览器里授权一次国内站 Tripo 账号即可使用，无需粘贴 API Key。"
+      },
+      "version": "0.1.3",
+      "author": {
+        "name": "VAST",
+        "url": "https://www.tripo3d.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/tripo-3d/icon.png",
+      "category": "productivity",
+      "keywords": [
+        "3d",
+        "asset-generation",
+        "game-development",
+        "glb",
+        "fbx",
+        "text-to-3d",
+        "image-to-3d",
+        "3d-printing",
+        "rigging",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Generate a low-poly treasure chest and export it as FBX for Unity",
+        "Turn this concept image into a textured 3D model and export it as GLB",
+        "Make a 3D-printable knight figurine and export STL"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成一个低多边形的宝箱 3D 模型，导出 FBX 给 Unity 用",
+          "把这张概念图变成带贴图的 3D 模型，导出 GLB",
+          "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
+        ]
+      }
     }
   ]
 }
