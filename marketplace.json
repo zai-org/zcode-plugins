@@ -94,7 +94,7 @@
         "en": "Automated video editing toolkit: standard cloud speech transcription and synthesis, full video frame extraction and understanding, local re-inspection, timeline, preview rendering, QC, and TTS.",
         "zh-CN": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。"
       },
-      "version": "0.4.3",
+      "version": "0.4.5",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"

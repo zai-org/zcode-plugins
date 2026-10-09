@@ -2,8 +2,9 @@
   "mcpServers": {
     "video-edit": {
       "type": "stdio",
-      "command": "python3",
+      "command": "node",
       "args": [
+        "${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs",
         "${CLAUDE_PLUGIN_ROOT}/mcp/video_edit_server.py"
       ],
       "cwd": "${CLAUDE_PROJECT_DIR}",
