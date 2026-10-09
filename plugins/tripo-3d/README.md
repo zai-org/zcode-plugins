@@ -68,8 +68,8 @@ The Tripo MCP server needs a one-time authorization:
   local image/model (the `curl` returned by `tripo_upload_ticket`) or to
   download a result. The fallback CLI path downloads and runs
   [tripo-cli](https://www.npmjs.com/package/tripo-cli) (MIT, via
-  `npx tripo-cli@latest`), only for jobs that need it (e.g. bulk generation or
-  stylize), and says so first.
+  `npx tripo-cli@latest`), only for jobs that need it (e.g. bulk generation),
+  and says so first.
 - **Hook**: `hooks/session-start.mjs` needs `node` on PATH. It reads the
   event from stdin and prints a fixed text to stdout; no network, no file
   access.

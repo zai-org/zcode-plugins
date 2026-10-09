@@ -45,7 +45,7 @@ API Key。本构建的 MCP 只对接国内站；海外站账号请安装海外�
 - **网络**：MCP 工具调用走 `https://developers.tripo3d.com/mcp`；授权页跳转到国内站 Tripo 控制台（developers.tripo3d.com）。生成结果通过 Tripo 的 CDN 短期链接（约 5 分钟过期）下载。
 - **账号与计费**：所有生成任务消耗你自己 Tripo 账号的积分，每次工具返回 `credits_consumed`；失败任务自动退款。批量生成前 skill 会先用 `tripo_plan` 草稿、查余额并确认。
 - **文件写入**：只在你要求把模型落到本地时，用 `curl` 把结果下载到项目目录；Hook 与 MCP 服务器本身不写任何文件。
-- **命令执行**：MCP 路径下仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。备用 CLI 路径通过 `npx tripo-cli@latest` 从 npm 下载并运行 [tripo-cli](https://www.npmjs.com/package/tripo-cli)（MIT），只在批量生成、stylize 等需要时使用，且会先说明。
+- **命令执行**：MCP 路径下仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。备用 CLI 路径通过 `npx tripo-cli@latest` 从 npm 下载并运行 [tripo-cli](https://www.npmjs.com/package/tripo-cli)（MIT），只在批量生成等需要时使用，且会先说明。
 - **Hook**：`hooks/session-start.mjs` 依赖 PATH 中的 `node`，只从 stdin 读取事件、向 stdout 输出一段固定文本，不访问网络、不读写文件。
 - **不采集任何数据**：插件本体不含遥测；账号凭据由 ZCode 的凭据存储管理，不经过对话。
 

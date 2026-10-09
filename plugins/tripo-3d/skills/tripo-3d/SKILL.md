@@ -112,8 +112,8 @@ loses access too.
      original textures); `tripo_segment` → `tripo_mesh_complete` — split into
      parts and close the cuts; `tripo_mesh_edit` — redo one region of an
      existing mesh with P2 Preview (`bbox` required). Stylize (lego / voxel /
-     voronoi / minecraft) is **CLI-only** (`--then stylize`) — there is no
-     `tripo_stylize` MCP tool.
+     voronoi / minecraft) has been retired — there is no `tripo_stylize` tool
+     and no CLI `--then stylize` step.
 6. **Deliver** — result URLs (`model_url`, `preview_image_url`) **expire in
    about 5 minutes**; never cache or re-print an old one — call
    `tripo_task_status` for fresh links. Download the file into the project
@@ -311,10 +311,10 @@ path instead.
   When the user only wants GLB, that convert buys a format nobody asked for —
   use a chain-free preset instead (`toy` for low-poly, with `-p face_limit=...`)
   or tell the user the extra format costs credits before running.
-- `--then <steps>` overrides the chain. Steps: `texture` `stylize` `convert`
+- `--then <steps>` overrides the chain. Steps: `texture` `convert`
   `import` `rig-check` `rig` `retarget` `segment` `complete` `decimate` `smartsegment`.
   Arguments use `step:key=value`; a bare value maps to the step's primary argument
-  (`convert:fbx`, `stylize:lego`, `decimate:5000`).
+  (`convert:fbx`, `decimate:5000`).
 - `-o, --out <dir>` sets the **parent** directory, not the artifact directory. `make`
   always creates `<dir>/tripo-out/<name>-<id8>/` underneath it, so `-o ./assets` writes
   `./assets/tripo-out/<name>-<id8>/model.glb`. Pass `-o` to keep artifacts inside the
@@ -366,5 +366,5 @@ Re-run `tripo task get <id> --download` instead.
 
 Model versions, generation/processing parameters, 2D steps, list prices, CLI
 result shape and other commands: read [`references/capability.md`](references/capability.md)
-(same parameter names on MCP and CLI). Stylize is **CLI-only** (`--then stylize`);
-MCP instead has `tripo_plan` (confirm before spend) and `tripo_mesh_edit` (P2 regional redo).
+(same parameter names on MCP and CLI). MCP also has `tripo_plan` (confirm before
+spend) and `tripo_mesh_edit` (P2 regional redo).

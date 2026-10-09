@@ -60,12 +60,11 @@ Every step takes a model task_id, a `file_token` or a model URL as `input`,
 except: `tripo_animate` / `retarget` (a successful rig task), `tripo_mesh_complete`
 / `complete` (a successful segment task) and `tripo_smart_segment` /
 `smartsegment` (file_token or URL only, never a task_id). CLI `--then` maps a
-bare value to the primary argument (`convert:fbx`, `stylize:lego`, `decimate:5000`).
+bare value to the primary argument (`convert:fbx`, `decimate:5000`).
 
 | MCP tool / CLI step | arguments and constraints |
 | --- | --- |
 | `tripo_texture` / `texture` | `texture_quality` `standard`/`detailed`/`extreme`; `pbr` (true); `texture_seed`; `texture_alignment`; `model` `v3.0` / `v3.0-20250812` (default) / `v3.5-20260815` (newest; unlocks `delight` and `texture_quality=fast` on MCP) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. MCP also takes guidance — exactly one of `prompt` (+ optional `style_image`), `image`, or `images` (4 views front/left/back/right). Re-textures any model, including imported files |
-| `stylize` (**CLI only** — no MCP tool) | `style` `lego` `voxel` `voronoi` `minecraft`; `block_size` 32–128 (minecraft only, default 80). On MCP there is no `tripo_stylize`; use CLI `--then stylize` or skip |
 | `tripo_mesh_edit` | P2 Preview regional regenerate: `input` (task_id / file_token / URL) + axis-aligned `bbox` in model space; optional `ref_image`. Rest of mesh kept. Billed separately |
 | `tripo_plan` | Free draft of the tool chain **before** any billed call; show the user and wait for confirmation. Skip only for pure reads (balance / usage / task status) |
 | `tripo_convert` / `convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo` (FBX only). `quad` with `GLTF` is rejected. Any non-default option bills the complex tier (10 credits instead of 5) |
