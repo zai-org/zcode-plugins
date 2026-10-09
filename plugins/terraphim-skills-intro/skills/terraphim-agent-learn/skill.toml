@@ -1,0 +1,17 @@
+[skill]
+name = "terraphim-agent-learn"
+version = "1.0.2"
+description = "Inspect and capture command failures or user corrections with terraphim-agent learn. Use when a user asks to preserve a concrete operational lesson, search earlier failures, or attach a correction; use terraphim-agent-memory for broader memory retrieval and lifecycle work."
+tier = "community"
+author = "terraphim"
+license = "Apache-2.0"
+repository = "https://github.com/terraphim/terraphim-cursor-plugin"
+
+[files]
+"SKILL.md" = "51d1b4c8f82cbd15931910e2a13a3c2fe951518fef44320b4b9df72a3dd85bcc"
+"references/command-guide.md" = "792034bb071bd45831aae1da1a11c999eb61fb7deed123d51b567737fc50346c"
+
+[signature]
+public_key = "261c6820525270bfe2a5daaa5bf3f581bd9bc193e1a0148010e870a3a63ad959"
+signature = "8bf9f0d742ffa26d550280355d2f1f46939881a29facbff673bc7abfb4da169959bcca17d42b78d612cd93646adbff92cacf686390932e707e5c9ebf08d1ab03"
+timestamp = "1789548056Z"
