@@ -21,6 +21,7 @@
 | [**github**](./plugins/github) | `developer-tools` | 基于 GitHub CLI 的工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库和 Codespaces。 |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | 基于 `glab` 的 GitLab 工作流，覆盖 MR、Issue、CI/CD、仓库、Release 和 API，并支持自托管实例。 |
 | [**alibaba-cloud-cli**](./plugins/alibaba-cloud-cli) | `developer-tools` | 阿里云 CLI 工作流：配置凭证与 profile，并安全执行云资源查询和操作。 |
+| [**superpowers**](./plugins/superpowers) | `developer-tools` | 经过实战检验的开发工作流技能 —— 头脑风暴、TDD、系统化调试、计划编写与执行、代码评审、子代理驱动开发 —— 在恰当时机自动触发。 |
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI 工作流：覆盖文档、表格、多维表格、日历、消息等 SaaS 资源，并引导应用配置与 OAuth 登录。 |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | 钉钉 Workspace CLI 工作流：OAuth/设备授权、验证组织账号，并按需安装上游 Skills。 |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | 企业微信 CLI 工作流：覆盖消息、文档、表格、邮件、日历、会议、通讯录和待办，并支持扫码授权与状态检查。 |
@@ -52,7 +53,7 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 
 | 分类 | 适用范围 | 当前插件 |
 | --- | --- | --- |
-| `developer-tools` | 开发、代码质量、Git、CI 和工程工作流 | `cloudbase-skills`、`mimosa`、`github`、`gitlab`、`alibaba-cloud-cli` |
+| `developer-tools` | 开发、代码质量、Git、CI 和工程工作流 | `cloudbase-skills`、`mimosa`、`github`、`gitlab`、`alibaba-cloud-cli`、`superpowers` |
 | `productivity` | 计划、知识工作和个人工作流自动化 | `video2code` |
 | `utilities` | 不属于其他分类的通用工具 | `lark-cli` |
 | `finance` | 金融领域工作流：行情、财务、风险与金融科技集成 | `write-research`、`read-macro`、`assess-credit`、`pick-funds`、`watch-positions`、`model-deals`、`vet-companies`、`find-clients`、`run-fpa`、`accounting-and-reporting` |
