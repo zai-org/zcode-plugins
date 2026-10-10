@@ -11,6 +11,22 @@
   },
   "plugins": [
     {
+      "name": "sounio",
+      "source": "./plugins/sounio",
+      "description": "Check Sounio source files with an existing local compiler and report the exact evidence level.",
+      "description_i18n": {
+        "en": "Check Sounio source files with an existing local compiler and report the exact evidence level.",
+        "zh-CN": "使用已有的本地编译器检查 Sounio 源文件，并准确说明验证证据的层级。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Demetrios Agourakis",
+        "url": "https://github.com/agourakis82"
+      },
+      "category": "developer-tools",
+      "keywords": ["sounio", "compiler", "scientific-programming", "diagnostics"]
+    },
+    {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
       "description": "CloudBase development skills and MCP integration for building, deploying, and troubleshooting Web, WeChat Mini Program, database, cloud function, CloudRun, storage, and AI projects.",
