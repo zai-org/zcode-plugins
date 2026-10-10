@@ -12,6 +12,7 @@ import threading
 import time
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 
 
@@ -27,6 +28,14 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def runtime_test_env() -> dict[str, str]:
+    # 安全回归必须使用原生引擎和默认 graded 策略，不能继承 runner 的演示/降级开关。
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith("MIMOSA_") and key not in {"NODE_OPTIONS", "NODE_PATH"}}
+    env["MIMOSA_ENGINE"] = "native"
+    return env
+
+
 def run_node(*args: str, cwd: Path | None = None, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
     node = shutil.which("node")
     if node is None:
@@ -34,6 +43,7 @@ def run_node(*args: str, cwd: Path | None = None, input_text: str | None = None)
     return subprocess.run(
         [node, *args],
         cwd=cwd,
+        env=runtime_test_env(),
         input=input_text,
         capture_output=True,
         text=True,
@@ -59,8 +69,7 @@ class McpStdioClient:
         node = shutil.which("node")
         if node is None:
             raise AssertionError("node must be available in PATH to validate Mimosa")
-        env = os.environ.copy()
-        env["MIMOSA_ENGINE"] = "native"
+        env = runtime_test_env()
         self.process = subprocess.Popen(
             [node, str(server)],
             cwd=cwd,
@@ -166,10 +175,18 @@ def assert_signed_inventory(test: unittest.TestCase, root: Path) -> None:
 
 
 class MimosaPluginTest(unittest.TestCase):
+    def test_runtime_env_does_not_inherit_hook_overrides(self) -> None:
+        with mock.patch.dict(os.environ, {"MIMOSA_HOOK_BLOCK": "warn", "MIMOSA_NO_GIT_GATE": "1", "NODE_OPTIONS": "--invalid"}):
+            env = runtime_test_env()
+        self.assertNotIn("MIMOSA_HOOK_BLOCK", env)
+        self.assertNotIn("MIMOSA_NO_GIT_GATE", env)
+        self.assertNotIn("NODE_OPTIONS", env)
+        self.assertEqual(env["MIMOSA_ENGINE"], "native")
+
     def test_marketplace_listing_uses_localized_product_name_and_published_icon(self) -> None:
         marketplace = load_json(ROOT / "marketplace.json")
         entry = next(item for item in marketplace["plugins"] if item["name"] == "mimosa")
-        self.assertEqual(entry["version"], "1.0.3")
+        self.assertEqual(entry["version"], "1.0.4")
         self.assertEqual(entry["displayName"], "Code Security Protection")
         self.assertEqual(
             entry["displayName_i18n"],
@@ -191,7 +208,7 @@ class MimosaPluginTest(unittest.TestCase):
         compatible = load_json(MIMOSA / ".claude-plugin" / "plugin.json")
         self.assertEqual(preferred, compatible)
         self.assertEqual(preferred["name"], "mimosa")
-        self.assertEqual(preferred["version"], "1.0.3")
+        self.assertEqual(preferred["version"], "1.0.4")
         self.assertEqual(set(preferred["description_i18n"]), {"en", "zh-CN"})
         self.assertEqual(preferred["commands"], "payload/commands")
         self.assertEqual(preferred["skills"], "payload/skills")
@@ -227,13 +244,14 @@ class MimosaPluginTest(unittest.TestCase):
             set(hooks),
             {"PreToolUse", "PostToolUse", "UserPromptSubmit", "SessionStart", "Stop"},
         )
-        for groups in hooks.values():
+        for event, groups in hooks.items():
             for group in groups:
                 for hook in group["hooks"]:
                     self.assertEqual(hook["type"], "process")
                     self.assertEqual(hook["command"], "node")
-                    self.assertEqual(len(hook["args"]), 1)
-                    self.assertTrue(hook["args"][0].startswith("${ZCODE_PLUGIN_ROOT}/payload/hooks/"))
+                    self.assertEqual(len(hook["args"]), 3)
+                    self.assertEqual(hook["args"][0], "${ZCODE_PLUGIN_ROOT}/hooks/run-hook.cjs")
+                    self.assertEqual(hook["args"][2], event)
 
         server = mcp_document["mcpServers"]["mimosa"]
         self.assertEqual(server["type"], "stdio")
@@ -287,6 +305,7 @@ class MimosaPluginTest(unittest.TestCase):
             self.assertIn("mimosa/.zcode-plugin/plugin.json", names)
             self.assertIn("mimosa/.claude-plugin/plugin.json", names)
             self.assertIn("mimosa/hooks/hooks.json", names)
+            self.assertIn("mimosa/hooks/run-hook.cjs", names)
             self.assertIn("mimosa/.mcp.json", names)
             self.assertIn("mimosa/payload/manifest.json", names)
             self.assertIn("mimosa/payload/dist/cli.js", names)
@@ -412,16 +431,48 @@ class MimosaPluginTest(unittest.TestCase):
                 },
             }
             result = run_node(
-                str(PAYLOAD / "hooks" / "scan-hook.mjs"),
+                str(MIMOSA / "hooks" / "run-hook.cjs"), "scan-hook.mjs", "PreToolUse",
                 cwd=project,
                 input_text=json.dumps(request),
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            response = json.loads(result.stdout)
+            self.assertTrue(result.stdout.strip(),
+                            f"PreToolUse returned no decision JSON; stderr={result.stderr[-2000:]!r}")
+            try:
+                response = json.loads(result.stdout)
+            except json.JSONDecodeError as error:
+                self.fail(f"PreToolUse returned invalid JSON: {error}; stderr={result.stderr[-2000:]!r}")
             decision = response["hookSpecificOutput"]
             self.assertEqual(decision["hookEventName"], "PreToolUse")
             self.assertEqual(decision["permissionDecision"], "deny")
             self.assertIn("命令注入", decision["permissionDecisionReason"])
+
+    def test_hook_adapter_flushes_deny_under_stdout_backpressure(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="mimosa-output-test-") as directory:
+            root = Path(directory)
+            shim = root / "slow-stdout.cjs"
+            shim.write_text(
+                "const w=process.stdout.write.bind(process.stdout);"
+                "process.stdout.write=function(c,e,cb){"
+                "if(typeof e==='function'){cb=e;e=undefined;}"
+                "setTimeout(()=>w(c,e,cb),40);return true;};",
+                encoding="utf-8",
+            )
+            request = {"session_id": "backpressure", "hook_event_name": "PreToolUse",
+                       "cwd": str(root), "tool_name": "Write", "tool_input": {
+                           "file_path": str(root / "unsafe.js"),
+                           "content": 'const { exec } = require("node:child_process");\nexport function run(input) { exec("sh -c " + input); }\n'}}
+            for attempt in range(3):
+                with self.subTest(attempt=attempt), mock.patch.dict(os.environ, {"TMPDIR": str(root)}):
+                    result = run_node("--require", str(shim), str(MIMOSA / "hooks" / "run-hook.cjs"),
+                                      "scan-hook.mjs", "PreToolUse", cwd=root, input_text=json.dumps(request))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
+                    self.assertEqual(list(root.glob("mimosa-hook-output-*")), [])
+
+    def test_hook_adapter_rejects_arbitrary_hook_path(self) -> None:
+        result = run_node(str(MIMOSA / "hooks" / "run-hook.cjs"), "../untrusted.js", "PreToolUse", input_text="{}")
+        self.assertEqual(json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"], "deny")
 
     def test_protected_runtime_rejects_tampering(self) -> None:
         with tempfile.TemporaryDirectory(prefix="mimosa-tamper-test-") as directory:
