@@ -21,6 +21,7 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**github**](./plugins/github) | `developer-tools` | GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, and Codespaces. |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | GitLab CLI workflows for merge requests, issues, CI/CD, repositories, releases, and API operations, including self-managed instances. |
 | [**alibaba-cloud-cli**](./plugins/alibaba-cloud-cli) | `developer-tools` | Alibaba Cloud CLI workflows for credential setup, profile checks, and safe cloud resource operations. |
+| [**superpowers**](./plugins/superpowers) | `developer-tools` | Battle-tested development workflow skills — brainstorming, TDD, systematic debugging, planning, code review, and subagent-driven development — that auto-trigger at the right moments. |
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login. |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | DingTalk Workspace CLI workflows with OAuth/device authorization, profile checks, and optional upstream Skills. |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | WeCom CLI workflows for messages, docs, sheets, mail, calendar, meetings, contacts, and todos with QR authentication. |
@@ -53,7 +54,7 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 
 | Category | Use it for | Current plugins |
 | --- | --- | --- |
-| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab`, `alibaba-cloud-cli` |
+| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab`, `alibaba-cloud-cli`, `superpowers` |
 | `productivity` | Planning, knowledge work, and personal workflow automation | `video2code` |
 | `utilities` | General-purpose helpers that do not fit another category | `lark-cli` |
 | `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
