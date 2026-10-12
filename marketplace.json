@@ -772,6 +772,34 @@
       "source": "./plugins/hyper3d-rodin",
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.jpg"
+    },
+    {
+      "name": "security-cn-pack",
+      "source": "./plugins/security-cn-pack",
+      "displayName": "Security CN Pack",
+      "icon": "",
+      "displayName_i18n": {
+        "en": "Security CN Pack",
+        "zh-CN": "中文安全知识包"
+      },
+      "description": "Chinese security methodology pack for authorized testing and bug-bounty: SRC playbooks, HW methodology, CNVD/CNNVD flows, 11 vuln-class playbooks. Knowledge-only.",
+      "description_i18n": {
+        "en": "Chinese security methodology pack for authorized testing and bug-bounty: SRC playbooks, HW methodology, CNVD/CNNVD flows, 11 vuln-class playbooks. Knowledge-only.",
+        "zh-CN": "面向授权测试与众测的中文安全方法论包：SRC 实战 playbook、护网红蓝方法论、CNVD/CNNVD 报送流程、11 类漏洞方法论。纯 Markdown 知识，无可执行利用代码。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "wdfdsyhb",
+        "url": "https://github.com/wdfdsyhb"
+      },
+      "category": "other",
+      "keywords": [
+        "security",
+        "bugbounty",
+        "src",
+        "methodology",
+        "education"
+      ]
     }
   ]
 }
