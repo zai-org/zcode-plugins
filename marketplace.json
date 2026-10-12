@@ -772,6 +772,33 @@
       "source": "./plugins/hyper3d-rodin",
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.jpg"
+    },
+    {
+      "name": "disk-scanner",
+      "source": "./plugins/disk-scanner",
+      "displayName": "Disk Scanner",
+      "icon": "",
+      "displayName_i18n": {
+        "en": "Disk Scanner",
+        "zh-CN": "磁盘扫描分析"
+      },
+      "description": "Local-first Windows disk space analyzer: folder size ranking, file-type breakdown, largest-files list, and confirmation-gated safe cleanup. Read-only by default; no network.",
+      "description_i18n": {
+        "en": "Local-first Windows disk space analyzer: folder size ranking, file-type breakdown, largest-files list, and confirmation-gated safe cleanup. Read-only by default; no network.",
+        "zh-CN": "本地优先的 Windows 磁盘空间分析：目录体积排行、文件类型分布、最大文件清单，以及需确认的安全清理。默认只读，无网络访问。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "wdfdsyhb",
+        "url": "https://github.com/wdfdsyhb"
+      },
+      "category": "utilities",
+      "keywords": [
+        "disk",
+        "cleanup",
+        "windows",
+        "storage"
+      ]
     }
   ]
 }
