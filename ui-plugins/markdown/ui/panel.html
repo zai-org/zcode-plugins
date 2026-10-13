@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Markdown</title>
+    <style>
+      /*__PANEL_CSS__*/
+    </style>
+  </head>
+  <body data-boot="connecting">
+    <div id="boot" role="status" aria-live="polite">
+      <span id="boot-message">正在打开编辑器…</span>
+      <button id="boot-retry" type="button" hidden>重试</button>
+    </div>
+    <header>
+      <button
+        id="switch"
+        type="button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="docs"
+      >
+        打开文件
+      </button>
+      <span class="path" id="path">Markdown</span>
+      <div class="view-actions">
+        <button
+          id="format"
+          type="button"
+          aria-expanded="false"
+          aria-controls="format-tools"
+          disabled
+        >
+          格式
+        </button>
+        <button id="outline" type="button" aria-pressed="false" disabled>大纲</button>
+      </div>
+    </header>
+    <div class="conflict" id="conflict" data-visible="false" role="alert">
+      <span id="conflict-message">文件在别处被修改，当前草稿未保存。</span>
+      <span class="actions">
+        <button id="reload" type="button">重新加载</button>
+        <button id="overwrite" type="button">用草稿覆盖</button>
+      </span>
+    </div>
+    <div class="stage no-doc">
+      <nav class="docs" id="docs" hidden aria-label="打开文件">
+        <input
+          id="doc-filter"
+          type="search"
+          aria-label="搜索工作区文件"
+          placeholder="搜索文件名或路径…"
+          autocomplete="off"
+        />
+        <div class="file-actions">
+          <button id="show-new" type="button" aria-expanded="false" aria-controls="new-form">
+            新建文件…
+          </button>
+          <button id="import-doc" type="button">导入文件…</button>
+        </div>
+        <form id="new-form" class="new-form" hidden>
+          <input
+            id="doc-name"
+            type="text"
+            aria-label="新文件路径"
+            placeholder="文件名称.md"
+            autocomplete="off"
+          />
+          <button class="new-doc" id="new-doc" type="submit">创建</button>
+        </form>
+        <input id="import-files" type="file" accept=".md,.markdown" multiple hidden />
+        <div class="empty-hint" id="docs-feedback" role="status"></div>
+        <div class="docs-results">
+          <div class="section" id="recent-section" hidden>
+            <div class="label" id="recent-label">最近打开</div>
+            <div id="recent-list"></div>
+          </div>
+          <div class="section" id="all-section">
+            <div class="label" id="all-label">工作区文件</div>
+            <div id="all-list"></div>
+          </div>
+          <div class="empty-hint" id="docs-empty" hidden>没有匹配的文档</div>
+        </div>
+      </nav>
+      <div class="drop-overlay" id="drop" hidden>松开以导入 Markdown 副本</div>
+      <div class="placeholder" id="empty">
+        <div class="empty-content">
+          <h1 id="empty-title">从一个想法开始</h1>
+          <p id="empty-description">打开工作区 Markdown，或拖入文件创建副本。</p>
+          <div class="empty-actions">
+            <button id="empty-new" type="button">新建文件</button>
+            <button id="empty-open" type="button">打开文件</button>
+          </div>
+        </div>
+      </div>
+      <nav id="outline-panel" class="outline-panel" aria-label="文章大纲" hidden>
+        <div class="outline-heading">
+          <span id="outline-title">大纲</span
+          ><button id="outline-close" type="button" aria-label="关闭大纲">×</button>
+        </div>
+        <div id="outline-items"></div>
+        <p id="outline-empty">添加标题后，大纲会出现在这里。</p>
+      </nav>
+      <div class="editor" id="editor"></div>
+    </div>
+    <footer>
+      <span id="status" class="status" role="status" aria-live="polite">尚未打开文件</span>
+      <button id="save" type="button" hidden>重试保存</button>
+      <span id="word-count"></span>
+      <button id="source" type="button" aria-pressed="false" disabled>源码</button>
+    </footer>
+    <div id="selection-actions" class="selection-actions" role="toolbar" hidden>
+      <span id="selection-format" class="selection-format"></span>
+      <span class="selection-divider" aria-hidden="true"></span>
+      <button id="reference" type="button" disabled>添加到对话</button>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script>
+      /*__BOOTSTRAP__*/
+    </script>
+  </body>
+</html>

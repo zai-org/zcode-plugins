@@ -1,0 +1,2 @@
+# Preserve upstream formatting in reproducible, installable runtime bundles.
+dist/** linguist-generated=true -whitespace
