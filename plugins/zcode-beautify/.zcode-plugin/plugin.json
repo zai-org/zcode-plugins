@@ -1,0 +1,29 @@
+{
+  "name": "zcode-beautify",
+  "displayName": "ZCode Beautify",
+  "displayName_i18n": {
+    "en": "ZCode Beautify",
+    "zh-CN": "ZCode 美化"
+  },
+  "description": "Set an image or a Wallpaper Engine scene/video as the ZCode desktop background, adapt all UI colors with Material Design 3 (Monet) dynamic color, and tune blur, dim, framing, chat-area masks and wallpaper rotation from a live in-app panel.",
+  "description_i18n": {
+    "en": "Set an image or a Wallpaper Engine scene/video as the ZCode desktop background, adapt all UI colors with Material Design 3 (Monet) dynamic color, and tune blur, dim, framing, chat-area masks and wallpaper rotation from a live in-app panel.",
+    "zh-CN": "把图片或 Wallpaper Engine 场景/视频设为 ZCode 桌面背景，以 Material Design 3（Monet）动态取色适配全局界面配色，并可在应用内实时面板调节模糊、压暗、取景、聊天区遮罩与壁纸轮播。"
+  },
+  "version": "0.4.0",
+  "author": {
+    "name": "Mc-GrowlR",
+    "url": "https://github.com/Mc-GrowlR"
+  },
+  "homepage": "https://github.com/Mc-GrowlR/zcode-beautify-for-wallpaper-engine",
+  "license": "MIT",
+  "keywords": [
+    "wallpaper",
+    "theme",
+    "monet",
+    "material-design-3",
+    "wallpaper-engine",
+    "panel"
+  ],
+  "mcpServers": "./.mcp.json"
+}

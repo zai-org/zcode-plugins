@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "zcode-beautify": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"
+      ],
+      "timeoutMs": 600000
+    }
+  }
+}
