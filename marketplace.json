@@ -1165,6 +1165,34 @@
           "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
         ]
       }
+    },
+    {
+      "name": "zcode-usage-panel",
+      "componentTypes": ["ui"],
+      "displayName": "Usage Panel",
+      "displayName_i18n": {
+        "en": "Usage Panel",
+        "zh-CN": "用量面板"
+      },
+      "version": "0.2.1",
+      "source": "./external_plugins/zcode-usage-panel",
+      "description": "Live usage panel for ZCode: per-tool/MCP/Skill call stats, token shares and TPS.",
+      "description_i18n": {
+        "en": "Live usage panel for ZCode: per-tool/MCP/Skill call stats, token shares and TPS.",
+        "zh-CN": "ZCode 用量面板：实时展示工具/MCP/Skill 调用明细、token 占比与 TPS。"
+      },
+      "category": "developer-tools",
+      "author": {
+        "name": "taohouchao"
+      },
+      "keywords": [
+        "usage",
+        "tokens",
+        "tps",
+        "observability",
+        "session-stats",
+        "mcp-app"
+      ]
     }
   ]
 }

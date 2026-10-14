@@ -1,0 +1,23 @@
+{
+  "name": "zcode-usage-panel",
+  "private": true,
+  "version": "0.2.1",
+  "type": "module",
+  "description": "ZCode MCP App：会话用量面板（工具/MCP/Skill 明细 + token 占比 + TPS）",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node build.mjs",
+    "smoke": "node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "^2.3.1",
+    "@modelcontextprotocol/ext-apps": "^2.0.3",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@types/node": "^24.19.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

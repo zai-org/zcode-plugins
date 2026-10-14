@@ -1,0 +1,39 @@
+{
+  "name": "zcode-usage-panel",
+  "version": "0.2.1",
+  "description": "Live usage panel for ZCode: per-tool/MCP/Skill call stats, token shares and TPS.",
+  "description_i18n": {
+    "en": "Live usage panel for ZCode: per-tool/MCP/Skill call stats, token shares and TPS.",
+    "zh-CN": "ZCode 用量面板：实时展示工具/MCP/Skill 调用明细、token 占比与 TPS。"
+  },
+  "author": {
+    "name": "taohouchao"
+  },
+  "license": "MIT",
+  "mcpServers": {
+    "usage": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/payload/dist/server.mjs"
+      ],
+      "env": {
+        "NODE_NO_WARNINGS": "1"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "usage",
+        "title": {
+          "en": "Usage Panel",
+          "zh-CN": "用量面板"
+        },
+        "server": "usage",
+        "resourceUri": "ui://zcode-usage-panel/index.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
