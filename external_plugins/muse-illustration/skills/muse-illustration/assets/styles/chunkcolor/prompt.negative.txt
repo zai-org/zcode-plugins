@@ -1,0 +1,16 @@
+no photorealistic rendering, no 3D shading, no photographic lighting, no soft gradients,
+no random scattered splotches, no spilled-palette chaos, no formless abstract blob,
+no curvy decorative S-curve, no wiggly ribbon-shaped mass, no squiggly or undulating silhouette,
+no freely bleeding blotches that ignore the subject's shape,
+no hard-edged vector rectangle with sharp corners, no perfect circles, no sharp symmetric geometric cutouts,
+no busy or fully-covered canvas, no dense cross-hatching, no cluttered detail,
+no multiple competing hues, no complementary color contrast, no saturated or neon colors,
+no heavy thick cartoon outlines, no glossy digital airbrush look, no western oil brushwork,
+no text, no letters, no characters, no calligraphy, no seal, no signature,
+no frame, no border, no mockup, no drop shadow
+
+-- 单色版（默认）额外追加 --
+no red accent
+
+-- 留红版额外追加 --
+no a second colour area, vermilion must stay a single tiny point under 1% of the image

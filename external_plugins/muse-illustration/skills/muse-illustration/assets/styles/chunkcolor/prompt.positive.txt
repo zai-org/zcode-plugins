@@ -1,0 +1,20 @@
+Modern Oriental ink-and-watercolor illustration of {SUBJECT}, museum exhibition poster aesthetic, built around one dominant color mass.
+
+THE MASS: one calm, stable plane of {MASS_COLOR} fills the lower two-thirds of the canvas, its top edge roughly LEVEL like a far-bank horizon line. The silhouette is composed and architectural — absolutely NOT a curvy decorative S-curve, NOT a wiggly ribbon, NOT a squiggle, NOT a random blob. Only the outer edge carries soft bleeding watercolor irregularity and torn-paper quality; that is texture, not shape. The mass reads as {MASS_IS}. Inside, the tonal drama describes that thing in an ordered way: for water, horizontal ripple bands parallel to the bank, pale reflected light along the far shore, fine granular sediment, deeper colour pooling toward the bottom; for a field, parallel rows; for a mountain, facet edges and crags reading rugged. Never random splotches, never a spilled palette.
+
+THE INK LINE: fine black ink drawing sits exactly ON that level top edge like a shoreline, drawn with brush and fine-pen line quality, varying line weight, occasional pale grey ink washes. Human figures reduced to tiny near-silhouettes or one- or two-stroke marks; landscape elements described a little more fully but never dense.
+
+NEGATIVE SPACE: large empty areas of paper above the mass — the emptiness IS the sky, the mist, the rain.
+
+COLOR: A SINGLE low-saturation hue only, varied only in value and translucency — no complementary-contrast pairing. Densest and darkest along the edge where pigment accumulates, lighter and translucent toward the interior, faint paper grain showing through.
+
+MOOD: literati, quiet, restrained, reclusive, poetic — like a museum exhibition label. Generous emptiness; never saturated; never filling the whole frame.
+
+— 可选开关（默认关闭；仅当题材有色差点题时才追加）—
+
+COLOR EXCEPTION: ONE very small muted vermilion accent #B5443A is permitted as the poetic focal point — 1–2 tiny spots maximum, together under 1% of the image area, e.g. a tiny wine-shop flag or a few blossoms. Muted vermilion only, never bright red. Everything else stays single-hue; this is a point of poetry, not a second colour area.
+
+Placeholders:
+{SUBJECT}    想要画的场景与素材（写在墨线上的内容）
+{MASS_IS}    那块色读起来是什么，必须点名，如 a spring river / a wheat field / a rugged mountain
+{MASS_COLOR} 单一主色，如 celadon green #8BA79B / mustard ochre #D4A537 / slate indigo #5C7391

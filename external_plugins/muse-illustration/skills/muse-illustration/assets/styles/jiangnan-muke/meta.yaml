@@ -1,0 +1,17 @@
+name: 江南春·水印木刻
+id: jiangnan-muke
+summary: 米白纸底、平涂色块、短刻痕，套色 / 水印木刻的平面语言
+best_for: [古典诗词, 山水, 江南, 田园, 建筑群]
+mood: [清雅, 静谧, 悠远]
+default:
+  size: 1024x1536
+  quality: high
+  variants: 1
+positive_file: prompt.positive.txt
+negative_file: prompt.negative.txt
+ref: ref.jpg
+notes: >
+  首条入库风格，源自杜牧《江南春》的一次生成。参考图为竖版立轴构图。
+  复现要点：部件级指令（屋顶=深色轮廓 / 墙=纸色留白 / 水=几笔横线）+ 显式负向约束。
+  已跨题材验证：杜牧《江南春》、白居易《忆江南》两首均获用户采纳（2026-10-14），
+  证明配方具备跨题材可移植性；参考图以 image1 传入 + 声明「只借风格不抄构图」可有效防止构图照抄。
