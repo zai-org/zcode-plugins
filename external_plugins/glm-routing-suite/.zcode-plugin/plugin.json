@@ -1,0 +1,14 @@
+{
+  "name": "glm-routing-suite",
+  "version": "0.5.0",
+  "description": "Four-stage workflow + delivery gate + graded task protocol with a soft stage gate and variant presets, ported from dsh-routing-suite (MIT/Apache-2.0): default zero-injection, completion-signal advancement, delivery_check evidence manifest, two-tier spec gating with red-team gates, PreToolUse write/edit gating, spec/react style presets",
+  "description_i18n": {
+    "en": "Four-stage workflow + delivery gate + graded task protocol with a soft stage gate and variant presets, ported from dsh-routing-suite (MIT/Apache-2.0): default zero-injection, completion-signal advancement, delivery_check evidence manifest, two-tier spec gating with red-team gates, PreToolUse write/edit gating, spec/react style presets",
+    "zh-CN": "移植自 dsh-routing-suite 的四阶段工作流＋交付门禁＋分级任务协议＋软阶段门禁＋变体预设：默认零注入、完成信号晋级、delivery_check 证据清单、两级规格门控含红队门、规格阶段 PreToolUse 扣住写入、spec/react 风格档"
+  },
+  "author": {
+    "name": "forrestneo"
+  },
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json"
+}

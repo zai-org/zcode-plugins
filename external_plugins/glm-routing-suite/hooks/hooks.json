@@ -1,0 +1,36 @@
+{
+  "description": "glm-routing-suite hooks: per-prompt close-range guidance (opt-in) + graded stage gate.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/on_prompt.py"
+            ],
+            "timeoutMs": 4000,
+            "statusMessage": "glm-routing-suite: classifying task…"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/gate_hook.py"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "glm-routing-suite: 检查阶段门禁…"
+          }
+        ]
+      }
+    ]
+  }
+}

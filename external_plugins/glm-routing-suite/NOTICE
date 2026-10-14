@@ -1,0 +1,40 @@
+glm-routing-suite — a ZCode plugin port of dsh-routing-suite
+Copyright (c) 2026 forrestneo (port). MIT License for this port's original
+code. Upstream component licenses differ and are respected per component:
+
+  - preset/router-standard (router-core.mjs, router-bootstrap-v34.mjs):
+    yjh051108/dsh-routing-suite — https://github.com/yjh051108/dsh-routing-suite
+    Copyright (c) 2026 yjh051108. MIT License.
+
+  - graded/ (dsh-graded-mode): Copyright (c) 2026 the dsh-graded-mode authors.
+    Apache-2.0 License (see upstream graded/LICENSE). Any future port of the
+    graded two-tier task protocol carries Apache-2.0 attribution and
+    reproduces only its behavioral semantics, not its source.
+
+Ported components:
+  - scripts/router_core.py  ← preset/router-standard/router-core.mjs
+    (task-classification regexes, behavior bands, personas, complexity
+    heuristic, mode parsing — preserved verbatim where they are the measured
+    artifacts of the upstream P1-P23 experiments)
+  - scripts/delivery_check.py  ← the deliveryCheck gate in
+    preset/router-standard/router-bootstrap-v34.mjs (v1.23-v1.28 semantics:
+    file/utf8 checks + 8-kind evidence manifest, reviewed visuals,
+    non-blocking numeric hint), re-exposed as a CLI
+  - skills/mode-router/SKILL.md  ← the v1.20 four-stage progressive workflow
+    (understanding→planning→development→verification, completion-signal
+    advancement, STAGE_GUIDES behavioral guidance) as a protocol
+
+Note on design lineage: v1.20 (read in full from router-bootstrap-v34.mjs)
+fixes the persona to a single RL sentence and enforces behavior via staged
+tool disclosure; the older band-swapped-persona design lives on only as
+informational mode output. This port follows the v1.20 mainline.
+
+Not ported (DSH-runtime specific, no ZCode equivalent):
+  - injector/ (runtime agent-loop injection, dev_* tooling, restrict)
+  - phase_begin/phase_advance/tools_catalog secondary disclosure plumbing
+  - graded/ (separate two-tier task-protocol plugin)
+
+Measured claims (three behavior bands, weak-persona optima per model,
+completion-signal advancement, anchor effects) originate from the upstream
+repository's P1-P23 experiments on DeepSeek models and are cited, not
+re-verified here.

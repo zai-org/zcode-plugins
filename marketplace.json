@@ -790,7 +790,9 @@
     },
     {
       "name": "blender",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Blender",
       "displayName_i18n": {
         "en": "Blender",
@@ -811,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -832,7 +836,9 @@
     },
     {
       "name": "openpencil",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "OpenPencil",
       "displayName_i18n": {
         "en": "OpenPencil",
@@ -855,7 +861,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -882,7 +890,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -909,7 +919,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -936,7 +948,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -963,7 +977,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -990,7 +1006,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -1017,7 +1035,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1044,7 +1064,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1071,7 +1093,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1138,6 +1162,34 @@
           "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
         ]
       }
+    },
+    {
+      "name": "glm-routing-suite",
+      "source": "./external_plugins/glm-routing-suite",
+      "displayName": "GLM Routing Suite",
+      "displayName_i18n": {
+        "en": "GLM Routing Suite",
+        "zh-CN": "GLM 思维路由套件"
+      },
+      "description": "Four-stage workflow + delivery gate + graded task protocol with a soft stage gate and variant presets, ported from dsh-routing-suite (MIT/Apache-2.0): default zero-injection, completion-signal advancement, delivery_check evidence manifest, two-tier spec gating with red-team gates, PreToolUse write/edit gating, spec/react style presets",
+      "description_i18n": {
+        "en": "Four-stage workflow + delivery gate + graded task protocol with a soft stage gate and variant presets, ported from dsh-routing-suite (MIT/Apache-2.0): default zero-injection, completion-signal advancement, delivery_check evidence manifest, two-tier spec gating with red-team gates, PreToolUse write/edit gating, spec/react style presets",
+        "zh-CN": "移植自 dsh-routing-suite 的四阶段工作流＋交付门禁＋分级任务协议＋软阶段门禁＋变体预设：默认零注入、完成信号晋级、delivery_check 证据清单、两级规格门控含红队门、规格阶段 PreToolUse 扣住写入、spec/react 风格档"
+      },
+      "version": "0.5.0",
+      "author": {
+        "name": "forrestneo"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "routing",
+        "reasoning-mode",
+        "glm",
+        "workflow",
+        "delivery-gate",
+        "graded",
+        "red-team"
+      ]
     }
   ]
 }
