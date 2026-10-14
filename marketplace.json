@@ -1138,6 +1138,42 @@
           "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
         ]
       }
+    },
+    {
+      "name": "etsy-manager",
+      "source": "./external_plugins/etsy-manager",
+      "description": "Manage Etsy shop products: create, update, delete listings, upload images, manage inventory, shipping and orders via the Etsy Open API v3",
+      "description_i18n": {
+        "en": "Manage Etsy shop products: create, update, delete listings, upload images, manage inventory, shipping and orders via the Etsy Open API v3",
+        "zh-CN": "管理 Etsy 店铺商品：通过 Etsy Open API v3 创建、更新、删除商品（listing），上传图片，管理库存、物流与订单。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Hugo",
+        "url": "https://gozutok.info"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/etsy-manager/icon.png",
+      "category": "productivity",
+      "keywords": [
+        "etsy",
+        "e-commerce",
+        "shop-management",
+        "listings",
+        "inventory",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "List the active listings in my Etsy shop",
+        "Create a draft Etsy listing for a handmade ceramic mug with a photo",
+        "Update the price and stock of my best-selling Etsy listing"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出我 Etsy 店铺中的在售商品",
+          "为手工陶瓷马克杯创建一个带图片的 Etsy 商品草稿",
+          "更新我最畅销的 Etsy 商品的价格和库存"
+        ]
+      }
     }
   ]
 }
