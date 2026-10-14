@@ -1,0 +1,11 @@
+{
+  "name": "jev-sim",
+  "version": "0.2.0",
+  "description": "Jev-style decision simulation on the session model: Choice/Noul/Score typed decisions with rotation debiasing, an explicit NONE outlet, three-state output, and temperature-scaling calibration",
+  "description_i18n": {
+    "en": "Jev-style decision simulation on the session model: Choice/Noul/Score typed decisions with rotation debiasing, an explicit NONE outlet, three-state output, and temperature-scaling calibration",
+    "zh-CN": "用会话内大模型模拟 Jev 决策模型：Choice/Noul/Score 类型化决策，轮转去偏差、NONE 出口、三态输出、温度缩放校准"
+  },
+  "author": { "name": "forrestneo" },
+  "skills": "./skills"
+}

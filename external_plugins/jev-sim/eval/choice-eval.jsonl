@@ -1,0 +1,12 @@
+{"id": "ev01", "question": "这封邮件应该路由给哪个团队？", "state": "发件人：李某。正文：你们平台2号下单的椅子到货就是断腿的，联系客服三天没人理。今天不给我退款，我就去12315和黑猫投诉，并且找律师发函。订单号SF88231。", "options": ["客服-退款", "法务", "销售", "市场"], "correct": "客服-退款"}
+{"id": "ev02", "question": "这段代码是什么语言？", "state": "def flatten(xs):\n    out = []\n    for x in xs:\n        if isinstance(x, list):\n            out.extend(flatten(x))\n        else:\n            out.append(x)\n    return out", "options": ["Python", "JavaScript", "Go", "Ruby"], "correct": "Python"}
+{"id": "ev03", "question": "这条用户评论的情感倾向是？", "state": "评论原文：真是'太棒了'，买来第二天屏幕就绿了，客服还教我重启大法，学到了学到了。下次一定还来（不会）。", "options": ["正面", "负面", "中性", "无法判断"], "correct": "负面"}
+{"id": "ev04", "question": "这个故障该定什么优先级？", "state": "监控告警：23:47 主数据库实例无响应，订单服务全量报错，支付成功率跌到0，持续12分钟，影响所有线上交易。", "options": ["P0-立即响应", "P1-高优处理", "P2-工作时间内处理", "P3-排期处理"], "correct": "P0-立即响应"}
+{"id": "ev05", "question": "这段文字是什么语言？", "state": "Trotz der Herausforderungen in den vergangenen Monaten hat das Team eine bemerkenswerte Leistung erbracht, die Anerkennung verdient.", "options": ["德语", "荷兰语", "瑞典语", "丹麦语"], "correct": "德语"}
+{"id": "ev06", "question": "这份简历的技术背景最贴近哪个岗位方向？", "state": "技能：Docker、Kubernetes、Terraform、Prometheus、Grafana、Shell、Go 基础。项目：搭建过 200 节点 K8s 集群，落地 CI/CD 流水线，负责服务网格治理。", "options": ["DevOps工程师", "前端工程师", "算法工程师", "数据分析师"], "correct": "DevOps工程师"}
+{"id": "ev07", "question": "这段新闻属于哪个频道？", "state": "摘要：某研究团队宣布在超导量子比特的纠错码距离上取得新纪录，逻辑错误率随码距增加实现了指数级下降，相关论文发表于 Nature。", "options": ["科技", "财经", "体育", "娱乐"], "correct": "科技"}
+{"id": "ev08", "question": "这段代码的主要缺陷类型是？", "state": "function total(items) {\n  let sum = 0;\n  for (let i = 0; i <= items.length; i++) {\n    sum += items[i].price;\n  }\n  return sum;\n}", "options": ["边界错误off-by-one", "空指针风险", "死循环", "类型错误"], "correct": "边界错误off-by-one"}
+{"id": "ev09", "question": "这封邮件的核心意图是什么？", "state": "发件人：某公司采购部王某。正文：看到贵司展会的工业相机方案，我们要采购30台用于产线质检，请报含税单价、货期和批量折扣，发到这个邮箱即可。", "options": ["销售-询价", "客服-售后", "人事-招聘", "合作-商务"], "correct": "销售-询价"}
+{"id": "ev10", "question": "下列哪种动物是哺乳动物？", "state": "（常识判断）", "options": ["海豚", "鲨鱼", "企鹅", "鳄鱼"], "correct": "海豚"}
+{"id": "ev11", "question": "这条消息应该路由给哪个处理组？", "state": "用户App内消息：上周买的落地灯罩运损裂了一条缝，灯体没事。不用退货吧？能不能只补发一个灯罩，或者我留着用你们补我差价也行。", "options": ["售后-补发换货", "客服-退款", "物流-理赔", "销售-续购"], "correct": "售后-补发换货"}
+{"id": "ev12", "question": "光年是什么类型的单位？", "state": "（常识判断）", "options": ["距离单位", "时间单位", "速度单位", "亮度单位"], "correct": "距离单位"}

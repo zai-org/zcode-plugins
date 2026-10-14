@@ -790,7 +790,9 @@
     },
     {
       "name": "blender",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Blender",
       "displayName_i18n": {
         "en": "Blender",
@@ -811,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -832,7 +836,9 @@
     },
     {
       "name": "openpencil",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "OpenPencil",
       "displayName_i18n": {
         "en": "OpenPencil",
@@ -853,7 +859,9 @@
     },
     {
       "name": "showcase",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Showcase",
       "displayName_i18n": {
         "en": "Showcase",
@@ -874,7 +882,9 @@
     },
     {
       "name": "disk-cleaner",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Disk Cleaner",
       "displayName_i18n": {
         "en": "Disk Cleaner",
@@ -896,7 +906,9 @@
     {
       "name": "photocraft",
       "source": "./plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -922,7 +934,9 @@
     {
       "name": "vectorcraft",
       "source": "./plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -948,7 +962,9 @@
     {
       "name": "pdfcraft",
       "source": "./plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -974,7 +990,9 @@
     {
       "name": "designcraft",
       "source": "./plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -1000,7 +1018,9 @@
     {
       "name": "wordcraft",
       "source": "./plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -1026,7 +1046,9 @@
     {
       "name": "gridcraft",
       "source": "./plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -1052,7 +1074,9 @@
     {
       "name": "deckcraft",
       "source": "./plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1078,7 +1102,9 @@
     {
       "name": "cadcraft",
       "source": "./plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1104,7 +1130,9 @@
     {
       "name": "soundcraft",
       "source": "./plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1171,6 +1199,36 @@
           "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
         ]
       }
+    },
+    {
+      "name": "jev-sim",
+      "source": "./external_plugins/jev-sim",
+      "displayName": "jev-sim",
+      "displayName_i18n": {
+        "en": "jev-sim",
+        "zh-CN": "决策模拟"
+      },
+      "description": "Jev-style decision simulation on the session model: Choice/Noul/Score typed decisions with rotation debiasing, an explicit NONE outlet, three-state output, and temperature-scaling calibration",
+      "description_i18n": {
+        "en": "Jev-style decision simulation on the session model: Choice/Noul/Score typed decisions with rotation debiasing, an explicit NONE outlet, three-state output, and temperature-scaling calibration",
+        "zh-CN": "用会话内大模型模拟 Jev 决策模型：Choice/Noul/Score 类型化决策，轮转去偏差、NONE 出口、三态输出、温度缩放校准"
+      },
+      "version": "0.2.0",
+      "author": {
+        "name": "forrestneo"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "jev",
+        "decision-model",
+        "choice",
+        "noul",
+        "score",
+        "calibration",
+        "routing",
+        "classification",
+        "probability"
+      ]
     }
   ]
 }
