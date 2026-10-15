@@ -1,0 +1,30 @@
+{
+  "name": "employed",
+  "version": "1.2.0",
+  "description": "Search live jobs verified on real employer ATS boards, research employers' hiring, and brief hiring markets with Employed by Guaq AI.",
+  "author": {
+    "name": "Guaq AI",
+    "email": "support@guaqai.me",
+    "url": "https://jobs.guaqai.me"
+  },
+  "homepage": "https://jobs.guaqai.me",
+  "repository": "https://github.com/Guaq-AI/employed-plugins",
+  "license": "MIT",
+  "keywords": [
+    "jobs",
+    "job-search",
+    "hiring",
+    "careers",
+    "internships",
+    "new-grad",
+    "ats",
+    "market-intelligence",
+    "mcp",
+    "employers",
+    "resume"
+  ],
+  "description_i18n": {
+    "en": "Search live jobs verified on real employer ATS boards, research employers' hiring, and brief hiring markets with Employed by Guaq AI.",
+    "zh-CN": "搜索经雇主招聘系统验证的在招职位，调研雇主招聘情况，并生成招聘市场简报。"
+  }
+}

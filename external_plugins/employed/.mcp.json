@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "employed": {
+      "type": "http",
+      "url": "https://jobs.guaqai.me/mcp"
+    }
+  }
+}
