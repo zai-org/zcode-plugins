@@ -1,6 +1,6 @@
 {
   "name": "zotero",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "在对话侧栏使用你的 Zotero 文库：搜索与阅读论文和你的高亮，Agent 在 PDF 中标出依据、生成引用与 .bib 文件，并可导入论文、写笔记、整理分类。",
   "author": {
     "name": "ZCode"

@@ -110,39 +110,65 @@ const FOLD: Record<string, string> = {
   "…": "...",
 };
 
+const GRAPHEMES = new Intl.Segmenter("und", { granularity: "grapheme" });
+
 /**
- * 归一化文本并记录每个结果字符来自原文的哪个位置：
+ * 归一化文本并记录每个结果 UTF-16 单元在原文中的起止位置：
  * NFKC（拆连字 ﬁ→fi）、统一引号与连字符、行尾连字符断词合并、空白折叠为单个空格、小写。
  * compact 时去掉所有空白（容忍 PDF 缺失或多出的空格）。
  */
-export function normalize(text: string, compact = false): { value: string; map: number[] } {
-  let value = "";
-  const map: number[] = [];
+export function normalize(text: string, compact = false): { value: string; map: number[]; endMap: number[] } {
+  let decomposed = "";
+  const sourceMap: number[] = [];
+  const sourceEndMap: number[] = [];
   let pendingSpace = -1;
-  for (let index = 0; index < text.length; index++) {
-    const char = text[index]!;
-    // 行尾连字符断词：小写字母-换行-小写字母，丢弃连字符与换行。
-    if (char === "-" && text[index + 1] === "\n" && /\p{Ll}/u.test(text[index - 1] ?? "") && /\p{Ll}/u.test(text[index + 2] ?? "")) {
-      index += 1;
-      continue;
-    }
-    if (/\s/.test(char)) {
-      if (!compact && pendingSpace < 0 && value.length) pendingSpace = index;
-      continue;
-    }
-    const folded = (FOLD[char] ?? char).normalize("NFKC").toLowerCase();
-    if (!folded) continue;
-    if (pendingSpace >= 0) {
-      value += " ";
-      map.push(pendingSpace);
-      pendingSpace = -1;
-    }
-    for (const part of folded) {
-      value += part;
-      map.push(index);
+  let skipUntil = 0;
+  for (const { segment, index: start } of GRAPHEMES.segment(text)) {
+    let offset = start;
+    for (const char of segment) {
+      const index = offset;
+      offset += char.length;
+      if (index < skipUntil) continue;
+      // 行尾连字符断词：小写字母-换行-小写字母，丢弃连字符与换行。
+      if (char === "-" && text[index + 1] === "\n" && /\p{Ll}$/u.test(text.slice(Math.max(0, index - 2), index)) && /^\p{Ll}/u.test(text.slice(index + 2, index + 4))) {
+        skipUntil = index + 2;
+        continue;
+      }
+      if (/\s/u.test(char)) {
+        if (!compact && pendingSpace < 0 && decomposed.length) pendingSpace = index;
+        continue;
+      }
+      // 删除空白 / 零宽字符、兼容分解都可能合并原来的字素边界；先保留分解后的来源，再统一组合。
+      const folded = (FOLD[char] ?? char).normalize("NFKD");
+      if (!folded) continue;
+      if (pendingSpace >= 0) {
+        decomposed += " ";
+        sourceMap.push(pendingSpace);
+        sourceEndMap.push(index);
+        pendingSpace = -1;
+      }
+      decomposed += folded;
+      // 连字可能展开成多个新字素；它们仍属于同一原始字素，不能丢掉其尾部重音。
+      for (let unit = 0; unit < folded.length; unit++) {
+        sourceMap.push(start);
+        sourceEndMap.push(start + segment.length);
+      }
     }
   }
-  return { value, map };
+  let value = "";
+  const map: number[] = [];
+  const endMap: number[] = [];
+  for (const { segment, index } of GRAPHEMES.segment(decomposed)) {
+    // NFKD 后按新字素做 NFC 等价于 NFKC，兼容 Jamo 与跨删除位置的重音也能重新组合。
+    const folded = segment.normalize("NFC").toLowerCase();
+    value += folded;
+    // indexOf 使用 UTF-16 偏移；映射完整来源跨度，防止高亮截断代理对、组合重音或被忽略的间隙。
+    for (let unit = 0; unit < folded.length; unit++) {
+      map.push(sourceMap[index]!);
+      endMap.push(sourceEndMap[index + segment.length - 1]!);
+    }
+  }
+  return { value, map, endMap };
 }
 
 export interface Match {
@@ -165,7 +191,7 @@ export function findInPage(page: PageText, quote: string, from = 0): Match | nul
       return {
         pageIndex: page.index,
         start: haystack.map[position]!,
-        end: haystack.map[position + needle.length - 1]! + 1,
+        end: haystack.endMap[position + needle.length - 1]!,
       };
   }
   // “开头 … 结尾”：两段都在本页且顺序正确，跨度不超过 3000 字符。

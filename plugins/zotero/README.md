@@ -50,6 +50,8 @@ You can also open the panel from the side pane "+" menu.
 | `export_bib` | Write a `.bib` file into the workspace from a collection and/or items |
 | `authorize_writes` | Ask for write access ahead of time |
 
+PDF phrase search and highlights match Unicode-equivalent text, including mathematical letters (`𝑥` / `x`), ligatures (`ﬁ` / `fi`) and composed or decomposed accents. Highlight ranges retain complete original characters and combining sequences.
+
 ### Permissions, privacy and network
 
 - The plugin only talks to Zotero on this computer (`127.0.0.1:23119`; another port can be set in the plugin setting *Zotero address*, loopback addresses only). Reading needs no permission.

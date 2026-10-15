@@ -9,6 +9,7 @@
 - `zotero/writes.ts`：批量创建（≤ 50）、按版本 PATCH（412 时以新版本重试一次）、删除（仅测试用，未暴露为工具）、附件三步上传（授权 → 传字节 → 登记），上传失败时删除刚建的附件条目。
 - `pdf/extract.ts`：pdf.js（legacy 构建，worker 在主线程）提取逐页文本项；`PdfStore` 按路径 + 修改时间 + 大小做 LRU 缓存。只读取 Zotero 为附件报告的 `file://` 路径。
 - `domain/`：纯函数。`text.ts` 拼页面文本并保留到文本项的映射；引文匹配做 NFKC、引号 / 连字符统一、行尾断词合并、空白折叠，失败再忽略全部空白，支持“开头 … 结尾”与跨页；矩形按 Helvetica 字宽比例在文本项内插值，竖直范围取基线下 0.25、上 0.75 字号（与 Zotero 自己的高亮一致）；排序键 `页序|偏移|距页顶`。`items.ts` 是条目摘要与模型文本。
+- 引文归一化先处理空白、零宽字符与软连字符，再兼容分解并按新的完整字素组合，支持数学字母、连字、组合重音与兼容 Jamo；归一化结果的每个 UTF-16 单元都保留原文起止偏移，搜索与高亮不得截断代理对或组合序列。
 - `metadata/metadata.ts`：DOI（doi.org 内容协商 CSL-JSON）与 arXiv（Atom API）到 Zotero 条目；PDF 下载限 http(s)、100 MB、校验 `%PDF-`。
 - `app/session.ts`：`ZoteroSession` 组合以上部分，持有面板视图（`viewSeq`）、Agent 高亮（只在会话内，保存后记 `savedAs`）、库版本轮询与变化事件、工作区路径检查（realpath，拒绝跳出工作区）。
 - `adapters/`：MCP 工具、资源与订阅。

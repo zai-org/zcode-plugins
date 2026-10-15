@@ -35,6 +35,46 @@ describe("normalize", () => {
   it("compact mode drops all whitespace", () => {
     expect(normalize("a b\nc", true).value).toBe("abc");
   });
+
+  it.each([
+    ["𝑥 + 𝐘 + 𝟙", "x + y + 1"],
+    ["𝒜\u030A", "å"],
+    ["e\u0301", "é"],
+    ["a\u0315\u0300", "à\u0315"],
+    ["가", "가"],
+    ["ﬁ", "fi"],
+    ["ＦＵＬＬ", "full"],
+  ])("normalizes complete Unicode sequences in %s", (source, expected) => {
+    const { value, map, endMap } = normalize(source);
+    expect(value).toBe(expected);
+    expect(map).toHaveLength(value.length);
+    expect(endMap).toHaveLength(value.length);
+  });
+
+  it("normalizes the mathematical alphanumeric block without splitting surrogate pairs", () => {
+    for (let code = 0x1d400; code <= 0x1d7ff; code++) {
+      const source = String.fromCodePoint(code);
+      expect(normalize(source).value).toBe(source.normalize("NFKC").toLowerCase());
+    }
+  });
+
+  it("maps normalized UTF-16 units to complete original graphemes", () => {
+    expect(normalize("🚀 e\u0301 ﬁ 𝑥")).toEqual({
+      value: "🚀 é fi x",
+      map: [0, 0, 2, 3, 5, 6, 6, 7, 8],
+      endMap: [2, 2, 3, 5, 6, 7, 7, 8, 10],
+    });
+  });
+
+  it("recomposes combining sequences after compact whitespace removal", () => {
+    expect(normalize("a \u0301b", true)).toEqual({ value: "áb", map: [0, 3], endMap: [3, 4] });
+    expect(normalize("𝒜 \u030A", true)).toEqual({ value: "å", map: [0], endMap: [4] });
+  });
+
+  it("retains the full original grapheme when compatibility decomposition splits a ligature", () => {
+    expect(normalize("ﬁ\u0301")).toEqual({ value: "fí", map: [0, 0], endMap: [2, 2] });
+    expect(normalize("ﬃ\u0301")).toEqual({ value: "ffí", map: [0, 0, 0], endMap: [2, 2, 2] });
+  });
 });
 
 describe("findInPage / findQuote", () => {
@@ -48,6 +88,18 @@ describe("findInPage / findQuote", () => {
   it("tolerates missing spaces in the PDF text", () => {
     const target = page("thecallstack remains");
     expect(findInPage(target, "the call stack")).not.toBeNull();
+  });
+
+  it.each([
+    ["a \u0301b", "a\u0301b"],
+    ["e\u200b\u0301", "é"],
+    ["e\u00ad\u0301", "e\u0301"],
+    ["ㄱㅏ", "가"],
+    ["ㄱㅏ", "가"],
+    ["𝒜 \u030A", "å"],
+  ])("keeps complete source ranges when folding %s joins a Unicode sequence", (source, quote) => {
+    const target = page(source);
+    expect(findInPage(target, quote)).toEqual({ pageIndex: 0, start: 0, end: source.length });
   });
 
   it("matches 'start … end' quotes", () => {
@@ -69,9 +121,60 @@ describe("findInPage / findQuote", () => {
     const match = findQuote(pages, "end of one page continues here");
     expect(match).toEqual({ pageIndex: 0, start: 4, end: pages[0]!.text.length });
   });
+
+  it.each([
+    ["𝑥", "x"],
+    ["𝑥", "𝑥"],
+    ["e\u0301", "é"],
+    ["é", "e\u0301"],
+    ["ﬁ", "fi"],
+    ["𝒜\u030A", "å"],
+    ["😀", "😀"],
+  ])("maps %s back to the complete original UTF-16 range", (source, quote) => {
+    const prefix = "Before 🚀 ";
+    const target = page(`${prefix}${source} after`);
+    const match = findInPage(target, quote);
+    expect(match).toEqual({ pageIndex: 0, start: prefix.length, end: prefix.length + source.length });
+    expect(textAt(target, match!.start, match!.end)).toBe(source);
+  });
+
+  it("keeps search offsets after supplementary characters and between repeated hits", () => {
+    const target = page("😀 𝑥 and 𝑥 end");
+    const hits = searchPages([target], "x", 10);
+    expect(hits.map(({ start, end }) => [start, end])).toEqual([[3, 5], [10, 12]]);
+    expect(hits.map(({ snippet }) => snippet)).toEqual([
+      "…😀 «𝑥» and 𝑥 end…",
+      "…😀 𝑥 and «𝑥» end…",
+    ]);
+  });
+
+  it.each(["ﬁ\u0301", "ﬃ\u0301"])("keeps the original accent when matching part of %s", (source) => {
+    const target = page(source);
+    const match = findInPage(target, "f");
+    expect(match).toEqual({ pageIndex: 0, start: 0, end: source.length });
+    expect(textAt(target, match!.start, match!.end)).toBe(source);
+    expect(searchPages([target], "f", 10)).toEqual([
+      { pageIndex: 0, label: "1", snippet: `…«${source}»…`, start: 0, end: source.length },
+    ]);
+  });
 });
 
 describe("rectsFor and sortIndex", () => {
+  it("covers the entire mathematical glyph without selecting adjacent text", () => {
+    const target = buildPage(
+      [
+        { str: "A ", transform: [10, 0, 0, 10, 72, 700], width: 20, height: 10 },
+        { str: "𝑥", transform: [10, 0, 0, 10, 92, 700], width: 11, height: 10 },
+        { str: " end", transform: [10, 0, 0, 10, 103, 700], width: 30, height: 10 },
+      ],
+      { index: 0, label: "1", width: 612, height: 792 },
+    );
+    const match = findQuote([target], "x")!;
+    expect(match).toEqual({ pageIndex: 0, start: 2, end: 4 });
+    expect(rectsFor(target, match.start, match.end)).toEqual([[92, 697.5, 103, 707.5]]);
+    expect(sortIndex(target, match.start, rectsFor(target, match.start, match.end))).toBe("00000|000002|00084");
+  });
+
   it("interpolates partial spans by glyph width and merges a line into one rect", () => {
     const target = buildPage(
       [
@@ -109,6 +212,22 @@ describe("parsePages", () => {
 });
 
 describe("real PDF text", () => {
+  it("finds and highlights normalized mathematical quotes in extracted PDF text", async () => {
+    const pdf = await extractPdf(
+      new Uint8Array(makePdf([["The equation x = 1 follows."]], { unicodeMap: { x: "𝑥" } })),
+      pdfjsDataDir(),
+    );
+    const target = pdf.pages[0]!;
+    expect(target.text).toContain("𝑥 = 1");
+    const hits = searchPages(pdf.pages, "x = 1", 10);
+    expect(hits).toHaveLength(1);
+    expect(hits[0]!.snippet).toContain("«𝑥 = 1»");
+    const match = findQuote(pdf.pages, "x")!;
+    expect(textAt(target, match.start, match.end)).toBe("𝑥");
+    const [rect] = rectsFor(target, match.start, match.end);
+    expect(rect![2]).toBeGreaterThan(rect![0]);
+  });
+
   it("extracts pages, labels, and anchors quotes across hyphenated line breaks", async () => {
     const pdf = await extractPdf(new Uint8Array(samplePaper()), pdfjsDataDir());
     expect(pdf.pageCount).toBe(3);

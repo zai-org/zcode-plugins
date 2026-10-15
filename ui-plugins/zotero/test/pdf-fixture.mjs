@@ -15,7 +15,7 @@ function winAnsi(text) {
 
 /**
  * @param {string[][]} pages 每页的文本行
- * @param {{ labels?: { start: number, style: "r" | "D", first?: number }[], width?: number, height?: number }} [options]
+ * @param {{ labels?: { start: number, style: "r" | "D", first?: number }[], width?: number, height?: number, unicodeMap?: Record<string, string> }} [options]
  */
 export function makePdf(pages, options = {}) {
   const width = options.width ?? 612;
@@ -25,7 +25,16 @@ export function makePdf(pages, options = {}) {
     objects.push(body);
     return objects.length;
   };
-  const font = add(Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"));
+  let toUnicode = "";
+  if (options.unicodeMap) {
+    // 用 ToUnicode 表保留 PDF 中的原始 Unicode 文本，不依赖机器上的字体。
+    const mappings = Object.entries(options.unicodeMap).map(([char, text]) =>
+      `<${char.charCodeAt(0).toString(16).padStart(2, "0")}> <${Buffer.from(text, "utf16le").swap16().toString("hex")}>`,
+    );
+    const cmap = Buffer.from(`/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /FixtureUnicode def\n/CMapType 2 def\n1 begincodespacerange\n<00> <FF>\nendcodespacerange\n${mappings.length} beginbfchar\n${mappings.join("\n")}\nendbfchar\nendcmap\nCMapName currentdict /CMap defineresource pop\nend\nend\n`);
+    toUnicode = ` /ToUnicode ${add(Buffer.concat([Buffer.from(`<< /Length ${cmap.length} >>\nstream\n`), cmap, Buffer.from("endstream")]))} 0 R`;
+  }
+  const font = add(Buffer.from(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding${toUnicode} >>`));
   const pagesId = objects.length + 1;
   objects.push(null); // Pages 占位
   const kids = [];
