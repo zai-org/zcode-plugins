@@ -790,7 +790,9 @@
     },
     {
       "name": "blender",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Blender",
       "displayName_i18n": {
         "en": "Blender",
@@ -811,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -832,7 +836,9 @@
     },
     {
       "name": "openpencil",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "OpenPencil",
       "displayName_i18n": {
         "en": "OpenPencil",
@@ -855,7 +861,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -882,7 +890,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -909,7 +919,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -936,7 +948,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -963,7 +977,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -990,7 +1006,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -1017,7 +1035,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1044,7 +1064,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1071,7 +1093,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1239,6 +1263,31 @@
       "author": {
         "name": "ZCode"
       }
+    },
+    {
+      "name": "zcode-grokbot-dispatch",
+      "source": "./external_plugins/zcode-grokbot-dispatch",
+      "description": "Grok Bot Dispatch for ZCode: bidirectional task dispatch between ZCode desktop and Grok Bot / DSH ([Project: X] routing, persistent session<->job mapping, automatic result reporting back to your Grok Bot peer: direct HTTP by default, Yobiru optional).",
+      "description_i18n": {
+        "en": "Grok Bot Dispatch for ZCode: bidirectional task dispatch between ZCode desktop and Grok Bot / DSH ([Project: X] routing, persistent session<->job mapping, automatic result reporting back to your Grok Bot peer: direct HTTP by default, Yobiru optional).",
+        "zh-CN": "Grok Bot 派活插件（ZCode 版）：ZCode 桌面版与 Grok Bot / DSH 双向派活（[Project: X] 路由、会话↔job 持久映射、任务结果自动回报给 Grok Bot 对端，默认 HTTP 直连，Yobiru 可选）。"
+      },
+      "version": "0.3.0",
+      "author": {
+        "name": "semantic-craft",
+        "url": "https://github.com/semantic-craft/zcode-dispatch"
+      },
+      "category": "productivity",
+      "keywords": [
+        "grok-bot",
+        "grokbot",
+        "dispatch",
+        "dsh",
+        "yobiru",
+        "hooks",
+        "mcp"
+      ],
+      "displayName": "Grok Bot Dispatch for ZCode"
     }
   ]
 }

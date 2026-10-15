@@ -1,0 +1,31 @@
+{
+  "description": "zcode-dispatch: bind session_id <-> job_id on UserPromptSubmit and auto-report dispatched-session results via Yobiru on Stop",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/stop-report.mjs"],
+            "timeoutMs": 10000,
+            "statusMessage": "zcode-dispatch: 记录会话↔job 映射…"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/stop-report.mjs"],
+            "timeoutMs": 20000,
+            "statusMessage": "zcode-dispatch: 自动回报任务结果…"
+          }
+        ]
+      }
+    ]
+  }
+}
