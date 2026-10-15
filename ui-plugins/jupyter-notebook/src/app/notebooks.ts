@@ -22,7 +22,7 @@ import {
   normalizeNotebook,
   serializeNotebook,
 } from "#nb/domain/notebook.ts";
-import { reduceOutput, updateDisplay } from "#nb/domain/outputs.ts";
+import { reduceOutput, updateDisplay, type StreamCursor } from "#nb/domain/outputs.ts";
 import { toServerPath } from "#nb/servers/registry.ts";
 
 export interface ServerHandle {
@@ -47,6 +47,7 @@ interface OpenNotebook {
   /** msg_id → cell id：每个 cell 只保留最近一次运行，迟到的后台输出也能归位。 */
   runs: Map<string, string>;
   clearPending: Set<string>;
+  streamCursors: Map<string, StreamCursor>;
   /** 最近一次排队用的序号（CellRun.seq）。 */
   runSeq: number;
   saveTimer: ReturnType<typeof setTimeout> | null;
@@ -231,6 +232,7 @@ export function createNotebookOwner(deps: OwnerDeps) {
     nb.pending = false;
     nb.runs.clear();
     nb.clearPending.clear();
+    nb.streamCursors.clear();
     nb.doc.save = { state: "saved", savedAt: nb.doc.save.savedAt ?? now(), error: null };
     const spec = nb.doc.metadata.kernelspec as { name?: string; display_name?: string; language?: string } | undefined;
     if (!nb.session) {
@@ -337,12 +339,14 @@ export function createNotebookOwner(deps: OwnerDeps) {
       return;
     }
     const state = reduceOutput(
-      { outputs: cell.outputs, clearPending: nb.clearPending.has(cell.id) },
+      { outputs: cell.outputs, clearPending: nb.clearPending.has(cell.id), stream: nb.streamCursors.get(cell.id) },
       type,
       message.content,
     );
     if (state.outputs === cell.outputs && state.clearPending === nb.clearPending.has(cell.id)) return;
     cell.outputs = state.outputs;
+    if (state.stream) nb.streamCursors.set(cell.id, state.stream);
+    else nb.streamCursors.delete(cell.id);
     if (state.clearPending) nb.clearPending.add(cell.id);
     else nb.clearPending.delete(cell.id);
     if (type === "execute_result" && typeof message.content.execution_count === "number")
@@ -559,6 +563,7 @@ export function createNotebookOwner(deps: OwnerDeps) {
         kernelStarting: null,
         runs: new Map(),
         clearPending: new Set(),
+        streamCursors: new Map(),
         runSeq: 0,
         saveTimer: null,
         saving: null,
@@ -610,6 +615,10 @@ export function createNotebookOwner(deps: OwnerDeps) {
       const removed = new Set(nb.doc.cells.map((cell) => cell.id));
       for (const cell of result.cells) removed.delete(cell.id);
       nb.doc.cells = result.cells;
+      // 删除 / 清空输出 / 改 cell 类型后释放旧 stream；仅编辑 source 时保留有效光标。
+      const streams = new Map(result.cells.map((cell) => [cell.id, cell.outputs.at(-1)]));
+      for (const [cellId, stream] of nb.streamCursors)
+        if (streams.get(cellId) !== stream.output) nb.streamCursors.delete(cellId);
       if (result.contentChanged) nb.doc.revision += 1;
       for (const [msgId, cellId] of nb.runs) if (removed.has(cellId)) nb.runs.delete(msgId);
       markPending(nb);
@@ -662,6 +671,7 @@ export function createNotebookOwner(deps: OwnerDeps) {
         cell.outputs = [];
         cell.executionCount = null;
         nb.clearPending.delete(cell.id);
+        nb.streamCursors.delete(cell.id);
         for (const [msgId, cellId] of nb.runs) if (cellId === cell.id) nb.runs.delete(msgId);
         if (!cell.source.trim()) {
           cell.run = null;

@@ -1,37 +1,46 @@
-import { LIMITS, type Output } from "#nb/contract.ts";
+import { LIMITS, type Output, type StreamOutput } from "#nb/contract.ts";
 import { normalizeBundle } from "#nb/domain/notebook.ts";
 
 /** 一个 cell 运行中的输出状态。clearPending 对应 `clear_output(wait=True)`：下一个输出到达时才清空。 */
 export interface OutputState {
   outputs: Output[];
   clearPending: boolean;
+  /** 仅内存：归一化文本不再包含回车，必须单独保留最后一个 stream 的写入位置。 */
+  stream?: StreamCursor;
 }
 
-/**
- * 处理终端控制字符：`\r` 回到行首（进度条覆盖），`\b` 退格。
- * 只对最后一个未结束的行生效时也正确，因为整段文本每次重算。
- */
-export function applyControlChars(text: string): string {
-  if (!text.includes("\r") && !text.includes("\b")) return text;
-  const lines = text.split("\n");
-  return lines
-    .map((line, index) => {
-      const last = index === lines.length - 1;
-      // 行尾 `\r\n` 的 `\r` 无意义；未结束的最后一行保留结尾 `\r`，下一段输出会覆盖它。
-      const pendingReturn = last && line.endsWith("\r");
-      let value = line.endsWith("\r") ? line.slice(0, -1) : line;
-      if (value.includes("\r")) {
-        // 后写的片段覆盖行首对应长度的字符。
-        let current = "";
-        for (const segment of value.split("\r"))
-          current = segment + current.slice(segment.length);
-        value = current;
+export interface StreamCursor {
+  output: StreamOutput;
+  cursor: number;
+  lineStart: number;
+}
+
+/** 只处理新到达的文本；光标以最后一个未结束的行内 UTF-16 位置记录。 */
+function appendStream(previous: string, text: string, cursor: number, lineStart: number) {
+  let value = previous;
+  // oxlint-disable-next-line no-control-regex -- 终端控制字符需要逐个处理，普通文字按块覆盖。
+  for (const part of text.split(/([\r\n\x08])/)) {
+    if (part === "\r") cursor = lineStart;
+    else if (part === "\n") {
+      value += "\n";
+      cursor = value.length;
+      lineStart = cursor;
+    } else if (part === "\b") {
+      if (cursor > lineStart) {
+        value = value.slice(0, cursor - 1) + value.slice(cursor);
+        cursor -= 1;
       }
-      // oxlint-disable-next-line no-control-regex -- ANSI / 终端控制字符是有意匹配的
-      while (value.includes("\b")) value = value.replace(/[^\x08]\x08|^\x08+/, "");
-      return pendingReturn ? `${value}\r` : value;
-    })
-    .join("\n");
+    } else if (part) {
+      value = value.slice(0, cursor) + part + value.slice(cursor + part.length);
+      cursor += part.length;
+    }
+  }
+  return { text: value, cursor, lineStart };
+}
+
+/** 处理终端控制字符：`\r` 回到行首（进度条覆盖），`\b` 删除光标前一字符。 */
+export function applyControlChars(text: string): string {
+  return appendStream("", text, 0, 0).text;
 }
 
 /** 超长 stream 保留首尾。 */
@@ -60,15 +69,23 @@ export function reduceOutput(
       const text = typeof content.text === "string" ? content.text : "";
       const outputs = takeClear(state).slice();
       const last = outputs.at(-1);
-      if (last?.output_type === "stream" && last.name === name) {
-        outputs[outputs.length - 1] = {
-          ...last,
-          text: capText(applyControlChars(last.text + text)),
-        };
-      } else {
-        outputs.push({ output_type: "stream", name, text: capText(applyControlChars(text)) });
+      const previous = last?.output_type === "stream" && last.name === name ? last : undefined;
+      const continuation = previous && state.stream?.output === previous ? state.stream : undefined;
+      const next = appendStream(previous?.text ?? "", text, continuation?.cursor ?? previous?.text.length ?? 0,
+        continuation?.lineStart ?? (previous ? previous.text.lastIndexOf("\n") + 1 : 0));
+      const capped = capText(next.text);
+      // 截断仍只保留首尾；把光标映射到保留片段，不能把标记当作新输出再解释。
+      if (next.text.length > LIMITS.streamChars) {
+        const head = Math.floor(LIMITS.streamChars * 0.4);
+        const project = (position: number) => position <= head ? position
+          : Math.max(head + capped.length - LIMITS.streamChars, capped.length - (next.text.length - position));
+        next.cursor = project(next.cursor);
+        next.lineStart = project(next.lineStart);
       }
-      return { outputs, clearPending: false };
+      const output: StreamOutput = { output_type: "stream", name, text: capped };
+      if (previous) outputs[outputs.length - 1] = output;
+      else outputs.push(output);
+      return { outputs, clearPending: false, stream: { output, cursor: next.cursor, lineStart: next.lineStart } };
     }
     case "display_data":
     case "execute_result": {
@@ -103,7 +120,7 @@ export function reduceOutput(
         clearPending: false,
       };
     case "clear_output":
-      return content.wait ? { outputs: state.outputs, clearPending: true } : { outputs: [], clearPending: false };
+      return content.wait ? { ...state, clearPending: true } : { outputs: [], clearPending: false };
     default:
       return state;
   }

@@ -30,6 +30,7 @@ Git 市场安装包已包含编译好的 MCP server 和面板，无需自行构�
 - 每个 cell 会注明 Agent 何时修改过它、是否正在运行它；左侧显示 cell 已运行、运行中、排队中或出错。
 - 运行中的 cell，运行按钮变成转动圆环里的停止键；排队的 cell 标出先后。全部运行时 kernel 状态显示“正在运行 3 / 5”；运行中的 cell 不在视野内时，面板底部的提示条可以带你过去。
 - 输出：带 ANSI 颜色的文本、HTML（如 pandas DataFrame 表格）、图片、SVG、Markdown、LaTeX、JSON。错误先显示异常和你的 cell 中出错的那一行，完整 traceback 点一下即可展开。HTML 经过清洗，输出中的脚本不会执行，因此交互式 JavaScript 输出（如 Plotly）和 ipywidgets 显示其静态替代内容。
+- 流式文本在 kernel 消息之间保留回车覆盖的写入位置，分段到达的进度更新不会错误追加到上一行末尾。
 - Jupyter 快捷键：Shift+Enter / Ctrl+Enter / Alt+Enter 运行；Esc 与 Enter 切换命令 / 编辑模式；A / B 插入，D D 删除，M / Y / R 切换类型，I I 中断，0 0 重启。
 - Kernel 菜单：中断、重启、重启并全部运行、清除输出、更换 kernel。
 - **在对话中引用**（@）把 cell 加入 Agent 上下文；出错的 cell 上 **让 Agent 修复** 会把错误发到对话。

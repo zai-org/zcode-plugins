@@ -30,6 +30,7 @@ You can also open the panel from the side pane "+" menu.
 - Each cell says when the agent changed it or is running it; the margin shows whether a cell ran, is running, is queued or failed.
 - A running cell's run button turns into a stop button inside a turning ring; queued cells show their place in line. During Run all the kernel status reads "Running 3 of 5", and if the running cell is out of view, a small bar at the bottom of the panel takes you to it.
 - Outputs: text with ANSI colours, HTML (tables such as pandas DataFrames), images, SVG, Markdown, LaTeX and JSON. Errors show the exception and the failing line of your cell; the full traceback is one click away. HTML is sanitized and output scripts do not run, so interactive JavaScript outputs (for example Plotly) and ipywidgets show their static fallback.
+- Streamed text preserves carriage-return overwrite positions between kernel messages, so partial progress updates do not append to the end of the previous line.
 - Jupyter keyboard shortcuts: Shift+Enter / Ctrl+Enter / Alt+Enter run; Esc and Enter switch between command and edit mode; A / B insert, D D delete, M / Y / R change type, I I interrupt, 0 0 restart.
 - Kernel menu: interrupt, restart, restart and run all, clear outputs, change kernel.
 - **Reference in chat** (@) adds a cell to the agent's context; **Ask agent to fix** on a failing cell sends the error to the conversation.

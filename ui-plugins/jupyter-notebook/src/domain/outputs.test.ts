@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Output } from "#nb/contract.ts";
+import { LIMITS, type Output } from "#nb/contract.ts";
 import { applyControlChars, capText, reduceOutput, updateDisplay, type OutputState } from "#nb/domain/outputs.ts";
 
 const empty: OutputState = { outputs: [], clearPending: false };
@@ -28,6 +28,52 @@ describe("reduceOutput", () => {
       ["stream", { name: "stdout", text: "100%\ndone\n" }],
     );
     expect((state.outputs[0] as { text: string }).text).toBe("100%\ndone\n");
+  });
+
+  it.each([
+    ["Hello\rWo", "Wollo"],
+    ["Hello\rWorld!\rX\nnext", "Xorld!\nnext"],
+    ["Hello\rWo\brld\n", "Wrld\n"],
+    ["first\r\nsecond\rXY", "first\nXYcond"],
+  ])("renders every split of %j identically", (text, expected) => {
+    for (let split = 0; split <= text.length; split++) {
+      const state = run(
+        ["stream", { text: text.slice(0, split) }],
+        ["stream", { text: text.slice(split) }],
+      );
+      expect(state.outputs).toEqual([{ output_type: "stream", name: "stdout", text: expected }]);
+    }
+    expect(run(...Array.from(text, (char): [string, Record<string, unknown>] => ["stream", { text: char }])).outputs)
+      .toEqual([{ output_type: "stream", name: "stdout", text: expected }]);
+  });
+
+  it("does not reuse a cursor after another output or clearing", () => {
+    const first = run(["stream", { text: "Hello\rW" }]);
+    for (const message of [
+      ["stream", { name: "stderr", text: "error" }],
+      ["display_data", { data: { "text/plain": "display" } }],
+      ["clear_output", { wait: false }],
+      ["clear_output", { wait: true }],
+    ] as [string, Record<string, unknown>][]) {
+      const state = reduceOutput(reduceOutput(first, ...message), "stream", { text: "o" });
+      expect(state.outputs.at(-1)).toEqual({ output_type: "stream", name: "stdout", text: "o" });
+    }
+    // A branch must not mutate the original state's continuation.
+    expect(reduceOutput(first, "stream", { text: "o" }).outputs[0])
+      .toEqual({ output_type: "stream", name: "stdout", text: "Wollo" });
+  });
+
+  it("keeps long stream output bounded while continuing at the retained head", () => {
+    const state = run(
+      ["stream", { text: "a".repeat(LIMITS.streamChars + 100) + "\rW" }],
+      ["stream", { text: "o" }],
+    );
+    const output = state.outputs[0] as { text: string };
+    expect(output.text.startsWith("Woaa")).toBe(true);
+    expect(output.text).toContain("characters omitted");
+    expect(output.text.length).toBeLessThan(LIMITS.streamChars + 100);
+    const overwritten = reduceOutput(state, "stream", { text: "\rX\bY" });
+    expect((overwritten.outputs[0] as { text: string }).text.startsWith("Yaaa")).toBe(true);
   });
 
   it("clears immediately, or on the next output with wait", () => {

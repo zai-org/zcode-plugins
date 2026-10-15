@@ -111,6 +111,24 @@ describe("launched server", () => {
     expect(disk.cells[0].source[0]).toBe("import sys\n");
   });
 
+  it("keeps stream overwrite positions across real kernel messages and saves only notebook data", async () => {
+    await owner.open({ path: "work/stream-cursor.ipynb", create: true });
+    const { inserted } = owner.edit(null, [{
+      op: "insert",
+      source: "import sys, time\nfor part in ('Hello\\rW', 'o', '\\n'):\n    sys.stdout.write(part)\n    sys.stdout.flush()\n    time.sleep(0.05)",
+    }]);
+    const id = inserted[0]!;
+    for (let run = 0; run < 2; run++) {
+      await owner.execute(null, { cellIds: [id] }, { wait: true, timeoutMs: 30_000 });
+      expect(text(await owner.read(), id)).toBe("Wollo\n");
+    }
+    await waitFor(async () => (await owner.read()).save.state === "saved");
+    const saved = JSON.parse(await readFile(join(workspace, "work/stream-cursor.ipynb"), "utf8"));
+    expect(saved.cells[0].outputs).toEqual([{ output_type: "stream", name: "stdout", text: ["Wollo\n"] }]);
+    // Keep the shared notebook selected for the remaining lifecycle tests.
+    await owner.open({ path: "work/a.ipynb" });
+  });
+
   it("interrupts a running cell", async () => {
     const { inserted } = owner.edit(null, [{ op: "insert", source: "import time\ntime.sleep(60)" }]);
     const id = inserted[0]!;
