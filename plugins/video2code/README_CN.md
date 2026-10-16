@@ -109,7 +109,7 @@ python3 skills/env-setup/scripts/env_doctor.py --fix
 | 配置项 | 默认值 | 作用 |
 | --- | --- | --- |
 | `media_resolution` | `medium` | `clip_video` 内联给模型的每帧分辨率档位：`low`（约 70 token/帧）、`medium`（约 256）、`high`（约 786）。 |
-| `clip_max_frames` | `400` | 一次 `clip_video` 调用所有 segment 累计抽帧上限；超出后按比例降帧。 |
+| `clip_max_frames` | `400` | 一次 `clip_video` 调用所有 segment 累计抽帧上限；超出时先为每段保留一帧，再按比例分配剩余预算，确保不超过上限。若上限小于段数，抽帧会返回错误；请减少段数或提高配置的上限。 |
 
 两者以 `V2C_MEDIA_RESOLUTION` 和 `V2C_CLIP_MAX_FRAMES` 传给 MCP 服务。
 

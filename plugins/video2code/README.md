@@ -109,7 +109,7 @@ Enabling this plugin grants code-execution trust. Concretely, it will:
 | Setting | Default | Effect |
 | --- | --- | --- |
 | `media_resolution` | `medium` | Per-frame resolution tier for frames inlined by `clip_video`: `low` (~70 tokens/frame), `medium` (~256), `high` (~786). |
-| `clip_max_frames` | `400` | Cap on frames extracted across all segments of one `clip_video` call; over the cap, frame rate is reduced proportionally. |
+| `clip_max_frames` | `400` | Cap on frames extracted across all segments of one `clip_video` call; over the cap, reserve one frame per segment and distribute remaining frames proportionally without exceeding the limit. If the cap is smaller than the number of segments, extraction returns an error; request fewer segments or increase the configured cap. |
 
 Both are passed to the MCP servers as `V2C_MEDIA_RESOLUTION` and `V2C_CLIP_MAX_FRAMES`.
 
