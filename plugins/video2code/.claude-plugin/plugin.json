@@ -1,6 +1,6 @@
 {
   "name": "video2code",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium",
   "author": {
     "name": "Z.ai",
