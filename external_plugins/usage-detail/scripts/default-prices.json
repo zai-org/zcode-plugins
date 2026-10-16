@@ -1,0 +1,97 @@
+{
+  "currency": "CNY",
+  "source": "models.dev",
+  "updated": "2026-10-15",
+  "models": {
+    "glm-4.6v": {
+      "in": 0.3,
+      "out": 0.9,
+      "cache": 0
+    },
+    "glm-4.5": {
+      "in": 0.6,
+      "out": 2.2,
+      "cache": 0.11
+    },
+    "glm-5v-turbo": {
+      "in": 5,
+      "out": 22,
+      "cache": 1.2
+    },
+    "glm-5.3-flash": {
+      "in": 0.8,
+      "out": 2.8,
+      "cache": 0.23
+    },
+    "glm-4.6": {
+      "in": 0.6,
+      "out": 2.2,
+      "cache": 0.11
+    },
+    "glm-5": {
+      "in": 1,
+      "out": 3.2,
+      "cache": 0.2
+    },
+    "glm-4.6v-flash": {
+      "in": 0,
+      "out": 0,
+      "cache": 0
+    },
+    "glm-4.5v": {
+      "in": 0.6,
+      "out": 1.8,
+      "cache": 0
+    },
+    "glm-5.3-flashx": {
+      "in": 2,
+      "out": 7,
+      "cache": 0.57
+    },
+    "glm-4.7-flash": {
+      "in": 0,
+      "out": 0,
+      "cache": 0
+    },
+    "glm-4.7": {
+      "in": 0.6,
+      "out": 2.2,
+      "cache": 0.11
+    },
+    "glm-4.5-flash": {
+      "in": 0,
+      "out": 0,
+      "cache": 0
+    },
+    "glm-5.2": {
+      "in": 1.4,
+      "out": 4.4,
+      "cache": 0.26
+    },
+    "glm-5.1": {
+      "in": 1.4,
+      "out": 4.4,
+      "cache": 0.26
+    },
+    "glm-4.7-flashx": {
+      "in": 0.07,
+      "out": 0.4,
+      "cache": 0.01
+    },
+    "glm-5-turbo": {
+      "in": 1.2,
+      "out": 4,
+      "cache": 0.24
+    },
+    "glm-4.5-air": {
+      "in": 0.2,
+      "out": 1.1,
+      "cache": 0.03
+    },
+    "glm-5.3": {
+      "in": 8,
+      "out": 28,
+      "cache": 2
+    }
+  }
+}

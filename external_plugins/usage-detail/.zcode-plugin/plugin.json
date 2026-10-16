@@ -1,0 +1,72 @@
+{
+  "name": "usage-detail",
+  "version": "0.16.0",
+  "description": "ZCode 本地逐条用量分析：请求明细钻取（token 构成、tok/s、缓存率）、会话侧栏实时仪表盘、会话健康分、模型效率排行、浪费取证、预算与燃烧告警、折算成本（官方牌价）、活跃热力图与导出——只读本地 SQLite，零模型开销。",
+  "author": {
+    "name": "axdlee",
+    "url": "https://github.com/axdlee"
+  },
+  "commands": "./commands",
+  "skills": "./skills",
+  "userConfig": {
+    "dbPath": {
+      "type": "string",
+      "title": "用量数据库路径",
+      "description": "本地 SQLite 路径，留空使用 ~/.zcode/cli/db/db.sqlite",
+      "default": ""
+    },
+    "panelLimit": {
+      "type": "string",
+      "title": "面板聚合条数",
+      "description": "侧栏与仪表盘默认聚合的最近请求条数（1-20000，-1 表示全部）",
+      "default": "-1"
+    },
+    "quotaToken": {
+      "type": "string",
+      "title": "官方配额 API Key（可选）",
+      "description": "智谱开放平台 API Key（bigmodel.cn 创建）。配置后 MCP 工具 usage_quota 可查官方 coding-plan 配额（5小时/周池）；不配置则该工具提示如何配置",
+      "default": ""
+    },
+    "quotaBase": {
+      "type": "string",
+      "title": "官方配额接口地址（可选）",
+      "description": "默认 https://open.bigmodel.cn，一般无需修改",
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "panel": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/scripts/mcp/panel-server.mjs"
+      ],
+      "env": {
+        "ZCODE_USAGE_DB": "${user_config.dbPath}",
+        "ZCODE_USAGE_LIMIT": "${user_config.panelLimit}",
+        "ZCODE_USAGE_QUOTA_TOKEN": "${user_config.quotaToken}",
+        "ZCODE_USAGE_QUOTA_BASE": "${user_config.quotaBase}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "usage",
+        "title": {
+          "zh-CN": "用量",
+          "en-US": "Usage"
+        },
+        "icon": "chart-column",
+        "server": "panel",
+        "resourceUri": "ui://usage-detail/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "hooks": "./hooks",
+  "description_i18n": {
+    "en": "Local per-request usage analytics for ZCode: drill-down request rows (token breakdown, tok/s, cache rate), a live session side-panel dashboard, session health scores, model leaderboard, waste forensics, budget and burn alerts, list-price converted costs, activity heatmap and export - read-only local SQLite, zero model overhead.",
+    "zh-CN": "ZCode 本地逐条用量分析：请求明细钻取（token 构成、tok/s、缓存率）、会话侧栏实时仪表盘、会话健康分、模型效率排行、浪费取证、预算与燃烧告警、折算成本（官方牌价）、活跃热力图与导出——只读本地 SQLite，零模型开销。"
+  }
+}
