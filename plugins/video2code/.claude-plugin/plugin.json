@@ -1,6 +1,6 @@
 {
   "name": "video2code",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium",
   "author": {
     "name": "Z.ai",
@@ -34,8 +34,9 @@
   "mcpServers": {
     "runtime": {
       "type": "stdio",
-      "command": "python3",
+      "command": "node",
       "args": [
+        "${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs",
         "${CLAUDE_PLUGIN_ROOT}/mcp/runtime_server.py"
       ],
       "cwd": "${CLAUDE_PROJECT_DIR}",
@@ -47,8 +48,9 @@
     },
     "video": {
       "type": "stdio",
-      "command": "python3",
+      "command": "node",
       "args": [
+        "${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs",
         "${CLAUDE_PLUGIN_ROOT}/mcp/video_server.py"
       ],
       "cwd": "${CLAUDE_PROJECT_DIR}",

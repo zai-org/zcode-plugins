@@ -8,8 +8,8 @@ description: "Check and provision the video2code plugin environment: Python/MCP/
 唯一入口：
 
 ```bash
-python3 <plugin_root>/skills/env-setup/scripts/env_doctor.py
-python3 <plugin_root>/skills/env-setup/scripts/env_doctor.py --fix
+node "<plugin_root>/hooks/run_python.mjs" "<plugin_root>/skills/env-setup/scripts/env_doctor.py"
+node "<plugin_root>/hooks/run_python.mjs" "<plugin_root>/skills/env-setup/scripts/env_doctor.py" --fix
 ```
 
 插件根路径由 SessionStart 输出，并写入 `.v2c/plugin_root`。完整探测给 Bash ≥120s。

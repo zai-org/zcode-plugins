@@ -117,7 +117,7 @@
         "en": "Records WebM through ZCode's built-in Browser Use WebView and converts it to MP4 with ffmpeg for video/URL replication; no Playwright or external Chromium required.",
         "zh-CN": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium"
       },
-      "version": "0.6.0",
+      "version": "0.6.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
