@@ -22,10 +22,14 @@
 | [**github**](./plugins/github) | `developer-tools` | 基于 GitHub CLI 的工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库和 Codespaces。 |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | 基于 `glab` 的 GitLab 工作流，覆盖 MR、Issue、CI/CD、仓库、Release 和 API，并支持自托管实例。 |
 | [**alibaba-cloud-cli**](./plugins/alibaba-cloud-cli) | `developer-tools` | 阿里云 CLI 工作流：配置凭证与 profile，并安全执行云资源查询和操作。 |
-| [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI 工作流：覆盖文档、表格、多维表格、日历、消息等 SaaS 资源，并引导应用配置与 OAuth 登录。 |
+| [**hyper3d-rodin**](./plugins/hyper3d-rodin) | `developer-tools` | 使用 Hyper3D Rodin Gen-2.5 生成三维模型，并使用 BANG 拆分已完成模型。 |
+| [**video-agent-kit**](./plugins/video-agent-kit) | `productivity` | 自动化视频剪辑：语音转录、抽帧理解、时间线、预览渲染、质检和 TTS。 |
+| [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
+| [**lark-cli**](./plugins/lark-cli) | `productivity` | Lark CLI 工作流：覆盖文档、表格、多维表格、日历、消息等 SaaS 资源，并引导应用配置与 OAuth 登录。 |
+| [**tencent-meeting-cli**](./plugins/tencent-meeting-cli) | `productivity` | 腾讯会议 CLI 工作流：OAuth2 授权、会议管理、录制管理和参会报告查询。 |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | 钉钉 Workspace CLI 工作流：OAuth/设备授权、验证组织账号，并按需安装上游 Skills。 |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | 企业微信 CLI 工作流：覆盖消息、文档、表格、邮件、日历、会议、通讯录和待办，并支持扫码授权与状态检查。 |
-| [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
+| [**obsidian**](./plugins/obsidian) | `productivity` | Obsidian 笔记创作、知识库自动化、网页提取、模板、Mermaid、Excalidraw 和 Canvas 工作流。 |
 
 ### UI 插件
 
@@ -50,10 +54,10 @@ UI 插件的运行产物（`plugins/<name>/dist/`）属于构建输出，不提�
 
 ### 金融插件
 
-10 个 `finance` 分类插件，覆盖卖方、买方、对公银行与企业财务职能。每个插件都是「一个路由
-agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远程行情数据 MCP 服务，
-认证由 ZCode 宿主注入 —— **不需要配置任何数据商账号**。除 `accounting-and-reporting`
-（基于你自有账套工作）外均需付费套餐。
+14 个 `finance` 分类插件，覆盖卖方、买方、对公银行、企业财务与金融数据访问。其中 10 个工作流插件组合
+路由 agent 与领域 skill；4 个数据连接插件通过 MCP 服务提供同花顺 iFinD、万得、天眼查、SEC、
+财经网页与新闻数据。远程服务的认证由 ZCode 宿主注入，**不需要配置数据商账号**。
+`accounting-and-reporting` 完全基于你自有账套工作。
 
 | 插件 | 方向 | 能力 |
 | --- | --- | --- |
@@ -67,6 +71,10 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 | [**find-clients**](./plugins/find-clients) | 对公获客 | 目标客户筛选、园区与集群分布、商机线索、客户画像。 |
 | [**run-fpa**](./plugins/run-fpa) | 经营分析 | 管理报表、滚动现金流与损益预测、预算差异归因、情景分析、同业对标。 |
 | [**accounting-and-reporting**](./plugins/accounting-and-reporting) | 核算与报告 | 月结关账检查、总账勾稽到根因、科目映射、法定口径报表、三表勾稽复核。 |
+| [**hexin**](./plugins/hexin) | iFinD 行情数据 | 通过 MCP 服务查询股票、海外股票、指数、基金与债券数据。 |
+| [**wind**](./plugins/wind) | 万得行情数据 | 通过 MCP 服务查询股票、指数、基金、债券、宏观、公告与研报数据。 |
+| [**tianyancha**](./plugins/tianyancha) | 企业信息 | 通过 MCP 服务查询天眼查企业信息。 |
+| [**finance-search**](./plugins/finance-search) | 财经搜索 | 通过 MCP 服务检索 SEC EDGAR 文件、财经网页与新闻。 |
 
 ## 插件市场分类
 
@@ -74,11 +82,12 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 
 | 分类 | 适用范围 | 当前插件 |
 | --- | --- | --- |
-| `developer-tools` | 开发、代码质量、Git、CI 和工程工作流 | `cloudbase-skills`、`mimosa`、`github`、`gitlab`、`alibaba-cloud-cli` |
-| `productivity` | 计划、知识工作和个人工作流自动化 | `video2code` |
-| `utilities` | 不属于其他分类的通用工具 | `lark-cli` |
-| `finance` | 金融领域工作流：行情、财务、风险与金融科技集成 | `write-research`、`read-macro`、`assess-credit`、`pick-funds`、`watch-positions`、`model-deals`、`vet-companies`、`find-clients`、`run-fpa`、`accounting-and-reporting` |
+| `developer-tools` | 开发、代码质量、Git、CI 和工程工作流 | `cloudbase-skills`、`mimosa`、`github`、`gitlab`、`alibaba-cloud-cli`、`hyper3d-rodin` |
+| `productivity` | 计划、知识工作和个人工作流自动化 | `video-agent-kit`、`video2code`、`lark-cli`、`tencent-meeting-cli`、`dingtalk-cli`、`wecom-cli`、`obsidian` |
+| `utilities` | 不属于其他分类的通用工具 | — |
+| `finance` | 金融领域工作流：行情、财务、风险与金融科技集成 | `write-research`、`read-macro`、`assess-credit`、`pick-funds`、`watch-positions`、`model-deals`、`vet-companies`、`find-clients`、`run-fpa`、`accounting-and-reporting`、`hexin`、`wind`、`tianyancha`、`finance-search` |
 | `guides` | 文档、学习和参考类插件 | — |
+| `template` | 用于创建新插件的可复制脚手架 | — |
 | `other` | 不适合以上分类的插件 | — |
 
 ## 安装方式
