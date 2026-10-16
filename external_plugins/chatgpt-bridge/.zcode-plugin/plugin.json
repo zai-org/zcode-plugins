@@ -1,0 +1,22 @@
+{
+  "name": "chatgpt-bridge",
+  "version": "0.1.1",
+  "description": "Manage the local ChatGPT plan bridge",
+  "description_i18n": {
+    "en": "Manage the local ChatGPT plan bridge",
+    "zh-CN": "管理本机 ChatGPT 订阅桥接的连接、模型和诊断"
+  },
+  "author": {
+    "name": "weixshaw",
+    "url": "https://github.com/weixshaw"
+  },
+  "license": "MIT",
+  "keywords": [
+    "chatgpt",
+    "openai",
+    "macos"
+  ],
+  "commands": "./commands",
+  "homepage": "https://github.com/weixshaw/zcode-chatgpt-bridge",
+  "repository": "https://github.com/weixshaw/zcode-chatgpt-bridge"
+}
