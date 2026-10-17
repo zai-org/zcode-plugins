@@ -90,11 +90,8 @@ def _apply_crop_scale(fr, crop, scale):
     """还原 still.py 的裁剪+缩放语义 (越界夹取, 放大 CUBIC / 缩小 AREA)。"""
     import cv2
     if crop:
-        x, y, w, h = crop
-        fh, fw = fr.shape[:2]
-        x, y = max(0, x), max(0, y)
-        fr = fr[y:min(fh, y + h), x:min(fw, x + w)]
-        if fr.size == 0:
+        fr = _slice(fr, crop)
+        if fr is None:
             return None
     if scale != 1.0:
         fr = cv2.resize(fr, None, fx=scale, fy=scale,
