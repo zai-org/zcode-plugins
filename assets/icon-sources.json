@@ -1858,7 +1858,7 @@
   {
     "name": "superpowers",
     "icon": "superpowers/icon.png",
-    "source": "/plugins/superpowers/assets/superpowers-small.svg",
+    "source": "/external_plugins/superpowers/assets/superpowers-small.svg",
     "mimeType": "image/png",
     "sha256": "4b324e9796754eaf5801f5b2f48be626a7e36ecf91f793fb6fdf1b8a7d4a30b9"
   },
