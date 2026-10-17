@@ -17,8 +17,8 @@ from pathlib import Path
 from .result import ToolResult
 from .run_context import RunContext
 
-# 与 movie_cut 保持同一版本串: 两边产物可互相复用缓存, 改合并算法时必须换版本号
-SEGMENT_VERSION = "cover-all-v2"
+# 镜头覆盖语义变化时升级版本，避免复用旧实现留下的空镜头缓存。
+SEGMENT_VERSION = "cover-all-v3"
 
 PROBE_TIMEOUT_SECONDS = 60
 
@@ -92,18 +92,17 @@ def detect_shots(args: dict, ctx: RunContext) -> ToolResult:
     started = time.time()
     det = ContentDetector(threshold=threshold)
     try:
-        if frame_skip > 0:
-            # 隔帧检测: 解码量减少, 提速全片切分; 代价是切点精度下降(可能漏快切),
-            # 默认关闭。SceneManager 默认 auto_downscale=True, 检测本身已在缩小帧上做。
-            from scenedetect import SceneManager, open_video
-            v = open_video(str(input_path))
-            sm = SceneManager()
-            sm.add_detector(det)
-            sm.detect_scenes(v, frame_skip=frame_skip, show_progress=False)
-            scenes = sm.get_scene_list()
-        else:
-            from scenedetect import detect
-            scenes = detect(str(input_path), det, show_progress=False)
+        # 隔帧检测: 解码量减少, 提速全片切分; 代价是切点精度下降(可能漏快切),
+        # 默认关闭。SceneManager 默认 auto_downscale=True, 检测本身已在缩小帧上做。
+        # Use SceneManager for both modes: its start_in_scene option is available
+        # throughout SceneDetect 0.6, unlike the detect() convenience wrapper's.
+        # Without it, a video with no cuts returns no shots at all.
+        from scenedetect import SceneManager, open_video
+        v = open_video(str(input_path))
+        sm = SceneManager()
+        sm.add_detector(det)
+        sm.detect_scenes(v, frame_skip=frame_skip, show_progress=False)
+        scenes = sm.get_scene_list(start_in_scene=True)
     except Exception as exc:
         return ToolResult(
             text=f"[ERROR] scene detection failed: {exc}",
