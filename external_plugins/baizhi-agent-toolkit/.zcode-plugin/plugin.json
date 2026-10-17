@@ -1,0 +1,22 @@
+{
+  "name": "baizhi-agent-toolkit",
+  "version": "0.1.0",
+  "description": "Connect ZCode to Baizhi Agent Toolkit for web search, page reading, and structured extraction with your own API key.",
+  "description_i18n": {
+    "en": "Connect ZCode to Baizhi Agent Toolkit for web search, page reading, and structured extraction with your own API key.",
+    "zh-CN": "使用自己的 API Key，将 ZCode 接入百智云 Agent Toolkit，获取网页搜索、网页读取与结构化提取能力。"
+  },
+  "author": {
+    "name": "ct-jaryn"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://agent-toolkit.app.baizhi.cloud/",
+  "keywords": [
+    "baizhi",
+    "百智云",
+    "mcp",
+    "web-search",
+    "web-extraction"
+  ],
+  "mcpServers": ".mcp.json"
+}
