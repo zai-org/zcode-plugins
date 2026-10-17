@@ -1920,7 +1920,7 @@
     "matchedBy": "official-repository-asset",
     "homepage": "https://www.tripo3d.ai",
     "mimeType": "image/png",
-    "sha256": "60f06a7443bb74f962c3095e6c63bb68b76c4d345c3e7cf2e22831720e080d1f",
+    "sha256": "a85e05cad881498c048a4ce6bcef99b6eb3bcb89172d446a577207102f55057b",
     "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
