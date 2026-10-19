@@ -1,0 +1,21 @@
+{
+  "name": "superpowers",
+  "description": "Battle-tested development skills for ZCode: brainstorming, test-driven development, systematic debugging, planning, code review, and subagent workflows that auto-trigger at the right moments.",
+  "description_i18n": {
+    "en": "Battle-tested development skills for ZCode: brainstorming, test-driven development, systematic debugging, planning, code review, and subagent workflows that auto-trigger at the right moments.",
+    "zh-CN": "面向 ZCode 的实战检验开发技能库：头脑风暴、测试驱动开发、系统化调试、计划编写与执行、代码评审与子代理协作等工作流，在恰当时机自动触发。"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "eps-epsiloneridani",
+    "url": "https://github.com/eps-epsiloneridani"
+  },
+  "keywords": [
+    "skills",
+    "tdd",
+    "debugging",
+    "planning",
+    "code-review",
+    "workflow"
+  ]
+}
