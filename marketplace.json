@@ -1253,6 +1253,27 @@
         "mcp",
         "game-development"
       ]
+    },
+    {
+      "name": "chatgpt-bridge",
+      "source": "./external_plugins/chatgpt-bridge",
+      "version": "0.1.1",
+      "description": "Manage the local ChatGPT plan bridge",
+      "description_i18n": {
+        "en": "Manage the local ChatGPT plan bridge",
+        "zh-CN": "管理本机 ChatGPT 订阅桥接的连接、模型和诊断"
+      },
+      "category": "developer-tools",
+      "author": {
+        "name": "weixshaw",
+        "url": "https://github.com/weixshaw"
+      },
+      "homepage": "https://github.com/weixshaw/zcode-chatgpt-bridge",
+      "keywords": [
+        "chatgpt",
+        "openai",
+        "macos"
+      ]
     }
   ]
 }
