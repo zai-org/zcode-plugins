@@ -1,0 +1,27 @@
+{
+  "name": "zcode-context-insight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "See what every model request carries: context composition, per-step trend, full request browser, injections and compactions, file activity, the agent fleet, and cross-session insights — read-only and offline.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bowenliang123/zcode-context-insight"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "esbuild": "^0.25.0"
+  }
+}

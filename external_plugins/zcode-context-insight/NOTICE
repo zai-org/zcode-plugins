@@ -1,0 +1,27 @@
+zcode-context-insight
+Copyright 2026 bowenliang123
+
+This product includes software and design inspiration developed by third parties:
+
+1. dsh-context (https://github.com/bowenliang123/dsh-context)
+   Licensed under the Apache License, Version 2.0.
+   The feature set, interaction model and several token-accounting conventions in this
+   project are adapted from dsh-context. The implementation here targets ZCode's session
+   store and MCP Apps host contract instead of DeepSeek Harness projections.
+
+2. ZCode (https://github.com/zai-org/ZCode)
+   Licensed under the Apache License, Version 2.0.
+   UI_PLUGIN.md and the host source define the MCP Apps surface, session metadata and
+   data-retention semantics this plugin follows.
+
+3. models.dev (https://models.dev)
+   The bundled model catalog in src/shared/models.json is a compact snapshot of the
+   models.dev public API, used for list-price estimates and context-window fallbacks.
+   No model data is fetched at runtime.
+
+4. DeepSeek image-token calculator
+   The attachment token estimate is a port of the public DeepSeek vision token
+   calculator (14px patches, 3:1 downsampling, 384-token cap).
+
+The MCP SDK and Zod are distributed under their respective licenses; see their
+package metadata in the build environment.

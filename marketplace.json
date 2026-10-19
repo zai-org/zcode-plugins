@@ -1164,6 +1164,35 @@
       ]
     },
     {
+      "name": "zcode-context-insight",
+      "source": "./external_plugins/zcode-context-insight",
+      "description": "See what every model request carries: context composition, per-step trend, full request browser, injections and compactions, file activity, the agent fleet, and cross-session insights — read-only and offline.",
+      "description_i18n": {
+        "en": "See what every model request carries: context composition, per-step trend, full request browser, injections and compactions, file activity, the agent fleet, and cross-session insights — read-only and offline.",
+        "zh-CN": "查看每次模型请求到底带了什么：上下文组成、逐请求趋势、完整请求浏览器、注入与压缩事件、文件活动、Agent 编队以及跨会话洞察——只读、离线。"
+      },
+      "homepage": "https://github.com/bowenliang123/zcode-context-insight",
+      "version": "0.1.0",
+      "author": {
+        "name": "bowenliang123",
+        "url": "https://github.com/bowenliang123"
+      },
+      "category": "developer-tools",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/zcode-context-insight/icon.png",
+      "displayName": "ZCode Context Insight",
+      "displayName_i18n": {
+        "zh-CN": "ZCode 上下文洞察"
+      },
+      "keywords": [
+        "context",
+        "tokens",
+        "usage",
+        "session",
+        "mcp",
+        "insights"
+      ]
+    },
+    {
       "name": "jupyter-notebook",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/jupyter-notebook/icon.png",
       "componentTypes": [

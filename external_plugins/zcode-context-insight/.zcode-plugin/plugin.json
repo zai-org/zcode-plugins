@@ -1,0 +1,80 @@
+{
+  "name": "zcode-context-insight",
+  "version": "0.1.0",
+  "description": "See what every model request carries: context composition, per-step trend, full request browser, injections and compactions, file activity, the agent fleet, and cross-session insights — read-only and offline.",
+  "description_i18n": {
+    "en": "See what every model request carries: context composition, per-step trend, full request browser, injections and compactions, file activity, the agent fleet, and cross-session insights — read-only and offline.",
+    "zh-CN": "查看每次模型请求到底带了什么：上下文组成、逐请求趋势、完整请求浏览器、注入与压缩事件、文件活动、Agent 编队以及跨会话洞察——只读、离线。"
+  },
+  "author": {
+    "name": "bowenliang123",
+    "url": "https://github.com/bowenliang123"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/bowenliang123/zcode-context-insight",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bowenliang123/zcode-context-insight.git"
+  },
+  "userConfig": {
+    "dataRoot": {
+      "type": "string",
+      "title": "ZCode CLI data directory",
+      "description": "Optional directory containing db/, rollout/, debug/ and log/. Empty uses ~/.zcode/cli.",
+      "default": ""
+    },
+    "dbPath": {
+      "type": "string",
+      "title": "Session database",
+      "description": "Optional absolute path to ZCode's db.sqlite. Empty uses <dataRoot>/db/db.sqlite.",
+      "default": ""
+    },
+    "contextWindow": {
+      "type": "number",
+      "title": "Context-window override",
+      "description": "Optional token window used when the model cannot be resolved from ZCode's provider config or the bundled model catalog. 0 = automatic.",
+      "default": 0
+    },
+    "priceFile": {
+      "type": "string",
+      "title": "Custom price book",
+      "description": "Optional path to a JSON price book with the same shape as models.dev's providers map. Empty uses the bundled snapshot.",
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "context": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_CONTEXT_DATA_ROOT": "${user_config.dataRoot}",
+        "ZCODE_CONTEXT_DB_PATH": "${user_config.dbPath}",
+        "ZCODE_CONTEXT_WINDOW": "${user_config.contextWindow}",
+        "ZCODE_CONTEXT_PRICE_FILE": "${user_config.priceFile}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "context",
+        "title": {
+          "en": "Context",
+          "en-US": "Context",
+          "zh-CN": "上下文"
+        },
+        "icon": "chart-column",
+        "server": "context",
+        "resourceUri": "ui://zcode-context-insight/context.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "commands": "commands",
+  "skills": "skills"
+}
