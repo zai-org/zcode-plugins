@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "yuantoutao": {
+      "type": "http",
+      "url": "https://mcp.yuantoutao.com/mcp",
+      "enabled": true,
+      "timeoutMs": 60000
+    }
+  }
+}
