@@ -30,7 +30,7 @@ import math
 import re
 import shutil
 import subprocess
-from .ffproc import run_proc, require_ffmpeg
+from .ffproc import require_ffmpeg, run_proc, write_ffconcat_file
 import time
 from pathlib import Path
 from typing import Any
@@ -2215,10 +2215,7 @@ def _cut_segment(
 
 def _concat_hard(segments: list[dict[str, Any]], output_path: Path, *, crf: int) -> str | None:
     concat_file = Path(segments[0]["path"]).parent / "concat.txt"
-    concat_file.write_text(
-        "".join(f"file '{Path(s['path']).as_posix()}'\n" for s in segments),
-        encoding="utf-8",
-    )
+    write_ffconcat_file(concat_file, (s["path"] for s in segments))
     cmd = [
         "ffmpeg", "-y", "-v", "error",
         "-f", "concat", "-safe", "0", "-i", str(concat_file),
@@ -3045,5 +3042,4 @@ def _qc_text(report: dict[str, Any], sampled: list[dict[str, Any]], report_path:
     else:
         lines.append("\nNo cuts to sample (single-clip output), so there are no join artefacts to inspect.")
     return "\n".join(lines)
-
 

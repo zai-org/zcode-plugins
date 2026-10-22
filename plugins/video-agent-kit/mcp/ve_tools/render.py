@@ -5,7 +5,7 @@ import math
 import os
 import shutil
 import subprocess
-from .ffproc import run_proc, safe_expr, require_ffmpeg
+from .ffproc import require_ffmpeg, run_proc, safe_expr, write_ffconcat_file
 import time
 from pathlib import Path
 
@@ -84,10 +84,7 @@ def render_preview(args: dict, ctx: RunContext) -> ToolResult:
             )
         segment_paths.append(seg_path)
     concat_file = work_dir / "concat.txt"
-    concat_file.write_text(
-        "".join(f"file '{ffconcat_escape(p)}'\n" for p in segment_paths),
-        encoding="utf-8",
-    )
+    write_ffconcat_file(concat_file, segment_paths)
     cmd = [
         "ffmpeg", "-y",
         "-f", "concat", "-safe", "0", "-i", str(concat_file),
@@ -731,10 +728,6 @@ def edit_decisions_from_plan(plan: dict) -> dict:
         ],
         "unsupported_tracks": plan["unsupported_tracks"],
     }
-
-
-def ffconcat_escape(path: Path) -> str:
-    return path.as_posix().replace("'", "'\\''")
 
 
 def cut_clip(clip: dict, output_path: Path, *, target_width: int, target_height: int) -> None:
