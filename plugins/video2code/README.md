@@ -65,6 +65,8 @@ Two stdio MCP servers, declared in both [`.mcp.json`](./.mcp.json) and the plugi
 **`runtime`** (600 s tool timeout) — serves and feeds the build:
 
 - `deploy_website` — serve a built `dist/` over a local `http.server`. Re-deploys reuse the same port and URL so the browser does not have to re-navigate, and the tool refuses to publish a build that references `/assets/...` images which do not exist.
+
+Deployment source and serving directories must be separate: if either contains the other, deployment returns an error before replacing files. Re-deploying the serving directory itself preserves its contents.
 - `get_asset` — fetch an asset from a supplied catalog. **Registered only when an asset catalog is present** (`assets_catalog.json` in the project, `V2C_CATALOG_PATH`, or `V2C_HAS_CATALOG=1`); otherwise the tool is not exposed at all.
 
 ## Hooks
