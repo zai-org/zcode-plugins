@@ -22,12 +22,87 @@ TEMPLATE_NAME="${TEMPLATE_NAME:-default}"
 NM_LOCAL_ROOT=${NM_LOCAL_ROOT:-/tmp/webapp-node-modules}
 mkdir -p "$NM_LOCAL_ROOT"
 
+package_hash() {
+  local output
+  local digest
+
+  # GNU coreutils exposes md5sum, while older macOS releases only ship BSD
+  # md5. The digest is only a cache key, but both commands produce the same
+  # MD5 value for a given package.json.
+  if command -v md5sum >/dev/null 2>&1; then
+    output=$(md5sum -- "$1") || return 1
+  elif command -v md5 >/dev/null 2>&1; then
+    output=$(md5 -q "$1") || return 1
+  else
+    echo "ERROR: neither md5sum nor md5 is available; cannot key node_modules cache." >&2
+    return 1
+  fi
+
+  if [[ "$output" =~ ([[:xdigit:]]{32}) ]]; then
+    digest="${BASH_REMATCH[1]}"
+    printf '%.12s\n' "$digest"
+    return 0
+  fi
+
+  echo "ERROR: could not parse package.json checksum." >&2
+  return 1
+}
+
+master_ready() {
+  [[ -d "$1" && -e "$1/.bin/vite" ]]
+}
+
+publish_master() {
+  local source=$1
+  local destination=$2
+  local lock="${destination}.publish-lock"
+  local attempts=0
+
+  # mkdir is an atomic, portable lock on both BSD/macOS and GNU/Linux. Build
+  # work stays parallel; only the final same-filesystem rename is serialized.
+  # This preserves the old first-writer-wins contract without GNU `mv -T`.
+  while ! mkdir "$lock" 2>/dev/null; do
+    if master_ready "$destination"; then
+      return 0
+    fi
+    attempts=$((attempts + 1))
+    if [[ "$attempts" -ge 300 ]]; then
+      echo "ERROR: timed out waiting for cache publisher lock: $lock" >&2
+      return 1
+    fi
+    sleep 0.1
+  done
+
+  if ! (
+    trap 'rmdir "$lock" 2>/dev/null || true' EXIT
+    trap 'exit 1' HUP INT TERM
+    if ! master_ready "$destination"; then
+      if ! mv "$source" "$destination"; then
+        echo "ERROR: failed to publish node_modules cache: $destination" >&2
+        exit 1
+      fi
+    fi
+  ); then
+    return 1
+  fi
+
+  if ! master_ready "$destination"; then
+    echo "ERROR: published node_modules cache is incomplete: $destination" >&2
+    return 1
+  fi
+}
+
 [[ -f "$PROJECT_PATH/package.json" ]] || { echo "ERROR: $PROJECT_PATH/package.json 不存在" >&2; exit 1; }
-PKG_HASH=$(md5sum "$PROJECT_PATH/package.json" | cut -c1-12)
+PKG_HASH=$(package_hash "$PROJECT_PATH/package.json")
 NM_MASTER="$NM_LOCAL_ROOT/master-$TEMPLATE_NAME-$PKG_HASH"
 
 # ── master 构建: 全部安装动作发生在本地盘构建目录, 永不触碰项目目录 ────────────
-if [[ ! -d "$NM_MASTER" ]]; then
+if ! master_ready "$NM_MASTER"; then
+  if [[ -e "$NM_MASTER" ]]; then
+    echo "ERROR: node_modules cache exists but is incomplete: $NM_MASTER" >&2
+    echo "Remove that cache entry and retry." >&2
+    exit 1
+  fi
   NM_TMP=$(mktemp -d "$NM_LOCAL_ROOT/.master.XXXXXX")
   cp "$PROJECT_PATH/package.json" "$NM_TMP/"
   [[ -f "$PROJECT_PATH/package-lock.json" ]] && cp "$PROJECT_PATH/package-lock.json" "$NM_TMP/"
@@ -40,7 +115,7 @@ if [[ ! -d "$NM_MASTER" ]]; then
   else
     echo "无可用底座, 本地盘冷启动全量 npm install (首次较慢)..."
   fi
-  if ! (cd "$NM_TMP" && npm install --no-audit --no-fund --prefer-offline 2>&1 | tail -5); then
+  if ! (set -o pipefail; cd "$NM_TMP" && npm install --no-audit --no-fund --prefer-offline 2>&1 | tail -5); then
     rm -rf "$NM_TMP"
     echo "ERROR: npm install failed (check registry/proxy connectivity above)." >&2
     exit 1
@@ -51,11 +126,18 @@ if [[ ! -d "$NM_MASTER" ]]; then
     exit 1
   fi
   # 原子落位: 并发同时建 master 时先到先得, 输家直接丢弃
-  mv -T "$NM_TMP/node_modules" "$NM_MASTER" 2>/dev/null || true
+  if ! publish_master "$NM_TMP/node_modules" "$NM_MASTER"; then
+    rm -rf "$NM_TMP"
+    exit 1
+  fi
   rm -rf "$NM_TMP"
 fi
 
 if [[ "$PREPARE_ONLY" == "1" ]]; then
+  if ! master_ready "$NM_MASTER"; then
+    echo "ERROR: node_modules cache is not ready: $NM_MASTER" >&2
+    exit 1
+  fi
   echo "✓ master ready: $NM_MASTER"
   exit 0
 fi
