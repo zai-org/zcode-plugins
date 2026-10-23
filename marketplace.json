@@ -1386,6 +1386,36 @@
         "unity-cli",
         "skills"
       ]
+    },
+    {
+      "name": "ponytail",
+      "displayName": "Ponytail",
+      "displayName_i18n": {
+        "en": "Ponytail",
+        "zh-CN": "Ponytail 懒人开发模式"
+      },
+      "version": "0.1.0",
+      "source": "./external_plugins/ponytail",
+      "description": "Lazy senior dev mode: the smallest change that fully solves the task. YAGNI, stdlib first, one line over fifty. Six skills and slash commands for lazy coding, diff review, whole-repo audit, shortcut-debt ledger, and measured impact. Port of DietrichGebert/ponytail (MIT).",
+      "description_i18n": {
+        "en": "Lazy senior dev mode: the smallest change that fully solves the task. YAGNI, stdlib first, one line over fifty. Six skills and slash commands for lazy coding, diff review, whole-repo audit, shortcut-debt ledger, and measured impact. Port of DietrichGebert/ponytail (MIT).",
+        "zh-CN": "懒惰资深开发模式：用完全解决问题的最小变更。YAGNI、优先标准库、能一行就不写五十行。包含懒人编码、变更审查、全仓库审计、技术债台账、实测收益六组技能与斜杠命令。移植自 DietrichGebert/ponytail（MIT）。"
+      },
+      "category": "productivity",
+      "author": {
+        "name": "Dietrich Gebert (upstream), ZCode port"
+      },
+      "license": "MIT",
+      "homepage": "https://github.com/dietrichgebert/ponytail",
+      "keywords": [
+        "ponytail",
+        "lazy",
+        "yagni",
+        "minimal-code",
+        "code-review",
+        "audit",
+        "tech-debt"
+      ]
     }
   ]
 }
