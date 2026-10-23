@@ -1,0 +1,26 @@
+{
+  "name": "respire",
+  "version": "0.1.0",
+  "description": "respire memory for ZCode: every-round title-tier recall, one-prefix store, model-optional degradation. Register on rsrs.rs for sync; the sidecar model is an optional boost.",
+  "description_i18n": {
+    "en": "respire local encrypted memory: every-round title-tier recall, one-prefix store, Stop storage check. Fully usable without the sidecar model.",
+    "zh-CN": "respire 本地加密记忆：每轮标题档自动召回、一句「记：」落库、Stop 存储检查，不装模型也完全可用。"
+  },
+  "author": {
+    "name": "risense-ai",
+    "url": "https://github.com/risense-ai"
+  },
+  "homepage": "https://github.com/risense-ai/respire-zcode",
+  "repository": "https://github.com/risense-ai/respire-zcode",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "respire",
+    "rsrs",
+    "recall",
+    "hooks",
+    "local-first"
+  ],
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json"
+}

@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" SessionStart || python \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" SessionStart",
+            "timeout": 20,
+            "statusMessage": "respire: injecting memory playbook"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" UserPromptSubmit || python \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" UserPromptSubmit",
+            "timeout": 20,
+            "statusMessage": "respire: recalling memory"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" Stop || python \"${CLAUDE_PLUGIN_ROOT}/hooks/respire.py\" Stop",
+            "timeout": 20,
+            "statusMessage": "respire: checking storage"
+          }
+        ]
+      }
+    ]
+  }
+}
