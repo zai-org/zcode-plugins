@@ -1,0 +1,13 @@
+{
+  "name": "expert-panel",
+  "version": "0.1.2",
+  "description": "专家团共识评审：多位不同视角专家独立作答→真匿名互评→仲裁归纳（共识率脚本计算、不足自动加辩）→主席综合→事实复核；quick/standard/deep 三档，零配置，结论按一致/分歧分离绝不硬合成。",
+  "description_i18n": {
+    "en": "Expert-panel consensus review: independent answers from multiple expert lenses → truly anonymous cross-critique → arbitration (consensus rate computed by script, extra debate round below threshold) → chair synthesis → fact verification; quick/standard/deep profiles, zero config, conclusions separate agreed items from explicit disagreements.",
+    "zh-CN": "专家团共识评审：多位不同视角专家独立作答→真匿名互评→仲裁归纳（共识率脚本计算、不足自动加辩）→主席综合→事实复核；quick/standard/deep 三档，零配置，结论按一致/分歧分离绝不硬合成。"
+  },
+  "author": { "name": "Zhang24y" },
+  "license": "MIT",
+  "skills": "./skills",
+  "commands": "./commands"
+}
