@@ -1,0 +1,12 @@
+{
+  "name": "regress-guard-market",
+  "description": "regress-guard 个人市场——源码仓即插件根（git pin 自带完整性）",
+  "plugins": [
+    {
+      "name": "regress-guard",
+      "source": "./",
+      "description": "AI 辅助开发的测试回归卡点 + 反脆弱控制体：钩子拦截链/清单状态机/知识层/提交门禁",
+      "version": "1.81.0"
+    }
+  ]
+}

@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -793,7 +796,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -816,7 +821,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -843,7 +850,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -870,7 +879,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -897,7 +908,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -924,7 +937,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -951,7 +966,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -978,7 +995,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1005,7 +1024,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1032,7 +1053,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1115,7 +1138,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1386,6 +1411,22 @@
         "unity-cli",
         "skills"
       ]
+    },
+    {
+      "name": "regress-guard",
+      "source": "./external_plugins/regress-guard",
+      "version": "1.98.2",
+      "displayName": "regress-guard",
+      "displayName_i18n": {
+        "en": "regress-guard",
+        "zh-CN": "回归守卫"
+      },
+      "description": "AI-coding governance gate for ZCode: pre-commit test enforcement, manifest-boundary guard, six-layer trust surface, assumption ledger, and FP-calibrated telemetry.",
+      "description_i18n": {
+        "en": "AI-coding governance gate for ZCode: pre-commit test enforcement, manifest-boundary guard, six-layer trust surface, assumption ledger, and FP-calibrated telemetry.",
+        "zh-CN": "AI 辅助开发治理门禁：提交前测试强制（不信 AI 自报的 done）、清单边界事前拦截、六层信任面、假设账本与误报校准遥测。"
+      },
+      "category": "developer-tools"
     }
   ]
 }

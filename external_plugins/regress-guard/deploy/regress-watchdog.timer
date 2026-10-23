@@ -1,0 +1,10 @@
+[Unit]
+Description=regress-guard 看门狗定时（每小时治理链体检）
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

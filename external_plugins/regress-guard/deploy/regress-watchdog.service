@@ -1,0 +1,6 @@
+[Unit]
+Description=regress-guard 链外看门狗（钩子链死亡时的独立报警腿）
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh %h/.zcode/workspace/default/regress-guard/deploy/watchdog.sh

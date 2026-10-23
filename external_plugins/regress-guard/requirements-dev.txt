@@ -1,0 +1,5 @@
+# regress-guard 开发/自测依赖（运行时零三方依赖——filelock 缺席自动降级，见
+# pre_commit_guard v1.95.1 ImportError 分支；本清单只服务跑自家测试套件）
+pytest>=7
+anyio>=3
+filelock>=3
