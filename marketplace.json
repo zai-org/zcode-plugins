@@ -793,7 +793,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -816,7 +818,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -843,7 +847,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -870,7 +876,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -897,7 +905,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -924,7 +934,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -951,7 +963,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -978,7 +992,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1005,7 +1021,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1032,7 +1050,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1218,6 +1238,31 @@
         "ue",
         "mcp",
         "game-development"
+      ]
+    },
+    {
+      "name": "usage-detail",
+      "source": "./external_plugins/usage-detail",
+      "version": "0.30.5",
+      "description": "Per-request usage analytics for ZCode: live dashboard & side-panel with token/cost/cache breakdown, 5h windows, budget alerts, vendor quotas. Read-only, zero model overhead, zh/en.",
+      "displayName": "Usage Detail",
+      "displayName_i18n": {
+        "zh-CN": "用量明细"
+      },
+      "description_i18n": {
+        "en": "Per-request usage analytics for ZCode: live dashboard & side-panel with token/cost/cache breakdown, 5h windows, budget alerts, vendor quotas. Read-only, zero model overhead, zh/en.",
+        "zh-CN": "逐条用量分析：实时仪表盘与会话侧栏，token 构成、折算成本、缓存率与 5h 计费窗口；预算燃烧告警与多厂商配额。只读本地数据、零模型开销、中英双语。"
+      },
+      "category": "developer-tools",
+      "icon": "https://raw.githubusercontent.com/axdlee/zcode-usage-detail/main/assets/usage-detail/icon.png",
+      "license": "MIT",
+      "keywords": [
+        "usage",
+        "tokens",
+        "cost",
+        "dashboard",
+        "quota",
+        "analytics"
       ]
     },
     {
