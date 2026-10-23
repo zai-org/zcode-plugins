@@ -1,0 +1,61 @@
+{
+  "name": "zcode-token-usage-statusbar",
+  "version": "1.5.3",
+  "description": "ZCode token usage query via the token_usage MCP tool, /usage command, and skill (reads the local usage DB). By default auto-installs the desktop floating usage status bar (modifies app.asar; fully quit and reopen ZCode to take effect; opt-out respected). Appends a per-answer rate line at the end of each reply (rendered deterministically via the renderer bridge; tok/s, TTFT, output tokens).",
+  "author": {
+    "name": "xhwxt/ByteRax"
+  },
+  "homepage": "https://github.com/ByteRax/zcode-token-usage-statusbar",
+  "repository": "https://github.com/ByteRax/zcode-token-usage-statusbar",
+  "license": "MIT",
+  "keywords": [
+    "token",
+    "usage",
+    "statusbar",
+    "monitor",
+    "zusage"
+  ],
+  "commands": "commands",
+  "skills": "skills",
+  "packageLayout": {
+    "schemaVersion": 1,
+    "files": [
+      "LICENSE",
+      "marketplace.json",
+      "plugins/zcode-token-usage-statusbar/.claude-plugin/plugin.json",
+      "plugins/zcode-token-usage-statusbar/.mcp.json",
+      "plugins/zcode-token-usage-statusbar/.zcode-plugin/plugin.json",
+      "plugins/zcode-token-usage-statusbar/README.md",
+      "plugins/zcode-token-usage-statusbar/commands/install-overlay.md",
+      "plugins/zcode-token-usage-statusbar/commands/uninstall-overlay.md",
+      "plugins/zcode-token-usage-statusbar/commands/usage.md",
+      "plugins/zcode-token-usage-statusbar/hooks/hooks.json",
+      "plugins/zcode-token-usage-statusbar/hooks/prompt-submit.py",
+      "plugins/zcode-token-usage-statusbar/hooks/session-start.py",
+      "plugins/zcode-token-usage-statusbar/inject-main.cjs",
+      "plugins/zcode-token-usage-statusbar/install_monitor.py",
+      "plugins/zcode-token-usage-statusbar/overlay.js",
+      "plugins/zcode-token-usage-statusbar/overlay_install.py",
+      "plugins/zcode-token-usage-statusbar/patch_install.py",
+      "plugins/zcode-token-usage-statusbar/plugin-release.cjs",
+      "plugins/zcode-token-usage-statusbar/plugin-storage.cjs",
+      "plugins/zcode-token-usage-statusbar/plugin-updater.cjs",
+      "plugins/zcode-token-usage-statusbar/plugin_auto_update.py",
+      "plugins/zcode-token-usage-statusbar/quota-client.cjs",
+      "plugins/zcode-token-usage-statusbar/release_unpack.py",
+      "plugins/zcode-token-usage-statusbar/renderer_bridge.py",
+      "plugins/zcode-token-usage-statusbar/restart_notice.py",
+      "plugins/zcode-token-usage-statusbar/runtime_lock.py",
+      "plugins/zcode-token-usage-statusbar/skills/zcode-token-usage/SKILL.md",
+      "plugins/zcode-token-usage-statusbar/token_rate.py",
+      "plugins/zcode-token-usage-statusbar/turn-stats.js",
+      "plugins/zcode-token-usage-statusbar/usage_mcp.py",
+      "plugins/zcode-token-usage-statusbar/usage_stats.py",
+      "plugins/zcode-token-usage-statusbar/zusage.py"
+    ]
+  },
+  "description_i18n": {
+    "en": "ZCode token usage query via the token_usage MCP tool, /usage command, and skill (reads the local usage DB). By default auto-installs the desktop floating usage status bar (modifies app.asar; fully quit and reopen ZCode to take effect; opt-out respected). Appends a per-answer rate line at the end of each reply (rendered deterministically via the renderer bridge; tok/s, TTFT, output tokens).",
+    "zh-CN": "ZCode token 用量查询（token_usage MCP 工具 + /usage 命令 + 技能，读本地 usage 数据库）；缺配置文件或缺字段时默认为桌面客户端自动安装/修复悬浮用量状态条（修改 app.asar，成功后需完全退出并重开；显式 false 保留，环境变量优先，卸载豁免阻止重注入，无环境变量覆盖时损坏/非布尔配置不开启）；每次回答末尾自动追加逐问速率行（由前端确定性渲染，依赖 renderer 桥；即时 tok/s 含思考、首字延迟、输出 token、生成耗时、段数/峰值与会话累计，--current 守卫防旧数据充数）。"
+  }
+}

@@ -1409,6 +1409,36 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "zcode-token-usage-statusbar",
+      "displayName": "Token Usage Statusbar",
+      "displayName_i18n": {
+        "en": "Token Usage Statusbar",
+        "zh-CN": "Token 用量状态栏"
+      },
+      "source": "./external_plugins/zcode-token-usage-statusbar",
+      "description": "ZCode token usage query via the token_usage MCP tool, /usage command, and skill (reads the local usage DB). By default auto-installs the desktop floating usage status bar (modifies app.asar; fully quit and reopen ZCode to take effect; opt-out respected). Appends a per-answer rate line at the end of each reply (rendered deterministically via the renderer bridge; tok/s, TTFT, output tokens).",
+      "description_i18n": {
+        "en": "ZCode token usage query via the token_usage MCP tool, /usage command, and skill (reads the local usage DB). By default auto-installs the desktop floating usage status bar (modifies app.asar; fully quit and reopen ZCode to take effect; opt-out respected). Appends a per-answer rate line at the end of each reply (rendered deterministically via the renderer bridge; tok/s, TTFT, output tokens).",
+        "zh-CN": "ZCode token 用量查询（token_usage MCP 工具 + /usage 命令 + 技能，读本地 usage 数据库）；缺配置文件或缺字段时默认为桌面客户端自动安装/修复悬浮用量状态条（修改 app.asar，成功后需完全退出并重开；显式 false 保留，环境变量优先，卸载豁免阻止重注入，无环境变量覆盖时损坏/非布尔配置不开启）；每次回答末尾自动追加逐问速率行（由前端确定性渲染，依赖 renderer 桥；即时 tok/s 含思考、首字延迟、输出 token、生成耗时、段数/峰值与会话累计，--current 守卫防旧数据充数）。"
+      },
+      "version": "1.5.3",
+      "author": {
+        "name": "ByteRax",
+        "url": "https://github.com/ByteRax"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "token",
+        "usage",
+        "statusbar",
+        "monitor",
+        "zusage"
+      ],
+      "homepage": "https://github.com/ByteRax/zcode-token-usage-statusbar",
+      "repository": "https://github.com/ByteRax/zcode-token-usage-statusbar",
+      "license": "MIT"
     }
   ]
 }

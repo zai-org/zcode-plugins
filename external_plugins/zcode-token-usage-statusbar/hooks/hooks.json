@@ -1,0 +1,32 @@
+{
+  "description": "zcode-token-usage-statusbar: 会话启动时同步运行时文件;缺配置文件或缺 plugin_auto_install_overlay 字段时默认自动安装/修复悬浮状态条,会修改 app.asar,成功后需完全退出并重开;显式 false 保留,ZUSAGE_PLUGIN_AUTO_INSTALL=1/0 优先于配置,卸载豁免仍阻止重注入;无环境变量覆盖时损坏/非布尔配置不开启;自动安装失败时用 install-overlay 兜底;仅已注入且待加载时提醒重启,uninstall-overlay 可豁免提醒;每次提问记录时刻并注入上一轮速率背景行(回答末尾统计行由前端确定性渲染,依赖 renderer 桥,--current 守卫防止拿上一轮数据充数);hook 解释器按 python3→python→py -3 自动回退(Windows 无 python3 别名)",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": true,
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.py\" || python \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.py\" || py -3 \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.py\"",
+            "timeoutMs": 60000,
+            "statusMessage": "zcode-token-usage-statusbar: 检查悬浮状态条…"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": true,
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/prompt-submit.py\" || python \"${ZCODE_PLUGIN_ROOT}/hooks/prompt-submit.py\" || py -3 \"${ZCODE_PLUGIN_ROOT}/hooks/prompt-submit.py\"",
+            "timeoutMs": 8000,
+            "statusMessage": "zcode-token-usage-statusbar: 记录提问时刻…"
+          }
+        ]
+      }
+    ]
+  }
+}
