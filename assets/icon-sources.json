@@ -2552,5 +2552,13 @@
     "homepage": "https://www.liblib.tv",
     "mimeType": "image/png",
     "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
+  },
+  {
+    "name": "prism",
+    "icon": "prism/icon.png",
+    "source": "https://raw.githubusercontent.com/saralaaga/prism/main/prism/assets/icon.svg",
+    "matchedBy": "official-repository-asset",
+    "mimeType": "image/png",
+    "sha256": "a8d57df3856a7e0088f9f7a42d7daa588c3c729b94841ec9c96000bb75233cfa"
   }
 ]
