@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Argo 面板</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; font: 13px/1.6 -apple-system, "PingFang SC", sans-serif;
+         background: transparent; color: #1a1a1a; }
+  @media (prefers-color-scheme: dark) { body { color: #e8e8e8; } }
+  h2 { font-size: 14px; margin: 18px 0 8px; }
+  .hint { opacity: .65; font-size: 12px; margin: 0 0 10px; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+         border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+         border-radius: 8px; margin-bottom: 6px; background: color-mix(in srgb, currentColor 4%, transparent); }
+  .row .meta { flex: 1; min-width: 0; }
+  .row .name { font-weight: 600; }
+  .row .desc { opacity: .6; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;
+           border: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+  .badge.paid { color: #c60; border-color: #c60; }
+  .badge.off { opacity: .45; text-decoration: line-through; }
+  .toggle { position: relative; width: 34px; height: 20px; flex-shrink: 0; cursor: pointer; }
+  .toggle input { opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .toggle .knob { position: absolute; inset: 0; border-radius: 10px; background: #8884; transition: .15s; pointer-events: none; }
+  .toggle .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+                         border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #0004; transition: .15s; }
+  .toggle input:checked + .knob { background: #3478f6; }
+  .toggle input:checked + .knob::after { transform: translateX(14px); }
+  input[type=text], input[type=password] { padding: 5px 8px; border-radius: 6px;
+    border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    background: transparent; color: inherit; font: inherit; }
+  button { padding: 5px 12px; border-radius: 6px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+           background: transparent; color: inherit; cursor: pointer; font: inherit; }
+  button:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+  .keyrow { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .keyrow code { flex: 1; font-size: 12px; }
+  .status { font-size: 11px; opacity: .7; margin-top: 4px; min-height: 16px; }
+  .status.err { color: #d33; }
+  #loading { opacity: .6; padding: 24px 0; }
+  .search { width: 100%; margin-bottom: 8px; }
+  details summary { cursor: pointer; opacity: .8; }
+</style>
+</head>
+<body>
+<div id="loading">正在连接 Argo…</div>
+<div id="main" hidden>
+  <p class="hint" id="envhint"></p>
+
+  <h2>密钥</h2>
+  <p class="hint">写入 argo env 文件（chmod 600），值不回显；清除后环境变量或 .env 提供的同名 key 会重新露出。</p>
+  <div id="keys"></div>
+  <div class="keyrow">
+    <input type="text" id="newkey" placeholder="KEY（如 EXA_API_KEY）" style="flex:1">
+    <input type="password" id="newval" placeholder="值" style="flex:1.4">
+    <button id="addkey">保存</button>
+  </div>
+  <div class="status" id="keystatus"></div>
+
+  <h2>引擎开关</h2>
+  <p class="hint">写入 config.local.yaml（argo 本机覆盖层），即时生效；关闭的引擎不再参与路由。</p>
+  <input type="text" class="search" id="search" placeholder="过滤引擎…">
+  <div id="engines"></div>
+  <div class="status" id="engstatus"></div>
+
+  <details>
+    <summary>诊断</summary>
+    <div class="status" id="diag" style="white-space:pre-wrap; margin-top:8px"></div>
+  </details>
+</div>
+
+<script type="module">
+import { App } from "./vendor/ext-apps.mjs";
+
+const app = new App({ name: "argo-panel", version: "2.9.8" });
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function callTool(name, args = {}) {
+  const r = await app.callServerTool({ name, arguments: args });
+  if (r.isError) throw new Error(r.content?.[0]?.text ?? "工具调用失败");
+  return JSON.parse(r.content?.[0]?.text ?? "{}");
+}
+
+async function refresh() {
+  const data = await callTool("get_panel");
+  $("envhint").textContent = `argo env：${data.env_file ?? "未找到"}`;
+  $("diag").textContent = JSON.stringify({ env_file: data.env_file, keys: data.configured_keys.length, engines: data.engines.length }, null, 2);
+  renderKeys(data.configured_keys);
+  window.__engines = data.engines;
+  renderEngines($("search").value);
+}
+
+function renderKeys(keys) {
+  $("keys").innerHTML = keys.map((k) => `
+    <div class="keyrow">
+      <code>${esc(k)}</code>
+      <span class="badge">已配置</span>
+      <button data-unset="${esc(k)}">清除</button>
+    </div>`).join("") || `<p class="hint">（尚无面板写入的 key；凭据库/.env 提供的密钥不在面板显示范围）</p>`;
+  $("keys").querySelectorAll("[data-unset]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      try {
+        await callTool("unset_env", { key: b.dataset.unset });
+        $("keystatus").textContent = `已清除 ${b.dataset.unset}`;
+        await refresh();
+      } catch (e) { $("keystatus").textContent = "清除失败：" + e.message; $("keystatus").className = "status err"; }
+    }));
+}
+
+function renderEngines(filter = "") {
+  const f = filter.trim().toLowerCase();
+  const list = (window.__engines ?? []).filter((e) =>
+    !f || e.name.toLowerCase().includes(f) || e.label.toLowerCase().includes(f));
+  $("engines").innerHTML = list.slice(0, 120).map((e) => `
+    <div class="row">
+      <label class="toggle"><input type="checkbox" data-engine="${esc(e.name)}" ${e.enabled ? "checked" : ""}><span class="knob"></span></label>
+      <div class="meta">
+        <div class="name ${e.enabled ? "" : "off"}">${esc(e.label)} <span style="opacity:.5;font-weight:400">${esc(e.name)}</span></div>
+        <div class="desc">${esc(e.desc)}</div>
+      </div>
+      ${e.explicit_only ? '<span class="badge">显式</span>' : ""}
+      <span class="badge ${e.cost_tier === "free" ? "" : "paid"}">${esc(e.cost_tier ?? "?")}</span>
+    </div>`).join("") + (list.length > 120 ? `<p class="hint">仅显示前 120 条，用上方过滤框收窄。</p>` : "");
+  $("engines").querySelectorAll("[data-engine]").forEach((box) =>
+    box.addEventListener("change", async () => {
+      const name = box.dataset.engine;
+      try {
+        await callTool("set_engine", { name, enabled: box.checked });
+        $("engstatus").textContent = `${name} → ${box.checked ? "启用" : "停用"}（已写覆盖层）`;
+        $("engstatus").className = "status";
+        const e = (window.__engines ?? []).find((x) => x.name === name);
+        if (e) e.enabled = box.checked;
+      } catch (err2) {
+        $("engstatus").textContent = `保存失败：${err2.message}`;
+        $("engstatus").className = "status err";
+        box.checked = !box.checked;
+      }
+    }));
+}
+
+$("search").addEventListener("input", () => renderEngines($("search").value));
+$("addkey").addEventListener("click", async () => {
+  const key = $("newkey").value.trim(), value = $("newval").value;
+  if (!key || !value) { $("keystatus").textContent = "KEY 与值都要填"; $("keystatus").className = "status err"; return; }
+  try {
+    await callTool("set_env", { key, value });
+    $("keystatus").textContent = `已保存 ${key}`;
+    $("keystatus").className = "status";
+    $("newkey").value = ""; $("newval").value = "";
+    await refresh();
+  } catch (e) { $("keystatus").textContent = "保存失败：" + e.message; $("keystatus").className = "status err"; }
+});
+
+try {
+  await app.connect();
+  $("loading").hidden = true;
+  $("main").hidden = false;
+  await refresh();
+} catch (e) {
+  $("loading").textContent = "连接宿主失败：" + e.message;
+}
+</script>
+</body>
+</html>
