@@ -2552,5 +2552,13 @@
     "homepage": "https://www.liblib.tv",
     "mimeType": "image/png",
     "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
+  },
+  {
+    "name": "tokencare",
+    "icon": "tokencare/icon.png",
+    "source": "generated original artwork for TokenCare (Pillow script: layered context lines compressing into one bar on an indigo-cyan gradient)",
+    "matchedBy": "generated-original",
+    "mimeType": "image/png",
+    "sha256": "3d567d102826140450531f70e4c683cb0bcf556d5b17b529a4edeb356b085180"
   }
 ]

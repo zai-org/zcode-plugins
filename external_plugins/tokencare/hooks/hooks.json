@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/vault.mjs\" record posttooluse",
+            "timeoutMs": 10000,
+            "statusMessage": "TokenCare: recording tool output stats"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/vault.mjs\" record sessionstart",
+            "timeoutMs": 10000,
+            "statusMessage": "TokenCare: checking context vault"
+          }
+        ]
+      }
+    ]
+  }
+}
