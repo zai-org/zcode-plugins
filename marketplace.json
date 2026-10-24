@@ -1409,6 +1409,30 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "uteamup-zcode",
+      "source": "./external_plugins/uteamup-zcode",
+      "description": "Connect ZCode to UteamUP CMMS for read-only work orders, assets, and maintenance data via Model Context Protocol (MCP), signing in with your UteamUP account.",
+      "description_i18n": {
+        "en": "Connect ZCode to UteamUP CMMS for read-only work orders, assets, and maintenance data via Model Context Protocol (MCP), signing in with your UteamUP account.",
+        "zh-CN": "通过 Model Context Protocol（MCP）将 ZCode 连接到 UteamUP CMMS，以只读方式查询工单、资产和维保数据，并使用您自己的 UteamUP 账号登录授权。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "UteamUP",
+        "url": "https://uteamup.com"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/uteamup-zcode/icon.png",
+      "category": "productivity",
+      "keywords": [
+        "mcp",
+        "uteamup",
+        "cmms",
+        "maintenance",
+        "work-orders",
+        "asset-management"
+      ]
     }
   ]
 }
