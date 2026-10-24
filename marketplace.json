@@ -1409,6 +1409,33 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "tokencare",
+      "displayName": "TokenCare",
+      "displayName_i18n": {
+        "en": "TokenCare",
+        "zh-CN": "TokenCare 上下文压缩"
+      },
+      "version": "0.2.2",
+      "source": "./external_plugins/tokencare",
+      "description": "Layered context compression and token optimization: a reversible vault for large tool outputs, duplicate-read detection, model-driven conversation compression, and per-session token statistics.",
+      "description_i18n": {
+        "en": "Layered context compression and token optimization: a reversible vault for large tool outputs, duplicate-read detection, model-driven conversation compression, and per-session token statistics.",
+        "zh-CN": "分层上下文压缩与省 token 优化：可逆的工具输出保险库、重复读取检测、模型驱动的对话压缩与会话 token 统计。"
+      },
+      "category": "developer-tools",
+      "author": {
+        "name": "TokenCare contributors"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/tokencare/icon.png",
+      "keywords": [
+        "context",
+        "compression",
+        "token-optimization",
+        "hooks",
+        "glm"
+      ]
     }
   ]
 }
