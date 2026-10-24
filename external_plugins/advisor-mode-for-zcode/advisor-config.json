@@ -1,0 +1,26 @@
+{
+  "enabled": true,
+  "roles": {
+    "unknownModelRole": "executor",
+    "advisor": {
+      "label": "Frontier Advisor",
+      "agentName": "advisor-reviewer",
+      "uiModelPatterns": ["glm-5.3"]
+    },
+    "executor": {
+      "label": "Fast Executor",
+      "agentName": "flash-executor",
+      "uiModelPatterns": ["flash"]
+    }
+  },
+  "gates": {
+    "planBeforeComplexTask": true,
+    "maxConsecutiveFailures": 2,
+    "mandatoryFinalReview": true,
+    "maxStopContinuations": 2
+  },
+  "defaults": {
+    "simplicityIntensity": "full",
+    "actionFirstOutput": true
+  }
+}
