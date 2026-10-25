@@ -1412,7 +1412,7 @@
     },
     {
       "name": "zcode-herdr-status",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "description": "Opt-in Linux status bridge from ZCode Hooks to the current Herdr pane, with an optional version-pinned metadata adapter.",
       "description_i18n": {
         "en": "Opt-in Linux status bridge from ZCode Hooks to the current Herdr pane, with an optional version-pinned metadata adapter.",

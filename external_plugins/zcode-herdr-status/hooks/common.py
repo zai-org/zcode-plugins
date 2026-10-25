@@ -10,7 +10,7 @@ import stat
 import subprocess
 import sys
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 NAME = 'zcode-herdr-status'
 ROOT = Path(__file__).resolve().parent.parent
 RUN_ENV = 'ZCODE_HERDR_STATUS_RUN'
