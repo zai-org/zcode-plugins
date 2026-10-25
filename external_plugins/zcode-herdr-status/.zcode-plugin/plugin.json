@@ -1,0 +1,19 @@
+{
+  "name": "zcode-herdr-status",
+  "version": "0.2.1",
+  "description": "Opt-in Linux status bridge from ZCode Hooks to the current Herdr pane, with an optional version-pinned metadata adapter.",
+  "description_i18n": {
+    "en": "Opt-in Linux status bridge from ZCode Hooks to the current Herdr pane, with an optional version-pinned metadata adapter.",
+    "zh-CN": "在 Linux 当前 Herdr 窗格中显式启用的 ZCode Hooks 状态桥接，可选用锁定版本的元数据适配器。"
+  },
+  "author": {
+    "name": "Bin Liu"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "herdr",
+    "status",
+    "hooks",
+    "linux"
+  ]
+}
