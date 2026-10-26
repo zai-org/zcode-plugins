@@ -1,4 +1,76 @@
-import type { KernelStatus, SaveState } from "#nb/contract.ts";
+import type { JupyterEnvironment, KernelStatus, SaveState } from "#nb/contract.ts";
+import { KIT_EN, KIT_ZH, type AgentMessage } from "#ui/setup-kit.tsx";
+
+const PACKAGES = ["jupyter-server", "ipykernel"] as const;
+const missingOf = (env: JupyterEnvironment) => (env.python ? env.packages.filter((pkg) => !pkg.version).map((pkg) => pkg.name) : [...PACKAGES]);
+
+function messageEn(env: JupyterEnvironment): AgentMessage {
+  const { python, uv } = env;
+  const missing = missingOf(env);
+  return {
+    lead: "Set up Jupyter for the Jupyter Notebook panel in ZCode.",
+    facts: {
+      title: "The panel checked this workspace:",
+      items: [
+        python
+          ? python.venv
+            ? `Project Python: ${python.executable} (${python.version})${python.uv ? ", managed by uv" : ""}`
+            : `Python: ${python.executable} (${python.version}, ${python.source}); this workspace has no virtual environment`
+          : `No Python interpreter was found (checked ${env.checked.join(", ")})`,
+        ...(python ? [`Missing packages: ${missing.join(", ")}`] : []),
+        ...(uv && !python?.uv ? [`uv${uv.version ? ` ${uv.version}` : ""} is available`] : []),
+      ],
+    },
+    steps: {
+      title: "Please:",
+      items: [
+        python?.venv && env.installCommand
+          ? `Add ${missing.length > 1 ? "both" : missing[0]} to this project's environment: \`${env.installCommand}\`. Do not install into the system Python.`
+          : python
+            ? `Create a virtual environment for this workspace (${uv ? "`uv venv`" : "`python3 -m venv .venv`"}) and install jupyter-server and ipykernel into it. Do not install into the system Python.`
+            : `Install Python 3 for this workspace${uv ? " (for example `uv venv --python 3.12`)" : ""}, then install jupyter-server and ipykernel into its environment.`,
+        python?.venv
+          ? `Confirm with \`${python.executable} -c "import jupyter_server, ipykernel"\`.`
+          : "Confirm that `import jupyter_server, ipykernel` works in that environment.",
+        "Start a server for this workspace with the Jupyter plugin's `start_server` tool.",
+      ],
+    },
+    outro: "The panel connects to the server as soon as it is up.",
+  };
+}
+
+function messageZh(env: JupyterEnvironment): AgentMessage {
+  const { python, uv } = env;
+  const missing = missingOf(env);
+  return {
+    lead: "请为 ZCode 的 Jupyter Notebook 面板配置 Jupyter。",
+    facts: {
+      title: "面板检查了这个工作区：",
+      items: [
+        python
+          ? python.venv
+            ? `项目 Python：${python.executable}（${python.version}）${python.uv ? "，由 uv 管理" : ""}`
+            : `Python：${python.executable}（${python.version}，${python.source}）；工作区没有虚拟环境`
+          : `没有找到 Python 解释器（检查了 ${env.checked.join("、")}）`,
+        ...(python ? [`缺少的包：${missing.join("、")}`] : []),
+        ...(uv && !python?.uv ? [`可用：uv${uv.version ? ` ${uv.version}` : ""}`] : []),
+      ],
+    },
+    steps: {
+      title: "请：",
+      items: [
+        python?.venv && env.installCommand
+          ? `把${missing.length > 1 ? "这两个包" : ` ${missing[0]} `}装进项目环境：\`${env.installCommand}\`。不要装进系统 Python。`
+          : python
+            ? `为这个工作区创建虚拟环境（${uv ? "`uv venv`" : "`python3 -m venv .venv`"}），并把 jupyter-server 和 ipykernel 装进去。不要装进系统 Python。`
+            : `为这个工作区安装 Python 3${uv ? "（例如 `uv venv --python 3.12`）" : ""}，再把 jupyter-server 和 ipykernel 装进它的环境。`,
+        python?.venv ? `用 \`${python.executable} -c "import jupyter_server, ipykernel"\` 确认。` : "确认在该环境中 `import jupyter_server, ipykernel` 可以运行。",
+        "用 Jupyter 插件的 `start_server` 工具为这个工作区启动 server。",
+      ],
+    },
+    outro: "server 启动后，面板会自动连接。",
+  };
+}
 
 const en = {
   locale: "en",
@@ -33,17 +105,28 @@ const en = {
 
   // 缺少 Jupyter
   missingTitle: "Jupyter is not installed in this workspace",
-  missingBody: ["The server needs ", "jupyter-server", " and ", "ipykernel", " in the project's Python."] as [string, string, string, string, string],
-  notFound: "not found",
-  missingBoth: "missing both",
-  missingOne: (name: string) => `missing ${name}`,
-  installLabel: "Install them into the project environment",
-  copy: "Copy",
-  copied: "Copied",
+  missingBody: ["Notebooks run on a Jupyter server. Starting one here needs ", "jupyter-server", " and ", "ipykernel", " in the project’s Python."] as [string, string, string, string, string],
   tryAgain: "Try again",
-  useUv: "Use uv instead",
   uvHint: "uv adds the two packages on top of the project's environment for this session only. Your project is not changed.",
-  back: "Back",
+  // 设置页
+  kit: KIT_EN,
+  setupMessage: messageEn,
+  setupJupyterTitle: "Set up Jupyter for this workspace",
+  workingTitle: "Setting up Jupyter",
+  workingLead: "The agent is installing jupyter-server and ipykernel in the chat. This page updates on its own as each requirement is met.",
+  reqProjectPython: "Project Python",
+  reqPython: "Python",
+  noPython: "No Python interpreter found",
+  managedByUv: "managed by uv",
+  installedIn: (where: string) => `Installed in ${where}`,
+  notInstalledIn: (where: string) => `Not installed in ${where}`,
+  checkedOncePython: "Checked once Python is found",
+  handoffInstall: "Let the agent install them",
+  installYourself: "Install them yourself",
+  useUvSession: "Use uv for this session only",
+  byUrlLong: "Connect to a running server by URL",
+  setUp: "Set up",
+  agentInstalling: "Agent is installing jupyter-server and ipykernel",
 
   // 打开 notebook
   openTitle: "Open a notebook",
@@ -194,17 +277,27 @@ const zh: typeof en = {
   serverStopped: "Server 已停止。",
 
   missingTitle: "当前工作区没有安装 Jupyter",
-  missingBody: ["启动 server 需要项目的 Python 中装有 ", "jupyter-server", " 和 ", "ipykernel", "。"],
-  notFound: "未找到",
-  missingBoth: "两者都缺",
-  missingOne: (name) => `缺少 ${name}`,
-  installLabel: "安装到项目环境中",
-  copy: "复制",
-  copied: "已复制",
+  missingBody: ["Notebook 在 Jupyter Server 上运行。在这里启动 server 需要项目的 Python 中装有 ", "jupyter-server", " 和 ", "ipykernel", "。"],
   tryAgain: "重试",
-  useUv: "改用 uv",
   uvHint: "uv 只在本次会话中把这两个包叠加到项目环境上，不会修改你的项目。",
-  back: "返回",
+  kit: KIT_ZH,
+  setupMessage: messageZh,
+  setupJupyterTitle: "为这个工作区配置 Jupyter",
+  workingTitle: "正在配置 Jupyter",
+  workingLead: "Agent 正在对话中安装 jupyter-server 和 ipykernel。每满足一项要求，这里会自动更新。",
+  reqProjectPython: "项目 Python",
+  reqPython: "Python",
+  noPython: "没有找到 Python 解释器",
+  managedByUv: "由 uv 管理",
+  installedIn: (where) => `已装在 ${where}`,
+  notInstalledIn: (where) => `${where} 中没有安装`,
+  checkedOncePython: "找到 Python 后检查",
+  handoffInstall: "让 Agent 安装",
+  installYourself: "自己安装",
+  useUvSession: "只在本次会话中使用 uv",
+  byUrlLong: "通过 URL 连接正在运行的 server",
+  setUp: "配置",
+  agentInstalling: "Agent 正在安装 jupyter-server 和 ipykernel",
 
   openTitle: "打开 notebook",
   find: "查找 notebook",

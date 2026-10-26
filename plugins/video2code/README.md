@@ -59,7 +59,7 @@ Two stdio MCP servers, declared in both [`.mcp.json`](./.mcp.json) and the plugi
 
 - `ingest_video` — whole-video ingest: deterministic frame extraction into timestamped contact sheets.
 - `clip_video` — higher-density re-look at a specific time window.
-- `still_crops` — crop regions out of a still frame.
+- `still_crops` — crop regions out of a still frame. Crop rectangles use source pixel coordinates and are clipped to the frame; fully outside rectangles produce no image or asset. The `still.py` CLI uses the same bounds.
 - `composite_view` — side-by-side comparison collage of source vs. replica.
 
 **`runtime`** (600 s tool timeout) — serves and feeds the build:

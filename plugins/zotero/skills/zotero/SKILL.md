@@ -12,7 +12,7 @@ Items are addressed by 8-character keys such as `7ERC5QFW`. A PDF is its own att
 ## 1. Orient
 
 - Call `list_collections` first in a conversation about the library. It reports whether Zotero is running, whether writes are possible, the collection tree and saved searches.
-- `zotero_not_running`: ask the user to start Zotero. `local_api_disabled`: tell them to enable *Settings → Advanced → Allow other applications on this computer to communicate with Zotero*. Do not retry in a loop.
+- `zotero_not_running`: Zotero is installed but closed; ask the user to start it (the panel has an *Open Zotero* button). `zotero_not_installed`: Zotero is not on this computer; tell the user, and offer to install it (section 7) — the panel can send you a setup request with the facts it detected. `local_api_disabled`: tell them to enable *Settings → Advanced → Allow other applications on this computer to communicate with Zotero* (the panel shows the steps). Do not retry in a loop.
 
 ## 2. Find and read
 
@@ -48,3 +48,12 @@ Writes go through Zotero's own permission dialog (Zotero 8 or later). The first 
 - `update_item` sets fields and adds/removes tags and collections; `add_note` writes Markdown notes (child notes or standalone); `create_collection` makes collections; `attach_pdf` adds a PDF to an existing item.
 - Ask before bulk changes (many items, removing tags or collections). The plugin cannot delete items; if the user wants something deleted, tell them to do it in Zotero.
 - After writing, mention what changed and where (the panel shows the item).
+
+## 7. Setting up Zotero
+
+When the user asks you to install or update Zotero — usually with the panel's message *Set up Zotero for the Zotero panel*, which lists the operating system, where it looked and the package managers it found — follow its steps:
+
+- Install Zotero 7 or later with the package manager the message names: `brew install --cask zotero` (Homebrew), `winget install --id DigitalScholar.Zotero -e --source winget --accept-source-agreements --accept-package-agreements`, or `flatpak install flathub org.zotero.Zotero`. Otherwise use the official installer from https://www.zotero.org/download/. Ask before using `sudo`.
+- Open Zotero once so it creates its profile (on macOS `open -a Zotero`).
+- The local API switch is a checkbox in Zotero's own settings: walk the user through *Settings → Advanced → Allow other applications on this computer to communicate with Zotero* (on Windows and Linux the menu is *Edit → Settings…*). Do not edit Zotero's preference files.
+- The panel checks again every few seconds and connects by itself; then call `list_collections`.

@@ -128,7 +128,13 @@ export async function installAutomation(server, { directory, workspace, name, fi
     try { return success(await fn(args)); } catch (error) { return failure(error.message); }
   });
   internal("_editor_attach", {}, async () => ({ token: bridge.attach(), workspace, tools: catalog.map((t) => t.name) }));
-  internal("_editor_poll", { token: z.string() }, async ({ token }) => ({ request: await bridge.poll(token) }));
+  server.registerTool("_editor_poll", { inputSchema: { token: z.string() }, _meta: hidden }, async ({ token }) => {
+    try {
+      const request = await bridge.poll(token);
+      // 只有真实任务续期；空长轮询不能让后台页面永久驻留。
+      return { ...success({ request }), ...(request ? { _meta: { "zcode/activity": true } } : {}) };
+    } catch (error) { return failure(error.message); }
+  });
   internal("_editor_reply", { token: z.string(), id: z.string(), result: z.any() }, async ({ token, id, result }) => ({ accepted: bridge.reply(token, id, result) }));
   internal("_editor_detach", { token: z.string() }, async ({ token }) => { bridge.check(token); bridge.close(); outputs.clear(); return {}; });
   internal("_editor_write", { token: z.string(), id: z.string(), path: z.string(), part: z.number().int().min(0), total: z.number().int().min(1).max(64), data: z.string().max(3 * 1024 * 1024) },

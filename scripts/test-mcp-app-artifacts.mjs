@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { assertKicadRuntimeTools, prepareKicadRuntime } from "./prepare-kicad-runtime.mjs";
 import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -47,6 +48,9 @@ try {
         server?.command,
         `${name}/${serverName}: artifact test requires a local stdio server`,
       );
+      const preparedEnv = name === "kicad"
+        ? await prepareKicadRuntime(join(installed, "dist/server.mjs"), temporary)
+        : {};
       const transport = new StdioClientTransport({
         command: server.command === "node" ? process.execPath : expand(server.command),
         args: (server.args ?? []).map(expand),
@@ -55,13 +59,13 @@ try {
           ...Object.fromEntries(
             Object.entries(server.env ?? {}).map(([key, value]) => [key, expand(value)]),
           ),
+          ...preparedEnv,
           PATH: process.env.PATH ?? "",
           HOME: temporary,
           NODE_PATH: "",
           ZCODE_WORKSPACE_ROOT: temporary,
           ZCODE_PLUGIN_ROOT: installed,
           ZCODE_PLUGIN_DATA: join(temporary, `${short}-data`),
-          ZCODE_BLENDER_FAKE_ENGINE: "1",
           ZCODE_DISK_CLEANER_TEST_TRASH: join(temporary, "trash"),
         },
         stderr: "pipe",
@@ -74,7 +78,10 @@ try {
       try {
         await client.connect(transport);
         assert.equal(client.getServerVersion()?.version, manifest.version);
-        if (client.getServerCapabilities()?.tools) await client.listTools();
+        if (client.getServerCapabilities()?.tools || name === "kicad") {
+          const { tools } = await client.listTools();
+          if (name === "kicad") assertKicadRuntimeTools(tools);
+        }
         for (const surface of manifest.ui.surfaces.filter((item) => item.server === serverName)) {
           const page = await client.readResource({ uri: surface.resourceUri });
           const html = page.contents[0]?.text;
@@ -84,7 +91,6 @@ try {
           assert.ok(!html.includes("/*__JS__*/"));
         }
         const create = {
-          blender: { name: "new_scene", arguments: { path: "artifact.blend" } },
           excalidraw: {
             name: "create_diagram",
             arguments: { title: "Artifact test", elements: [] },

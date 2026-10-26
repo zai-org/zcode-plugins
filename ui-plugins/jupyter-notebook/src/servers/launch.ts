@@ -17,6 +17,8 @@ export interface PythonCandidate {
   source: string;
   /** 给人看的写法：工作区内的解释器写成相对路径。 */
   display?: string;
+  /** 所在虚拟环境的目录（工作区虚拟环境、VIRTUAL_ENV、CONDA_PREFIX）。 */
+  venv?: string;
 }
 
 const PROBE = [
@@ -61,13 +63,14 @@ export function pythonCandidates(
   if (configured) list.push({ command: configured, source: "plugin setting" });
   for (const dir of [".venv", "venv", ".env", "env"]) {
     const path = join(workspaceRoot, dir, bin);
-    if (existsSync(path)) list.push({ command: path, source: `workspace ${dir}`, display: `${dir}/${bin}` });
+    if (existsSync(path)) list.push({ command: path, source: `workspace ${dir}`, display: `${dir}/${bin}`, venv: join(workspaceRoot, dir) });
   }
-  if (env.VIRTUAL_ENV) list.push({ command: join(env.VIRTUAL_ENV, bin), source: "VIRTUAL_ENV" });
+  if (env.VIRTUAL_ENV) list.push({ command: join(env.VIRTUAL_ENV, bin), source: "VIRTUAL_ENV", venv: env.VIRTUAL_ENV });
   if (env.CONDA_PREFIX)
     list.push({
       command: join(env.CONDA_PREFIX, platform === "win32" ? "python.exe" : "bin/python"),
       source: "CONDA_PREFIX",
+      venv: env.CONDA_PREFIX,
     });
   for (const name of platform === "win32" ? ["python", "py"] : ["python3", "python"])
     list.push({ command: name, source: "PATH" });
@@ -89,13 +92,23 @@ export function probePython(command: string, timeoutMs = 20_000): Promise<Python
   });
 }
 
-/** 依次探测，返回第一个同时装有 jupyter_server 与 ipykernel 的解释器。 */
-export async function findJupyterPython(
+export interface PythonInspection {
+  /** 第一个同时装有 jupyter_server 与 ipykernel 的解释器。 */
+  found: { candidate: PythonCandidate; probe: PythonProbe } | null;
+  /** 没有找到时的安装目标：第一个能运行的解释器（通常是工作区虚拟环境）。 */
+  target: { candidate: PythonCandidate; probe: PythonProbe } | null;
+  pythons: MissingJupyterDetails["pythons"];
+  report: string[];
+}
+
+/** 依次探测候选解释器，直到找到装有两者的那个。 */
+export async function inspectPythons(
   candidates: PythonCandidate[],
   probe: (command: string) => Promise<PythonProbe | null> = probePython,
-): Promise<{ command: string; probe: PythonProbe }> {
+): Promise<PythonInspection> {
   const report: string[] = [];
   const pythons: MissingJupyterDetails["pythons"] = [];
+  let target: PythonInspection["target"] = null;
   for (const candidate of candidates) {
     const shown = candidate.display ?? candidate.command;
     const result = await probe(candidate.command);
@@ -104,26 +117,38 @@ export async function findJupyterPython(
       pythons.push({ executable: shown, source: candidate.source, version: null, missing: [] });
       continue;
     }
-    if (result.jupyterServer && result.ipykernel) return { command: candidate.command, probe: result };
+    if (result.jupyterServer && result.ipykernel) return { found: { candidate, probe: result }, target: null, pythons, report };
+    target ??= { candidate, probe: result };
     const missing = [!result.jupyterServer && "jupyter-server", !result.ipykernel && "ipykernel"].filter(
       (name): name is string => !!name,
     );
     report.push(`- ${result.executable} (${candidate.source}, Python ${result.version}): missing ${missing.join(" and ")}`);
     pythons.push({ executable: shown, source: candidate.source, version: result.version, missing });
   }
+  return { found: null, target, pythons, report };
+}
+
+/** 依次探测，返回第一个同时装有 jupyter_server 与 ipykernel 的解释器。 */
+export async function findJupyterPython(
+  candidates: PythonCandidate[],
+  probe: (command: string) => Promise<PythonProbe | null> = probePython,
+  installCommand?: (target: PythonCandidate | null) => Promise<string | null>,
+): Promise<{ command: string; probe: PythonProbe }> {
+  const { found, target, pythons, report } = await inspectPythons(candidates, probe);
+  if (found) return { command: found.candidate.command, probe: found.probe };
   // 建议装进第一个能运行的解释器（通常是工作区虚拟环境）。
-  const target = pythons.find((item) => item.version !== null)?.executable ?? "python3";
+  const shown = target ? (target.candidate.display ?? target.candidate.command) : "python3";
   const details: MissingJupyterDetails = {
     checked: report,
     pythons,
-    installCommand: `${target} -m pip install jupyter-server ipykernel`,
+    installCommand: (await installCommand?.(target?.candidate ?? null)) ?? `${shown} -m pip install jupyter-server ipykernel`,
   };
   throw new JupyterError(
     "jupyter_not_installed",
     [
       "No Python environment with jupyter-server and ipykernel was found. Checked:",
       ...report,
-      "Install them into the project's environment (for example `python -m pip install jupyter-server ipykernel`, or `uv pip install jupyter-server ipykernel` in a uv project), pass `python` with the path of an interpreter that has them, or start with `useUv: true` to let uv provide them.",
+      `Install them into the project's environment (\`${details.installCommand}\`), pass \`python\` with the path of an interpreter that has them, or start with \`useUv: true\` to let uv provide them.`,
     ].join("\n"),
     details as unknown as Record<string, unknown>,
   );

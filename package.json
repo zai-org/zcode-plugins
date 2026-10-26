@@ -6,7 +6,7 @@
     "test": "vitest run tests/mcp-app-client.test.ts tests/local-marketplace.test.ts && pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "lint": "oxlint ui-plugins scripts/*.mjs",
-    "test:artifacts": "node scripts/test-mcp-app-artifacts.mjs",
+    "test:artifacts": "node --test scripts/prepare-kicad-runtime.test.mjs && node scripts/test-mcp-app-artifacts.mjs",
     "test:pages": "node scripts/test-mcp-app-pages.mjs",
     "marketplace:local": "node scripts/build-local-marketplace.mjs"
   },

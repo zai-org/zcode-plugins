@@ -45,6 +45,14 @@ const key = async (value) => {
 try {
   await page.goto(fixture.url);
   await saved();
+  await page.waitForFunction(() => window.__latestContext?.structuredContent.documentId === "demo");
+  assert.equal(await page.getByRole("tab").count(), 1);
+  assert.equal(
+    await page
+      .getByRole("tab", { name: "应用启动流程", exact: true })
+      .getAttribute("aria-selected"),
+    "true",
+  );
   assert.ok(
     !(await fixture.client.listTools()).tools.some(
       (tool) => tool.name === "restore_last_agent_edit",
@@ -216,21 +224,159 @@ try {
   await page.locator("#new-document").click();
   await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id !== "demo");
   await saved();
+  const blankId = await page.evaluate(() => window.__excalidrawPanel.state().document.id);
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.api.getAppState().zoom.value), 1);
+  await page.waitForFunction(
+    (id) => window.__latestContext?.structuredContent.documentId === id,
+    blankId,
+  );
+  assert.equal(
+    await page.evaluate(() => window.__latestContext.structuredContent.elementIds),
+    undefined,
+  );
+  // 双击当前标签重命名；取消、空名称及保存都通过真实表单交互。
+  await page.getByRole("tab", { name: "未命名画板", exact: true }).dblclick();
+  await page.locator("#rename-input").fill("Discard this name");
+  await page.keyboard.press("Escape");
+  assert.equal(await page.getByRole("tab", { name: "未命名画板", exact: true }).count(), 1);
+  await page.getByRole("tab", { name: "未命名画板", exact: true }).dblclick();
+  await page.locator("#rename-input").fill("   ");
+  assert.equal(await page.locator("#rename-button").isDisabled(), true);
+  await page.locator("#rename-input").fill("我的新画板");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => !document.querySelector("dialog[open]"));
+  await saved();
+  assert.equal((await fixture.call("read_scene", { id: blankId })).document.title, "我的新画板");
+  await page.waitForFunction(
+    () => window.__latestContext?.structuredContent.title === "我的新画板",
+  );
   await key("ControlOrMeta+z");
   assert.equal(
     await page.evaluate(() => window.__excalidrawPanel.api.getSceneElements().length),
     0,
   );
-  await page.locator(".document-menu summary").click();
-  await page.getByRole("button", { name: "应用启动流程", exact: true }).click();
+  await page.getByRole("tab", { name: "应用启动流程", exact: true }).click();
   await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id === "demo");
   await saved();
+  await page.waitForFunction(() => window.__latestContext?.structuredContent.documentId === "demo");
   assert.equal(await field("box", "backgroundColor"), "#ffc9c9");
+  await page.getByRole("tab", { name: "我的新画板", exact: true }).click();
+  await page.waitForFunction((id) => window.__excalidrawPanel.state().document?.id === id, blankId);
+  await saved();
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.api.getAppState().zoom.value), 1);
+  await page.getByRole("tab", { name: "我的新画板", exact: true }).dblclick();
+  await page.locator("#rename-input").fill("重命名后的画板");
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(() => !document.querySelector("dialog[open]"));
+  await saved();
+  // 快捷新建在菜单外可直接使用；原有画板可通过 tab 返回。
+  await page.locator("#new-document-shortcut").click();
+  await page.waitForFunction((id) => window.__excalidrawPanel.state().document?.id !== id, blankId);
+  await saved();
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.api.getAppState().zoom.value), 1);
+  const widgetState = await page.evaluate(() => window.__pluginClient.widgetState);
+  fixture.setBootstrap({ toolOutput: changed, widgetState });
+  await page.reload();
+  await saved();
+  assert.equal(
+    await page.evaluate(() => window.__excalidrawPanel.state().document.id),
+    widgetState.documentId,
+  );
+  await page.getByRole("tab", { name: "重命名后的画板", exact: true }).waitFor();
+  assert.equal(await page.getByRole("tab").count(), 3);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  // A regular vertical wheel scrolls overflowing tabs without moving the canvas;
+  // native horizontal trackpad gestures still work.
+  const tabs = page.getByRole("tablist");
+  const canvasView = await page.evaluate(() => {
+    const { scrollX, scrollY, zoom } = window.__excalidrawPanel.api.getAppState();
+    return { scrollX, scrollY, zoom };
+  });
+  await tabs.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  await tabs.hover();
+  await page.mouse.wheel(0, 120);
+  await page.waitForFunction(() => document.querySelector(".document-tabs").scrollLeft > 0);
+  await page.mouse.wheel(0, -1200);
+  await page.waitForFunction(() => document.querySelector(".document-tabs").scrollLeft === 0);
+  await page.mouse.wheel(120, 0);
+  await page.waitForFunction(() => document.querySelector(".document-tabs").scrollLeft > 0);
+  assert.deepEqual(
+    await page.evaluate(() => {
+      const { scrollX, scrollY, zoom } = window.__excalidrawPanel.api.getAppState();
+      return { scrollX, scrollY, zoom };
+    }),
+    canvasView,
+  );
+  await page.getByRole("tab", { name: "未命名画板", exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: join(artifacts, "narrow-tabs.png") });
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await page.getByRole("tab", { name: "应用启动流程", exact: true }).click();
+  await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id === "demo");
+  await saved();
+  await page.screenshot({ path: join(artifacts, "wide-tabs.png") });
   const exportData = await readFile(join(fixture.workspace, "diagram.excalidraw"));
   await page
     .locator('input[type="file"]')
     .setInputFiles({ name: "import.excalidraw", mimeType: "application/json", buffer: exportData });
   await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id !== "demo");
+  await saved();
+  assert.equal(await field("box", "backgroundColor"), "#ffc9c9");
+  // Closing tabs preserves documents, the active canvas, and the restored tab list.
+  const importedId = await page.evaluate(() => window.__excalidrawPanel.state().document.id);
+  const diagramIds = (await fixture.call("list_diagrams")).documents.map((doc) => doc.id).sort();
+  await page.getByRole("button", { name: "关闭标签 应用启动流程", exact: true }).click();
+  await page.waitForFunction(() => !document.getElementById("diagram-tab-demo"));
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.state().document.id), importedId);
+  await page.waitForFunction(() => !document.getElementById("new-document-shortcut").disabled);
+  fixture.setBootstrap({
+    toolOutput: changed,
+    widgetState: await page.evaluate(() => window.__pluginClient.widgetState),
+  });
+  await page.reload();
+  await saved();
+  assert.equal(await page.getByRole("tab", { name: "应用启动流程", exact: true }).count(), 0);
+  await page.locator(".document-menu summary").click();
+  await page.locator(".document-list button").filter({ hasText: "应用启动流程" }).click();
+  await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id === "demo");
+  await saved();
+  assert.equal(await field("box", "backgroundColor"), "#ffc9c9");
+  await page.getByRole("button", { name: "关闭标签 应用启动流程", exact: true }).click();
+  await page.waitForFunction(
+    (id) => window.__excalidrawPanel.state().document?.id === id,
+    importedId,
+  );
+  await page.waitForFunction(
+    (id) => window.__latestContext?.structuredContent.documentId === id,
+    importedId,
+  );
+  while (await page.locator(".document-tab-close").count()) {
+    await page.locator(".document-tab-close").first().click();
+    await page.waitForFunction(() => !document.getElementById("new-document-shortcut").disabled);
+  }
+  await page.waitForFunction(() => window.__latestContext?.structuredContent.documentId === null);
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.state().document), null);
+  assert.equal(
+    await page.evaluate(() => window.__excalidrawPanel.api.getSceneElements().length),
+    0,
+  );
+  assert.deepEqual(
+    (await fixture.call("list_diagrams")).documents.map((doc) => doc.id).sort(),
+    diagramIds,
+  );
+  const closedState = await page.evaluate(() => window.__pluginClient.widgetState);
+  assert.equal(closedState.documentId, null);
+  assert.deepEqual(closedState.recentDocumentIds, []);
+  fixture.setBootstrap({ toolOutput: changed, widgetState: closedState });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  assert.equal(await page.evaluate(() => window.__excalidrawPanel.state().document), null);
+  assert.equal(await page.getByRole("tab").count(), 0);
+  await page.screenshot({ path: join(artifacts, "closed-tabs.png") });
+  await page.locator(".document-menu summary").click();
+  await page.locator(".document-list button").filter({ hasText: "应用启动流程" }).click();
+  await page.waitForFunction(() => window.__excalidrawPanel.state().document?.id === "demo");
   await saved();
   assert.equal(await field("box", "backgroundColor"), "#ffc9c9");
   assert.deepEqual(errors, []);

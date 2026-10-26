@@ -27,6 +27,10 @@ tests/test_distribution.py       export-ignore
 tests/test_public_docs.py        export-ignore
 .agents/skills/zcode-plugin-sync/ export-ignore
 .claude/skills/zcode-plugin-sync  export-ignore
+.agents/skills/zcode-plugin-license-review/  export-ignore
+.claude/skills/zcode-plugin-license-review   export-ignore
+.agents/skills/zcode-plugin-review/          export-ignore
+.claude/skills/zcode-plugin-review           export-ignore
 
 plugins/openpencil/licenses/font-NotoNaskhArabic-OFL.txt -whitespace
 

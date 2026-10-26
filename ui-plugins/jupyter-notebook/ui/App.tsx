@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { applyDocumentTheme, applyHostFonts, applyHostStyleVariables } from "@modelcontextprotocol/ext-apps";
-import type { NotebookDoc } from "#nb/contract.ts";
+import type { NotebookDoc, SessionState } from "#nb/contract.ts";
 import { host } from "#ui/bridge.ts";
 import { strings, type Strings } from "#ui/i18n.ts";
 import { Icon } from "#ui/icons.tsx";
@@ -36,8 +36,8 @@ function useHostContext() {
   return { s: strings(context?.locale ?? navigator.language), inline };
 }
 
-/** 对话中的卡片：notebook 概要与“在侧栏打开”。 */
-function InlineCard({ doc, s }: { doc: NotebookDoc | undefined; s: Strings }) {
+/** 对话中的卡片：notebook 概要与“在侧栏打开”；缺少依赖时给出下一步。 */
+function InlineCard({ doc, state, s }: { doc: NotebookDoc | undefined; state: SessionState; s: Strings }) {
   const active = doc?.cells.findIndex((cell) => cell.run?.state === "running") ?? -1;
   const runningCell = active >= 0 ? doc!.cells[active] : undefined;
   const [now, setNow] = useState(Date.now());
@@ -47,6 +47,8 @@ function InlineCard({ doc, s }: { doc: NotebookDoc | undefined; s: Strings }) {
     return () => clearInterval(timer);
   }, [runningCell]);
   const kernel = doc?.kernel;
+  const needsSetup = !doc && state.environment.state === "missing" && !state.servers.some((server) => server.status === "ready");
+  const working = needsSetup && state.setup.handoffAt !== null;
   return (
     <div className="inline-card">
       <div className="tile">
@@ -64,11 +66,23 @@ function InlineCard({ doc, s }: { doc: NotebookDoc | undefined; s: Strings }) {
                 )}
           </div>
         )}
+        {needsSetup && (
+          <div className="sub">
+            <span className={`lamp ${working ? "agent" : "warn"}`} />
+            {working ? s.agentInstalling : s.missingTitle}
+          </div>
+        )}
       </div>
-      <button type="button" className="btn outline" aria-label={s.openPanel} title={s.openPanel} onClick={() => void host.requestFullscreen()}>
-        <Icon name="panel" size={15} />
-        {s.open}
-      </button>
+      {needsSetup && !working ? (
+        <button type="button" className="btn primary" onClick={() => void host.requestFullscreen()}>
+          {s.setUp}
+        </button>
+      ) : (
+        <button type="button" className="btn outline" aria-label={s.openPanel} title={s.openPanel} onClick={() => void host.requestFullscreen()}>
+          <Icon name="panel" size={15} />
+          {s.open}
+        </button>
+      )}
     </div>
   );
 }
@@ -91,7 +105,7 @@ export function App() {
 
   const state = snap.state;
   const doc = snap.active ? snap.docs[snap.active] : undefined;
-  if (inline) return <InlineCard doc={doc} s={s} />;
+  if (inline) return <InlineCard doc={doc} state={state} s={s} />;
 
   const hasServer = state.servers.some((server) => server.status === "ready");
   if (!hasServer && !state.notebooks.length) return <ServerSetup state={state} s={s} />;

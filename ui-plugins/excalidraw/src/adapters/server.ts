@@ -29,7 +29,7 @@ export function createExcalidrawServer({
   workspaceRoot: string;
   assetRoot: string;
 }) {
-  const server = new McpServer({ name: "excalidraw", version: "0.2.2" });
+  const server = new McpServer({ name: "excalidraw", version: "0.3.4" });
   const id = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
   const object = z.record(z.string(), z.unknown());
   const version = { id, expectedRevision: z.number().int().positive(), operationId: id };
@@ -185,8 +185,8 @@ export function createExcalidrawServer({
   );
   register(
     "commit_scene",
-    "Save the editor draft with revision checking.",
-    { ...version, scene: object },
+    "Save the editor draft and optional title with revision checking.",
+    { ...version, scene: object, title: z.string().trim().min(1).max(200).optional() },
     true,
     async (input) => ({
       document: diagramRef(await store.commit({ ...input, scene: validateScene(input.scene) })),

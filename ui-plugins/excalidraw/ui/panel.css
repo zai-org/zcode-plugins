@@ -8,6 +8,13 @@
   --color-menu-hover: #f0f0f0;
   --color-popover: #fff;
   --color-destructive: #b42318;
+  --color-toolbar: #f2f2f7;
+  --color-toolbar-hover: #f1f0ff;
+  --color-toolbar-border: #f1f0ff;
+  --color-toolbar-icon: #1b1b1f;
+  --color-saved: #2f9e44;
+  --color-saving: #b77900;
+  --color-save-error: #e03131;
   --ui-font-size: 14px;
 }
 * {
@@ -49,51 +56,73 @@ body,
   --color-menu-hover: #36373d;
   --color-popover: #292a2f;
   --color-destructive: #ffaaa1;
+  --color-toolbar: hsl(245, 10%, 21%);
+  --color-toolbar-hover: #363541;
+  --color-toolbar-border: hsl(245, 10%, 21%);
+  --color-toolbar-icon: #e3e3e8;
+  --color-saved: #69db7c;
+  --color-saving: #ffd43b;
+  --color-save-error: #ff8787;
 }
 .document-bar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 4px 12px;
   min-height: 40px;
   border-bottom: 1px solid var(--color-border);
 }
 .document-menu {
-  min-width: 0;
-  margin-inline-end: auto;
+  flex: 0 0 auto;
 }
 .document-menu summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
   list-style: none;
 }
 .document-menu summary::-webkit-details-marker {
   display: none;
 }
-#diagram-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-}
 #save-status {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-inline-start: auto;
+  flex: 0 0 20px;
+  height: 32px;
   color: var(--color-foreground-subtle);
 }
-#save-status[data-error="true"] {
-  color: var(--color-destructive);
+#save-status[data-state="saved"] {
+  color: var(--color-saved);
+}
+#save-status[data-state="saving"] {
+  color: var(--color-saving);
+}
+#save-status[data-state="error"] {
+  color: var(--color-save-error);
+}
+.save-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .document-menu-content {
   position: absolute;
-  top: 44px;
+  top: 48px;
   left: 12px;
   z-index: 20;
   width: min(320px, calc(100% - 24px));
-  max-height: calc(100% - 56px);
+  max-height: calc(100% - 60px);
   overflow: auto;
   padding: 4px;
   border: 1px solid var(--color-border);
@@ -125,6 +154,64 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.document-tabs {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.document-tab {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: 224px;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: var(--color-foreground-subtle);
+}
+.document-tab:hover {
+  background: var(--color-menu-hover);
+}
+.document-tab[data-active="true"] {
+  color: var(--color-foreground);
+  border-bottom-color: currentColor;
+  background: var(--color-surface);
+}
+.document-tab [role="tab"] {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px 0 0 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.document-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  height: 24px;
+  margin-inline-end: 4px;
+  padding: 5px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+.document-tab-close:hover:not(:disabled) {
+  background: var(--color-toolbar-hover);
+}
+.document-tab-close svg {
+  width: 14px;
+  height: 14px;
+}
 .canvas-host {
   flex: 1;
   min-height: 0;
@@ -145,7 +232,7 @@ body,
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
-.document-bar button,
+.document-menu-content button,
 .panel-dialog button,
 .notice button {
   font: inherit;
@@ -157,11 +244,33 @@ body,
   min-height: 28px;
   flex-shrink: 0;
 }
-.document-bar button:hover:not(:disabled),
-.document-menu summary:hover,
+.document-menu-content button:hover:not(:disabled),
 .panel-dialog button:hover:not(:disabled),
 .notice button:hover:not(:disabled) {
   background: var(--color-menu-hover);
+}
+.document-bar .toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  padding: 9px;
+  border: 1px solid var(--color-toolbar-border);
+  border-radius: 8px;
+  background: var(--color-toolbar);
+  color: var(--color-toolbar-icon);
+}
+.document-bar .toolbar-button svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.document-bar .toolbar-button:hover:not(:disabled),
+.document-menu[open] > .toolbar-button {
+  background: var(--color-toolbar-hover);
 }
 .document-menu-content button[aria-current="true"] {
   background: var(--color-surface);

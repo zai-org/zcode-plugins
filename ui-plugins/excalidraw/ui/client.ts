@@ -3,7 +3,7 @@ import { EmptyResultSchema } from "@modelcontextprotocol/core";
 
 // 此文件属于本插件，只封装页面使用的能力；线协议和类型由官方 SDK 提供。
 export function createClient(
-  app = new App({ name: "excalidraw", version: "0.2.2" }, {}, { autoResize: false }),
+  app = new App({ name: "excalidraw", version: "0.3.4" }, {}, { autoResize: false }),
 ) {
   let toolInput: Record<string, unknown> | null = null;
   let toolOutput: unknown = null;

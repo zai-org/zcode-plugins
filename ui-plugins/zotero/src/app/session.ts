@@ -7,6 +7,7 @@ import {
   ZoteroError,
   type AgentHighlight,
   type Annotation,
+  type HostFacts,
   type AnnotationsDoc,
   type ItemDetail,
   type LibraryId,
@@ -15,6 +16,7 @@ import {
   type PdfInfo,
   type Rect,
   type SessionState,
+  type ZoteroInstall,
 } from "#z/contract.ts";
 import { parseAnnotation, summarize, type RawItem } from "#z/domain/items.ts";
 import { findQuote, rectsFor, sortIndex, textAt, type PageText } from "#z/domain/text.ts";
@@ -27,7 +29,9 @@ import {
   type NewItem,
 } from "#z/metadata/metadata.ts";
 import { PdfStore, isPdf, type PdfText } from "#z/pdf/extract.ts";
+import { detectFacts } from "#z/host/facts.ts";
 import { ZoteroClient } from "#z/zotero/client.ts";
+import { findZotero, launchZotero } from "#z/zotero/install.ts";
 import { Library } from "#z/zotero/library.ts";
 import { Writer } from "#z/zotero/writes.ts";
 
@@ -54,6 +58,10 @@ export interface SessionOptions {
   fetcher?: Fetcher;
   authorizeTimeoutMs?: number;
   log?: (line: string) => void;
+  /** 测试注入：替换本机事实探测、Zotero 安装查找与启动。 */
+  facts?: () => Promise<HostFacts>;
+  findApp?: () => Promise<ZoteroInstall>;
+  launchApp?: () => Promise<string>;
 }
 
 export function resolveColor(color: string | undefined): string {
@@ -86,8 +94,15 @@ export class ZoteroSession {
   private librariesLoaded = false;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
   private polling = false;
+  // 设置页：本机事实、已安装的 Zotero、“已交给 Agent”。
+  private facts: HostFacts | null = null;
+  private factsPending: Promise<void> | null = null;
+  private app: ZoteroInstall | null = null;
+  private handoffAt: number | null = null;
+  private readonly options: SessionOptions;
 
   constructor(options: SessionOptions) {
+    this.options = options;
     this.workspaceRoot = resolve(options.workspaceRoot);
     this.fetcher = options.fetcher ?? fetch;
     this.log = options.log ?? (() => undefined);
@@ -122,6 +137,12 @@ export class ZoteroSession {
       viewSeq: this.viewSeq,
       highlights: this.highlights,
       authorizing: this.client.isAuthorizing,
+      setup: {
+        facts: this.facts,
+        app: this.app,
+        handoffAt: this.handoffAt !== null && Date.now() - this.handoffAt < LIMITS.handoffMs ? this.handoffAt : null,
+        address: new URL(this.client.baseUrl).host,
+      },
     };
   }
 
@@ -130,7 +151,20 @@ export class ZoteroSession {
   // -------------------------------------------------------------------------
 
   async ready() {
-    await this.client.ensureReady();
+    try {
+      await this.client.ensureReady();
+    } catch (error) {
+      // Zotero 没有运行时，区分“根本没装”：Agent 应该帮用户安装，而不是让用户去打开它。
+      if (error instanceof ZoteroError && error.code === "zotero_not_running") {
+        await this.checkSetup();
+        if (this.app?.state === "missing")
+          throw new ZoteroError(
+            "zotero_not_installed",
+            `Zotero is not installed on this computer (looked in ${this.app.searched.join(", ")}). It needs the Zotero desktop app, version 7 or later, from https://www.zotero.org/download/ — offer to install it, then ask the user to turn on Settings → Advanced → "Allow other applications on this computer to communicate with Zotero".`,
+          );
+      }
+      throw error;
+    }
     if (!this.librariesLoaded) await this.refreshLibraries();
   }
 
@@ -144,14 +178,21 @@ export class ZoteroSession {
     }
   }
 
-  /** 检查一次：Zotero 是否在运行、各库版本是否变化。 */
+  /** 检查一次：Zotero 是否在运行、各库版本是否变化；未就绪时同时检查本机是否装了 Zotero。 */
   async poll() {
     if (this.polling) return;
     this.polling = true;
     try {
       const before = this.client.status.state;
       const status = await this.client.probe();
-      if (status.state !== "ready") return;
+      if (status.state !== "ready") {
+        await this.checkSetup();
+        return;
+      }
+      if (this.handoffAt !== null) {
+        this.handoffAt = null;
+        this.emit({ kind: "state" });
+      }
       if (before !== "ready" || !this.librariesLoaded) await this.refreshLibraries();
       for (const library of this.libraries) {
         const { changed } = await this.library.checkVersion(library.id).catch(() => ({ changed: false }));
@@ -180,6 +221,53 @@ export class ZoteroSession {
 
   close() {
     this.watch(false);
+  }
+
+  // -------------------------------------------------------------------------
+  // 设置页：本机事实、已安装的 Zotero、交给 Agent、打开 Zotero
+  // -------------------------------------------------------------------------
+
+  /** Zotero 未就绪时：本机事实（只探测一次）与安装情况（每次轮询，文件检查很便宜）。 */
+  private async checkSetup() {
+    if (!this.facts) {
+      this.factsPending ??= (this.options.facts ?? (() => detectFacts()))()
+        .then((facts) => {
+          this.facts = facts;
+          this.emit({ kind: "state" });
+        })
+        .catch((error) => this.log(`could not detect host facts: ${error}`))
+        .finally(() => (this.factsPending = null));
+    }
+    try {
+      const { state, path, version, searched } = await (this.options.findApp ?? findZotero)();
+      const app: ZoteroInstall = { state, ...(path ? { path } : {}), ...(version ? { version } : {}), searched };
+      if (JSON.stringify(app) !== JSON.stringify(this.app)) {
+        this.app = app;
+        this.emit({ kind: "state" });
+      }
+    } catch (error) {
+      this.log(`could not look for the Zotero app: ${error}`);
+    }
+  }
+
+  /** 设置页的“重新检查”：立即探测一次。 */
+  async recheck() {
+    await this.poll();
+    if (this.client.status.state !== "ready") await this.checkSetup();
+  }
+
+  /** 面板把安装交给了 Agent：设置页据此显示“正在设置”，直到 Zotero 就绪。 */
+  handoff() {
+    if (this.client.status.state === "ready") return;
+    this.handoffAt = Date.now();
+    this.emit({ kind: "state" });
+  }
+
+  /** 打开已安装的 Zotero；它启动后由轮询发现。 */
+  async launchApp(): Promise<string> {
+    const path = await (this.options.launchApp ?? launchZotero)();
+    this.log(`started Zotero (${path})`);
+    return path;
   }
 
   // -------------------------------------------------------------------------
@@ -658,10 +746,19 @@ export class ZoteroSession {
         parent = next;
       }
     }
-    if (real !== root && !real.startsWith(root + sep))
+    if (!isInside(root, real))
       throw new ZoteroError("path_outside_workspace", `${path} is outside the workspace (${this.workspaceRoot}).`);
     return real;
   }
+}
+
+/**
+ * target 是否在 root 之中（含 root 本身）。用 relative 判断：root 为盘符根目录（如 D:\）时也成立，
+ * Windows 上不区分大小写，跨盘符时 relative 返回绝对路径。
+ */
+export function isInside(root: string, target: string, path: Pick<typeof import("node:path"), "relative" | "isAbsolute" | "sep"> = { relative, isAbsolute, sep }): boolean {
+  const rel = path.relative(root, target);
+  return !path.isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${path.sep}`);
 }
 
 /** 1 起的物理页码（read_fulltext 中的 "page N"）到页序。 */

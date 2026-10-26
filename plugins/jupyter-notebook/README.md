@@ -24,6 +24,7 @@ You can also open the panel from the side pane "+" menu.
 
 ### Panel
 
+- **Setup** when no server is running and the workspace's Python lacks `jupyter-server` or `ipykernel`: the panel checks before you click Start and lists the project Python (and whether uv manages it) and each package. **Send to agent** posts a ready-made message with the right install command (`uv add --dev …` in a uv project, `pip` otherwise) so the agent installs them and starts a server; *Install them yourself* shows the command and *Use uv for this session only*. The panel checks again every few seconds and moves on as soon as the packages are there. Connecting to a running server by URL needs no local install.
 - The panel follows ZCode's theme: colours, fonts and light / dark mode come from the host.
 - One header row: the notebook name opens a switcher for open notebooks, opening and creating notebooks; the kernel status opens the kernel menu.
 - Code, Markdown and raw cells with syntax highlighting; Markdown with LaTeX math.
@@ -66,4 +67,5 @@ pnpm test               # unit tests
 pnpm test:integration   # against a real Jupyter Server
 pnpm smoke              # built MCP server over stdio
 pnpm test:e2e           # panel in Chrome through the official AppBridge host
+pnpm test:setup         # setup page in Chrome with a real uv environment that lacks the packages
 ```

@@ -15,12 +15,13 @@ export function createEditorController(ports: {
 }) {
   let document: Diagram | null = null;
   let draft: Scene | null = null;
+  let draftTitle: string | null = null;
   let saving: Promise<void> | null = null;
   let error: string | null = null;
   let generation = 0;
   const state = (): EditorState => ({
     document,
-    dirty: draft !== null,
+    dirty: draft !== null || draftTitle !== null,
     saving: saving !== null,
     error,
   });
@@ -29,18 +30,21 @@ export function createEditorController(ports: {
   async function flush(): Promise<void> {
     if (saving) return saving;
     if (error) throw new Error(error);
-    if (!draft || !document) return;
+    if ((!draft && draftTitle === null) || !document) return;
     const run = async () => {
-      while (draft && document) {
-        const scene = draft;
+      while ((draft || draftTitle !== null) && document) {
+        const scene = draft ?? document.scene;
+        const title = draftTitle;
         const written = await ports.commit({
           id: document.id,
           expectedRevision: document.revision,
           operationId: crypto.randomUUID(),
           scene,
+          ...(title !== null ? { title } : {}),
         });
         document = written;
         if (draft && fingerprint(draft) === fingerprint(scene)) draft = null;
+        if (draftTitle === title) draftTitle = null;
       }
     };
     saving = run()
@@ -58,6 +62,17 @@ export function createEditorController(ports: {
   return {
     state,
     scene: () => draft ?? document?.scene ?? { elements: [], appState: {}, files: {} },
+    async close() {
+      const nextGeneration = ++generation;
+      await flush();
+      if (nextGeneration !== generation) return;
+      document = null;
+      draft = null;
+      draftTitle = null;
+      error = null;
+      ports.onScene({ elements: [], appState: {}, files: {} }, "reset");
+      emit();
+    },
     async open(id: string, discard = false) {
       const nextGeneration = ++generation;
       // 丢弃只针对未接受的草稿；在途提交必须结束，避免旧 ACK 把新文档切回去。
@@ -73,6 +88,7 @@ export function createEditorController(ports: {
       if (!discard && sameDocument && loaded.revision <= document!.revision) return;
       document = loaded;
       draft = null;
+      draftTitle = null;
       error = null;
       ports.onScene(loaded.scene, sameDocument && !discard ? "update" : "reset");
       emit();
@@ -85,6 +101,16 @@ export function createEditorController(ports: {
       emit();
       // 保存的正确性由 ACK 和版本承担；无需用 debounce 的时长猜测用户是否已经完成编辑。
       if (!error) void flush().catch(() => {});
+    },
+    async rename(title: string) {
+      if (!document) throw new Error("No diagram is open");
+      const trimmed = title.trim();
+      if (!trimmed || trimmed.length > 200)
+        throw new Error("Title must contain 1 to 200 characters");
+      if (trimmed === (draftTitle ?? document.title)) return flush();
+      draftTitle = trimmed;
+      emit();
+      await flush();
     },
     flush,
   };

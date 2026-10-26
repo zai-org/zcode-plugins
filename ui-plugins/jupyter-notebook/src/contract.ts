@@ -1,5 +1,5 @@
 export const PLUGIN_NAME = "jupyter-notebook";
-export const PLUGIN_VERSION = "0.1.0";
+export const PLUGIN_VERSION = "0.2.0";
 /** manifest `mcpServers` 键、`ui.surfaces[].id` 与资源命名空间保持一致。 */
 export const SERVER_NAME = "jupyter-notebook";
 export const SURFACE_ID = "jupyter-notebook";
@@ -9,6 +9,11 @@ export const STATE_URI = "ui://jupyter-notebook/state.json";
 /** 单个 notebook 的完整文档与运行状态。页面订阅它。 */
 export const notebookUri = (id: string) => `ui://jupyter-notebook/notebooks/${id}.json`;
 export const NOTEBOOK_URI_PREFIX = "ui://jupyter-notebook/notebooks/";
+/**
+ * 设置页：check 立即重新检查工作区的 Python，handoff 记下“已交给 Agent”。两者都返回 SessionState。
+ * 用资源而不是工具：宿主对页面发起的工具调用要求审批，读取资源不需要。nonce 让每次读取都到达 server。
+ */
+export const setupUri = (op: "check" | "handoff", nonce: string) => `ui://jupyter-notebook/setup/${op}/${nonce}`;
 
 /** 工具结果、资源与模型摘要的上限。 */
 export const LIMITS = {
@@ -31,6 +36,10 @@ export const LIMITS = {
   toolTimeoutMs: 1_780_000,
   /** 一次编辑批次的最大操作数。 */
   operations: 200,
+  /** 面板打开、还没有可用 server 且缺少依赖时，重新检查工作区 Python 的间隔。 */
+  environmentWatchMs: 4_000,
+  /** “已交给 Agent”在依赖就绪或这段时间后清除。 */
+  handoffMs: 30 * 60_000,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -206,6 +215,49 @@ export interface SessionState {
   current: string | null;
   /** start_server 首先尝试的解释器（工作区内的写成相对路径），供面板说明。 */
   launchPython: string | null;
+  environment: JupyterEnvironment;
+  setup: {
+    /** 面板把安装交给 Agent 的时间；依赖就绪、有可用 server 或 LIMITS.handoffMs 后为 null。 */
+    handoffAt: number | null;
+  };
+}
+
+/**
+ * 工作区能否启动 Jupyter Server：启动前就检查（设置页的要求清单），不必等 start_server 失败。
+ * 与 start_server 按同样的顺序查找解释器。
+ */
+export interface JupyterEnvironment {
+  /** unknown：尚未检查；ready：有解释器同时装有 jupyter-server 与 ipykernel；missing：没有。 */
+  state: "unknown" | "ready" | "missing";
+  /** ready 时为找到的解释器；missing 时为安装目标（第一个能运行的解释器）；一个都没有时为 null。 */
+  python: {
+    /** 给人看的写法：工作区内的写成相对路径。 */
+    executable: string;
+    /** 如 "workspace .venv"、"PATH"。 */
+    source: string;
+    version: string;
+    /** 所在虚拟环境（工作区内的写成相对路径，家目录缩写为 ~）；系统 Python 为 null。 */
+    venv: string | null;
+    /** 由 uv 管理的环境（uv 创建的 venv，或项目有 uv.lock）。 */
+    uv: boolean;
+  } | null;
+  /** 目标解释器中两个包的版本（null 表示未安装）。 */
+  packages: { name: "jupyter-server" | "ipykernel"; version: string | null }[];
+  /** 检查过的解释器（给人看的写法）。 */
+  checked: string[];
+  /** 装进目标环境的命令；没有能运行的解释器时为 null。 */
+  installCommand: string | null;
+  /** 本机的 uv（可以 useUv 启动，或管理项目环境）。 */
+  uv: { path: string; version?: string } | null;
+  checkedAt: number;
+}
+
+/** 本机事实（host/facts.ts 使用）。 */
+export interface HostFacts {
+  os: "macos" | "windows" | "linux" | "other";
+  osName: string;
+  arch: string;
+  tools: { name: string; version?: string; path: string }[];
 }
 
 /** jupyter_not_installed 的 details：检查过的解释器与建议的安装命令。 */

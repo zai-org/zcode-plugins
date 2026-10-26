@@ -79,7 +79,7 @@ describe("tool list", () => {
     expect(names).toEqual(
       [
         "add_item", "add_note", "attach_pdf", "authorize_writes", "cite", "clear_highlights", "create_collection", "export_bib", "find_in_pdf",
-        "get_item", "highlight", "list_collections", "open_item", "panel_refresh", "read_fulltext", "save_highlights", "search_annotations",
+        "get_item", "highlight", "list_collections", "open_item", "panel_launch_zotero", "panel_refresh", "read_fulltext", "save_highlights", "search_annotations",
         "search_library", "show_items", "update_item",
       ].sort(),
     );

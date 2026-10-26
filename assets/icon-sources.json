@@ -1920,7 +1920,7 @@
     "matchedBy": "official-repository-asset",
     "homepage": "https://www.tripo3d.ai",
     "mimeType": "image/png",
-    "sha256": "60f06a7443bb74f962c3095e6c63bb68b76c4d345c3e7cf2e22831720e080d1f",
+    "sha256": "a85e05cad881498c048a4ce6bcef99b6eb3bcb89172d446a577207102f55057b",
     "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
@@ -1961,6 +1961,15 @@
     "matchedBy": "official-github-organization-avatar",
     "mimeType": "image/png",
     "sha256": "a8384578a86e4e7ae1fe273572ffff566d748c98b7eb6eff1321294005bd8b2b"
+  },
+  {
+    "name": "unreal-engine",
+    "icon": "unreal-engine/icon.png",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/4d29a35c954699b389a834aacc97dd6e7e74143c/icons/unrealengine.svg",
+    "matchedBy": "brand-vector-mirror-solid-black-background",
+    "homepage": "https://www.unrealengine.com/en-US/branding",
+    "mimeType": "image/png",
+    "sha256": "8f384cbb86e11b04a0ad257319efcb58a9cad2fac21362c883e4cb7e9bc65d53"
   },
   {
     "name": "unreal-engine-skills-for-claude-code",
@@ -2506,5 +2515,49 @@
     "source": "https://github.com/luochang212/zcode-autoresearch/blob/main/assets/icon.svg",
     "mimeType": "image/png",
     "sha256": "1375e75102719077b460f4b6add3b0c49b7d2c506c6700eb102cfdc50a6e7118"
+  },
+  {
+    "name": "zcode-site",
+    "icon": "zcode-site/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "9d7f32e5bf2e0bf1f1b1967268534090c611fd308659a0360c1c729b35553d7d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "anet",
+    "icon": "anet/icon.png",
+    "source": "https://avatars.githubusercontent.com/u/305781773?s=256&v=4",
+    "matchedBy": "official-github-organization-avatar",
+    "homepage": "https://agentnetwork.org.cn",
+    "mimeType": "image/png",
+    "sha256": "2ff11555dd0be1f5efeac9005014770d2898f220d20367da32ba4434566d2a68"
+  },
+  {
+    "name": "kicad",
+    "icon": "kicad/icon.png",
+    "source": "Original artwork drawn for this plugin: ui-plugins/kicad/ui/src/logo.svg (a chat bubble holding a PCB trace with pads and a via; the same file is inlined in the panel header), rendered to PNG with headless Chrome; contains no KiCad logo or other third-party image",
+    "matchedBy": "original-artwork",
+    "mimeType": "image/png",
+    "sha256": "0df90e74c4865fda417b2ccb0f95266a6392834ccb449fc1602bb059482d62ad",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "unity",
+    "icon": "unity/icon.png",
+    "source": "https://github.com/Unity-Technologies.png?size=256",
+    "matchedBy": "official-github-organization-avatar",
+    "homepage": "https://unity.com",
+    "mimeType": "image/png",
+    "sha256": "300cc9cf57b29fe09b43e587b23f563c390bb67242227524acfcc28fc477f4f7"
+  },
+  {
+    "name": "libtv-cli",
+    "icon": "libtv-cli/icon.png",
+    "source": "https://www.liblib.tv/pwa/libtv/icon-512.png",
+    "matchedBy": "official-pwa-icon-512",
+    "homepage": "https://www.liblib.tv",
+    "mimeType": "image/png",
+    "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
   }
 ]

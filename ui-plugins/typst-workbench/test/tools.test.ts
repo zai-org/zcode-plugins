@@ -10,7 +10,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ResourceUpdatedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { createTypstMcpServer } from "#t/adapters/server.ts";
 import { TypstSession } from "#t/app/session.ts";
-import { STATE_URI, URIS, type SessionState, type Toolchain } from "#t/contract.ts";
+import { STATE_URI, URIS, type HostFacts, type SessionState, type Toolchain } from "#t/contract.ts";
 import { pdfjsDataDir } from "#t/pdf/extract.ts";
 
 const FAKE = resolve(dirname(fileURLToPath(import.meta.url)), "fake-typst.mjs");
@@ -35,7 +35,7 @@ afterEach(async () => {
 
 async function setup(
   files: Record<string, string>,
-  options: { env?: Record<string, string>; dataDir?: string; locate?: () => Promise<Toolchain> } = {},
+  options: { env?: Record<string, string>; dataDir?: string; locate?: () => Promise<Toolchain>; facts?: () => Promise<HostFacts> } = {},
 ): Promise<Setup> {
   const workspace = await mkdtemp(join(tmpdir(), "typst-tools-"));
   for (const [path, text] of Object.entries(files)) {
@@ -49,6 +49,7 @@ async function setup(
     pdfjsDataDir: pdfjsDataDir(),
     env: { ...process.env, ...options.env },
     ...(options.locate ? { locate: options.locate } : {}),
+    facts: options.facts ?? (async () => FACTS),
   });
   const server = createTypstMcpServer({ session, assetRoot: workspace, pdfjsDataDir: pdfjsDataDir() });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -75,6 +76,8 @@ async function setup(
   open.push(result);
   return result;
 }
+
+const FACTS: HostFacts = { os: "macos", osName: "macOS 15.4", arch: "Apple silicon", tools: [{ name: "Homebrew", version: "4.5.2", path: "/opt/homebrew/bin/brew" }] };
 
 const PAPER = {
   "main.typ": '= Introduction\nThe quick brown fox jumps over the lazy dog.\n#include "chapters/one.typ"\nClosing words of the paper.\n',
@@ -264,6 +267,43 @@ describe.skipIf(process.platform === "win32")("tools", () => {
     expect(result.text).toMatch(/^\[typst_missing\] Typst was not found on this computer\. Install Typst \(for example `brew install typst`/);
     expect((await t.call("status")).text).toMatch(/^Typst was not found/);
     expect((await t.state()).toolchain).toEqual({ state: "missing" });
+  });
+
+  it("describes the computer for the setup page and records the hand-off to the agent", async () => {
+    const t = await setup(PAPER, { locate: async () => ({ state: "missing" }) });
+    await t.session.activate();
+    await expect.poll(async () => (await t.state()).setup.facts).toEqual(FACTS);
+    const state = await t.state();
+    expect(state.setup.searched.length).toBeGreaterThan(1);
+    expect(state.setup.handoffAt).toBeNull();
+    const read = async (uri: string): Promise<SessionState> => JSON.parse(((await t.client.readResource({ uri })).contents[0] as { text: string }).text);
+    expect((await read(URIS.setup("handoff", "a1"))).setup.handoffAt).toEqual(expect.any(Number));
+    expect((await t.state()).setup.handoffAt).toEqual(expect.any(Number));
+    await expect(read(URIS.setup("nope" as "check", "a2"))).rejects.toThrow();
+  });
+
+  it("picks up Typst installed while the panel is open and starts the preview", async () => {
+    let toolchain: Toolchain = { state: "missing" };
+    const t = await setup(PAPER, { locate: async () => toolchain });
+    await t.client.subscribeResource({ uri: STATE_URI });
+    await expect.poll(async () => (await t.state()).toolchain.state).toBe("missing");
+    await t.client.readResource({ uri: URIS.setup("handoff", "b1") });
+    toolchain = { state: "ready", path: FAKE, source: "setting", version: "0.14.2" };
+    // 面板打开期间的定时查找发现了 Typst：预览自动开始，“已交给 Agent”清除。
+    await expect.poll(async () => (await t.state()).toolchain.state, { timeout: 8_000 }).toBe("ready");
+    expect((await t.state()).setup.handoffAt).toBeNull();
+    await expect.poll(async () => (await t.state()).snapshot?.pages ?? 0, { timeout: 10_000 }).toBeGreaterThan(0);
+    await t.client.unsubscribeResource({ uri: STATE_URI });
+  });
+
+  it("checks again right away from the setup page", async () => {
+    let toolchain: Toolchain = { state: "missing" };
+    const t = await setup(PAPER, { locate: async () => toolchain });
+    await t.session.activate();
+    toolchain = { state: "ready", path: FAKE, source: "setting", version: "0.14.2" };
+    const state = JSON.parse(((await t.client.readResource({ uri: URIS.setup("check", "c1") })).contents[0] as { text: string }).text) as SessionState;
+    expect(state.toolchain.state).toBe("ready");
+    expect(state.main).toBe("main.typ");
   });
 
   it("stops typst watch processes left by a server that was killed", async () => {

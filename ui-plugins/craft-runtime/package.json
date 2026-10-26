@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "test": "node --test assets.test.mjs bridge.test.mjs snapshot.test.mjs",
-    "typecheck": "node --check chinese-smoke.mjs && node --check assets.mjs && node --check assets.test.mjs && node --check automation-smoke.mjs && node --check automation.mjs && node --check bridge.mjs && node --check bridge.test.mjs && node --check browser-smoke.mjs && node --check build.mjs && node --check client.mjs && node --check compile.mjs && node --check electron-smoke.mjs && node --check extract-catalog.mjs && node --check normalize-wasm.mjs && node --check overlay.mjs && node --check server.mjs && node --check snapshot.mjs && node --check snapshot.test.mjs && node --check toolchain.mjs"
+    "test": "node --test assets.test.mjs bridge.test.mjs snapshot.test.mjs retention.test.mjs",
+    "typecheck": "node --check chinese-smoke.mjs && node --check assets.mjs && node --check assets.test.mjs && node --check automation-smoke.mjs && node --check automation.mjs && node --check bridge.mjs && node --check bridge.test.mjs && node --check browser-smoke.mjs && node --check build.mjs && node --check client.mjs && node --check compile.mjs && node --check electron-smoke.mjs && node --check extract-catalog.mjs && node --check normalize-wasm.mjs && node --check overlay.mjs && node --check retention.test.mjs && node --check server.mjs && node --check snapshot.mjs && node --check snapshot.test.mjs && node --check toolchain.mjs"
   }
 }

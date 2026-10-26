@@ -25,6 +25,7 @@ You can also open the panel from the side pane "+" menu.
 
 ### Panel
 
+- **Setup** when Zotero is not ready: a checklist of the Zotero app, whether it is open and whether its local API is on. If Zotero is missing or too old, **Send to agent** posts a ready-made message (your system, where the panel looked, your package managers) so the agent installs it, and *Install it yourself* shows the command for your system. If it is installed but closed, **Open Zotero** starts it. If the local API is off, the panel shows exactly which box to tick in Zotero's settings. The panel connects by itself as soon as Zotero answers.
 - **Library**: pick My Library, a group library, a collection or a saved search; search titles, authors and years, or full text and notes too; sort; load more. Each row shows the type, authors, year and venue, and a **PDF** chip that opens the reader.
 - **Selecting items**: tick items (Shift-click for a range), then **Add to chat** puts them into the agent's context for your next message, or **Ask** sends your question together with the items.
 - **Item details**: authors, venue, abstract, your annotations and the agent's highlights, notes, fields, collections, tags and attachments; **Show in Zotero** jumps to the item in the Zotero app.
@@ -74,6 +75,7 @@ Tests (from `ui-plugins/zotero`):
 ```sh
 pnpm test        # unit and integration tests against a simulated Zotero local API
 pnpm test:e2e    # built server and panel in Chrome through the official AppBridge host
+pnpm test:setup  # the setup page in Chrome: missing Zotero, hand-off to the agent, Open Zotero, local API off
 pnpm live        # read-only checks against the Zotero running on this computer
 pnpm live --write  # also creates, then deletes, a test collection and items (Zotero asks for permission)
 ```

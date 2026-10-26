@@ -141,16 +141,44 @@ export function createJupyterMcpServer({
   });
   registry.onChange(stateChanged);
 
+  // 面板打开、还没有可用 server 时，定时重新检查工作区的 Python：依赖装好后设置页自动前进。
+  let environmentTimer: ReturnType<typeof setInterval> | null = null;
+  const hasReadyServer = () => registry.list().some((info) => info.status === "ready");
+  const watchEnvironment = (enabled: boolean) => {
+    if (enabled && !environmentTimer) {
+      void registry.checkEnvironment().catch((error) => log(`environment check failed: ${error}`));
+      environmentTimer = setInterval(() => {
+        if (hasReadyServer() || registry.environment().state === "ready") return;
+        void registry.checkEnvironment().catch((error) => log(`environment check failed: ${error}`));
+      }, LIMITS.environmentWatchMs);
+      environmentTimer.unref?.();
+    } else if (!enabled && environmentTimer) {
+      clearInterval(environmentTimer);
+      environmentTimer = null;
+    }
+  };
+
   server.server.setRequestHandler(SubscribeRequestSchema, async ({ params }) => {
     subscribed.add(params.uri);
+    if (params.uri === STATE_URI) watchEnvironment(true);
     return {};
   });
   server.server.setRequestHandler(UnsubscribeRequestSchema, async ({ params }) => {
     subscribed.delete(params.uri);
+    if (params.uri === STATE_URI) watchEnvironment(false);
     return {};
   });
 
+  // 面板把安装交给 Agent 的时间；依赖就绪或有可用 server 后清除。
+  let handoffAt: number | null = null;
+  const currentHandoff = () => {
+    if (handoffAt !== null && (registry.environment().state === "ready" || hasReadyServer() || Date.now() - handoffAt > LIMITS.handoffMs)) handoffAt = null;
+    return handoffAt;
+  };
+
   async function sessionState(): Promise<SessionState> {
+    // 第一次读取前先检查一次，面板不会先显示“启动”再换成“缺少依赖”。
+    if (registry.environment().state === "unknown" && !hasReadyServer()) await registry.checkEnvironment().catch(() => undefined);
     return {
       version: stateVersion,
       servers: registry.list(),
@@ -158,6 +186,8 @@ export function createJupyterMcpServer({
       notebooks: owner.list(),
       current: owner.current,
       launchPython: registry.launchPython(),
+      environment: registry.environment(),
+      setup: { handoffAt: currentHandoff() },
     };
   }
 
@@ -686,6 +716,23 @@ export function createJupyterMcpServer({
   server.registerResource("state", STATE_URI, { mimeType: JSON_MIME }, async () => ({
     contents: [{ uri: STATE_URI, mimeType: JSON_MIME, text: JSON.stringify(await sessionState()) }],
   }));
+  // 设置页：立即重新检查（check）或记下已交给 Agent（handoff）；返回最新状态。
+  server.registerResource(
+    "setup",
+    new ResourceTemplate("ui://jupyter-notebook/setup/{op}/{nonce}", { list: undefined }),
+    { mimeType: JSON_MIME },
+    async (uri, variables) => {
+      const op = String(variables.op);
+      if (op === "check") await registry.checkEnvironment();
+      else if (op === "handoff") {
+        if (registry.environment().state !== "ready" && !hasReadyServer()) {
+          handoffAt = Date.now();
+          stateChanged();
+        }
+      } else throw new JupyterError("invalid_operation", `No setup action ${op}`);
+      return { contents: [{ uri: uri.href, mimeType: JSON_MIME, text: JSON.stringify(await sessionState()) }] };
+    },
+  );
   server.registerResource(
     "notebook",
     new ResourceTemplate(`${NOTEBOOK_URI_PREFIX}{id}.json`, { list: undefined }),

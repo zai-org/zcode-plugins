@@ -1,6 +1,6 @@
 {
   "name": "@zcode/plugin-zotero",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:e2e": "node scripts/e2e.mjs",
     "live": "node scripts/live.mjs",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "test:setup": "node scripts/setup-e2e.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

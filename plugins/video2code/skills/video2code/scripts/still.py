@@ -42,11 +42,12 @@ def main() -> None:
         if crop:
             x, y, w, h = crop
             fh, fw = fr.shape[:2]
-            x, y = max(0, x), max(0, y)
-            fr = fr[y:min(fh, y + h), x:min(fw, x + w)]
-            if fr.size == 0:
+            x0, y0 = max(0, x), max(0, y)
+            x1, y1 = min(fw, x + w), min(fh, y + h)
+            if x1 <= x0 or y1 <= y0:
                 print(f"[WARN] t={t}s 裁剪区域为空 (crop 超界?)")
                 continue
+            fr = fr[y0:y1, x0:x1]
         if a.scale != 1.0:
             fr = cv2.resize(fr, None, fx=a.scale, fy=a.scale,
                             interpolation=cv2.INTER_CUBIC if a.scale > 1 else cv2.INTER_AREA)

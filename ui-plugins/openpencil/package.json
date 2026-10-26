@@ -1,6 +1,6 @@
 {
   "name": "@zcode/plugin-openpencil",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "description": "在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，并让 Agent 通过设计工具协同修改。",
   "license": "MIT",

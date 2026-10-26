@@ -288,7 +288,7 @@ const broken = await startHarness({ workspace: second, env: { ZCODE_PLUGIN_DATA:
 try {
   step("an unusable Typst path explains itself");
   const { outer, frame } = await broken.open("?theme=light&locale=en-US");
-  await frame.locator(".status-screen h2", { hasText: "Typst cannot run" }).waitFor({ timeout: 15_000 });
+  await frame.locator(".setup h1", { hasText: "Typst cannot run" }).waitFor({ timeout: 15_000 });
   assert.match(await frame.locator(".error-box").innerText(), /not an executable file/);
   await shot(outer, "10-typst-error");
   const status = await broken.client.callTool({ name: "check", arguments: {} });

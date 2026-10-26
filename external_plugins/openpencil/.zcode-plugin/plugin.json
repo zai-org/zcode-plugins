@@ -1,0 +1,50 @@
+{
+  "name": "openpencil",
+  "version": "0.3.2",
+  "description": "在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。",
+  "author": {
+    "name": "zcoder"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "design": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "ZCODE_OPENPENCIL_ENABLE_EVAL": "${user_config.enableEval}"
+      }
+    }
+  },
+  "userConfig": {
+    "enableEval": {
+      "type": "boolean",
+      "title": "允许 eval 工具（任意 Figma Plugin API 脚本）",
+      "description": "开启后 Agent 可通过 eval 在设计稿上执行任意 JavaScript；默认关闭。",
+      "default": false
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "design",
+        "title": {
+          "zh-CN": "设计稿",
+          "en-US": "Design"
+        },
+        "icon": "pencil",
+        "server": "design",
+        "resourceUri": "ui://openpencil/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "Edit design files with OpenPencil and MCP tools.",
+    "zh-CN": "在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。"
+  }
+}

@@ -1,4 +1,4 @@
-export function startFakeZotero(options?: { writes?: boolean; authorize?: "always" | "once" | "deny" | "hang"; apiEnabled?: boolean; version?: string }): Promise<{
+export function startFakeZotero(options?: { writes?: boolean; authorize?: "always" | "once" | "deny" | "hang"; apiEnabled?: boolean; version?: string; port?: number }): Promise<{
   url: string;
   storage: string;
   state: any;

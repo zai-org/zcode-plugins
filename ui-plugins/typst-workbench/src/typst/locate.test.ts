@@ -3,7 +3,7 @@ import { chmod, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { chooseMain, scanTypFiles } from "#t/domain/project.ts";
-import { atLeast, locateTypst, parseVersion } from "#t/typst/locate.ts";
+import { atLeast, locateTypst, parseVersion, searchedDirs } from "#t/typst/locate.ts";
 
 async function fakeTypst(dir: string, version: string) {
   await mkdir(dir, { recursive: true });
@@ -21,6 +21,16 @@ describe("versions", () => {
     expect(atLeast("0.14.0", [0, 14, 0])).toBe(true);
     expect(atLeast("0.13.1", [0, 14, 0])).toBe(false);
     expect(atLeast("1.0.0", [0, 14, 0])).toBe(true);
+  });
+});
+
+describe("searched locations shown on the setup page", () => {
+  it("puts the package manager and cargo first and abbreviates the home folder", () => {
+    expect(searchedDirs("darwin", {}, "/Users/me", "arm64").slice(0, 2)).toEqual(["/opt/homebrew/bin", "~/.cargo/bin"]);
+    expect(searchedDirs("darwin", {}, "/Users/me", "x64").slice(0, 2)).toEqual(["/usr/local/bin", "~/.cargo/bin"]);
+    expect(searchedDirs("linux", {}, "/home/me").slice(0, 2)).toEqual(["~/.cargo/bin", "~/.local/bin"]);
+    const dirs = searchedDirs("darwin", {}, "/Users/me", "arm64");
+    expect(new Set(dirs).size).toBe(dirs.length);
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makePdf, samplePaper } from "#test/pdf-fixture.mjs";
-import { extractPdf, pdfjsDataDir } from "#z/pdf/extract.ts";
+import { extractPdf, pdfjsDataDir, pdfjsFactoryUrls } from "#z/pdf/extract.ts";
 import {
   buildPage,
   charWidth,
@@ -124,6 +124,13 @@ describe("real PDF text", () => {
     expect(rects[1]![0]).toBeCloseTo(72, 0);
     expect(rects[2]![0]).toBeCloseTo(72, 0);
     expect(rects[0]![1]).toBeGreaterThan(rects[1]![1]);
+  });
+
+  it("accepts a Windows pdf.js data folder", async () => {
+    const dir = "C:\\Users\\me\\.zcode\\plugins\\zotero\\dist\\pdfjs\\";
+    expect(pdfjsFactoryUrls(dir)).toEqual({ cMapUrl: `${dir}cmaps/`, standardFontDataUrl: `${dir}standard_fonts/` });
+    // pdf.js 在 getDocument 中同步检查结尾的 "/"；这份 PDF 不需要 CMap，文件夹不存在也能读出文本。
+    expect((await extractPdf(new Uint8Array(samplePaper()), dir)).pageCount).toBe(3);
   });
 
   it("ends a mid-line highlight at the right glyph", async () => {

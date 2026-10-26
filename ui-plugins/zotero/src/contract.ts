@@ -1,5 +1,5 @@
 export const PLUGIN_NAME = "zotero";
-export const PLUGIN_VERSION = "0.1.0";
+export const PLUGIN_VERSION = "0.2.1";
 /** manifest `mcpServers` 键、`ui.surfaces[].id` 与资源命名空间保持一致。 */
 export const SERVER_NAME = "zotero";
 export const SURFACE_ID = "zotero";
@@ -20,6 +20,11 @@ export const URIS = {
   pdfPart: (library: string, attachmentKey: string, part: number) =>
     `ui://zotero/lib/${library}/pdf/${attachmentKey}/${part}`,
   pdfjsData: (kind: string, file: string) => `ui://zotero/pdfjs/${kind}/${file}`,
+  /**
+   * 设置页：check 立即重新检查 Zotero，handoff 记下“已交给 Agent”。两者都返回 SessionState。
+   * 用资源而不是工具：宿主对页面发起的工具调用要求审批，读取资源不需要。nonce 让每次读取都到达 server。
+   */
+  setup: (op: "check" | "handoff", nonce: string) => `ui://zotero/setup/${op}/${nonce}`,
 } as const;
 export const LIBRARY_URI_PREFIX = "ui://zotero/lib/";
 
@@ -50,7 +55,12 @@ export const LIMITS = {
   authorizeTimeoutMs: 180_000,
   /** 面板订阅时轮询 Zotero 的间隔。 */
   pollMs: 2_500,
+  /** “已交给 Agent”在 Zotero 就绪或这段时间后清除。 */
+  handoffMs: 30 * 60_000,
 } as const;
+
+/** 本地 API 需要的最低 Zotero 主版本。 */
+export const MIN_ZOTERO = 7;
 
 /** 库标识：个人库 "user"，群组库 "g<id>"。 */
 export type LibraryId = string;
@@ -124,6 +134,40 @@ export interface ZoteroStatus {
   auth: WriteAuth;
   error?: string;
   checkedAt: number;
+}
+
+/** 本机事实：设置页的页脚与交给 Agent 的消息使用。 */
+export interface HostFacts {
+  os: "macos" | "windows" | "linux" | "other";
+  /** 如 "macOS 15.4"、"Windows 11"、"Ubuntu 24.04.1 LTS"。 */
+  osName: string;
+  /** 如 "Apple silicon"、"Intel"、"x64"、"arm64"。 */
+  arch: string;
+  /** 找到的包管理器（Homebrew、winget、Flatpak…）。path 的家目录缩写为 ~。 */
+  tools: { name: string; version?: string; path: string }[];
+}
+
+/** 本机安装的 Zotero 桌面程序。 */
+export interface ZoteroInstall {
+  state: "found" | "missing";
+  /** 程序位置（macOS 为 .app），家目录缩写为 ~。 */
+  path?: string;
+  /** 如 "7.0.15"。 */
+  version?: string;
+  /** 未找到时查找过的位置。 */
+  searched: string[];
+}
+
+/** Zotero 不可用时设置页需要的信息。 */
+export interface SetupInfo {
+  /** 探测完成前为 null。 */
+  facts: HostFacts | null;
+  /** Zotero 未就绪时检查；就绪后保留最后一次结果。 */
+  app: ZoteroInstall | null;
+  /** 面板把安装交给 Agent 的时间；Zotero 就绪或 LIMITS.handoffMs 后为 null。 */
+  handoffAt: number | null;
+  /** 本地 API 的地址，如 "127.0.0.1:23119"。 */
+  address: string;
 }
 
 export interface LibraryInfo {
@@ -311,6 +355,7 @@ export interface SessionState {
   highlights: AgentHighlight[];
   /** 正在等待用户在 Zotero 里批准写入。 */
   authorizing: boolean;
+  setup: SetupInfo;
 }
 
 // ---------------------------------------------------------------------------
@@ -319,6 +364,7 @@ export interface SessionState {
 
 export type ZoteroErrorCode =
   | "zotero_not_running"
+  | "zotero_not_installed"
   | "local_api_disabled"
   | "zotero_error"
   | "not_found"

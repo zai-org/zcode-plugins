@@ -24,6 +24,7 @@ You can also open the panel from the side pane "+" menu.
 
 ### Panel
 
+- **Setup** when Typst is missing, too old or broken: a checklist of what the panel found (and where it looked), your system and package managers, and a ready-made message that **Send to agent** posts to the chat so the agent installs it (**Copy** works with any other agent). *Install it yourself* shows the command for your system. The panel checks again every few seconds and opens the preview as soon as Typst runs.
 - **Live preview** of the main file. Each save recompiles incrementally with `typst watch` and the visible pages are redrawn in place — no flicker, and the scroll position stays where it was. Zoom (fit width, fit page, or a percentage), page box, and an **Outline** of the headings.
 - **Main file**: picked automatically (`main.typ`, or the only `.typ` file); switch it from the file menu in the toolbar. The choice is remembered for the workspace. With several candidates and no obvious one, the panel asks.
 - **Status and problems**: the toolbar shows *compiling*, the compile time, or the number of errors and warnings. When the document does not compile, the last good version stays visible (dimmed) and the **Problems** panel lists each error with its location, source line, Typst's hints and the call trace. **Fix with agent** sends them to the agent; **Add to chat** adds them to the agent's context.
@@ -68,5 +69,6 @@ Tests (from `ui-plugins/typst-workbench`):
 ```sh
 pnpm test        # unit tests, every tool against a simulated typst CLI, and the main flows against the installed Typst
 pnpm test:e2e    # built server and panel in Chrome through the official AppBridge host, with the installed Typst
+pnpm test:setup  # the setup page in Chrome: missing Typst, hand-off to the agent, Typst appearing (simulated)
 TYPST_TEST_BINARY=/path/to/typst pnpm test   # run the real-Typst tests with another Typst version
 ```

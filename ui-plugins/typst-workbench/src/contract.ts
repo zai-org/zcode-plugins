@@ -1,5 +1,5 @@
 export const PLUGIN_NAME = "typst-workbench";
-export const PLUGIN_VERSION = "0.1.0";
+export const PLUGIN_VERSION = "0.2.0";
 /** manifest `mcpServers` 键与 `ui.surfaces[].id`。 */
 export const SERVER_NAME = "typst";
 export const SURFACE_ID = "typst";
@@ -11,6 +11,11 @@ export const URIS = {
   /** 快照按 seq 不可变；页面按 seq 分块读取，不会混读两次编译的字节。 */
   pdfPart: (seq: number, part: number) => `ui://typst-workbench/pdf/${seq}/${part}`,
   pdfjsData: (kind: string, file: string) => `ui://typst-workbench/pdfjs/${kind}/${file}`,
+  /**
+   * 设置页：check 立即重新查找 Typst，handoff 记下“已交给 Agent”。两者都返回 SessionState。
+   * 用资源而不是工具：宿主对页面发起的工具调用要求审批，读取资源不需要。nonce 让每次读取都到达 server。
+   */
+  setup: (op: "check" | "handoff", nonce: string) => `ui://typst-workbench/setup/${op}/${nonce}`,
 } as const;
 
 /** 已验证的最低 Typst 版本：render_pages 需要 `--pages`（0.12 引入）。 */
@@ -41,6 +46,11 @@ export const LIMITS = {
   diagnostics: 30,
   /** 状态通知节流。 */
   notifyMs: 30,
+  /** 面板打开且 Typst 不可用时重新查找的间隔；每 setupShellEvery 次连同登录 shell 一起查。 */
+  setupWatchMs: 3_000,
+  setupShellEvery: 5,
+  /** “已交给 Agent”在 Typst 就绪或这段时间后清除。 */
+  handoffMs: 30 * 60_000,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -66,6 +76,27 @@ export interface Toolchain {
   /** 从哪里找到的。 */
   source?: "setting" | "path" | "common" | "shell";
   error?: string;
+}
+
+/** 本机事实：设置页的页脚与交给 Agent 的消息使用。 */
+export interface HostFacts {
+  os: "macos" | "windows" | "linux" | "other";
+  /** 如 "macOS 15.4"、"Windows 11"、"Ubuntu 24.04.1 LTS"。 */
+  osName: string;
+  /** 如 "Apple silicon"、"Intel"、"x64"、"arm64"。 */
+  arch: string;
+  /** 找到的包管理器与相关工具（Homebrew、winget、cargo…）。path 的家目录缩写为 ~。 */
+  tools: { name: string; version?: string; path: string }[];
+}
+
+/** Typst 不可用时设置页需要的信息。 */
+export interface SetupInfo {
+  /** 探测完成前为 null。 */
+  facts: HostFacts | null;
+  /** 查找过的目录（PATH 之外，家目录缩写为 ~），与本机最相关的在前。 */
+  searched: string[];
+  /** 面板把安装交给 Agent 的时间；Typst 就绪或 LIMITS.handoffMs 后为 null。 */
+  handoffAt: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,6 +197,7 @@ export interface SessionState {
   view: PanelView | null;
   viewSeq: number;
   highlights: Highlight[];
+  setup: SetupInfo;
 }
 
 // ---------------------------------------------------------------------------

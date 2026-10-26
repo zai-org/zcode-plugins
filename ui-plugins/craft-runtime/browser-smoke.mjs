@@ -82,7 +82,7 @@ try {
     let client;
     const started = Date.now();
     try {
-      await cp(join(root, "plugins", name), installed, { recursive: true });
+      await cp(join(root, "external_plugins", name), installed, { recursive: true });
       const transport = new StdioClientTransport({
         command: process.execPath, args: [join(installed, "dist/server.mjs")], cwd: temporary,
         env: { PATH: process.env.PATH || "", ZCODE_WORKSPACE_ROOT: temporary }, stderr: "pipe",

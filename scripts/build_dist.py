@@ -147,6 +147,8 @@ def build_zip(plugin_dir: Path, out_path: Path) -> None:
         if built != {"name": manifest["name"], "version": manifest["version"]} or source["version"] != manifest["version"]:
             raise UnsafeTree(f"{plugin_dir.name}: build version mismatch; run pnpm build first")
         validate_local_mcp_paths(plugin_dir, manifest)
+    if not source_package.is_file() and (plugin_dir / "dist").exists():
+        raise UnsafeTree(f"{plugin_dir.name}: unexpected dist without a build source; inspect and remove stale generated output before packaging")
     files = regular_files(plugin_dir)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:

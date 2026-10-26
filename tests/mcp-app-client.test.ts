@@ -1,13 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { App } from "@modelcontextprotocol/ext-apps";
-import { createClient as blender } from "../ui-plugins/blender/ui/src/client";
 import { createClient as excalidraw } from "../ui-plugins/excalidraw/ui/client";
 import { createClient as openpencil } from "../ui-plugins/openpencil/ui/client";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe.each([
-  ["Blender", blender],
   ["Excalidraw", excalidraw],
   ["OpenPencil", openpencil],
 ] as const)("%s page connection", (_name, createClient) => {

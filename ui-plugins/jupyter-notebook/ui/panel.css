@@ -1,4 +1,5 @@
 @import "katex/dist/katex.min.css";
+@import "./setup-kit.css";
 
 /*
  * 颜色、字体、字号与圆角取宿主经 MCP Apps 传来的标准样式变量（ZCode 由 Zai Light / Zai Dark 主题映射），
@@ -63,6 +64,33 @@
   --nb-selection: color-mix(in srgb, #3b82f6 22%, transparent);
   --nb-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
   --nb-plate: #ffffff;
+
+  /* 设置页（setup-kit.css）使用的 token；Agent 紫色与 Typst、Zotero 插件一致 */
+  --su-bg: var(--nb-bg);
+  --su-card: var(--nb-card);
+  --su-fg: var(--nb-fg);
+  --su-fg2: var(--nb-fg2);
+  --su-fg3: var(--nb-fg3);
+  --su-surface: var(--nb-surface);
+  --su-hover-strong: var(--nb-hover-strong);
+  --su-border: var(--nb-border);
+  --su-border-strong: var(--nb-border-strong);
+  --su-success: var(--nb-success);
+  --su-warning: var(--nb-warning);
+  --su-warning-fg: var(--nb-warning-fg);
+  --su-danger: var(--nb-danger);
+  --su-danger-fg: var(--nb-danger-fg);
+  --su-agent: #8b6fd6;
+  --su-agent-surface: color-mix(in srgb, var(--su-agent) 9%, transparent);
+  --su-mono: var(--nb-mono);
+  --su-text: var(--nb-text);
+  --su-text-sm: var(--nb-text-sm);
+  --su-text-caption: var(--nb-text-caption);
+  --su-text-xl: var(--nb-text-xl);
+  --su-r-md: var(--nb-r-md);
+  --su-r-lg: var(--nb-r-lg);
+  --su-r-xl: var(--nb-r-xl);
+  --su-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(13, 13, 13, 0.06);
 
   --syn-keyword: #cf222e;
   --syn-string: #0a3069;
@@ -141,6 +169,9 @@
   --ansi-bright-magenta: #d2a8ff;
   --ansi-bright-cyan: #56d4dd;
   --ansi-bright-white: #f0f6fc;
+  --su-agent: #b39dfa;
+  --su-agent-surface: color-mix(in srgb, var(--su-agent) 12%, transparent);
+  --su-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
   color-scheme: dark;
 }
 
@@ -1665,6 +1696,10 @@ button.row:hover:not(:disabled) {
   min-width: 0;
   font: var(--nb-code) / 20px var(--nb-mono);
   overflow-wrap: anywhere;
+}
+/* 设置页组件的 32px 按钮（与 size-lg 相同） */
+.setup .btn.lg {
+  height: 32px;
 }
 .buttons {
   display: flex;

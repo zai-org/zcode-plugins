@@ -2,13 +2,13 @@
 
 普通插件和带 UI 的插件共用根目录 `marketplace.json`、安装目录、版本规则及宿主的注册、安装、启用、更新入口。开发流程以[现有插件教程](PLUGIN_DEVELOPMENT_CN.md#18-在客户端本地测试)为准；UI 仅增加 MCP 页面资源和 `ui.surfaces`，没有独立注册机制。
 
-`plugins/<name>/dist/`、Blender 的 `ui/dist/` 和桥接脚本、OpenPencil 的 `dist/node_modules/`，以及根目录 `dist/` 的发布 ZIP，都是构建输出，不提交到 Git，由 `.gitignore` 排除，并由 `tests/test_generated_outputs.py` 阻止重新入库。CI 与本地开发使用同一入口 `pnpm build` 从 `ui-plugins/<name>/` 生成它们；CI 中的产物测试、打包和发布预演都在构建之后执行。因此需要编译的插件不能从未构建的 Git checkout 直接安装：本地测试先构建，再使用 `dist/local-marketplace`；正式用户通过已发布的市场安装。
+`plugins/<name>/dist/` / `external_plugins/<name>/dist/`、OpenPencil 的 `dist/node_modules/`，以及根目录 `dist/` 的发布 ZIP，都是构建输出，不提交到 Git，由 `.gitignore` 排除，并由 `tests/test_generated_outputs.py` 阻止重新入库。CI 与本地开发使用同一入口 `pnpm build` 从 `ui-plugins/<name>/` 生成它们；CI 中的产物测试、打包和发布预演都在构建之后执行。因此需要编译的插件不能从未构建的 Git checkout 直接安装：本地测试先构建，再使用 `dist/local-marketplace`；正式用户通过已发布的市场安装。
 
 Craft 插件的网页编译快照 `ui-plugins/<name>/web/` 同样是构建输出，不提交。构建时依次使用工作区已有的快照、快照缓存（`CRAFT_BUILD_CACHE`，默认 `.craft-cache/`）、从 `upstream.json` 固定的上游提交现场编译；编译需要 `ui-plugins/craft-runtime/toolchain.json` 固定的 Rust / Trunk、Chrome，以及访问上游仓库、crates.io 和 GitHub Release 的网络。细节见[适配层说明](../ui-plugins/craft-runtime/README.md#build)。
 
 ## 清单与构建所有权
 
-- 根目录 `marketplace.json` 是唯一插件清单。每个条目的 `source` 指向 `./plugins/<name>`，与 `.zcode-plugin/plugin.json` 的名称、版本一致。新增插件、删除条目或升级版本不需要修改根构建脚本。
+- 根目录 `marketplace.json` 是唯一插件清单。每个条目的 `source` 指向 `./plugins/<name>` 或 `./external_plugins/<name>`，与 `.zcode-plugin/plugin.json` 的名称、版本一致。新增插件、删除条目或升级版本不需要修改根构建脚本。
 - 无需编译的插件直接使用安装目录。需要编译的插件在 `ui-plugins/<name>/package.json` 声明 `scripts.build`；名称来自 marketplace 条目，不要求固定前缀。
 - `pnpm build` 逐项发现已登记的源码包并运行其 `build` 脚本，把 `dist/` 复制到安装目录。可选的 `scripts.stage` 负责额外资源，目标目录由 `ZCODE_PLUGIN_INSTALL_DIR` 传入。根脚本不识别具体插件名称或第三方依赖。
 - 资源和外部运行依赖归插件自己的构建 / stage 脚本负责；只复制运行所需文件，不能把开发工作区的 node_modules 链接带进安装包。stage 只能清理自己生成的资源，不能删除安装清单、skill、说明或许可。
@@ -16,9 +16,9 @@ Craft 插件的网页编译快照 `ui-plugins/<name>/web/` 同样是构建输出
 
 ## 插件命名
 
-这批 UI 插件使用简短名称 `blender`、`excalidraw`、`openpencil`。源码目录 `ui-plugins/<name>`、安装目录 `plugins/<name>`、marketplace 条目、安装清单 `name`、MCP 服务身份和 `ui://<name>/...` 资源地址保持一致；没有产品前缀要求。构建清单仍为唯一目录来源。
+这批 UI 插件使用简短名称 `excalidraw`、`openpencil`。源码目录 `ui-plugins/<name>`、安装目录 `plugins/<name>` 或 `external_plugins/<name>`、marketplace 条目、安装清单 `name`、MCP 服务身份和 `ui://<name>/...` 资源地址保持一致；没有产品前缀要求。构建清单仍为唯一目录来源。
 
-用户可见名称由根 marketplace 条目的 `displayName` / `displayName_i18n` 持有，不依赖文件夹名称或从 ID 推导大小写。这三个条目分别显示为 Blender、Excalidraw、OpenPencil，页面标题也不带产品前缀。本地来源与正式分发目录保留这些展示字段；宿主按完整插件 ID 关联 listing。
+用户可见名称由根 marketplace 条目的 `displayName` / `displayName_i18n` 持有，不依赖文件夹名称或从 ID 推导大小写。这两个条目分别显示为 Excalidraw、OpenPencil，页面标题也不带产品前缀。本地来源与正式分发目录保留这些展示字段；宿主按完整插件 ID 关联 listing。
 
 改名同步更新客户端、服务端、资源读取、文档、测试和锁文件的工作区路径；安装产物内容变化按版本规则升级。开发安装以插件 ID 区分，新名称须按普通流程重新安装；不自动删除旧安装或迁移旧插件数据。新旧安装中的页面与服务分别使用各自一致的资源地址。刷新来源只更新目录，旧 ID 的已安装副本不会因此改名；更新开发安装时应安装新 ID，并停用旧 ID，保留旧数据。
 

@@ -12,6 +12,8 @@ import { exportDiagram } from "#ui/export.ts";
 import { DocumentMenu } from "#ui/DocumentMenu.tsx";
 import { ExportDialog } from "#ui/ExportDialog.tsx";
 import { ReferenceContextMenu } from "#ui/ReferenceContextMenu.tsx";
+import { RenameDialog } from "#ui/RenameDialog.tsx";
+import { ToolbarIcon } from "#ui/ToolbarIcon.tsx";
 import "@excalidraw/excalidraw/index.css";
 import "#ui/panel.css";
 
@@ -31,6 +33,7 @@ function outputRefKey() {
 function App() {
   const api = useRef<ExcalidrawImperativeAPI | null>(null);
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
   const [contextMenu, setContextMenu] = useState<AppState["contextMenu"]>(null);
   const [state, setState] = useState<EditorState>({
     document: null,
@@ -44,6 +47,13 @@ function App() {
     locale: getClient().locale,
   });
   const [documents, setDocuments] = useState<Array<Pick<Diagram, "id" | "title">>>([]);
+  const recentIds = useRef<string[]>([]);
+  const [recentDocumentIds, setRecentDocumentIds] = useState<string[]>([]);
+  const [renameTarget, setRenameTarget] = useState<Pick<Diagram, "id" | "title"> | null>(null);
+  const lastContextDocument = useRef("");
+  const lastToolRef = useRef("");
+  const contextQueue = useRef(Promise.resolve());
+  const widgetStateQueue = useRef(Promise.resolve());
   const [selectedCount, setSelectedCount] = useState(0);
   const [operation, setOperation] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,6 +62,27 @@ function App() {
   const applying = useRef(false);
   const cn = globals.locale?.startsWith("zh") ?? true;
   const t = (zh: string, en: string) => (cn ? zh : en);
+  const persistTabs = (documentId: string | null) => {
+    const saved = {
+      documentId,
+      recentDocumentIds: [...recentIds.current],
+      lastToolRef: outputRefKey(),
+    };
+    const pending = widgetStateQueue.current.then(() => getClient().setWidgetState(saved));
+    widgetStateQueue.current = pending.catch(() => {});
+    return pending;
+  };
+  const publishContext = (context: Record<string, unknown>) => {
+    // A slow previous bridge request must never overwrite the newly selected diagram.
+    const pending = contextQueue.current.then(() =>
+      getClient().updateModelContext({
+        content: [{ type: "text", text: `Excalidraw ${JSON.stringify(context)}` }],
+        structuredContent: context,
+      }),
+    );
+    contextQueue.current = pending.catch(() => {});
+    return pending;
+  };
   const controller = useRef<ReturnType<typeof createEditorController> | null>(null);
   if (!controller.current)
     controller.current = createEditorController({
@@ -78,11 +109,15 @@ function App() {
             elements: restored.elements,
             appState: {
               ...(reset ? restored.appState : scene.appState),
+              ...(reset
+                ? { zoom: { value: 1 as AppState["zoom"]["value"] }, scrollX: 0, scrollY: 0 }
+                : {}),
               theme: getClient().theme === "dark" ? "dark" : "light",
             },
             captureUpdate: reset ? CaptureUpdateAction.NEVER : CaptureUpdateAction.IMMEDIATELY,
           });
-          if (reset)
+          // Fitting an empty bounding box produces Excalidraw's maximum zoom (3000%).
+          if (reset && restored.elements.some((element: ExcalidrawElement) => !element.isDeleted))
             canvas.scrollToContent(undefined, { fitToViewport: true, viewportZoomFactor: 0.75 });
         } finally {
           applying.current = false;
@@ -91,13 +126,51 @@ function App() {
       onState(next) {
         setState(next);
         if (next.document && !next.dirty && !next.saving) {
-          void getClient()
-            .setWidgetState({ documentId: next.document.id, lastToolRef: outputRefKey() })
-            .catch((e) => setOperation(String(e)));
+          const doc = next.document;
+          setDocuments((docs) => [
+            { id: doc.id, title: doc.title },
+            ...docs.filter((item) => item.id !== doc.id),
+          ]);
+          if (recentIds.current.at(-1) !== doc.id) {
+            const recent = [...recentIds.current.filter((id) => id !== doc.id), doc.id].slice(-8);
+            recentIds.current = recent;
+            // Keep visible tabs in place while retaining the eight most recently visited diagrams.
+            setRecentDocumentIds((ids) => [
+              ...ids.filter((id) => recent.includes(id)),
+              ...recent.filter((id) => !ids.includes(id)),
+            ]);
+          }
+          void persistTabs(doc.id).catch((e) => setOperation(String(e)));
+          const key = JSON.stringify([doc.id, doc.title]);
+          if (key !== lastContextDocument.current) {
+            lastContextDocument.current = key;
+            void publishContext({
+              kind: "active-diagram",
+              documentId: doc.id,
+              title: doc.title,
+              revision: doc.revision,
+            }).catch((e) => {
+              if (lastContextDocument.current === key) lastContextDocument.current = "";
+              setOperation(String(e));
+            });
+          }
+        } else if (!next.document) {
+          // Closing the last tab must not reopen an old tool result on the next host update.
+          lastToolRef.current = outputRefKey();
+          lastContextDocument.current = "";
+          void persistTabs(null).catch((e) => setOperation(String(e)));
+          void publishContext({ kind: "active-diagram", documentId: null }).catch((e) =>
+            setOperation(String(e)),
+          );
         }
       },
     });
   const editor = controller.current;
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [state.document?.id, recentDocumentIds]);
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
     setOperation("");
@@ -112,7 +185,6 @@ function App() {
   useEffect(() => {
     if (!ready) return;
     let active = true;
-    let lastRef = "";
     let initial = true;
     const refresh = () => {
       if (!active) return;
@@ -120,32 +192,45 @@ function App() {
       // 旧结果仅用于空页面恢复；活页面不能把先到的新输入与旧导出结果拼接后误切文档。
       const ref = outputRef(!editor.state().document);
       const saved = getClient().widgetState as
-        | { documentId?: string; lastToolRef?: string }
+        | { documentId?: string | null; lastToolRef?: string; recentDocumentIds?: string[] }
         | undefined;
+      if (initial && Array.isArray(saved?.recentDocumentIds)) {
+        recentIds.current = [
+          ...new Set(saved.recentDocumentIds.filter((id) => typeof id === "string")),
+        ].slice(-8);
+        setRecentDocumentIds(recentIds.current);
+      }
       // 重开时旧 toolOutput 不能覆盖用户另选的文档；真正新增的工具结果仍优先打开。
       const restoreSelected =
         initial && saved?.documentId && (!ref || saved.lastToolRef === outputRefKey());
+      const restoreEmpty =
+        initial && saved?.documentId === null && (!ref || saved.lastToolRef === outputRefKey());
       initial = false;
+      if (restoreEmpty) {
+        lastToolRef.current = outputRefKey();
+        return;
+      }
       if (restoreSelected) {
-        lastRef = outputRefKey();
+        lastToolRef.current = outputRefKey();
         void editor.open(saved.documentId!).catch((e) => setOperation(String(e)));
         return;
       }
-      if (ref && `${ref.id}:${ref.revision}` !== lastRef) {
-        lastRef = `${ref.id}:${ref.revision}`;
+      if (ref && `${ref.id}:${ref.revision}` !== lastToolRef.current) {
+        lastToolRef.current = `${ref.id}:${ref.revision}`;
         const current = editor.state().document;
         if (current?.id === ref.id && current.revision >= ref.revision) return;
         void editor.open(ref.id).catch((e) => setOperation(String(e)));
-      } else if (!editor.state().document && !ref) {
-        if (saved?.documentId)
-          void editor.open(saved.documentId).catch((e) => setOperation(String(e)));
       }
     };
     window.addEventListener("plugin:change", refresh);
     refresh();
     void call("list_diagrams")
       .then((r) => {
-        if (active) setDocuments(r.documents);
+        if (active)
+          setDocuments((docs) => [
+            ...docs,
+            ...r.documents.filter((doc: Diagram) => !docs.some((item) => item.id === doc.id)),
+          ]);
       })
       .catch((e) => setOperation(String(e)));
     getClient().notifyIntrinsicHeight(680);
@@ -186,7 +271,6 @@ function App() {
       ? await call("save_copy", { title, scene })
       : await call("create_diagram", { title, elements: [] });
     await editor.open(result.document.id, true);
-    setDocuments((docs) => [result.document, ...docs]);
   };
   const reference = async () => {
     // 右键先更新命中选区；等待保存前固定目标，避免旧闭包或后续选择造成引用错位。
@@ -202,7 +286,9 @@ function App() {
       ? selectedIds
       : doc.scene.elements.filter((e) => !e.isDeleted).map((e) => e.id);
     const context = {
+      kind: selectedIds.length ? "selection" : "diagram",
       documentId: doc.id,
+      title: doc.title,
       revision: doc.revision,
       elementIds: ids,
       labels: selectionContext(doc.scene, ids)
@@ -210,10 +296,7 @@ function App() {
         .map((e) => String(e.text))
         .slice(0, 20),
     };
-    await getClient().updateModelContext({
-      content: [{ type: "text", text: `Excalidraw ${JSON.stringify(context)}` }],
-      structuredContent: context,
-    });
+    await publishContext(context);
     setOperation(
       t(
         "已加入对话输入框，可继续输入修改要求。",
@@ -228,11 +311,77 @@ function App() {
     state.document && !documents.some((doc) => doc.id === state.document!.id)
       ? [state.document, ...documents]
       : documents;
+  const recentDocuments = recentDocumentIds.flatMap((id) => {
+    const doc = visibleDocuments.find((doc) => doc.id === id);
+    return doc ? [doc] : [];
+  });
+  const showDocumentTabs = recentDocuments.length > 0;
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    if (!tabs) return;
+    const scrollTabs = (event: WheelEvent) => {
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        Math.abs(event.deltaX) >= Math.abs(event.deltaY) ||
+        tabs.scrollWidth <= tabs.clientWidth
+      )
+        return;
+      // Keep native horizontal gestures; convert a vertical mouse wheel only over the tabs.
+      event.preventDefault();
+      const unit =
+        event.deltaMode === WheelEvent.DOM_DELTA_LINE
+          ? 16
+          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+            ? tabs.clientWidth
+            : 1;
+      tabs.scrollLeft += event.deltaY * unit;
+    };
+    // React's delegated wheel listener is passive, so cancellation needs a native listener.
+    tabs.addEventListener("wheel", scrollTabs, { passive: false });
+    return () => tabs.removeEventListener("wheel", scrollTabs);
+  }, [showDocumentTabs]);
+  const saveState = state.error
+    ? "error"
+    : state.saving || state.dirty
+      ? "saving"
+      : state.document
+        ? "saved"
+        : "empty";
+  const saveLabel = {
+    error: t("保存失败", "Save failed"),
+    saving: t("保存中…", "Saving…"),
+    saved: t("已保存", "Saved"),
+    empty: t("未打开画板", "No diagram"),
+  }[saveState];
+  const rename = () => {
+    const doc = editor.state().document;
+    if (doc && !busy) setRenameTarget({ id: doc.id, title: doc.title });
+  };
+  const closeTab = async (id: string) => {
+    const index = recentDocuments.findIndex((doc) => doc.id === id);
+    if (index < 0) return;
+    if (editor.state().document?.id === id) {
+      const neighbor = recentDocuments[index + 1] ?? recentDocuments[index - 1];
+      if (neighbor) await editor.open(neighbor.id);
+      else await editor.close();
+      // A newer tool update may have superseded the switch or close.
+      if (editor.state().document?.id === id) return;
+    }
+    recentIds.current = recentIds.current.filter((item) => item !== id);
+    setRecentDocumentIds((ids) => ids.filter((item) => item !== id));
+    await persistTabs(editor.state().document?.id ?? null);
+    requestAnimationFrame(() => {
+      (
+        tabsRef.current?.querySelector<HTMLButtonElement>('[aria-selected="true"]') ??
+        document.querySelector<HTMLElement>(".document-menu summary")
+      )?.focus();
+    });
+  };
   return (
     <main className={`diagram-app text-ui-base ${globals.theme === "dark" ? "dark" : ""}`}>
       <header className="document-bar">
         <DocumentMenu
-          title={state.document?.title ?? "Excalidraw"}
           documents={visibleDocuments}
           currentId={state.document?.id}
           busy={busy}
@@ -242,22 +391,96 @@ function App() {
           onImport={() => importing.current?.click()}
           onOpen={(id) => void run(() => editor.open(id))}
           onReference={() => void run(reference)}
+          onRename={rename}
         />
-        <span id="save-status" className="text-ui-sm" role="status" data-error={!!state.error}>
-          {state.error
-            ? t("保存失败", "Save failed")
-            : state.saving || state.dirty
-              ? t("保存中…", "Saving…")
-              : state.document
-                ? t("已保存", "Saved")
-                : t("未打开画板", "No diagram")}
+        <button
+          id="new-document-shortcut"
+          className="toolbar-button"
+          disabled={busy}
+          title={t("新建画板", "New diagram")}
+          aria-label={t("新建画板", "New diagram")}
+          onClick={() => void run(() => newDocument())}
+        >
+          <ToolbarIcon name="plus" />
+        </button>
+        {showDocumentTabs && (
+          <div
+            ref={tabsRef}
+            className="document-tabs"
+            role="tablist"
+            aria-label={t("最近打开的画板", "Recently opened diagrams")}
+          >
+            {recentDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="document-tab"
+                role="presentation"
+                data-active={doc.id === state.document?.id}
+              >
+                <button
+                  id={`diagram-tab-${doc.id}`}
+                  role="tab"
+                  aria-selected={doc.id === state.document?.id}
+                  aria-controls="diagram-canvas"
+                  tabIndex={doc.id === state.document?.id ? 0 : -1}
+                  disabled={busy}
+                  title={t(`${doc.title}（双击重命名）`, `${doc.title} (double-click to rename)`)}
+                  onClick={() => {
+                    if (doc.id !== editor.state().document?.id) void run(() => editor.open(doc.id));
+                  }}
+                  onDoubleClick={() => {
+                    if (doc.id === editor.state().document?.id) rename();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "F2" && doc.id === editor.state().document?.id) {
+                      event.preventDefault();
+                      rename();
+                    }
+                    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+                      event.preventDefault();
+                      const tabs = Array.from(
+                        tabsRef.current!.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+                      );
+                      const index = tabs.indexOf(event.currentTarget);
+                      const next =
+                        event.key === "Home"
+                          ? 0
+                          : event.key === "End"
+                            ? tabs.length - 1
+                            : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) %
+                              tabs.length;
+                      tabs[next]?.focus();
+                    }
+                  }}
+                >
+                  <span className="document-name">{doc.title}</span>
+                </button>
+                <button
+                  className="document-tab-close"
+                  disabled={busy}
+                  aria-label={t(`关闭标签 ${doc.title}`, `Close tab ${doc.title}`)}
+                  title={t("关闭标签（保留画板）", "Close tab (keep diagram)")}
+                  onClick={() => void run(() => closeTab(doc.id))}
+                >
+                  <ToolbarIcon name="close" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <span id="save-status" role="status" data-state={saveState} title={saveLabel}>
+          <span className="save-status-dot" aria-hidden="true" />
+          <span className="sr-only">{saveLabel}</span>
         </span>
         <button
           id="open-export"
+          className="toolbar-button"
+          title={t("导出", "Export")}
+          aria-label={t("导出", "Export")}
           disabled={!state.document || busy}
           onClick={() => setExportOpen(true)}
         >
-          {t("导出", "Export")}
+          <ToolbarIcon name="export" />
         </button>
         <input
           ref={importing}
@@ -271,7 +494,15 @@ function App() {
           }}
         />
       </header>
-      <div className="canvas-host" ref={canvasRef}>
+      <div
+        className="canvas-host"
+        id="diagram-canvas"
+        role={showDocumentTabs ? "tabpanel" : "region"}
+        aria-labelledby={
+          showDocumentTabs && state.document ? `diagram-tab-${state.document.id}` : undefined
+        }
+        ref={canvasRef}
+      >
         <Excalidraw
           excalidrawAPI={(value: ExcalidrawImperativeAPI) => {
             api.current = value;
@@ -321,7 +552,6 @@ function App() {
                       scene: editor.scene(),
                     });
                     await editor.open(result.document.id, true);
-                    setDocuments((docs) => [result.document, ...docs]);
                   })
                 }
               >
@@ -340,6 +570,20 @@ function App() {
             </button>
           )}
         </div>
+      )}
+      {renameTarget && (
+        <RenameDialog
+          title={renameTarget.title}
+          t={t}
+          onClose={() => setRenameTarget(null)}
+          onSave={async (title) => {
+            if (editor.state().document?.id !== renameTarget.id)
+              throw new Error(
+                t("画板已切换，请重新命名。", "Diagram changed. Please rename it again."),
+              );
+            await editor.rename(title);
+          }}
+        />
       )}
       {exportOpen && state.document && (
         <ExportDialog

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { MissingJupyterDetails, NotebookRef, ServerInfo, SessionState } from "#nb/contract.ts";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { NotebookRef, ServerInfo, SessionState } from "#nb/contract.ts";
 import { host, ToolError } from "#ui/bridge.ts";
 import type { Strings } from "#ui/i18n.ts";
 import { Icon } from "#ui/icons.tsx";
 import { Menu, MenuItem, useMenu } from "#ui/Menu.tsx";
-import { refreshState, selectNotebook } from "#ui/store.ts";
+import { Command, Disclosure, Handoff, Intro, Requirements, SentStrip, Tag, type Requirement } from "#ui/setup-kit.tsx";
+import { refreshState, selectNotebook, setupAction } from "#ui/store.ts";
 import { hostOf, relativeTime } from "#ui/text.ts";
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -28,49 +29,118 @@ function PlainHeader({ title, s, onClose, children }: { title: string; s: String
   );
 }
 
-/** 没有已连接 server 时：本机发现的 server、为工作区启动、按 URL 连接。 */
+/** 本机发现的、尚未连接的 server。 */
+function Discovered({ state, s, busy, run, label }: { state: SessionState; s: Strings; busy: string | null; run: Run; label: string }) {
+  const discovered = state.discovered.filter((item) => !item.connectedAs);
+  if (!discovered.length) return null;
+  return (
+    <div className="section">
+      <div className="label">{label}</div>
+      <div className="card">
+        {discovered.map((item) => (
+          <div className="row" key={item.url}>
+            <div className="tile">
+              <Icon name="server" />
+            </div>
+            <div className="grow">
+              <div className="mono sm" style={{ fontSize: "var(--nb-text-caption)", lineHeight: "20px" }}>
+                {hostOf(item.url)}
+              </div>
+              <div className="sm fg2" title={item.rootDir ?? undefined}>
+                {[item.version && s.serverVersion(item.version), item.rootDir].filter(Boolean).join(" · ")}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn outline"
+              disabled={!!busy}
+              onClick={() => void run(item.url, () => host.call("connect_server", { url: item.url }))}
+            >
+              {busy === item.url ? s.connectingServer : s.connect}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 按 URL 连接已有 server（远程 server 不需要本机安装 Jupyter）。 */
+function ByUrl({ s, busy, run, label }: { s: Strings; busy: string | null; run: Run; label: string }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [token, setToken] = useState("");
+  return (
+    <div className="section">
+      <button type="button" className={`label ${open ? "open" : ""}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <Icon name="chevronDown" size={12} />
+        {label}
+      </button>
+      {open && (
+        <form
+          className="url-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (url.trim())
+              void run("url", () => host.call("connect_server", { url: url.trim(), ...(token.trim() ? { token: token.trim() } : {}) }));
+          }}
+        >
+          <label className="field mono">
+            <Icon name="link" size={14} />
+            <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder={s.urlPlaceholder} spellCheck={false} aria-label={label} />
+          </label>
+          <div className="line">
+            <label className="field">
+              <input
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                placeholder={s.tokenPlaceholder}
+                type="password"
+                autoComplete="off"
+                aria-label={s.tokenPlaceholder}
+              />
+            </label>
+            <button type="submit" className="btn outline size-lg" disabled={!!busy || !url.trim()}>
+              {busy === "url" ? s.connectingServer : s.connect}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+type Run = (key: string, action: () => Promise<unknown>) => Promise<void>;
+
+/** 没有已连接 server 时：本机发现的 server、为工作区启动、按 URL 连接；缺少依赖时先显示设置页。 */
 export function ServerSetup({ state, s }: { state: SessionState; s: Strings }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [missing, setMissing] = useState<MissingJupyterDetails | null>(null);
-  const [byUrl, setByUrl] = useState(false);
-  const [url, setUrl] = useState("");
-  const [token, setToken] = useState("");
   const discovered = state.discovered.filter((item) => !item.connectedAs);
   const starting = busy === "start" || busy === "uv" || state.servers.some((server) => server.status === "starting");
   const failed = state.servers.find((server) => server.status === "error");
 
-  const run = async (key: string, action: () => Promise<unknown>) => {
+  const run: Run = async (key, action) => {
     setBusy(key);
     setError(null);
     try {
       await action();
-      setMissing(null);
-      await refreshState();
     } catch (caught) {
-      if (caught instanceof ToolError && caught.code === "jupyter_not_installed" && caught.details)
-        setMissing(caught.details as unknown as MissingJupyterDetails);
-      else setError(message(caught));
+      // 缺少依赖：server 已更新环境检查，设置页会显示要求清单，不需要再弹错误。
+      if (!(caught instanceof ToolError && caught.code === "jupyter_not_installed")) setError(message(caught));
     } finally {
       setBusy(null);
+      await refreshState();
     }
   };
   const start = (useUv = false) => run(useUv ? "uv" : "start", () => host.call("start_server", useUv ? { useUv: true } : {}));
 
-  if (missing)
+  if (state.environment.state === "missing")
     return (
       <div className="shell">
         <PlainHeader title={s.title} s={s} />
         <div className="page">
-          <MissingJupyter
-            details={missing}
-            s={s}
-            busy={busy}
-            error={error}
-            onRetry={() => void start()}
-            onUv={() => void start(true)}
-            onBack={() => (setMissing(null), setError(null))}
-          />
+          <JupyterSetup state={state} s={s} busy={busy} run={run} onUv={() => void start(true)} error={error} />
         </div>
       </div>
     );
@@ -88,36 +158,7 @@ export function ServerSetup({ state, s }: { state: SessionState; s: Strings }) {
             <p className="lead">{s.setupBody}</p>
           </div>
 
-          {discovered.length > 0 && (
-            <div className="section">
-              <div className="label">{s.discovered}</div>
-              <div className="card">
-                {discovered.map((item) => (
-                  <div className="row" key={item.url}>
-                    <div className="tile">
-                      <Icon name="server" />
-                    </div>
-                    <div className="grow">
-                      <div className="mono sm" style={{ fontSize: "var(--nb-text-caption)", lineHeight: "20px" }}>
-                        {hostOf(item.url)}
-                      </div>
-                      <div className="sm fg2" title={item.rootDir ?? undefined}>
-                        {[item.version && s.serverVersion(item.version), item.rootDir].filter(Boolean).join(" · ")}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn outline"
-                      disabled={!!busy}
-                      onClick={() => void run(item.url, () => host.call("connect_server", { url: item.url }))}
-                    >
-                      {busy === item.url ? s.connectingServer : s.connect}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <Discovered state={state} s={s} busy={busy} run={run} label={s.discovered} />
 
           <div className="section">
             <div className="label">{discovered.length ? s.startLabelOr : s.startLabel}</div>
@@ -137,50 +178,7 @@ export function ServerSetup({ state, s }: { state: SessionState; s: Strings }) {
             </div>
           </div>
 
-          <div className="section">
-            <button type="button" className={`label ${byUrl ? "open" : ""}`} aria-expanded={byUrl} onClick={() => setByUrl(!byUrl)}>
-              <Icon name="chevronDown" size={12} />
-              {s.byUrl}
-            </button>
-            {byUrl && (
-              <form
-                className="url-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (url.trim())
-                    void run("url", () =>
-                      host.call("connect_server", { url: url.trim(), ...(token.trim() ? { token: token.trim() } : {}) }),
-                    );
-                }}
-              >
-                <label className="field mono">
-                  <Icon name="link" size={14} />
-                  <input
-                    value={url}
-                    onChange={(event) => setUrl(event.target.value)}
-                    placeholder={s.urlPlaceholder}
-                    spellCheck={false}
-                    aria-label={s.byUrl}
-                  />
-                </label>
-                <div className="line">
-                  <label className="field">
-                    <input
-                      value={token}
-                      onChange={(event) => setToken(event.target.value)}
-                      placeholder={s.tokenPlaceholder}
-                      type="password"
-                      autoComplete="off"
-                      aria-label={s.tokenPlaceholder}
-                    />
-                  </label>
-                  <button type="submit" className="btn outline size-lg" disabled={!!busy || !url.trim()}>
-                    {busy === "url" ? s.connectingServer : s.connect}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+          <ByUrl s={s} busy={busy} run={run} label={s.byUrl} />
 
           {(error || failed?.error) && <pre className="error-box">{error ?? `${s.serverStopped}\n${failed?.error}`}</pre>}
           <p className="hint">{s.askAgent}</p>
@@ -190,97 +188,86 @@ export function ServerSetup({ state, s }: { state: SessionState; s: Strings }) {
   );
 }
 
-function MissingJupyter({
-  details,
+/** 缺少 jupyter-server / ipykernel：要求清单、交给 Agent、自己安装，或连接已有 server。 */
+function JupyterSetup({
+  state,
   s,
   busy,
-  error,
-  onRetry,
+  run,
   onUv,
-  onBack,
+  error,
 }: {
-  details: MissingJupyterDetails;
+  state: SessionState;
   s: Strings;
   busy: string | null;
-  error: string | null;
-  onRetry: () => void;
+  run: Run;
   onUv: () => void;
-  onBack: () => void;
+  error: string | null;
 }) {
-  const [copied, setCopied] = useState(false);
-  const command = useRef<HTMLElement>(null);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(details.installCommand);
-    } catch {
-      // 沙箱 iframe 可能不允许写剪贴板：选中命令，用户自己复制。
-      const range = document.createRange();
-      if (command.current) range.selectNodeContents(command.current);
-      getSelection()?.removeAllRanges();
-      getSelection()?.addRange(range);
-      return;
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const env = state.environment;
+  const python = env.python;
+  const working = state.setup.handoffAt !== null;
+  const where = python ? (python.venv ?? python.executable) : "";
+  const rows: Requirement[] = [
+    python
+      ? {
+          key: "python",
+          glyph: "ok",
+          title: python.venv ? s.reqProjectPython : s.reqPython,
+          detail: `${python.executable} · ${python.uv ? s.managedByUv : python.source}`,
+          side: <Tag tone="version">{python.version}</Tag>,
+        }
+      : { key: "python", glyph: "todo", title: s.reqPython, detail: s.noPython, side: <Tag tone="warn">{s.kit.missing}</Tag> },
+    ...(["jupyter-server", "ipykernel"] as const).map((name): Requirement => {
+      const version = env.packages.find((pkg) => pkg.name === name)?.version;
+      if (!python) return { key: name, glyph: "wait", title: name, detail: s.checkedOncePython };
+      return version
+        ? { key: name, glyph: "ok", title: name, detail: s.installedIn(where), side: <Tag tone="version">{version}</Tag> }
+        : { key: name, glyph: "todo", title: name, detail: s.notInstalledIn(where), side: <Tag tone="warn">{s.kit.missing}</Tag> };
+    }),
+  ];
   const [lead, pkg1, and, pkg2, tail] = s.missingBody;
+  const message = s.setupMessage(env);
+  const handoff = () => setupAction("handoff");
   return (
-    <div className="setup" style={{ gap: 20 }}>
-      <div className="intro">
-        <div className="tile lg warn">
-          <Icon name="alert" size={20} />
-        </div>
-        <h1>{s.missingTitle}</h1>
-        <p className="lead">
-          {lead}
-          <code>{pkg1}</code>
-          {and}
-          <code>{pkg2}</code>
-          {tail}
-        </p>
-      </div>
-      {details.pythons.length > 0 && (
-        <div className="card">
-          {details.pythons.map((python) => (
-            <div className="row compact" key={python.executable}>
-              <span className="mono name" style={{ fontSize: "var(--nb-text-caption)" }}>
-                {python.executable}
-              </span>
-              <span className="side">
-                {python.version === null
-                  ? s.notFound
-                  : `${python.version} · ${python.missing.length > 1 ? s.missingBoth : s.missingOne(python.missing[0] ?? "")}`}
-              </span>
-            </div>
-          ))}
-        </div>
+    <div className="setup">
+      <Intro
+        icon={<Icon name="notebook" size={20} />}
+        title={working ? s.workingTitle : s.setupJupyterTitle}
+        lead={
+          working ? (
+            s.workingLead
+          ) : (
+            <>
+              {lead}
+              <code>{pkg1}</code>
+              {and}
+              <code>{pkg2}</code>
+              {tail}
+            </>
+          )
+        }
+      />
+      <Discovered state={state} s={s} busy={busy} run={run} label={s.discovered} />
+      <Requirements k={s.kit} rows={rows} live={working ? "watching" : null} agentWorking={working} onCheck={() => setupAction("check")} />
+      {working ? <SentStrip k={s.kit} message={message} onHandoff={handoff} /> : <Handoff k={s.kit} title={s.handoffInstall} message={message} onHandoff={handoff} />}
+      {(env.installCommand || env.uv) && (
+        <Disclosure label={s.installYourself}>
+          {env.installCommand && <Command k={s.kit} command={env.installCommand} />}
+          {env.uv && (
+            <>
+              <div className="buttons">
+                <button type="button" className="btn outline" disabled={!!busy} onClick={onUv}>
+                  {busy === "uv" && <Icon name="spinner" size={14} className="spin" />}
+                  {busy === "uv" ? s.starting : s.useUvSession}
+                </button>
+              </div>
+              <p className="hint">{s.uvHint}</p>
+            </>
+          )}
+        </Disclosure>
       )}
-      <div className="section">
-        <div className="label">{s.installLabel}</div>
-        <div className="cmd">
-          <code ref={command}>{details.installCommand}</code>
-          <button type="button" className="btn sm ghost icon-only quiet" aria-label={s.copy} title={copied ? s.copied : s.copy} onClick={() => void copy()}>
-            <Icon name={copied ? "check" : "copy"} size={14} />
-          </button>
-        </div>
-      </div>
-      <div className="buttons">
-        <button type="button" className="btn primary" disabled={!!busy} onClick={onRetry}>
-          {busy === "start" && <Icon name="spinner" size={14} className="spin" />}
-          {busy === "start" ? s.starting : s.tryAgain}
-        </button>
-        <button type="button" className="btn outline" disabled={!!busy} onClick={onUv}>
-          {busy === "uv" && <Icon name="spinner" size={14} className="spin" />}
-          {busy === "uv" ? s.starting : s.useUv}
-        </button>
-        <span className="spacer" />
-        <button type="button" className="btn ghost quiet" disabled={!!busy} onClick={onBack}>
-          {s.back}
-        </button>
-      </div>
-      <p className="hint" style={{ marginTop: -8 }}>
-        {s.uvHint}
-      </p>
+      <ByUrl s={s} busy={busy} run={run} label={s.byUrlLong} />
       {error && <pre className="error-box">{error}</pre>}
     </div>
   );

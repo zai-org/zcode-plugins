@@ -9,7 +9,7 @@ Checks:
 - each plugin dir has a manifest whose name/version match the marketplace
   entry; lookup order matches the ZCode client:
   .zcode-plugin/plugin.json (preferred) -> .claude-plugin/plugin.json (compat)
-- every directory under both plugin roots is registered in the marketplace, except
+- every directory under both plugin roots is listed or explicitly unlisted, except
   TEMPLATE_DIRS (template sources kept for copying, not published)
 
 Stdlib only. Exit code 0 = pass, 1 = fail.
@@ -37,7 +37,7 @@ MAX_PLUGIN_FILES = 5000
 MAX_PLUGIN_BYTES = 256 * 1024 * 1024
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$")
 LOCALE = re.compile(r"^[a-z]{2}(-[A-Za-z0-9]+)*$")
-CATEGORIES = {"developer-tools", "productivity", "utilities", "guides", "finance", "template", "other"}
+CATEGORIES = {"游戏/3D", "developer-tools", "productivity", "utilities", "guides", "finance", "template", "other"}
 
 # Template plugin sources stay in the repo as copy-and-start scaffolding but are
 # deliberately absent from marketplace.json, so the registration check skips them.
@@ -262,6 +262,24 @@ def main() -> int:
             err(f"{label}: plugin.json description_i18n does not match marketplace entry")
         for problem in ui_surface_errors(manifest, plugin_dir):
             err(f"{label}: {problem}")
+
+    # Retain withdrawn source trees without making them installable catalog entries.
+    unlisted = marketplace.get("unlistedPlugins", [])
+    if not isinstance(unlisted, list):
+        err("marketplace.json: 'unlistedPlugins' must be a list")
+        unlisted = []
+    for entry in unlisted:
+        try:
+            if not isinstance(entry, dict):
+                raise ValueError("entry must be an object")
+            plugin_dir = resolve_plugin_dir(entry, ROOT)
+            if not plugin_dir.is_dir():
+                raise ValueError("source directory does not exist")
+            if entry["source"][2:] in registered_dirs:
+                raise ValueError("source is already listed or unlisted")
+            registered_dirs.add(entry["source"][2:])
+        except ValueError as exc:
+            err(f"marketplace.json unlistedPlugins: {exc}")
 
     for directory in PLUGIN_ROOTS:
         plugins_root = ROOT / directory

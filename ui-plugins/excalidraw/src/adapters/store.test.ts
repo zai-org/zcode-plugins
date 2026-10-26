@@ -15,6 +15,49 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 describe("document persistence", () => {
+  it("persists renames atomically with revision and idempotency checks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "excalidraw-rename-"));
+    const store = createDocumentStore(root);
+    resources.push({ root, store });
+    const original = await store.create("Old title", makeScene([{ id: "box" }]), "one");
+    const input = {
+      id: "one",
+      expectedRevision: 1,
+      operationId: "rename",
+      title: "  New title  ",
+      scene: original.scene,
+    };
+    const renamed = await store.commit(input);
+    expect(renamed).toMatchObject({
+      id: "one",
+      title: "New title",
+      revision: 2,
+      scene: original.scene,
+    });
+    expect(await store.commit(input)).toEqual(renamed);
+    await expect(store.commit({ ...input, title: "Different" })).rejects.toMatchObject({
+      code: "operation_conflict",
+    });
+    await expect(store.commit({ ...input, operationId: "stale" })).rejects.toMatchObject({
+      code: "revision_conflict",
+    });
+    await expect(
+      store.commit({ ...input, operationId: "blank", expectedRevision: 2, title: "  " }),
+    ).rejects.toMatchObject({ code: "invalid_title" });
+    expect((await store.list())[0]).toMatchObject({ title: "New title", revision: 2 });
+    await store.close();
+    const reopened = createDocumentStore(root);
+    resources.push({ root, store: reopened });
+    expect(await reopened.read("one")).toEqual(renamed);
+    const edited = await reopened.commit({
+      id: "one",
+      expectedRevision: 2,
+      operationId: "edit",
+      scene: original.scene,
+    });
+    expect(edited.title).toBe("New title");
+  });
+
   it("migrates existing documents without discarding content or idempotency records", async () => {
     const root = await mkdtemp(join(tmpdir(), "excalidraw-migration-"));
     const resource: { root: string; store?: DocumentStore } = { root };

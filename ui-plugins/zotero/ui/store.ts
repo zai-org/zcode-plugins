@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { STATE_URI, type ItemQuery, type LibraryId, type PanelView, type SessionState } from "#z/contract.ts";
+import { STATE_URI, URIS, type ItemQuery, type LibraryId, type PanelView, type SessionState } from "#z/contract.ts";
 import { host } from "#ui/bridge.ts";
 
 /**
@@ -225,3 +225,14 @@ export async function startStore() {
 }
 
 export const refreshState = () => load(STATE_URI);
+
+/** 设置页：立即重新检查 Zotero，或记下已交给 Agent。经资源读取，不触发审批。 */
+export async function setupAction(op: "check" | "handoff") {
+  const nonce = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  try {
+    const state = await host.readJson<SessionState>(URIS.setup(op, nonce));
+    set({ state, error: null });
+  } finally {
+    void load(STATE_URI);
+  }
+}

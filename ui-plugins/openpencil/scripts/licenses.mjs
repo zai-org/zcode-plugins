@@ -41,7 +41,7 @@ export async function writeNotices(metafiles, destination) {
           : `${pkg.name.replace(/^@/, "").replace(/\//g, "-")}.txt`;
       const upstreamPath = join(
         dirname(destination),
-        "../../../plugins/openpencil/licenses",
+        "../../../external_plugins/openpencil/licenses",
         upstream,
       );
       const exists = await readFile(upstreamPath, "utf8").then(
@@ -55,7 +55,7 @@ export async function writeNotices(metafiles, destination) {
       if (!upstream) throw new Error(`Missing license for bundled dependency ${key}`);
       texts.push(
         await readFile(
-          join(dirname(destination), "../../../plugins/openpencil/licenses", upstream),
+          join(dirname(destination), "../../../external_plugins/openpencil/licenses", upstream),
           "utf8",
         ),
       );

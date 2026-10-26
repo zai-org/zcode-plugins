@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import {
   STATE_URI,
   notebookUri,
+  setupUri,
   type NotebookDoc,
   type NotebookRef,
   type SessionState,
@@ -141,4 +142,15 @@ export function selectNotebook(id: string) {
 }
 
 export const refreshState = () => load(STATE_URI);
+
+/** 设置页：立即重新检查工作区的 Python，或记下已交给 Agent。经资源读取，不触发审批。 */
+export async function setupAction(op: "check" | "handoff") {
+  const nonce = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  try {
+    const state = await host.readJson<SessionState>(setupUri(op, nonce));
+    set({ state, error: null });
+  } finally {
+    void load(STATE_URI);
+  }
+}
 export const refreshNotebook = (id: string) => load(notebookUri(id));

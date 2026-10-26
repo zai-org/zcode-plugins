@@ -1,0 +1,19 @@
+{
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "name": "libtv-cli",
+  "version": "0.2.0",
+  "description": "Official LibTV CLI skill for video creation canvases, workspaces, nodes, models, uploads, and generation workflows.",
+  "description_i18n": {
+    "en": "Official LibTV CLI skill for video creation canvases, workspaces, nodes, models, uploads, and generation workflows.",
+    "zh-CN": "LibTV 官方 CLI 技能，支持视频创作画布、工作区、节点、模型、素材上传与生成工作流。"
+  },
+  "homepage": "https://www.liblib.art/tv/zh",
+  "keywords": [
+    "libtv-cli",
+    "cli",
+    "skills"
+  ]
+}

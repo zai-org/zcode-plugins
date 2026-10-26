@@ -28,6 +28,14 @@ export function pdfjsDataDir(hint?: string): string | null {
   return null;
 }
 
+/**
+ * getDocument 的 CMap 与标准字体地址。pdf.js 要求它们以 "/" 结尾，不接受 Windows 的 "\"；
+ * Node 中 pdf.js 直接用 fs 读取 `地址 + 文件名`，Windows 也接受混用的分隔符。
+ */
+export function pdfjsFactoryUrls(dataDir: string) {
+  return { cMapUrl: `${dataDir}cmaps/`, standardFontDataUrl: `${dataDir}standard_fonts/` };
+}
+
 export interface PdfText {
   pageCount: number;
   pages: PageText[];
@@ -40,9 +48,7 @@ export async function extractPdf(data: Uint8Array, dataDir: string | null): Prom
   // pdf.js 会转移（detach）传入的缓冲区，所以传一份拷贝。
   const task = pdfjs.getDocument({
     data: new Uint8Array(data),
-    ...(dataDir
-      ? { cMapUrl: `${dataDir}cmaps${sep}`, cMapPacked: true, standardFontDataUrl: `${dataDir}standard_fonts${sep}` }
-      : {}),
+    ...(dataDir ? { ...pdfjsFactoryUrls(dataDir), cMapPacked: true } : {}),
     disableFontFace: true,
     useSystemFonts: false,
     verbosity: 0,

@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import type { Diagram } from "#excalidraw/contract.ts";
+import { ToolbarIcon } from "#ui/ToolbarIcon.tsx";
 
 export type Translate = (zh: string, en: string) => string;
 export function DocumentMenu({
-  title,
   documents,
   currentId,
   busy,
@@ -12,9 +12,9 @@ export function DocumentMenu({
   onImport,
   onOpen,
   onReference,
+  onRename,
   t,
 }: {
-  title: string;
   documents: Array<Pick<Diagram, "id" | "title">>;
   currentId?: string;
   busy: boolean;
@@ -23,6 +23,7 @@ export function DocumentMenu({
   onImport(): void;
   onOpen(id: string): void;
   onReference(): void;
+  onRename(): void;
   t: Translate;
 }) {
   const menu = useRef<HTMLDetailsElement>(null);
@@ -53,9 +54,8 @@ export function DocumentMenu({
           menu.current?.removeAttribute("open");
       }}
     >
-      <summary aria-label={t("画板菜单", "Diagram menu")} title={title}>
-        <span id="diagram-title">{title}</span>
-        <span aria-hidden="true">⌄</span>
+      <summary className="toolbar-button" aria-label={t("菜单", "Menu")} title={t("菜单", "Menu")}>
+        <ToolbarIcon name="menu" />
       </summary>
       <div className="document-menu-content" aria-label={t("文档操作", "Document actions")}>
         <button id="new-document" disabled={busy} onClick={() => choose(onNew)}>
@@ -63,6 +63,9 @@ export function DocumentMenu({
         </button>
         <button disabled={busy} onClick={() => choose(onImport)}>
           {t("导入画板…", "Import diagram…")}
+        </button>
+        <button disabled={!currentId || busy} onClick={() => choose(onRename)}>
+          {t("重命名画板…", "Rename diagram…")}
         </button>
         <button
           id="reference-selection"

@@ -231,3 +231,12 @@ it("preserves external plugin sources in portable ordinary and UI snapshots", as
     access(join(output, "external_plugins", name, "dist/app.cjs")),
   ).resolves.toBeUndefined();
 }, 15000);
+
+
+it("rejects retired compiled output instead of distributing it as a standard plugin", async () => {
+  const root = await fixture();
+  await rm(join(root, "ui-plugins", name), { recursive: true });
+  await expect(buildLocalMarketplace(root)).rejects.toThrow("unexpected dist without a build source");
+  await expect(buildPlugins(root)).rejects.toThrow("unexpected dist without a build source");
+  expect(await readFile(join(root, "plugins", name, "dist/app.cjs"), "utf8")).toContain("module.exports");
+});

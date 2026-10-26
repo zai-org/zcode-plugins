@@ -1,6 +1,6 @@
 {
   "name": "jupyter-notebook",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。",
   "author": {
     "name": "ZCode"

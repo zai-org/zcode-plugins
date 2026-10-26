@@ -1,0 +1,27 @@
+{
+  "name": "unreal-engine",
+  "version": "0.1.3",
+  "description": "Build and edit Unreal Engine levels, adjust scene actors, and create and debug Blueprint logic for game prototypes.",
+  "description_i18n": {
+    "zh-CN": "在 Unreal Engine 中搭建和编辑关卡、调整场景物体，创建与调试蓝图逻辑，制作游戏原型。",
+    "en": "Build and edit Unreal Engine levels, adjust scene actors, and create and debug Blueprint logic for game prototypes."
+  },
+  "author": {
+    "name": "Z.ai"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "unreal-mcp": {
+      "type": "http",
+      "url": "${user_config.endpoint}"
+    }
+  },
+  "userConfig": {
+    "endpoint": {
+      "type": "string",
+      "default": "http://127.0.0.1:8000/mcp",
+      "description": "Unreal MCP endpoint on the machine running the ZCode agent. Keep the unauthenticated UE server on loopback."
+    }
+  }
+}

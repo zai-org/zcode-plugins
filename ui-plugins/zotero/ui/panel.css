@@ -1,3 +1,6 @@
+@import "./setup-base.css";
+@import "./setup-kit.css";
+
 /*
  * 颜色、字体、字号与圆角取宿主经 MCP Apps 传来的标准样式变量（ZCode 由 Zai Light / Zai Dark 主题映射），
  * 宿主未提供时退回同一主题的字面量。其余 token 由这些变量派生，随主题切换。
@@ -39,6 +42,33 @@
   --z-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
   --z-reader-bg: color-mix(in srgb, var(--z-fg) 6%, var(--z-page));
   color-scheme: light;
+
+  /* 设置页（setup-base.css / setup-kit.css）使用的 token */
+  --su-bg: var(--z-bg);
+  --su-card: var(--z-card);
+  --su-fg: var(--z-fg);
+  --su-fg2: var(--z-fg2);
+  --su-fg3: var(--z-fg3);
+  --su-surface: var(--z-surface);
+  --su-hover-strong: var(--z-hover-strong);
+  --su-border: var(--z-border);
+  --su-border-strong: var(--z-border-strong);
+  --su-success: var(--z-success);
+  --su-warning: var(--z-warning);
+  --su-warning-fg: color-mix(in srgb, var(--z-warning) 65%, #000);
+  --su-danger: var(--z-danger);
+  --su-danger-fg: var(--z-danger-fg);
+  --su-agent: var(--z-agent);
+  --su-agent-surface: color-mix(in srgb, var(--z-agent) 9%, transparent);
+  --su-mono: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+  --su-text: var(--z-text);
+  --su-text-sm: var(--z-text-sm);
+  --su-text-caption: calc(var(--z-text) - 1px);
+  --su-text-xl: var(--z-text-xl);
+  --su-r-md: var(--z-r-md);
+  --su-r-lg: var(--z-r-lg);
+  --su-r-xl: var(--z-r-xl);
+  --su-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(13, 13, 13, 0.06);
 }
 
 :root[data-theme="dark"] {
@@ -65,6 +95,10 @@
   --z-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
   --z-reader-bg: var(--z-page);
   color-scheme: dark;
+
+  --su-warning-fg: color-mix(in srgb, var(--z-warning) 75%, #fff);
+  --su-agent-surface: color-mix(in srgb, var(--z-agent) 12%, transparent);
+  --su-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 * {

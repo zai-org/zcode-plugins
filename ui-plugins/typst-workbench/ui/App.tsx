@@ -1,19 +1,14 @@
-import { useCallback, useState } from "react";
-import { MIN_TYPST, type SessionState } from "#t/contract.ts";
+import { useCallback, useEffect, useState } from "react";
+import type { SessionState } from "#t/contract.ts";
 import { host } from "#ui/bridge.ts";
 import { Toast, errorText, useHostContext } from "#ui/common.tsx";
 import type { Strings } from "#ui/i18n.ts";
 import { Icon } from "#ui/icons.tsx";
 import { Preview } from "#ui/Preview.tsx";
+import { TypstReady, TypstSetup } from "#ui/Setup.tsx";
 import { refreshState, useSnapshot } from "#ui/store.ts";
 
 type Notify = (message: string, tone?: "info" | "error") => void;
-
-const INSTALL = [
-  { os: "macOS", command: "brew install typst" },
-  { os: "Windows", command: "winget install --id Typst.Typst" },
-  { os: "Linux / any", command: "cargo install --locked typst-cli" },
-];
 
 function CheckAgain({ s, notify }: { s: Strings; notify: Notify }) {
   const [checking, setChecking] = useState(false);
@@ -37,43 +32,22 @@ function CheckAgain({ s, notify }: { s: Strings; notify: Notify }) {
   );
 }
 
-/** 找不到 typst、版本过旧或无法运行时的说明页。 */
-function ToolchainScreen({ state, s, notify }: { state: SessionState; s: Strings; notify: Notify }) {
-  const { toolchain } = state;
-  if (toolchain.state === "unknown")
-    return (
-      <div className="center">
-        <span className="spinner lg" />
-        <p className="muted">{s.findingTypst}</p>
-      </div>
-    );
-  const title =
-    toolchain.state === "missing" ? s.missingTitle : toolchain.state === "too_old" ? s.tooOldTitle(toolchain.version ?? "") : s.errorTitle;
-  return (
-    <div className="center status-screen">
-      <div className="tile lg">
-        <Icon name={toolchain.state === "missing" ? "power" : "alert"} size={22} />
-      </div>
-      <h2>{title}</h2>
-      {toolchain.state === "missing" && (
-        <>
-          <p className="muted">{s.missingBody}</p>
-          <ul className="install">
-            {INSTALL.map((entry) => (
-              <li key={entry.os}>
-                <span className="muted small">{entry.os}</span>
-                <code>{entry.command}</code>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {toolchain.state === "too_old" && <p className="muted">{s.tooOldBody(MIN_TYPST.join("."), toolchain.path ?? "typst")}</p>}
-      {toolchain.state === "error" && <pre className="error-box">{toolchain.error}</pre>}
-      <p className="muted small">{s.settingHint}</p>
-      <CheckAgain s={s} notify={notify} />
-    </div>
-  );
+/** 刚在这个页面里装好 Typst 时，短暂显示“已就绪”再进入预览。 */
+const READY_MS = 2_500;
+function useReadyMoment(state: SessionState | null) {
+  const [phase, setPhase] = useState<"none" | "setup" | "ready" | "done">("none");
+  const ready = state?.toolchain.state === "ready";
+  const unusable = !!state && state.toolchain.state !== "ready" && state.toolchain.state !== "unknown";
+  useEffect(() => {
+    if (unusable && phase !== "setup") setPhase("setup");
+    else if (ready && phase === "setup") setPhase("ready");
+  }, [unusable, ready, phase]);
+  useEffect(() => {
+    if (phase !== "ready") return;
+    const timer = setTimeout(() => setPhase("done"), READY_MS);
+    return () => clearTimeout(timer);
+  }, [phase]);
+  return { showReady: phase === "ready", dismiss: () => setPhase("done") };
 }
 
 /** 没有主文件：列出 .typ 文件供选择，或说明还没有。 */
@@ -120,21 +94,30 @@ function ChooseMain({ state, s, notify }: { state: SessionState; s: Strings; not
   );
 }
 
-/** 对话中的卡片：编译状态与“在侧栏打开”。 */
+/** 对话中的卡片：编译状态与“在侧栏打开”；Typst 不可用时直接进入设置。 */
 function InlineCard({ state, s }: { state: SessionState | null; s: Strings }) {
   const errors = state?.diagnostics.filter((entry) => entry.severity === "error").length ?? 0;
-  const ok = !!state && state.toolchain.state === "ready" && !!state.main && errors === 0 && state.status.phase !== "crashed";
+  const toolchain = state?.toolchain.state;
+  const unusable = !!state && toolchain !== "ready" && toolchain !== "unknown";
+  const working = unusable && state.setup.handoffAt !== null;
+  const ok = !!state && toolchain === "ready" && !!state.main && errors === 0 && state.status.phase !== "crashed";
   const sub = !state
     ? s.connecting
-    : state.toolchain.state === "missing"
-      ? s.missingTitle
-      : !state.main
-        ? s.noFilesTitle
-        : errors
-          ? `${state.main} · ${s.errors(errors)}`
-          : state.snapshot
-            ? `${state.main} · ${s.inlineReady(state.snapshot.pages)}`
-            : `${state.main} · ${s.compiling}`;
+    : working
+      ? s.agentSettingUp
+      : toolchain === "missing"
+        ? s.missingTitle
+        : toolchain === "too_old"
+          ? s.tooOldTitle(state.toolchain.version ?? "")
+          : toolchain === "error"
+            ? s.errorTitle
+            : !state.main
+              ? s.noFilesTitle
+              : errors
+                ? `${state.main} · ${s.errors(errors)}`
+                : state.snapshot
+                  ? `${state.main} · ${s.inlineReady(state.snapshot.pages)}`
+                  : `${state.main} · ${s.compiling}`;
   return (
     <div className="inline-card">
       <div className="tile">
@@ -143,14 +126,20 @@ function InlineCard({ state, s }: { state: SessionState | null; s: Strings }) {
       <div className="grow">
         <div className="name">{s.title}</div>
         <div className="sub">
-          <span className={`lamp ${ok ? "ok" : "bad"}`} />
+          <span className={`lamp ${ok ? "ok" : working ? "agent" : "bad"}`} />
           <span className="ellipsis">{sub}</span>
         </div>
       </div>
-      <button type="button" className="btn outline sm" aria-label={s.openPanel} title={s.openPanel} onClick={() => void host.requestFullscreen()}>
-        <Icon name="panel" size={15} />
-        {s.open}
-      </button>
+      {unusable && !working ? (
+        <button type="button" className="btn primary sm" onClick={() => void host.requestFullscreen()}>
+          {s.setUp}
+        </button>
+      ) : (
+        <button type="button" className="btn outline sm" aria-label={s.openPanel} title={s.openPanel} onClick={() => void host.requestFullscreen()}>
+          <Icon name="panel" size={15} />
+          {s.open}
+        </button>
+      )}
     </div>
   );
 }
@@ -161,6 +150,7 @@ export function App() {
   const [toast, setToast] = useState<{ message: string; tone?: "info" | "error" } | null>(null);
   const notify = useCallback((message: string, tone?: "info" | "error") => setToast({ message, tone }), []);
   const dismiss = useCallback(() => setToast(null), []);
+  const readyMoment = useReadyMoment(snap.state);
 
   if (inline) return <InlineCard state={snap.state} s={s} />;
   if (!snap.connected || !snap.state)
@@ -168,7 +158,15 @@ export function App() {
 
   const state = snap.state;
   let view;
-  if (state.toolchain.state !== "ready") view = <ToolchainScreen state={state} s={s} notify={notify} />;
+  if (state.toolchain.state === "unknown")
+    view = (
+      <div className="center">
+        <span className="spinner lg" />
+        <p className="muted">{s.findingTypst}</p>
+      </div>
+    );
+  else if (state.toolchain.state !== "ready") view = <TypstSetup state={state} s={s} />;
+  else if (readyMoment.showReady) view = <TypstReady state={state} s={s} onContinue={readyMoment.dismiss} />;
   else if (!state.main) view = <ChooseMain state={state} s={s} notify={notify} />;
   else view = <Preview state={state} s={s} notify={notify} />;
   return (

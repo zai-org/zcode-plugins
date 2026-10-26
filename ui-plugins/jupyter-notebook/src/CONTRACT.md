@@ -6,6 +6,7 @@
 
 - `jupyter/`：Jupyter Server REST（status、kernelspecs、sessions、kernels、contents）与 kernel WebSocket（旧版 JSON 帧，不协商子协议）。只认 `{baseUrl, token}`，不区分 server 来源。
 - `servers/`：`ServerRegistry` 是连接唯一 owner。`attach(url, token)` 连接已有 server；`launch()` 找到装有 `jupyter_server` + `ipykernel` 的 Python，起 `python -m jupyter_server`（仅 `127.0.0.1`、随机端口、`JUPYTER_TOKEN`、root_dir = 工作区），就绪后同样 attach。`discover()` 读 Jupyter runtime 目录的 `jpserver-*.json`。只停止自己 launch 的 server；进程退出时一并停止。
+- `servers/environment.ts`：启动前的环境检查（`JupyterEnvironment`）：与 `start_server` 相同的解释器顺序，目标解释器中两个包的版本，环境是否由 uv 管理（pyvenv.cfg 的 `uv =` 或项目的 uv.lock），本机的 uv，以及安装命令（uv 项目 `uv add --dev`，没有 pyproject.toml 的 uv 环境 `uv pip install --python`，其余 pip）。`start_server` 失败时的提示用同一个命令。
 - `domain/`：nbformat 规范化（补 cell id、source 归一为字符串）、编辑操作、输出归并（stream 合并、`clear_output(wait)`、`update_display_data`）、模型摘要。纯函数。
 - `app/notebooks.ts`：`NotebookOwner` 是已打开 notebook 的唯一 owner：文档、revision、kernel session、执行、自动保存与冲突。
 - `adapters/`：MCP 工具、资源与订阅。
@@ -46,7 +47,19 @@
 
 - `ui://jupyter-notebook/panel.html`：页面，单文件 HTML。
 - `ui://jupyter-notebook/state.json`：`SessionState`，可订阅。
+- `ui://jupyter-notebook/setup/{op}/{nonce}`：设置页操作，返回 `SessionState`。`check` 立即检查环境；`handoff` 记下已交给 Agent。
 - `ui://jupyter-notebook/notebooks/{id}.json`：`NotebookDoc`，可订阅；运行中节流约 100 ms 通知一次。超出 `LIMITS.resourceBytes` 时省略最大的输出并计数。
+
+## 设置页
+
+缺少本机程序时，面板显示同一套设置页（三个插件共用 `ui/setup-kit.tsx` 与 `ui/setup-kit.css`，颜色经 `--su-*` 映射到各自的 token）：
+
+- **要求清单**：每一项要求一行，状态为满足 / 缺少 / 等待上一步 / 正在检查 / 失败；未满足的行右侧总有一个词（不只靠颜色）。缺少时说明查找过的位置，页脚列出本机系统、架构与包管理器（`host/facts.ts`，只读探测）。
+- **交给 Agent**：按检测到的事实生成一条消息（开头、灰色的事实、步骤、结尾），发送前完整可见；**发给 Agent** 用 `sendMessage` 以用户名义发到对话，**复制**同样的纯文本可交给任意 Agent。宿主不支持发消息时，复制是主要操作。
+- **已交给 Agent**：发送后读取 `setup/handoff/{nonce}`，server 记下时间（`setup.handoffAt`）；所有页面（含对话卡片）据此显示“正在设置”，第一个未满足的要求显示为正在检查。要求满足或 30 分钟后清除。
+- **自动前进**：面板订阅 `state.json` 期间 server 定时重新检查，满足后状态通知页面；“重新检查”读取 `setup/check/{nonce}` 立即检查。两者都是资源读取：宿主对页面发起的工具调用要求审批，读取资源不需要。
+
+Jupyter 的要求：Python、`jupyter-server`、`ipykernel`。没有可用 server 且环境缺少依赖时，面板先显示设置页（第一次读取 `state.json` 前先检查一次，不会先显示“启动”）；本机发现的 server 与按 URL 连接仍可使用，因为它们不需要本机安装。依赖装好后回到“启动”页；Agent 按消息调用 `start_server` 后进入 notebook 列表。
 
 ## 页面通信
 
@@ -70,5 +83,5 @@ sequenceDiagram
 ## 安全
 
 - token 不出现在工具结果、资源、日志或页面中；launched server 只绑定 `127.0.0.1`。
-- 不自动安装任何东西；缺少依赖时返回 `jupyter_not_installed` 与安装建议。`useUv` 是显式选项。
+- 不自动安装任何东西；缺少依赖时返回 `jupyter_not_installed` 与安装建议，设置页可以把安装交给 Agent（由用户点击发送）。`useUv` 是显式选项。
 - HTML / SVG / Markdown 输出在页面经 DOMPurify 清洗后渲染，不执行输出中的脚本。

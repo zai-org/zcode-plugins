@@ -739,6 +739,16 @@ export function createZoteroMcpServer({
   );
 
   // 面板专用：刷新连接状态（Zotero 刚启动时）。
+  // 面板专用：打开已安装的 Zotero（设置页的“打开 Zotero”）。
+  register(
+    "panel_launch_zotero",
+    { description: "Open the Zotero desktop app installed on this computer.", input: {}, visibility: ["app"] },
+    async () => {
+      const path = await session.launchApp();
+      return { text: `Started Zotero (${path}).`, structured: { path } };
+    },
+  );
+
   register(
     "panel_refresh",
     { description: "Check the Zotero connection again.", input: {}, visibility: ["app"], readOnly: true },
@@ -774,6 +784,19 @@ export function createZoteroMcpServer({
     if (session.client.status.state === "unknown") await session.poll().catch(() => undefined);
     return json(STATE_URI, session.state());
   });
+  // 设置页：立即重新检查（check）或记下已交给 Agent（handoff）；返回最新状态。
+  server.registerResource(
+    "setup",
+    new ResourceTemplate("ui://zotero/setup/{op}/{nonce}", { list: undefined }),
+    { mimeType: JSON_MIME },
+    async (uri, variables) => {
+      const op = String(variables.op);
+      if (op === "check") await session.recheck();
+      else if (op === "handoff") session.handoff();
+      else throw new ZoteroError("not_found", `No setup action ${op}`);
+      return json(uri.href, session.state());
+    },
+  );
   server.registerResource(
     "collections",
     new ResourceTemplate("ui://zotero/lib/{library}/collections.json", { list: undefined }),

@@ -94,6 +94,27 @@ class CatalogClassificationTest(unittest.TestCase):
         self.assertNotEqual(code, 0)
         self.assertIn("external_plugins/other", message)
 
+    def test_unlisted_plugin_keeps_source_without_publishing(self):
+        self.catalog["plugins"] = []
+        self.catalog["unlistedPlugins"] = [{"name": "panel", "source": self.entry["source"]}]
+        directory = self.write_fixture()
+        self.assertEqual(self.check()[0], 0, self.check()[1])
+        with patch.object(build_dist, "ROOT", self.root), patch.object(build_dist, "DIST", self.root / "dist"), patch.object(build_dist, "ASSETS_DIR", self.root / "assets"), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(build_dist.main(), 0)
+        published = json.loads((self.root / "dist/marketplace.json").read_text())
+        self.assertEqual(published["plugins"], [])
+        self.assertFalse((self.root / "dist/plugins/panel").exists())
+        self.assertTrue(directory.is_dir())
+
+    def test_invalid_unlisted_sources_are_rejected(self):
+        for unlisted in [None, [None], [{"name": "panel", "source": self.entry["source"]}],
+                         [{"name": "other", "source": "./external_plugins/other"}],
+                         [{"name": "panel", "source": "./external_plugins/../panel"}]]:
+            with self.subTest(unlisted=unlisted):
+                self.catalog["unlistedPlugins"] = unlisted
+                self.write_fixture()
+                self.assertIn("unlistedPlugins", self.check()[1])
+
     def test_source_escape_is_rejected_by_validator_and_builder(self):
         self.entry["source"] = "./external_plugins/../panel"
         self.write_fixture()

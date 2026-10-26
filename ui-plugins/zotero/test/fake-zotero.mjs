@@ -427,7 +427,7 @@ export async function startFakeZotero(options = {}) {
       return send(response, 500, String(error?.stack ?? error));
     }
   });
-  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  await new Promise((done) => server.listen(options.port ?? 0, "127.0.0.1", done));
   const url = `http://127.0.0.1:${server.address().port}`;
   return {
     url,

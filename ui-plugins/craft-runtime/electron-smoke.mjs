@@ -47,7 +47,7 @@ app.whenReady().then(async()=>{
   const errors=[];
   try{
    const workspace=await mkdtemp(join(output,name+'-workspace-'));
-   const transport=new StdioClientTransport({command:${JSON.stringify(process.execPath)},args:[join(root,'plugins',name,'dist/server.mjs')],cwd:workspace,env:{PATH:process.env.PATH||'',ZCODE_WORKSPACE_ROOT:workspace},stderr:'pipe'});
+   const transport=new StdioClientTransport({command:${JSON.stringify(process.execPath)},args:[join(root,'external_plugins',name,'dist/server.mjs')],cwd:workspace,env:{PATH:process.env.PATH||'',ZCODE_WORKSPACE_ROOT:workspace},stderr:'pipe'});
    client=new Client({name:'craft-electron-check',version:'1'});await client.connect(transport);
    const panel=await client.readResource({uri:'ui://'+name+'/panel.html'});
    const registry=createPluginSandboxRegistry();
@@ -76,7 +76,7 @@ app.whenReady().then(async()=>{
    assert.equal(await frame.executeJavaScript("document.querySelectorAll('#craft-toolbar, #craft-open, #craft-path').length"),0);
    assert.equal(await frame.executeJavaScript("document.getElementById('craft-stage').getBoundingClientRect().top"),0);
    assert.equal(await frame.executeJavaScript("document.getElementById('craft-notice').hidden"),true);
-   const automation=await automationSmoke({client,name,workspace,catalogPath:join(root,'plugins',name,'dist/tools.json'),frame:{
+   const automation=await automationSmoke({client,name,workspace,catalogPath:join(root,'external_plugins',name,'dist/tools.json'),frame:{
     evaluate:fn=>frame.executeJavaScript('('+fn.toString()+')()'),
     waitForFunction:(fn,_arg,options)=>waitFor(()=>frame.executeJavaScript('('+fn.toString()+')()'),options.timeout),
    }});

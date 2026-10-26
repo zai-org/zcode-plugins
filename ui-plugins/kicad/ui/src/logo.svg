@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>ZCode KiCad plugin</title>
+  <!-- A chat bubble (the conversation) whose content is a PCB trace with two pads, a via and a branch (the board). Solid square, no baked corner radius. -->
+  <rect width="512" height="512" fill="#0d3b2c"/>
+  <path d="M132 84 H380 A56 56 0 0 1 436 140 V292 A56 56 0 0 1 380 348 H236 L136 442 V348 H132 A56 56 0 0 1 76 292 V140 A56 56 0 0 1 132 84 Z" fill="#eaf4ee"/>
+  <g fill="none" stroke="#1b7a58" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M152 216 H224 L272 168 H368"/>
+    <path d="M224 216 L272 264 H368"/>
+  </g>
+  <g fill="#e0a526">
+    <circle cx="146" cy="216" r="40"/>
+    <circle cx="372" cy="168" r="34"/>
+    <circle cx="372" cy="264" r="34"/>
+  </g>
+  <g fill="#eaf4ee">
+    <circle cx="146" cy="216" r="15"/>
+    <circle cx="372" cy="168" r="13"/>
+    <circle cx="372" cy="264" r="13"/>
+  </g>
+  <circle cx="224" cy="216" r="18" fill="#e0a526"/>
+  <circle cx="224" cy="216" r="7" fill="#1b7a58"/>
+</svg>

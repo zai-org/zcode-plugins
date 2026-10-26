@@ -41,7 +41,7 @@ export async function writeNotices(metafiles, destination) {
       if (!upstream) throw new Error(`Missing license for bundled dependency ${key}`);
       texts.push(
         await readFile(
-          join(dirname(destination), "../../../plugins/excalidraw/licenses", upstream),
+          join(dirname(destination), "../../../external_plugins/excalidraw/licenses", upstream),
           "utf8",
         ),
       );

@@ -1,0 +1,68 @@
+{
+  "name": "kicad",
+  "version": "0.6.1",
+  "description": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+  "author": {
+    "name": "冯小平",
+    "url": "https://github.com/fxp"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "kicad": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 300000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "ZCODE_KICAD_APP": "${user_config.kicadApp}",
+        "ZCODE_KICAD_PYTHON": "${user_config.pythonPath}"
+      }
+    }
+  },
+  "userConfig": {
+    "kicadApp": {
+      "type": "file",
+      "default": "",
+      "title": "KiCad.app 路径",
+      "description": "可选。KiCad 10 的 KiCad.app 完整路径。留空使用 /Applications/KiCad/KiCad.app；本插件用其中的 kicad-cli、自带 Python 和官方符号/封装库。"
+    },
+    "pythonPath": {
+      "type": "file",
+      "default": "",
+      "title": "带 fastmcp 的 Python",
+      "description": "可选。已安装 fastmcp、pydantic、numpy 的 Python 解释器。留空时依次使用 uv（自动按需拉取依赖）和 PATH 上的 python3。"
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "board",
+        "title": {
+          "zh-CN": "KiCad 电路板",
+          "en-US": "KiCad board"
+        },
+        "icon": "cpu",
+        "server": "kicad",
+        "resourceUri": "ui://kicad/board.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+    "zh-CN": "把 KiCad 10 嵌入对话：Agent 用电路 spec 设计双层板（真实 KiCad 库、自动布线、DRC、Gerber/BOM/贴片坐标），侧栏面板显示 3D 渲染和 DRC 结论；一键在真实的 KiCad PCB Editor 里继续编辑，保存后自动同步回对话。"
+  },
+  "keywords": [
+    "kicad",
+    "pcb",
+    "electronics",
+    "hardware",
+    "ui"
+  ]
+}

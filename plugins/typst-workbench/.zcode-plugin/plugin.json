@@ -1,6 +1,6 @@
 {
   "name": "typst-workbench",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "用你本机的 Typst 在对话侧栏实时预览文档：Agent 改完文件预览即刻更新，查看错误与渲染页面、在预览中标出位置、导出 PDF；你可以选中预览中的文字，连同对应的源码位置发给 Agent。",
   "author": {
     "name": "ZCode"

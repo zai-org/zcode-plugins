@@ -1,0 +1,27 @@
+{
+  "name": "blender",
+  "version": "0.4.1",
+  "description": "Use the official Blender CLI to install or locate Blender, model in visible desktop iterations, and inspect images before refining the same project.",
+  "description_i18n": {
+    "en": "Use the official Blender CLI to install or locate Blender, model in visible desktop iterations, and inspect images before refining the same project.",
+    "zh-CN": "引导安装和使用官方 Blender CLI，逐轮打开界面建模，实际看图后调整同一项目。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "homepage": "https://www.blender.org",
+  "repository": "https://github.com/blender/blender",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "blender",
+    "blender-cli",
+    "3d",
+    "render",
+    "bpy",
+    "gltf",
+    "batch",
+    "automation"
+  ],
+  "skills": "skills"
+}

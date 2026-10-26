@@ -79,11 +79,15 @@ export async function startFixture() {
       const value = await response.json(); if(!response.ok) throw Error(value.error); return value;
     }
     window.__contexts = [];
+    window.__activeContexts = [];
     window.__pluginClient = {
       theme: 'light', locale: 'zh-CN', toolCancelled: null, ...${JSON.stringify(bootstrap)},
       readResource: (uri) => rpc('readResource', {uri}),
       callTool: (name, args) => rpc('callTool', {name, arguments:args}),
-      updateModelContext: async (value) => { window.__contexts.push(value); },
+      updateModelContext: async (value) => {
+        window.__latestContext = value;
+        (value.structuredContent.kind === 'active-diagram' ? window.__activeContexts : window.__contexts).push(value);
+      },
       setWidgetState: async (value) => { window.__pluginClient.widgetState = value; },
       notifyIntrinsicHeight: () => {},
     };

@@ -55,3 +55,19 @@ These are UI integrations. Native engine automation, every import/export format,
 coverage, OCR models, native audio plugins, printing, clipboard behavior and unsaved document
 recovery have not been exhaustively tested. The workspace import cap is 128 MiB and the host
 export cap is 50 MiB. See each plugin's bilingual README for invocation and limitations.
+
+## 后台保留声明（2026-10-22）
+
+九个 Craft 页面（cadcraft、deckcraft、designcraft、gridcraft、pdfcraft、photocraft、soundcraft、vectorcraft、wordcraft）
+通过共用运行时在 HTML 资源 `_meta.ui.backgroundRetention` 声明 `true`，以允许 WASM 编辑器后台运行。
+宿主按窗口保留；超过四个后台声明页时可以回收三十分钟未活跃且不忙的页面。回收会销毁页面内存，
+不能代替保存文件。其它插件不增加声明。验证包含真实 MCP resources/list 与 resources/read 返回、
+九个安装版本/市场版本一致、宿主 Electron 读取声明和真实 PhotoCraft 后台运行。
+
+长轮询取到业务任务时，通过结果 `_meta["zcode/activity"]: true` 让宿主在解除 busy 前续期；空轮询不声明。既有单次操作 120 秒上限保持。
+
+本次九个插件均升级为 `0.2.4`。构建、独立复制安装包 MCP 检查、运行时 20 项测试、
+市场校验与 ZIP 打包通过。macOS arm64 / Electron 44.7.0 使用实际 PhotoCraft `0.2.4`
+验证最小化后首次启动、后台文档/图层操作、恢复同一 guest 与删除释放；证据批次
+`zcode-mcp-host-e2e-zv1BoS`。未在用户商店资料中重装，未重跑其它八个编辑器的可视交互，
+Windows/Linux 未验证。

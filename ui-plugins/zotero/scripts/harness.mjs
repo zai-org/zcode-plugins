@@ -20,7 +20,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const PANEL_CSP =
   "default-src 'none'; script-src 'self' 'unsafe-inline' blob: data: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'";
 
-export async function startHarness({ env = {}, workspace }) {
+/** server：要运行的 server 入口（默认真实打包的 dist/server.mjs）。 */
+export async function startHarness({ env = {}, workspace, server = join(root, "dist/server.mjs") }) {
   const client = new Client({ name: "zotero-harness", version: "1" });
   const sseClients = new Set();
   client.setNotificationHandler(ResourceUpdatedNotificationSchema, (notification) => {
@@ -29,7 +30,7 @@ export async function startHarness({ env = {}, workspace }) {
   const stderr = [];
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: [join(root, "dist/server.mjs")],
+    args: [server],
     cwd: workspace,
     env: { ...process.env, ZCODE_WORKSPACE_ROOT: workspace, ...env },
     stderr: "pipe",

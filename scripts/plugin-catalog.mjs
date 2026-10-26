@@ -86,7 +86,15 @@ export async function validateLocalMcpPaths(installed, manifest) {
 }
 
 export async function validateBuiltPlugin(plugin) {
-  if (!plugin.pkg) return;
+  if (!plugin.pkg) {
+    try {
+      await access(join(plugin.installed, "dist"));
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      throw error;
+    }
+    throw new Error(`${plugin.entry.name}: unexpected dist without a build source; inspect and remove stale generated output before packaging`);
+  }
   const { entry, installed, manifest } = plugin;
   const built = await readJson(join(installed, "dist/build-info.json"));
   if (built.name !== entry.name || built.version !== manifest.version)

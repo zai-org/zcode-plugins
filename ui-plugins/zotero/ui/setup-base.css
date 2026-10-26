@@ -1,0 +1,171 @@
+/*
+ * 设置页骨架：与 jupyter-notebook 的设置页（.setup / .card / .row / .cmd）同一套结构与尺寸。
+ * 只作用于 .setup-shell 之内，不影响面板其他部分的按钮与卡片。
+ */
+.setup-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--su-bg);
+}
+.setup-hdr {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--su-border);
+}
+.setup-hdr .name {
+  font-weight: 500;
+}
+.setup-hdr .icon {
+  color: var(--su-fg2);
+}
+.setup-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.setup {
+  max-width: 492px;
+  margin: 0 auto;
+  padding: 36px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  line-height: 1.5;
+}
+.setup .intro {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.setup .tile.lg {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px;
+  border: 0;
+  border-radius: var(--su-r-xl);
+  background: var(--su-hover-strong);
+  color: var(--su-fg);
+}
+.setup h1 {
+  margin: 0;
+  font-size: var(--su-text-xl);
+  line-height: 26px;
+  font-weight: 600;
+}
+.setup .lead {
+  margin: 0;
+  color: var(--su-fg2);
+  text-wrap: pretty;
+}
+.setup .lead code {
+  font-family: var(--su-mono);
+  font-size: var(--su-text-caption);
+  color: var(--su-fg);
+}
+.setup .section {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.setup .label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--su-text-sm);
+  line-height: 16px;
+  color: var(--su-fg2);
+  font-weight: 500;
+}
+.setup .card {
+  border: 1px solid var(--su-border);
+  border-radius: var(--su-r-xl);
+  background: var(--su-card);
+  overflow: hidden;
+}
+.setup .row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 14px;
+  min-width: 0;
+}
+.setup .row + .row {
+  border-top: 1px solid var(--su-border);
+}
+.setup .row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.setup .hint {
+  margin: 0;
+  font-size: var(--su-text-sm);
+  line-height: 17px;
+  color: var(--su-fg3);
+  text-wrap: pretty;
+}
+.setup .hint b {
+  font-weight: 500;
+  color: var(--su-fg2);
+}
+.setup .hint code {
+  font-family: var(--su-mono);
+}
+.setup .cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--su-surface);
+  border-radius: var(--su-r-xl);
+  padding: 8px 6px 8px 14px;
+}
+.setup .cmd code {
+  flex: 1;
+  min-width: 0;
+  font: calc(var(--su-text) - 1.5px) / 20px var(--su-mono);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.setup .error-box {
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  font: var(--su-text-sm) / 18px var(--su-mono);
+}
+
+/* 按钮：jupyter-notebook 的尺寸（28 / 24 / 32） */
+.setup .btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--su-r-lg);
+  font-size: var(--su-text-caption);
+  line-height: 1;
+}
+.setup .btn.sm {
+  height: 24px;
+  padding: 0 8px;
+  gap: 5px;
+  border-radius: var(--su-r-md);
+  font-size: var(--su-text-sm);
+}
+.setup .btn.lg {
+  height: 32px;
+  padding: 0 12px;
+  font-size: var(--su-text);
+}
+.setup .btn.icon-only {
+  width: 28px;
+  padding: 0;
+}
+.setup .btn.sm.icon-only {
+  width: 24px;
+}
+.setup .btn.outline {
+  border-color: var(--su-border);
+}

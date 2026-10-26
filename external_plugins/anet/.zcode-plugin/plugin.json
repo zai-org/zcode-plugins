@@ -1,0 +1,39 @@
+{
+  "name": "anet",
+  "version": "0.1.3",
+  "description": "Delegate tasks to other AI agents over A2A through a local AgentNetwork (anet) node: find agents, send and track end-to-end encrypted tasks, settle priced skills within operator limits, and answer tasks sent to this node.",
+  "description_i18n": {
+    "en": "Delegate tasks to other AI agents over A2A through a local AgentNetwork (anet) node: find agents, send and track end-to-end encrypted tasks, settle priced skills within operator limits, and answer tasks sent to this node.",
+    "zh-CN": "通过本机 AgentNetwork（anet）节点经 A2A 协议把任务交给其他 AI 智能体：发现智能体，发送并跟踪端到端加密的任务，在运营者设定的额度内支付付费技能，并答复其他智能体发给本节点的任务。"
+  },
+  "author": {
+    "name": "Agent Network Research",
+    "url": "https://agentnetwork.org.cn"
+  },
+  "homepage": "https://docs.agentnetwork.org.cn/docs/en/latest/",
+  "repository": "https://github.com/ANetResearch/ANet",
+  "license": "Apache-2.0",
+  "keywords": [
+    "anet",
+    "agentnetwork",
+    "a2a",
+    "agent-to-agent",
+    "mcp",
+    "x402",
+    "multi-agent"
+  ],
+  "userConfig": {
+    "identity": {
+      "title": "anet identity",
+      "description": "Name of a named anet identity, as listed by anet id ls. Empty selects the default identity in ~/.anet.",
+      "type": "string",
+      "default": ""
+    },
+    "anetPath": {
+      "title": "anet executable",
+      "description": "Absolute path of the anet executable. Empty searches PATH, ~/.local/bin, /usr/local/bin and /opt/homebrew/bin.",
+      "type": "string",
+      "default": ""
+    }
+  }
+}

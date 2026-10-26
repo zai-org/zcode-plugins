@@ -96,6 +96,9 @@ def parse_quoted_value(raw: str, quote: str, line_number: int) -> str:
 
 def parse_dotenv(text: str) -> list[tuple[str, str]]:
     entries: list[tuple[str, str]] = []
+    # GitHub stores secret names as uppercase and treats lookups as
+    # case-insensitive. Track that canonical form so a dotenv file cannot
+    # submit the same remote secret twice under differently-cased names.
     seen: set[str] = set()
 
     for line_number, source_line in enumerate(text.splitlines(), start=1):
@@ -116,7 +119,8 @@ def parse_dotenv(text: str) -> list[tuple[str, str]]:
             raise DotenvError(f"line {line_number}: invalid secret name")
         if key.upper().startswith("GITHUB_"):
             raise DotenvError(f"line {line_number}: GITHUB_ names are reserved")
-        if key in seen:
+        canonical_key = key.upper()
+        if canonical_key in seen:
             raise DotenvError(f"line {line_number}: duplicate secret name {key}")
 
         raw_value = raw_value.lstrip()
@@ -126,7 +130,7 @@ def parse_dotenv(text: str) -> list[tuple[str, str]]:
             value = split_unquoted_value(raw_value)
 
         entries.append((key, value))
-        seen.add(key)
+        seen.add(canonical_key)
 
     if not entries:
         raise DotenvError("secret file contains no KEY=VALUE entries")

@@ -1,0 +1,29 @@
+{"app_name":"pcbnew","app_version":"10.0.6","bundleID":"org.kicad.pcbnew","bug_type":"309","name":"pcbnew"}
+{
+  "procName": "pcbnew",
+  "procPath": "/private/var/folders/*/pcbnew.app/Contents/MacOS/pcbnew",
+  "captureTime": "2026-10-19 19:00:37.4708 +0800",
+  "exception": {
+    "codes": "0x0000000000000000, 0x0000000000000000",
+    "rawCodes": [
+      0,
+      0
+    ],
+    "type": "EXC_CRASH",
+    "signal": "SIGABRT"
+  },
+  "termination": {
+    "code": 1,
+    "flags": 518,
+    "namespace": "DYLD",
+    "indicator": "Library missing",
+    "details": [
+      "(terminated at launch; ignore backtrace)"
+    ],
+    "reasons": [
+      "Library not loaded: @rpath/libkicommon.10.0.6.dylib",
+      "Referenced from: <36B2C30D-B0D7-3AF3-8EE9-51BF68679947> /private/var/folders/*/pcbnew.app/Contents/MacOS/pcbnew",
+      "Reason: tried: '/private/var/folders/xx/yyyyyyyy/T/AppTranslocation/00000000-0000-0000-0000-000000000000/d/pcbnew.app/Contents/Frameworks/libkicommon.10.0.6.dylib' (no such file), '/private/var/folders/xx/yyyyyyyy/T/AppTranslocation/00000000-0000-0000-0000-000000000000/d/pcbnew.app/Contents/Frameworks/Python.framework/libkicommon.10.0.6.dylib' (no such file), '/private/var/folders/xx/yyyyyyyy/T/AppTranslocation/00000000-0000-0000-0000-000000000000/d/pcbnew.app/Contents/Frameworks/libkicommon.10.0.6.dylib' (no such file), '/private/var/folders/xx/yyyyyyyy/T/AppTranslocation/00000000-0000-0000-0000-000000000000/d/pcbnew.app/Contents/Frameworks/Python.framework/libkicommo"
+    ]
+  }
+}

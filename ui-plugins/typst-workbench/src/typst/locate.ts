@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { access, constants, stat } from "node:fs/promises";
-import { delimiter, isAbsolute, join } from "node:path";
+import { delimiter, isAbsolute, join, sep } from "node:path";
 import { MIN_TYPST, type Toolchain } from "#t/contract.ts";
 
 export type Version = [number, number, number];
@@ -48,6 +48,19 @@ export function commonDirs(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, ho
     "/snap/bin",
     "/usr/bin",
   ];
+}
+
+/** 设置页显示的查找位置：与本机最相关的在前（Homebrew / WinGet、cargo），家目录缩写为 ~。 */
+export function searchedDirs(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string, arch: string = process.arch): string[] {
+  const dirs = commonDirs(platform, env, home);
+  const first =
+    platform === "win32"
+      ? [dirs[0]!, join(home, ".cargo", "bin")]
+      : platform === "darwin"
+        ? [arch === "arm64" ? "/opt/homebrew/bin" : "/usr/local/bin", join(home, ".cargo", "bin")]
+        : [join(home, ".cargo", "bin"), join(home, ".local", "bin")];
+  const ordered = [...new Set([...first, ...dirs])];
+  return ordered.map((dir) => (home && dir.startsWith(home + sep) ? `~${dir.slice(home.length)}` : dir));
 }
 
 async function executable(path: string): Promise<boolean> {

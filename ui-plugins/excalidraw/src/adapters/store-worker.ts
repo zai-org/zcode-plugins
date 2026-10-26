@@ -78,14 +78,18 @@ function mutate(method: string, args: Commit & { operations?: Operation[] }): Di
         : validateScene(args.scene),
     );
     const revision = current.revision + 1;
+    const title = args.title === undefined ? current.title : args.title.trim();
+    if (!title || title.length > 200)
+      throw new DiagramError("invalid_title", "Title must contain 1 to 200 characters");
     const updatedAt = Date.now();
-    db.prepare("UPDATE documents SET scene=?,revision=?,updatedAt=? WHERE id=?").run(
+    db.prepare("UPDATE documents SET scene=?,title=?,revision=?,updatedAt=? WHERE id=?").run(
       scene,
+      title,
       revision,
       updatedAt,
       current.id,
     );
-    const result = diagram({ ...current, scene, revision, updatedAt });
+    const result = diagram({ ...current, scene, title, revision, updatedAt });
     db.prepare("INSERT INTO operations VALUES (?,?,?,?)").run(
       args.id,
       args.operationId,

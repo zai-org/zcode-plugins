@@ -46,7 +46,7 @@ const toolMeta = (name: string, visibility: Array<"model" | "app">) => {
 
 export function createDesignServer(options: DesignServerOptions) {
   const { registry, bridge, workspaceRoot, assetRoot } = options;
-  const server = new McpServer({ name: PLUGIN_NAME, version: "0.3.1" });
+  const server = new McpServer({ name: PLUGIN_NAME, version: "0.3.2" });
   const register = (
     name: string,
     description: string,

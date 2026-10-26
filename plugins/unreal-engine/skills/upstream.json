@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/EpicGames/unreal-engine-skills-for-claude-code-plugin",
+  "commit": "a6aa73ada02a9fb1f5415bec491f9942c519b297",
+  "license": "MIT",
+  "adaptations": [
+    "ZCode connection and setup instructions",
+    "Removed unavailable Claude docked context guidance",
+    "ZCode editor discovery, project launch, bounded readiness and client reconnection guidance",
+    "Observed dispatch, localized Blueprint and parameter compatibility guidance; bounded smoke-test verification and cleanup"
+  ]
+}

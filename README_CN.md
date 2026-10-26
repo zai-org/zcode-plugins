@@ -18,6 +18,7 @@
 | 插件 | 分类 | 说明 |
 | --- | --- | --- |
 | [**cloudbase-skills**](./plugins/cloudbase-skills) | `developer-tools` | 腾讯云 CloudBase 开发技能与 MCP 集成，覆盖 Web、小程序、数据库、云函数、云托管、云存储和 AI 项目。 |
+| [**blender**](./plugins/blender) | `productivity` | Blender 官方 Lab MCP 集成（仅 MCP，无 UI 面板）：检查并修改场景、执行 bpy、检索文档、截图和渲染。 |
 | [**mimosa**](./plugins/mimosa) | `developer-tools` | 本地优先的代码安全防线，提供写入前 Hook、复查与 Git 门禁、安全命令和可选密封深扫。 |
 | [**github**](./plugins/github) | `developer-tools` | 基于 GitHub CLI 的工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库和 Codespaces。 |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | 基于 `glab` 的 GitLab 工作流，覆盖 MR、Issue、CI/CD、仓库、Release 和 API，并支持自托管实例。 |
@@ -29,24 +30,25 @@
 
 ### UI 插件
 
-- `blender` `0.2.2`: 在 ZCode 对话旁打开 Blender 场景：Agent 修改物体、材质、相机并渲染预览；面板用 Three.js 轻量浏览。
-- `excalidraw` `0.2.2`: 让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。
-- `openpencil` `0.2.3`: 在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。
+Excalidraw、OpenPencil 和 9 个 Craft 插件作为社区插件收录于 [`external_plugins/`](./external_plugins/)，由 `zcoder` 维护。
+
+- `excalidraw` `0.2.3`: 让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。
+- `openpencil` `0.3.2`: 在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。
 - `zcode-mcp-app-dev` `0.1.1`: 使用官方 SDK 开发 ZCode MCP App，附宿主扩展约定与独立构建指引。
 
-- `photocraft` `0.2.2`：PhotoCraft 图像编辑。
-- `vectorcraft` `0.2.2`：VectorCraft 矢量绘图。
-- `pdfcraft` `0.2.2`：PdfCraft PDF 编辑。
-- `designcraft` `0.2.2`：DesignCraft 页面排版。
-- `wordcraft` `0.2.2`：WordCraft 文字处理。
-- `gridcraft` `0.2.2`：GridCraft 电子表格。
-- `deckcraft` `0.2.2`：DeckCraft 演示文稿。
-- `cadcraft` `0.2.2`：CADCraft CAD 绘图。
-- `soundcraft` `0.2.2`：SoundCraft 音频编辑。
+- `photocraft` `0.2.3`：PhotoCraft 图像编辑。
+- `vectorcraft` `0.2.3`：VectorCraft 矢量绘图。
+- `pdfcraft` `0.2.3`：PdfCraft PDF 编辑。
+- `designcraft` `0.2.3`：DesignCraft 页面排版。
+- `wordcraft` `0.2.3`：WordCraft 文字处理。
+- `gridcraft` `0.2.3`：GridCraft 电子表格。
+- `deckcraft` `0.2.3`：DeckCraft 演示文稿。
+- `cadcraft` `0.2.3`：CADCraft CAD 绘图。
+- `soundcraft` `0.2.3`：SoundCraft 音频编辑。
 
 这 9 个 Craft 插件嵌入固定源码版本编译的 Trunk/WASM 编辑器，支持工作区文件导入、保存，并将全部 334 个上游 MCP 工具定义接入当前编辑器。原生系统专属功能仍受 Web 平台限制。构建来源、限制与验证方法见 [共享适配层说明](./ui-plugins/craft-runtime/README.md)。
 
-UI 插件的运行产物（`plugins/<name>/dist/`）属于构建输出，不提交到 Git。发布流水线从 `ui-plugins/` 源码构建并发布 ZIP；仅靠 Git checkout 无法安装需要编译的 UI 插件。源码开发需要 Node.js 24+ 和 pnpm 10.33.2：运行 `pnpm install --frozen-lockfile` 和 `pnpm build` 后，注册 `dist/local-marketplace`。修改源码或版本后重新构建即可。
+UI 插件的运行产物（`plugins/<name>/dist/` / `external_plugins/<name>/dist/`）属于构建输出，不提交到 Git。发布流水线从 `ui-plugins/` 源码构建并发布 ZIP；仅靠 Git checkout 无法安装需要编译的 UI 插件。源码开发需要 Node.js 24+ 和 pnpm 10.33.2：运行 `pnpm install --frozen-lockfile` 和 `pnpm build` 后，注册 `dist/local-marketplace`。修改源码或版本后重新构建即可。
 
 ### 金融插件
 
@@ -129,4 +131,4 @@ Apache License 2.0
 
 ## MCP Apps
 
-交互插件源码位于 `ui-plugins/`，安装目录位于 `plugins/`。构建与验证见 [MCP App 构建说明](docs/MCP_APP_BUILD.md)；可选的 `zcode-mcp-app-dev` skill 提供官方 SDK 开发指引和 ZCode 扩展示例，不是运行依赖。
+交互插件源码位于 `ui-plugins/`，安装目录位于 `plugins/` 或 `external_plugins/`。构建与验证见 [MCP App 构建说明](docs/MCP_APP_BUILD.md)；可选的 `zcode-mcp-app-dev` skill 提供官方 SDK 开发指引和 ZCode 扩展示例，不是运行依赖。

@@ -97,12 +97,16 @@ export function createTypstMcpServer({
   });
   server.server.setRequestHandler(SubscribeRequestSchema, async ({ params }) => {
     subscribed.add(params.uri);
-    // 面板打开即开始预览。
-    if (params.uri === STATE_URI) void session.activate().catch((error) => log(`activation failed: ${error}`));
+    // 面板打开即开始预览；Typst 不可用时持续重新查找，装好后自动开始。
+    if (params.uri === STATE_URI) {
+      void session.activate().catch((error) => log(`activation failed: ${error}`));
+      session.watchSetup(true);
+    }
     return {};
   });
   server.server.setRequestHandler(UnsubscribeRequestSchema, async ({ params }) => {
     subscribed.delete(params.uri);
+    if (params.uri === STATE_URI) session.watchSetup(false);
     return {};
   });
 
@@ -429,6 +433,21 @@ export function createTypstMcpServer({
     await session.refreshCandidates().catch(() => undefined);
     return { contents: [{ uri: STATE_URI, mimeType: JSON_MIME, text: JSON.stringify(session.state()) }] };
   });
+  // 设置页：立即重新查找（check）或记下已交给 Agent（handoff）；返回最新状态。
+  server.registerResource(
+    "setup",
+    new ResourceTemplate("ui://typst-workbench/setup/{op}/{nonce}", { list: undefined }),
+    { mimeType: JSON_MIME },
+    async (uri, variables) => {
+      const op = String(variables.op);
+      if (op === "check") await session.recheck(true);
+      else if (op === "handoff") {
+        await session.activate().catch((error) => log(`activation failed: ${error}`));
+        session.handoff();
+      } else throw new TypstError("not_found", `No setup action ${op}`);
+      return { contents: [{ uri: uri.href, mimeType: JSON_MIME, text: JSON.stringify(session.state()) }] };
+    },
+  );
   server.registerResource(
     "pdf-part",
     new ResourceTemplate("ui://typst-workbench/pdf/{seq}/{part}", { list: undefined }),

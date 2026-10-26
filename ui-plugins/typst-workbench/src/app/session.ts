@@ -8,6 +8,7 @@ import {
   type CompileStatus,
   type Diagnostic,
   type Highlight,
+  type HostFacts,
   type PanelView,
   type SessionState,
   type SnapshotInfo,
@@ -17,7 +18,8 @@ import { fuzzyFind, lineRange, lineStarts, locateInSources, skeleton, type Sourc
 import { chooseMain, scanTypFiles } from "#t/domain/project.ts";
 import { findQuote, parsePages, rectsFor, textAt, type PageText } from "#t/domain/text.ts";
 import { extractPages, pageCount } from "#t/pdf/extract.ts";
-import { locateTypst, type LocateOptions } from "#t/typst/locate.ts";
+import { detectFacts } from "#t/host/facts.ts";
+import { locateTypst, searchedDirs, type LocateOptions } from "#t/typst/locate.ts";
 import { exportPdf, renderPages } from "#t/typst/oneshot.ts";
 import { Watcher, reapOrphans } from "#t/typst/watcher.ts";
 
@@ -31,6 +33,8 @@ export interface SessionOptions {
   env?: NodeJS.ProcessEnv;
   /** 测试注入：替换工具链查找。 */
   locate?: (options: LocateOptions) => Promise<Toolchain>;
+  /** 测试注入：替换本机事实探测。 */
+  facts?: () => Promise<HostFacts>;
   log?: (line: string) => void;
 }
 
@@ -39,6 +43,12 @@ interface Snapshot {
   bytes: Uint8Array;
   pages?: Promise<PageText[]>;
 }
+
+/** cargo 也是一种安装方式（cargo install typst-cli）。 */
+const cargo = (env: NodeJS.ProcessEnv) => {
+  const home = env.HOME ?? env.USERPROFILE ?? "";
+  return [{ name: "cargo", bin: "cargo", dirs: [join(home, ".cargo", "bin")] }];
+};
 
 const INSTALL_HINT =
   "Install Typst (for example `brew install typst`, `winget install --id Typst.Typst`, `cargo install --locked typst-cli`, or a release from https://github.com/typst/typst/releases), or set its path in the plugin setting “Typst path”.";
@@ -84,6 +94,14 @@ export class TypstSession {
   private activated = false;
   private closed = false;
 
+  // 设置页：本机事实、“已交给 Agent”、面板打开期间的重新查找。
+  private facts: HostFacts | null = null;
+  private factsPending: Promise<void> | null = null;
+  private handoffAt: number | null = null;
+  private setupTimer: ReturnType<typeof setInterval> | null = null;
+  private setupTicks = 0;
+  private rechecking: Promise<void> | null = null;
+
   constructor(private readonly options: SessionOptions) {
     this.workspaceRoot = resolve(options.workspaceRoot);
     this.log = options.log ?? (() => undefined);
@@ -113,6 +131,11 @@ export class TypstSession {
       view: this.view,
       viewSeq: this.viewSeq,
       highlights: this.highlights,
+      setup: {
+        facts: this.facts,
+        searched: searchedDirs(process.platform, this.env, this.env.HOME ?? this.env.USERPROFILE ?? ""),
+        handoffAt: this.handoffAt !== null && Date.now() - this.handoffAt < LIMITS.handoffMs ? this.handoffAt : null,
+      },
     };
   }
 
@@ -124,6 +147,7 @@ export class TypstSession {
   activate(): Promise<void> {
     this.activation ??= (async () => {
       this.realRoot = await realpath(this.workspaceRoot).catch(() => this.workspaceRoot);
+      void this.detectFacts();
       await this.detectToolchain();
       await this.refreshCandidates(true);
       if (!this.main) this.main = chooseMain(this.candidates, await this.remembered());
@@ -137,11 +161,79 @@ export class TypstSession {
     return this.activation;
   }
 
-  private async detectToolchain() {
+  private async detectToolchain(shell = true) {
     const locate = this.options.locate ?? locateTypst;
-    this.toolchain = await locate({ setting: this.options.typstPath, env: this.env });
+    const before = this.toolchain;
+    this.toolchain = await locate({ setting: this.options.typstPath, env: this.env, shell });
+    const changed = before.state !== this.toolchain.state || before.path !== this.toolchain.path || before.version !== this.toolchain.version;
+    if (!changed) return;
     if (this.toolchain.state === "ready") this.log(`typst ${this.toolchain.version} at ${this.toolchain.path} (${this.toolchain.source})`);
     else this.log(`typst not usable: ${this.toolchain.state} ${this.toolchain.error ?? ""}`);
+  }
+
+  /** 本机事实只探测一次（系统、架构、包管理器不会在会话中变化；cargo 可能被装上，设置页重新检查时刷新）。 */
+  private detectFacts(force = false): Promise<void> {
+    if (this.facts && !force) return Promise.resolve();
+    this.factsPending ??= (this.options.facts ?? (() => detectFacts(cargo(this.env))))()
+      .then((facts) => {
+        if (JSON.stringify(facts) === JSON.stringify(this.facts)) return;
+        this.facts = facts;
+        this.emit();
+      })
+      .catch((error) => this.log(`could not detect host facts: ${error}`))
+      .finally(() => (this.factsPending = null));
+    return this.factsPending;
+  }
+
+  // -------------------------------------------------------------------------
+  // 设置页：重新查找、交给 Agent
+  // -------------------------------------------------------------------------
+
+  /**
+   * 重新查找 Typst（Agent 或用户刚装好时）。找到可用的 Typst 就扫描文件、开始预览。
+   * shell 为 false 时跳过登录 shell（面板打开期间的定时查找用它，避免频繁启动 shell）。
+   */
+  recheck(shell = true): Promise<void> {
+    this.rechecking ??= (async () => {
+      await this.activate();
+      const before = this.toolchain;
+      await this.detectToolchain(shell);
+      const changed = before.state !== this.toolchain.state || before.path !== this.toolchain.path || before.version !== this.toolchain.version;
+      if (!changed) return;
+      if (this.toolchain.state === "ready") {
+        this.handoffAt = null;
+        await this.stopWatcher();
+        await this.refreshCandidates(true);
+        if (!this.main) this.main = chooseMain(this.candidates, await this.remembered());
+        await this.startWatcher();
+      }
+      this.emit();
+    })().finally(() => (this.rechecking = null));
+    return this.rechecking;
+  }
+
+  /** 面板把安装交给了 Agent：设置页据此显示“正在设置”，直到 Typst 就绪。 */
+  handoff() {
+    if (this.toolchain.state === "ready") return;
+    this.handoffAt = Date.now();
+    this.emit();
+  }
+
+  /** 面板订阅期间，Typst 不可用时每隔几秒重新查找，装好后预览自动开始。 */
+  watchSetup(enabled: boolean) {
+    if (enabled && !this.setupTimer && !this.closed) {
+      this.setupTicks = 0;
+      this.setupTimer = setInterval(() => {
+        if (this.toolchain.state === "ready" || this.toolchain.state === "unknown" || this.rechecking) return;
+        const shell = ++this.setupTicks % LIMITS.setupShellEvery === 0;
+        if (shell) void this.detectFacts(true);
+        void this.recheck(shell).catch((error) => this.log(`recheck failed: ${error}`));
+      }, LIMITS.setupWatchMs);
+      this.setupTimer.unref?.();
+    } else if (!enabled && this.setupTimer) {
+      clearInterval(this.setupTimer);
+      this.setupTimer = null;
+    }
   }
 
   /** 重新查找 typst、重新扫描文件并重启 watch（面板的“重新启动”按钮）。 */
@@ -703,6 +795,7 @@ export class TypstSession {
 
   async close() {
     this.closed = true;
+    this.watchSetup(false);
     await this.stopWatcher();
     if (this.buildDir) await rm(this.buildDir, { recursive: true, force: true }).catch(() => undefined);
   }

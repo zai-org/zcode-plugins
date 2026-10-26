@@ -3,10 +3,12 @@ import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import {
   JupyterError,
   type DiscoveredServer,
+  type JupyterEnvironment,
   type ServerInfo,
 } from "#nb/contract.ts";
 import { createJupyterClient, normalizeBaseUrl, type JupyterClient } from "#nb/jupyter/rest.ts";
 import { discoverServers, type RuntimeServer } from "#nb/servers/discover.ts";
+import { UNKNOWN_ENVIRONMENT, checkEnvironment, installCommandForTarget } from "#nb/servers/environment.ts";
 import {
   findJupyterPython,
   launchJupyterServer,
@@ -28,6 +30,8 @@ export interface RegistryDeps {
   pythonPath: string | null;
   discover?: () => Promise<RuntimeServer[]>;
   findPython?: typeof findJupyterPython;
+  /** 测试注入：替换启动前的环境检查。 */
+  checkEnvironment?: () => Promise<JupyterEnvironment>;
   launch?: (options: LaunchOptions) => Promise<LaunchedProcess>;
   clientFactory?: typeof createJupyterClient;
   onLog?: (line: string) => void;
@@ -86,11 +90,28 @@ export function createServerRegistry(deps: RegistryDeps) {
   const clientFactory = deps.clientFactory ?? createJupyterClient;
   const discover = deps.discover ?? (() => discoverServers());
   let launching: Promise<ServerInfo> | null = null;
+  let environment: JupyterEnvironment = UNKNOWN_ENVIRONMENT;
+  let checkingEnvironment: Promise<JupyterEnvironment> | null = null;
 
   const changed = () => {
     for (const listener of listeners) listener();
   };
   const snapshot = (entry: Entry): ServerInfo => ({ ...entry.info });
+
+  /** 检查工作区能否启动 Jupyter Server（并发的检查合并为一次）；结果变化时通知。 */
+  function refreshEnvironment(): Promise<JupyterEnvironment> {
+    checkingEnvironment ??= (deps.checkEnvironment ?? (() => checkEnvironment({ workspaceRoot: deps.workspaceRoot, pythonPath: deps.pythonPath })))()
+      .then((next) => {
+        const same = JSON.stringify({ ...next, checkedAt: 0 }) === JSON.stringify({ ...environment, checkedAt: 0 });
+        environment = next;
+        if (!same) changed();
+        return next;
+      })
+      .finally(() => {
+        checkingEnvironment = null;
+      });
+    return checkingEnvironment;
+  }
 
   async function verify(client: JupyterClient) {
     // /api/status 需要认证；/api 给出版本。
@@ -175,6 +196,11 @@ export function createServerRegistry(deps: RegistryDeps) {
       return snapshot(entry);
     },
 
+    /** 最近一次环境检查的结果。 */
+    environment: (): JupyterEnvironment => environment,
+
+    checkEnvironment: refreshEnvironment,
+
     /** start_server 首先尝试的解释器（只看文件是否存在，不探测）。 */
     launchPython(): string | null {
       const first = pythonCandidates(deps.workspaceRoot, deps.pythonPath)[0];
@@ -197,7 +223,15 @@ export function createServerRegistry(deps: RegistryDeps) {
           const candidates = python
             ? [{ command: python, source: "requested" }]
             : pythonCandidates(deps.workspaceRoot, deps.pythonPath);
-          command = (await (deps.findPython ?? findJupyterPython)(candidates)).command;
+          try {
+            command = (
+              await (deps.findPython ?? findJupyterPython)(candidates, undefined, (target) => installCommandForTarget(target, deps.workspaceRoot))
+            ).command;
+          } catch (error) {
+            // 设置页随之显示缺少的依赖。
+            if (error instanceof JupyterError && error.code === "jupyter_not_installed") void refreshEnvironment().catch(() => undefined);
+            throw error;
+          }
         }
         const proc = await (deps.launch ?? launchJupyterServer)({
           workspaceRoot: deps.workspaceRoot,

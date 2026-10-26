@@ -1,6 +1,6 @@
 {
   "name": "@zcode/plugin-typst-workbench",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:e2e": "node scripts/e2e.mjs",
-    "preview": "node scripts/preview.mjs"
+    "preview": "node scripts/preview.mjs",
+    "test:setup": "node scripts/setup-e2e.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",

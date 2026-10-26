@@ -1,0 +1,15 @@
+{
+  "name": "unity",
+  "version": "0.1.5",
+  "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unity/icon.png",
+  "description": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
+  "description_i18n": {
+    "en": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
+    "zh-CN": "在 Unity 中搭建游戏场景、编辑物体和资源、编写 C# 脚本，运行并调试游戏原型。"
+  },
+  "author": {
+    "name": "Z.ai"
+  },
+  "license": "SEE THIRD_PARTY_NOTICES.md",
+  "skills": "skills"
+}

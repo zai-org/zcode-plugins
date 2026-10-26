@@ -24,6 +24,7 @@ Git 市场安装包已包含编译好的 MCP server 和面板，无需自行构�
 
 ### 面板
 
+- **安装引导**：没有运行中的 server、且工作区的 Python 缺少 `jupyter-server` 或 `ipykernel` 时，面板在你点“启动”之前就检查，并列出项目 Python（以及是否由 uv 管理）和每个包。**发给 Agent** 发出一条带正确安装命令的消息（uv 项目用 `uv add --dev …`，否则用 `pip`），由 Agent 安装并启动 server；*自己安装*给出命令以及“只在本次会话中使用 uv”。面板每隔几秒重新检查，包装好后自动进入下一步。通过 URL 连接已在运行的 server 不需要本机安装。
 - 面板跟随 ZCode 主题：颜色、字体与浅色 / 深色模式都取自宿主。
 - 头部只有一行：点 notebook 名称可切换已打开的 notebook、打开或新建 notebook；点 kernel 状态打开 kernel 菜单。
 - 代码、Markdown、Raw cell，语法高亮；Markdown 支持 LaTeX 公式。
@@ -66,4 +67,5 @@ pnpm test               # 单元测试
 pnpm test:integration   # 真实 Jupyter Server
 pnpm smoke              # 构建后的 MCP server（stdio）
 pnpm test:e2e           # Chrome 中经官方 AppBridge 宿主运行面板
+pnpm test:setup         # 在 Chrome 中用缺少依赖的真实 uv 环境测试安装引导
 ```

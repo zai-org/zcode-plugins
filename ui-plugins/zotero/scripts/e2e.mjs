@@ -165,12 +165,12 @@ try {
   await frame.locator(".detail-title", { hasText: "Revised in Zotero" }).waitFor({ timeout: 10_000 });
   fake.touch("PAPERAAA", { title: "Second-Class Values Revisited" });
 
-  step("status screens when Zotero's API is off, and recovery");
+  step("setup page when Zotero's API is off, and recovery");
   fake.state.apiEnabled = false;
-  await frame.locator(".status-screen h2", { hasText: "Turn on Zotero's local API" }).waitFor({ timeout: 10_000 });
+  await frame.locator(".setup h1", { hasText: "Turn on Zotero's local API" }).waitFor({ timeout: 10_000 });
   await shot(outer, "06-api-disabled");
   fake.state.apiEnabled = true;
-  await frame.locator(".status-screen button", { hasText: "Check again" }).click();
+  // 设置页每隔几秒自动重新检查，不需要点击。
   await frame.locator(".detail-title").waitFor({ timeout: 10_000 });
   await outer.context().close();
 

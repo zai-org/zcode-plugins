@@ -1,0 +1,1 @@
+The KiCad worker of this plugin (circuit spec checking, placement, auto-router, DRC, fabrication export) and its artifact store, under the same license as the plugin. `config.py` reads no file: locations come from the environment the plugin was started with.

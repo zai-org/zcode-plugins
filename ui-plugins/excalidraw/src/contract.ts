@@ -36,6 +36,7 @@ export interface Commit {
   expectedRevision: number;
   operationId: string;
   scene: Scene;
+  title?: string;
 }
 export interface DocumentStore {
   create(title: string, scene: Scene, id?: string): Promise<Diagram>;

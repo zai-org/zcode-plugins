@@ -18,7 +18,7 @@ const openedFiles = [];
 const readAsset = createAssetReader(join(directory, "assets"), config.assets);
 const server = new McpServer({ name, version }, { capabilities: { resources: {}, tools: {} } });
 const metadata = {
-  ui: { prefersBorder: false },
+  ui: { prefersBorder: false, backgroundRetention: true },
   "zcode/csp": { wasmUnsafeEval: true },
 };
 const resource = (uri, bytes) => ({
