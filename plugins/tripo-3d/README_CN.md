@@ -2,6 +2,18 @@
 
 [English](./README.md)
 
+## 0.1.5
+
+游戏/实时资产显式优先选择 **P2**（积分高于 H/P1）；看重积分更低、速度更快时仍可选 **P1**，
+影视/渲染/打印用 v3.1。绑骨默认 v3.0，动画预设须跟随上游 rig 模型。
+重拓扑 v3.0 的 `smart_uv` 与独立 `tripo_smart_uv` 是不同计费流程。
+fast 贴图需 v3.5；`chat_image_1` 已退役。
+
+CLI 最低 **0.8.0**，通过 `npx tripo-cli@0.8` 运行，不使用 npm `latest`；执行前
+检查实际版本，不满足则停止，不静默降级。计划不是报价，本文**费用未估算**，
+计费前须说明不确定性并获得确认。禁止自动切换账号。MCP 是默认路径，未授权
+不构成使用 CLI 的许可。Hook 同步执行来源标记、版本门槛与选模/计费约束。
+
 Tripo 官方 ZCode 插件。用一句话或一张图生成带贴图的 3D 模型，支持骨骼绑定、动画、
 减面和格式转换（GLB/FBX/OBJ/STL/USDZ/3MF），文件直接落到你的项目里。覆盖游戏、
 影视、AR 和 3D 打印场景。
@@ -14,10 +26,10 @@ API Key。本构建的 MCP 只对接国内站；海外站账号请安装海外�
 
 | 组件 | 内容 |
 | --- | --- |
-| Skill `tripo-3d` | 主流程：执行路径选择、授权引导、MCP 工作流、场景 → 工具链映射、输入处理、积分规则；以及备用的 `tripo-cli` 路径 |
+| Skill `tripo-3d` | 主流程：执行路径选择、授权引导、MCP 工作流、场景 → 工具链映射、输入处理、积分规则；以及需明确选择的 `tripo-cli` 路径 |
 | Skill `tripo-game-asset` | 游戏资产配方：面数预算道具、LOD 链、绑骨角色与动画、接入 Unity/Unreal/Godot/Three.js |
-| MCP 服务器 `tripo` | 远程 Streamable HTTP server `https://developers.tripo3d.com/mcp`（OAuth 2.1），提供 `tripo_plan`、`tripo_text_to_3d`、`tripo_image_to_3d`、`tripo_task_wait`、`tripo_mesh_edit`、`tripo_rig`、`tripo_animate`、`tripo_convert` 等 26 个工具 |
-| Hook `SessionStart` | 会话开始时注入 5 条硬规则（异步等待、链接过期、积分确认 / `tripo_plan`、浏览器授权、如实报错），保证即使 skill 未被触发也遵守 |
+| MCP 服务器 `tripo` | 远程 Streamable HTTP server `https://developers.tripo3d.com/mcp`（OAuth 2.1），含计划、生成、绑骨、转换与独立 UV；以实际可见工具 schema 为准 |
+| Hook `SessionStart` | 注入 7 条规则：异步等待、链接过期、计费确认、浏览器授权、如实报错、来源/版本门槛、显式选模与计费决策 |
 
 ## 怎么用
 
@@ -45,7 +57,7 @@ API Key。本构建的 MCP 只对接国内站；海外站账号请安装海外�
 - **网络**：MCP 工具调用走 `https://developers.tripo3d.com/mcp`；授权页跳转到国内站 Tripo 控制台（developers.tripo3d.com）。生成结果通过 Tripo 的 CDN 短期链接（约 5 分钟过期）下载。
 - **账号与计费**：所有生成任务消耗你自己 Tripo 账号的积分，每次工具返回 `credits_consumed`；失败任务自动退款。批量生成前 skill 会先用 `tripo_plan` 草稿、查余额并确认。
 - **文件写入**：只在你要求把模型落到本地时，用 `curl` 把结果下载到项目目录；Hook 与 MCP 服务器本身不写任何文件。
-- **命令执行**：MCP 路径下仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。备用 CLI 路径通过 `npx tripo-cli@latest` 从 npm 下载并运行 [tripo-cli](https://www.npmjs.com/package/tripo-cli)（MIT），只在批量生成等需要时使用，且会先说明。
+- **命令执行**：MCP 路径下仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。可选 [tripo-cli](https://www.npmjs.com/package/tripo-cli) 路径（MIT）通过 `npx tripo-cli@0.8` 运行，最低 0.8.0。仅当用户明确选择 CLI 并确认账号、区域和计费计划后执行，先检查实际版本；不可用则停止。MCP 失败、未授权、批量或本地落盘需求均不自动切换 CLI。
 - **Hook**：`hooks/session-start.mjs` 依赖 PATH 中的 `node`，只从 stdin 读取事件、向 stdout 输出一段固定文本，不访问网络、不读写文件。
 - **不采集任何数据**：插件本体不含遥测；账号凭据由 ZCode 的凭据存储管理，不经过对话。
 

@@ -5,6 +5,24 @@ description: Generate a 3D model from a text prompt, a reference image, or an ex
 
 # Tripo 3D
 
+## Client attribution
+
+Use `tripo-cli` 0.8.0 or later, pinned as `npx tripo-cli@0.8`. Check the
+version before using these contracts; if it is missing or older, ask before
+installing it or offer the authorized MCP path, never
+silently downgrade or switch accounts. The cost is not estimated by this document:
+show a live estimate if available, otherwise disclose that uncertainty and obtain
+explicit consent before any billed task. A plan is not a quote.
+On every CLI command, including each command
+in a pipeline and commands from references, set
+`TRIPO_DISTRIBUTION_CHANNEL=zcode_plugin`. Set `TRIPO_CLIENT_APP=zcode` only
+when running in ZCode; in the Claude compatibility host use `TRIPO_CLIENT_APP=claude`.
+If the host is unknown, leave `TRIPO_CLIENT_APP` unset; never infer it from the
+package name. Use a variable prefix in POSIX or set `$env:TRIPO_CLIENT_APP` and
+`$env:TRIPO_DISTRIBUTION_CHANNEL` in the same PowerShell call. Never save these
+values to an account profile. MCP sends only `X-Tripo-Distribution: zcode_plugin`;
+its client info identifies the actual host. OAuth and region selection stay the same.
+
 Generate engine-ready 3D assets with Tripo. Two execution paths exist; pick one
 before doing anything else, and never pretend to run what this environment
 cannot run.
@@ -98,20 +116,22 @@ loses access too.
      credits, then add a skeleton with the `rig_type` the check returned.
      Prompt characters as **T-pose** at generation time; `spec: "mixamo"` for
      Unity Humanoid / Mixamo pipelines. Leave `model` unset: `tripo_rig` picks
-     the humanoid v1.0 rig for `biped` and the creature v2.5 rig for the other
+     v3.0 for `biped` and the creature v2.5 rig for the other
      body types, and its result says which preset family the rig takes.
    - `tripo_animate` — presets on a **successful rig task** (≤5 per call,
      billed per animation). Preset names follow the rig model reported by
-     `tripo_rig`: humanoid (v1.0) rigs take `preset:biped:walk`,
-     `preset:biped:idle`, …; creature (v2.5) rigs take `preset:walk`,
-     `preset:idle`, …; `animate_in_place: true` when game code drives movement.
+     `tripo_rig`: explicit legacy v1.0 rigs take `preset:biped:walk`,
+     `preset:biped:idle`, …; v3.0 and v2.5 rigs take `preset:walk`,
+     `preset:idle`, … on bipeds and only their body-type clip on creatures
+     (`preset:quadruped:walk`, …; avian has none); `animate_in_place: true`
+     when game code drives movement.
    - `tripo_convert` — export GLTF/USDZ/FBX/OBJ/STL/3MF, optional retopology
      via `face_limit`/`quad`. Quads cannot export GLTF. Any non-default option
      bills as "complex convert".
    - `tripo_decimate` — high-poly → low-poly (`face_limit` 500–20000, bakes the
      original textures); `tripo_segment` → `tripo_mesh_complete` — split into
      parts and close the cuts; `tripo_mesh_edit` — redo one region of an
-     existing mesh with P2 Preview (`bbox` required). Stylize (lego / voxel /
+     existing mesh with P2 (`bbox` required). Stylize (lego / voxel /
      voronoi / minecraft) has been retired — there is no `tripo_stylize` tool
      and no CLI `--then stylize` step.
 6. **Deliver** — result URLs (`model_url`, `preview_image_url`) **expire in
@@ -129,10 +149,10 @@ followed by `tripo_task_wait`. GLB is the native output — a `tripo_convert`
 step is only worth its credits when the target really needs another format.
 
 - **Game prop, mobile / WebGL / many instances** — generate with
-  `face_limit` ≤ 20000 (auto-selects the low-poly `P1` model) →
+  explicit `model: "P2"` and a confirmed `face_limit` →
   `tripo_convert` `format: "FBX"` (`texture_size: 2048`) for Unity/Unreal;
   Three.js/Godot take the GLB as is.
-- **Game hero asset, PC / console** — default `v3.1`, `pbr: true`,
+- **Game hero asset, PC / console** — explicit `model: "P2"`, `pbr: true`,
   `texture_quality: "detailed"` → FBX only if the engine needs it.
 - **Film / render / close-ups** — `v3.1` with `geometry_quality: "detailed"`
   and `texture_quality: "detailed"` (both cost extra credits).
@@ -144,9 +164,10 @@ step is only worth its credits when the target really needs another format.
   with `template: "t_pose"` turns a character image into one) →
   `tripo_image_to_3d`/`tripo_text_to_3d` → `tripo_rig_check` → `tripo_rig`
   (`spec: "mixamo"` for Unity Humanoid) → `tripo_animate` with the preset
-  family named in the `tripo_rig` result: humanoids
-  `["preset:biped:walk", "preset:biped:idle"]`, creatures (quadruped and the
-  other body types) `["preset:walk", "preset:idle"]`.
+  family named in the `tripo_rig` result: v3.0 humanoids
+  `["preset:walk", "preset:idle"]`; creatures use their body-specific presets
+  (e.g. `preset:quadruped:walk`); explicit v1.0 humanoids alone use
+  `preset:biped:*`.
 - **LOD chain** — generate once → one `tripo_decimate` per level
   (`face_limit` is a target, not a hard ceiling — say so when the project has
   a strict budget).
@@ -162,11 +183,10 @@ step is only worth its credits when the target really needs another format.
 
 ## Parameters that matter
 
-- **Generation model version is chosen automatically**: `v3.1` high fidelity
-  by default, `P1` when the prompt smells low-poly or `face_limit ≤ 20000`.
-  Only pass `model` to the generation tools when the user explicitly asks
-  (`P2` / `P2-20260801` Preview for quads or a bigger low-poly budget). The
-  rig model is likewise chosen from `rig_type` by `tripo_rig` (see above).
+- **Choose the generation model explicitly**: P2 for game/realtime topology
+  (costs more credits than H/P1); P1 remains optional for lower cost and speed. Use v3.1
+  for film/render/print. This is plugin policy, not an API requirement. Confirm
+  the model, texture options and cost; re-confirm any paid model change.
 - 3D printing / untextured output: `texture: false, pbr: false` skips texture
   credits entirely; convert to `STL` (add `flatten_bottom: true` for stability).
 - `quad: true` (v3.1 or P2) needs a `tripo_convert` to FBX/OBJ/USDZ at the end;
@@ -197,7 +217,7 @@ step is only worth its credits when the target really needs another format.
   per-stage breakdown when a chain misbehaves.
 - `tripo_task_list` — status of up to 100 task ids in one call (batches).
 - `tripo_usage` — recent per-task credit spend (includes per-task breakdown).
-- `tripo_mesh_edit` — P2 Preview regional regenerate (`bbox` + optional
+- `tripo_mesh_edit` — P2 regional regenerate (`bbox` + optional
   `ref_image`).
 
 ## Spending the user's credits
@@ -218,7 +238,7 @@ record.
 ## Before the first generation
 
 ```bash
-npx tripo-cli@latest doctor     # verifies key, network, region, balance
+npx tripo-cli@0.8 doctor        # verifies key, network, region, balance
 ```
 
 Auth resolves from `TRIPO_API_KEY` (a `tsk_...` key) or a previous `tripo login`.
@@ -242,7 +262,7 @@ should pick `cn` (Alipay top-up), everyone else `ov` — signing up during the
 login flow is fine and new accounts get free credits.
 
 ```bash
-npx tripo-cli@latest login --region cn --yes    # or: --region ov
+npx tripo-cli@0.8 login --region cn --yes       # or: --region ov
 ```
 
 `--yes` forces the non-interactive device flow. The command prints a
@@ -269,12 +289,12 @@ assume they have never seen this page:
 When the command exits 0, re-run `doctor` and continue. Exit code 3 means the
 code expired or was denied — run the same login command again for a fresh
 code. If an older CLI rejects headless login with a usage error, fall back to
-asking the user to run `npx tripo-cli@latest login` in their own terminal.
+asking the user to run `npx tripo-cli@0.8 login` in their own terminal.
 
-Installing globally (`npm install -g tripo-cli`) makes repeated calls faster and
+Installing globally (`npm install -g tripo-cli@0.8`) makes repeated calls faster and
 is what makes the bare `tripo` command exist — ask before doing it. Without a
 global install, run every `tripo ...` command in this and related skills as
-`npx tripo-cli@latest ...`; npx downloads the CLI on first use, so a fresh machine
+`npx tripo-cli@0.8 ...`; npx downloads the CLI on first use, so a fresh machine
 needs no manual install. If `npx` itself is missing, Node.js is not installed —
 have the user install Node.js LTS first. On China-mainland networks, when the
 npx download stalls, switch to the npmmirror registry and retry:
@@ -312,7 +332,7 @@ path instead.
   use a chain-free preset instead (`toy` for low-poly, with `-p face_limit=...`)
   or tell the user the extra format costs credits before running.
 - `--then <steps>` overrides the chain. Steps: `texture` `convert`
-  `import` `rig-check` `rig` `retarget` `segment` `complete` `decimate` `smartsegment`.
+  `import` `rig-check` `rig` `retarget` `segment` `complete` `decimate` `smartsegment` `uv`.
   Arguments use `step:key=value`; a bare value maps to the step's primary argument
   (`convert:fbx`, `decimate:5000`).
 - `-o, --out <dir>` sets the **parent** directory, not the artifact directory. `make`
@@ -352,9 +372,9 @@ path instead.
    it does not, `tripo redo` re-rolls with a new seed.
 5. **Never invent parameters.** Run `tripo docs --topic commands/make` for the full
    flag list, or `tripo docs --topic common-errors` for the error table.
-6. **Let the CLI choose the model version.** It selects `tripo-v3.1` (high fidelity)
-   or `tripo-p1` (low-poly, face budget 50-20000) automatically. Only pass `--model`
-   when the user explicitly asks for one (`tripo-p2` Preview for quads).
+6. **Pass `--model` explicitly.** Prefer `tripo-p2` for game/realtime
+   topology, retain `tripo-p1` for lower cost and speed, and `tripo-v3.1` for film/render/print.
+   Confirm cost before execution; presets are not a substitute for this choice.
 
 Download URLs returned by the API expire in about five minutes — never cache one.
 Re-run `tripo task get <id> --download` instead.
@@ -368,3 +388,8 @@ Model versions, generation/processing parameters, 2D steps, list prices, CLI
 result shape and other commands: read [`references/capability.md`](references/capability.md)
 (same parameter names on MCP and CLI). MCP also has `tripo_plan` (confirm before
 spend) and `tripo_mesh_edit` (P2 regional redo).
+
+Retopology: `tripo_decimate` with explicit `model: "v3.0", smart_uv: true`
+combines retopology and UVs (35 tri / 40 quad credits). Standalone
+`tripo_smart_uv` is a separate billed UV-layout task for inputs up to 80,000
+equivalent triangles; confirm the choice and cost. See the capability reference.
