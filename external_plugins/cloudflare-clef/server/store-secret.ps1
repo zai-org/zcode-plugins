@@ -11,6 +11,10 @@ $ErrorActionPreference = "Stop"
 
 $secretPath = Join-Path $env:USERPROFILE ".zcode\secrets\cloudflare-clef.json"
 
+# Non-interactive automation via environment variables: preferred over
+# -Token/-AccountId parameters, which are visible in the process command line.
+if (-not $AccountId -and $env:CLOUDFLARE_ACCOUNT_ID) { $AccountId = $env:CLOUDFLARE_ACCOUNT_ID }
+if (-not $Token -and $env:CLOUDFLARE_API_TOKEN) { $Token = $env:CLOUDFLARE_API_TOKEN }
 if (-not $AccountId) { $AccountId = Read-Host "Cloudflare Account ID (32 hex characters)" }
 if (-not $Token) {
   $tokenSecure = Read-Host "Cloudflare API Token (input hidden)" -AsSecureString
