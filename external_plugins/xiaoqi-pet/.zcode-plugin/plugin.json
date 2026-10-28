@@ -1,0 +1,15 @@
+{
+  "name": "xiaoqi-pet",
+  "version": "0.3.1",
+  "description": "Xiaoqi desk pet: a companion for ZCode that mirrors live session activity — phases, tools, approval waits and completions — on a desktop pet, with a multi-session task board, color-coded task drawers, desktop notices and a today's-usage / plan-balance capsule.",
+  "author": {
+    "name": "fengxiaohui"
+  },
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills",
+  "commands": "./commands",
+  "description_i18n": {
+    "en": "Xiaoqi desk pet: a companion for ZCode that mirrors live session activity — phases, tools, approval waits and completions — on a desktop pet, with a multi-session task board, color-coded task drawers, desktop notices and a today's-usage / plan-balance capsule.",
+    "zh-CN": "小栖桌宠：把 ZCode 会话状态（思考、执行工具、等待确认、完成）实时投到桌面宠物上的伴侣，带多会话任务看板、彩色抽屉卡、桌面通知与今日用量 / 套餐余量胶囊。"
+  }
+}

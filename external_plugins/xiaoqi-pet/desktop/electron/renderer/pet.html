@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xiaoqi</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="pet-body" data-mood="idle">
+  <div id="stage" class="pet-stage" role="button" tabindex="0" aria-label="Xiaoqi">
+    <img class="pet-art" id="pet-art" src="../assets/pet.svg" alt="" draggable="false">
+    <span id="badge" class="pet-badge" aria-hidden="true"></span>
+    <span id="balance" class="balance-pill" hidden></span>
+  </div>
+
+  <div id="bubble" class="pet-bubble" hidden>
+    <div id="bubble-title" class="bubble-title"></div>
+    <div class="bubble-row">
+      <span id="bubble-dot" class="bubble-dot"></span>
+      <span id="bubble-action" class="bubble-action"></span>
+      <span id="bubble-time" class="bubble-time"></span>
+    </div>
+  </div>
+  <div id="hint" class="hint"></div>
+
+  <script src="common.js"></script>
+  <script src="pet.js"></script>
+</body>
+</html>

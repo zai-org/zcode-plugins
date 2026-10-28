@@ -1,0 +1,88 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" SessionStart || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" SessionStart",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" UserPromptSubmit || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" UserPromptSubmit",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" PreToolUse || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" PreToolUse",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" PermissionRequest || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" PermissionRequest",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" PostToolUse || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" PostToolUse",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" PostToolUseFailure || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" PostToolUseFailure",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.sh\" Stop || powershell -NoProfile -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/feed-event.ps1\" Stop",
+            "timeoutMs": 5000,
+            "statusMessage": "小栖桌宠：同步会话状态"
+          }
+        ]
+      }
+    ]
+  }
+}
