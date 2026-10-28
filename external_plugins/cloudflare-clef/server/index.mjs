@@ -4,10 +4,13 @@
 // seams (registerDecisionProvider, secret store, guarded fetch) are replaced by
 // a dependency-free stdio MCP server with credentials from environment variables.
 
+import { statSync, readFileSync } from "node:fs";
+import { extname, isAbsolute } from "node:path";
+
 import { encodeBatch, decodeResponse, UnsupportedInput, InvalidResponse } from "./protocol.mjs";
 
 const SERVER_NAME = "cloudflare-clef";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.3.0";
 const ACCOUNT_PATTERN = /^[a-fA-F0-9]{32}$/;
 const REQUEST_TIMEOUT_MS = 55_000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -20,8 +23,9 @@ const TOOL = {
     "instead of free-text guesses. Use for triage/routing/severity judgments over a concrete state. " +
     "Question types: boolean (optional criteria {true,false}); choice (criteria map of 2-255 " +
     "label→description entries); score (criteria array of 2-10 ordered level names, rated 0..n-1). " +
-    "state may be any JSON evidence and may embed up to 4 images as data:image/png|jpeg|webp;base64 URLs " +
-    "or {content_type,base64} objects.",
+    "state may be any JSON evidence and may attach up to 4 images as data:image/png|jpeg|webp;base64 URLs, " +
+    "{content_type,base64} objects, or absolute local file paths (.png/.jpg/.jpeg/.webp) that this server " +
+    "reads from disk and embeds on the caller's behalf.",
   inputSchema: {
     type: "object",
     additionalProperties: false,
@@ -35,8 +39,9 @@ const TOOL = {
       },
       state: {
         description:
-          "The evidence to evaluate, as arbitrary JSON (string, array or object). May embed images " +
-          "as data URLs or {content_type,base64} objects; total text budget is ~24k bytes.",
+          "The evidence to evaluate, as arbitrary JSON (string, array or object). May attach up to 4 images " +
+          "as data URLs, {content_type,base64} objects, or absolute local file paths (.png/.jpg/.jpeg/.webp) " +
+          "which the server reads and embeds; remaining text budget is ~24k bytes.",
       },
       questions: {
         type: "object",
@@ -63,6 +68,38 @@ const TOOL = {
     },
   },
 };
+
+class ImagePathError extends Error {}
+
+const IMAGE_MIME_BY_EXTENSION = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" };
+const MAX_PATH_IMAGE_BYTES = 4 * 1024 * 1024;
+
+// Chat models cannot reliably emit megabytes of Base64 inside tool arguments,
+// so exact absolute paths to existing local image files are resolved here into
+// data URLs before encoding; every other string passes through untouched.
+function resolveImagePaths(value) {
+  if (typeof value === "string") {
+    const mime = IMAGE_MIME_BY_EXTENSION[extname(value).toLowerCase()];
+    if (mime === undefined || !isAbsolute(value)) return value;
+    let info;
+    try {
+      info = statSync(value);
+    } catch {
+      throw new ImagePathError(`${value}: image file not found; pass an absolute path to an existing local file`);
+    }
+    if (!info.isFile()) throw new ImagePathError(`${value}: not a regular file`);
+    if (info.size > MAX_PATH_IMAGE_BYTES) throw new ImagePathError(`${value}: exceeds the 4 MiB per-image limit`);
+    return `data:${mime};base64,` + readFileSync(value).toString("base64");
+  }
+  if (Array.isArray(value)) return value.map(resolveImagePaths);
+  if (value !== null && typeof value === "object") {
+    // Null-prototype output keeps untrusted "__proto__" keys as plain data.
+    const out = Object.create(null);
+    for (const [key, item] of Object.entries(value)) out[key] = resolveImagePaths(item);
+    return out;
+  }
+  return value;
+}
 
 function credentials() {
   const accountId = typeof process.env.CLOUDFLARE_ACCOUNT_ID === "string" ? process.env.CLOUDFLARE_ACCOUNT_ID : "";
@@ -111,11 +148,13 @@ async function evaluate(callId, args) {
   if (!ok) return errText(setupMessage());
 
   const model = args?.model === "clef" ? "clef" : "clef-flash";
+  let state = args?.state;
   let request;
   try {
-    request = encodeBatch({ state: args?.state, questions: args?.questions }, model);
+    if (state !== undefined) state = resolveImagePaths(state);
+    request = encodeBatch({ state, questions: args?.questions }, model);
   } catch (e) {
-    if (e instanceof UnsupportedInput) return errText(`unsupported-input: ${e.message}`);
+    if (e instanceof UnsupportedInput || e instanceof ImagePathError) return errText(`unsupported-input: ${e.message}`);
     throw e;
   }
 

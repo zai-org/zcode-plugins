@@ -55,13 +55,15 @@ After installation, ask the agent to call `clef_evaluate`, for example:
 
 Returns `{model, answers, usage}`; answers are keyed by the original question ids, choice/score include full probability distributions, boolean returns `probabilityTrue`. Omitting `model` uses `clef-flash`.
 
+Images in state attach three ways: embedded data URLs, `{content_type,base64}` objects, or **absolute local file paths** (`.png/.jpg/.jpeg/.webp`; the string must be exactly the file path). Path-form images are read from disk by the server and embedded as `[image #N]` — chat models cannot reliably emit large base64 blobs, so prefer paths for real screenshots. A missing path or a file over 4 MiB returns a clear unsupported-input error.
+
 ## Translation and boundaries (same as the original)
 
 - boolean → noul → probabilityTrue; choice keeps all probabilities; score index objects become arrays.
 - Question and option ids are remapped on the wire (Chinese and slashes allowed) and restored in results.
 - Request URL is fixed to `api.cloudflare.com` (SSRF excluded by construction), redirects disabled; 55 s timeout; MCP request cancellation supported.
 - No retries, no background polling, no fallback to paid models; 429 surfaces a rate-limit error (with retry-after hint).
-- Text/JSON evidence plus up to 4 images (PNG/JPEG/WebP, 4 MiB each, 8 MiB total, 16 MP limit).
+- Text/JSON evidence plus up to 4 images (PNG/JPEG/WebP, 4 MiB each, 8 MiB total, 16 MP limit); absolute-path image files referenced in state are read from local disk at evaluation time (png/jpg/jpeg/webp only, must exist, ≤ 4 MiB).
 - Conservative input budget: UTF-8 bytes + 1,024 + 128 per alternative ≤ 24,000 (adapter-side approximation, not a vendor tokenizer).
 - Response bodies are read with a 1 MiB cap.
 

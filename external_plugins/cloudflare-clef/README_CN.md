@@ -53,13 +53,15 @@ powershell -ExecutionPolicy Bypass -File "<插件安装目录>\server\store-secr
 
 返回 `{model, answers, usage}`；答案以原始问题 id 为键，choice/score 附带完整概率分布，boolean 返回 `probabilityTrue`。`model` 省略时用 `clef-flash`。
 
+state 中的图片有三种挂载方式：内嵌 data URL、`{content_type,base64}` 对象，或**绝对路径本地文件**（`.png/.jpg/.jpeg/.webp`，字符串须精确等于文件路径）。路径方式由 server 读盘嵌入并以 `[image #N]` 占位——聊天模型无法可靠生成大段 base64，实际截图请优先用路径；路径不存在或超过 4 MiB 会返回明确的 unsupported-input 错误。
+
 ## 翻译与边界（与原插件一致）
 
 - boolean → noul → probabilityTrue；choice 保留全部概率；score 的索引对象转数组。
 - 重新映射问题与选项 ID，允许中文、斜杠等标识，恢复结果原 ID。
 - 请求 URL 固定为 `api.cloudflare.com`（构造上排除 SSRF），禁止重定向；55 秒超时；支持 MCP 请求取消。
 - 无重试、无后台轮询、无收费模型自动回退；429 返回限流错误（含 retry-after 提示）。
-- 支持文本/JSON 证据，最多 4 张图片（PNG/JPEG/WebP，单张 4 MiB、合计 8 MiB、16 MP 上限）。
+- 支持文本/JSON 证据，最多 4 张图片（PNG/JPEG/WebP，单张 4 MiB、合计 8 MiB、16 MP 上限）；state 中以绝对路径引用的本地图片文件会在评测时被读取（仅 png/jpg/jpeg/webp，文件须存在且 ≤ 4 MiB）。
 - 保守输入预算：UTF-8 字节 + 1,024 + 每候选 128 ≤ 24,000（接入侧近似保护，非厂商 tokenizer 精确计算）。
 - 响应体读取上限 1 MiB。
 
