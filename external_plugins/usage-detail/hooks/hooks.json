@@ -1,0 +1,46 @@
+{
+  "description": "usage-detail: 每轮结束本地统计用量——侧栏面板「本轮」卡实时刷新（始终开启，零开销）；可选系统通知或回复末尾统计行（usage.sh turnstats，默认关）",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/prompt-submit.mjs"],
+            "timeoutMs": 5000,
+            "statusMessage": "usage-detail: 准备本轮用量统计…"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/stop-notify.mjs"],
+            "async": true,
+            "timeoutMs": 20000,
+            "statusMessage": "usage-detail: 本轮用量通知…"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/permission-notify.mjs"],
+            "async": true,
+            "timeoutMs": 10000,
+            "statusMessage": "usage-detail: 权限等待提醒…"
+          }
+        ]
+      }
+    ]
+  }
+}
