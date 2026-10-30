@@ -1,5 +1,5 @@
 ---
-description: 启动或安装思考小窗，把 ZCode 思维链实时翻成中文
+description: 启动或安装思考小窗，把英文思维链实时翻成中文
 argument-hint: "[安装、启动或排障]"
 skills: cot-peek
 ---

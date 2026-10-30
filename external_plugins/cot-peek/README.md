@@ -1,6 +1,6 @@
 # Cot Peek / 思考小窗
 
-A floating ball that translates ZCode reasoning traces into Chinese in real time. AI thinks in English; this ball speaks Chinese, half a second after each reasoning round lands on disk.
+A floating ball that translates English reasoning traces into Chinese in real time. AI thinks in English; this ball speaks Chinese, half a second after each reasoning round lands on disk.
 
 [中文说明](README_CN.md)
 
@@ -8,10 +8,10 @@ A floating ball that translates ZCode reasoning traces into Chinese in real time
 
 ## What it does
 
-- **Reasoning stream**: watches ZCode's rollout directory with `ReadDirectoryChangesW`; each finished reasoning round is split into segments, translated by three concurrent workers, and shown as it completes. Write to translation measured at 0.05 to 0.5 seconds.
+- **Reasoning stream**: watches ZCode's rollout directory with `ReadDirectoryChangesW`; each finished reasoning round is split into segments, translated by three concurrent workers, and shown as it completes. Latency from file write to on-screen text measured at 0.05 to 0.5 seconds.
 - **Clipboard translation**: copy any English text while the window is open and get Chinese within a second.
 - **Tabbed window**: one window, two tabs, a pause button. Reading position never jumps; the view only follows when you are already at the bottom.
-- **Round ball**: a 44 px circle docked at the right edge of the screen. Click to expand, click × to collapse. Collapsing pauses all translation.
+- **Round ball**: a small dark circle docked at the right edge of the screen, with no rectangular frame. Click to expand, click × to collapse. Collapsing pauses all translation.
 
 ![clipboard](https://raw.githubusercontent.com/cobaltna/cot-peek/main/screenshots/clipboard.png)
 
