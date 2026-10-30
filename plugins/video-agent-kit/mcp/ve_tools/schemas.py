@@ -523,7 +523,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
 
 
 RECAP_TOOL_SCHEMAS: dict[str, dict] = {'detect_shots': {'description': 'Detect shot boundaries across the whole video with PySceneDetect ContentDetector and '
-                                 'cache them as a shots.json timeline (segment_version cover-all-v2). Shots cover the '
+                                 'cache them as a shots.json timeline (segment_version cover-all-v3). Shots cover the '
                                  'full video contiguously with no gaps: sub-min_len shots are merged into the previous '
                                  'shot (or accumulated into the first real shot when they open the video), so adjacent '
                                  'shots always satisfy end == next start. Output JSON fields '
