@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcpbids": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/stdio.mjs"
+      ]
+    }
+  }
+}
