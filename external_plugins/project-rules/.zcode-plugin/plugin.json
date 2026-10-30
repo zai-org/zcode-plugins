@@ -1,0 +1,24 @@
+{
+  "name": "project-rules",
+  "version": "0.1.0",
+  "description": "Load CLAUDE.md and path-scoped rule files (.zcode/rules/*.md with paths: globs) into ZCode sessions, so projects coming from Claude Code or Cursor keep their instructions. Hooks only, no network.",
+  "description_i18n": {
+    "en": "Load CLAUDE.md and path-scoped rule files (.zcode/rules/*.md with paths: globs) into ZCode sessions, so projects coming from Claude Code or Cursor keep their instructions. Hooks only, no network.",
+    "zh-CN": "将 CLAUDE.md 与按路径生效的规则文件 (.zcode/rules/*.md, 支持 paths: glob) 注入 ZCode 会话, 让从 Claude Code 或 Cursor 迁移的项目保留原有指令. 仅使用 Hook, 不访问网络."
+  },
+  "author": {
+    "name": "qubn",
+    "url": "https://github.com/dominiclafleur"
+  },
+  "homepage": "https://github.com/dominiclafleur/zcode-project-rules",
+  "repository": "https://github.com/dominiclafleur/zcode-project-rules",
+  "license": "MIT",
+  "keywords": [
+    "rules",
+    "claude-md",
+    "context",
+    "hooks",
+    "migration",
+    "cursor-rules"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "description": "project-rules: inject CLAUDE.md and .zcode/rules/*.md as model context. Never blocks or rewrites tool calls.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/rules.js\"",
+            "timeoutMs": 10000,
+            "statusMessage": "project-rules: loading CLAUDE.md and rules"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/rules.js\"",
+            "timeoutMs": 10000,
+            "statusMessage": "project-rules: matching path rules"
+          }
+        ]
+      }
+    ]
+  }
+}
