@@ -99,7 +99,7 @@ python3 skills/env-setup/scripts/env_doctor.py --fix
 启用本插件等于授予代码执行信任。具体地，它会：
 
 - **执行命令** —— `ffmpeg`/`ffprobe` 做转码与抽帧；`skills/web-replicate/scripts/init-webapp.sh` 会执行 `npm install` 拉起 `node_modules`。
-- **写文件** —— `recordings/`（WebM 与 MP4）、`app/`（脚手架项目）、`out/`（`plan.md`、`verify.jsonl`、`report.md`，以及 `out/cmp/` 下的对照图）、`.v2c/`（插件根路径指针与 hook 状态，含 `.v2c/hook_state/interceptions.jsonl`），以及 `/tmp/webapp-node-modules` 下的 `node_modules` 缓存（可用 `NM_LOCAL_ROOT` 改）。
+- **写文件** —— `recordings/`（WebM 与 MP4）、`app/`（脚手架项目）、`out/`（`plan.md`、`verify.jsonl`、`report.md`，以及 `out/cmp/` 下的对照图）、`.v2c/`（插件根路径指针与 hook 状态，含 `.v2c/hook_state/interceptions.jsonl`），以及 `/tmp/webapp-node-modules` 下的 `node_modules` 缓存（可用 `NM_LOCAL_ROOT` 改）。并发初始化只会共享已完整落位的缓存；缓存发布同时兼容 macOS/BSD 和 GNU 标准命令行工具。
 - **监听本地端口** —— `deploy_website` 在 8765 或之后第一个空闲端口起 `http.server`，只监听本地，MCP 服务进程退出时统一清理。
 - **访问网络** —— 安装模板依赖时访问 npm registry；以及你让它录制的目标网站。
 - **不上报任何遥测**，不需要 API key、token 或账号。插件里没有任何凭据，也不会把内容上传到任何地方。
