@@ -1,0 +1,23 @@
+{
+  "name": "agent-qa",
+  "version": "0.1.0",
+  "description": "Natural-language web and mobile testing with agent-qa from vostride, recorded run evidence, and advanced memidex memory and self-improvement.",
+  "description_i18n": {
+    "en": "Natural-language web and mobile testing with agent-qa from vostride, recorded run evidence, and advanced memidex memory and self-improvement.",
+    "zh-CN": "使用 vostride 的 agent-qa 进行自然语言 Web 与移动端测试，查看运行证据，并利用先进的 memidex 记忆引擎和自我改进能力。"
+  },
+  "author": {
+    "name": "vostride",
+    "url": "https://vostride.com"
+  },
+  "homepage": "https://vostride.com/docs/agent-qa/quickstart",
+  "license": "Apache-2.0",
+  "keywords": [
+    "testing",
+    "qa",
+    "web",
+    "mobile",
+    "memidex"
+  ],
+  "skills": "./skills"
+}
