@@ -23,10 +23,14 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**github**](./plugins/github) | `developer-tools` | GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, and Codespaces. |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | GitLab CLI workflows for merge requests, issues, CI/CD, repositories, releases, and API operations, including self-managed instances. |
 | [**alibaba-cloud-cli**](./plugins/alibaba-cloud-cli) | `developer-tools` | Alibaba Cloud CLI workflows for credential setup, profile checks, and safe cloud resource operations. |
-| [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login. |
+| [**hyper3d-rodin**](./plugins/hyper3d-rodin) | `developer-tools` | Generate and split 3D models with Hyper3D Rodin Gen-2.5 and BANG. |
+| [**video-agent-kit**](./plugins/video-agent-kit) | `productivity` | Automated video editing with transcription, frame analysis, timeline editing, preview rendering, QC, and TTS. |
+| [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
+| [**lark-cli**](./plugins/lark-cli) | `productivity` | Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login. |
+| [**tencent-meeting-cli**](./plugins/tencent-meeting-cli) | `productivity` | Tencent Meeting CLI workflows for OAuth setup, meeting management, recordings, and attendee reports. |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | DingTalk Workspace CLI workflows with OAuth/device authorization, profile checks, and optional upstream Skills. |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | WeCom CLI workflows for messages, docs, sheets, mail, calendar, meetings, contacts, and todos with QR authentication. |
-| [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
+| [**obsidian**](./plugins/obsidian) | `productivity` | Obsidian authoring, vault automation, web extraction, templates, Mermaid, Excalidraw, and Canvas workflows. |
 
 ### UI plugins
 
@@ -52,11 +56,11 @@ UI plugin runtimes (`plugins/<name>/dist/` / `external_plugins/<name>/dist/`) ar
 
 ### Finance plugins
 
-Ten `finance` plugins covering the sell side, the buy side, corporate banking, and the
-corporate finance function. Each pairs one routing agent with domain skills and, except
-`accounting-and-reporting`, remote market-data MCP servers that authenticate through the
-ZCode host — no data-vendor account to configure. All of them require a paid plan except
-`accounting-and-reporting`, which works off your own ledger.
+Fourteen `finance` plugins cover the sell side, the buy side, corporate banking, corporate
+finance, and financial-data access. Ten workflow plugins pair a routing agent with domain
+skills; four connector plugins expose iFinD, Wind, Tianyancha, SEC, web, and news data through
+MCP services. Remote services authenticate through the ZCode host, so there is no data-vendor
+account to configure. `accounting-and-reporting` works entirely from your own ledger.
 
 | Plugin | Focus | What it does |
 | --- | --- | --- |
@@ -70,6 +74,10 @@ ZCode host — no data-vendor account to configure. All of them require a paid p
 | [**find-clients**](./plugins/find-clients) | Corporate client acquisition | Prospect screening, park and cluster maps, business-opportunity signals, client portraits. |
 | [**run-fpa**](./plugins/run-fpa) | Corporate FP&A | Management reporting, rolling cash and P&L forecasts, budget variance attribution, scenarios, peer benchmarking. |
 | [**accounting-and-reporting**](./plugins/accounting-and-reporting) | Accounting & reporting | Month-end close review, ledger reconciliation to root cause, account mapping, statutory statements, three-statement tie-out. |
+| [**hexin**](./plugins/hexin) | iFinD market data | Stock, global stock, index, fund, and bond data through MCP services. |
+| [**wind**](./plugins/wind) | Wind market data | Stock, global stock, index, fund, bond, macroeconomic, announcement, and research data through MCP services. |
+| [**tianyancha**](./plugins/tianyancha) | Company information | Tianyancha company-information queries through an MCP service. |
+| [**finance-search**](./plugins/finance-search) | Financial search | SEC EDGAR filing search plus financial web and news search through MCP services. |
 
 ## Marketplace categories
 
@@ -77,11 +85,12 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 
 | Category | Use it for | Current plugins |
 | --- | --- | --- |
-| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab`, `alibaba-cloud-cli` |
-| `productivity` | Planning, knowledge work, and personal workflow automation | `video2code` |
-| `utilities` | General-purpose helpers that do not fit another category | `lark-cli` |
-| `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
+| `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab`, `alibaba-cloud-cli`, `hyper3d-rodin` |
+| `productivity` | Planning, knowledge work, and personal workflow automation | `video-agent-kit`, `video2code`, `lark-cli`, `tencent-meeting-cli`, `dingtalk-cli`, `wecom-cli`, `obsidian` |
+| `utilities` | General-purpose helpers that do not fit another category | — |
+| `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting`, `hexin`, `wind`, `tianyancha`, `finance-search` |
 | `guides` | Documentation, learning, and reference-only plugins | — |
+| `template` | Copyable scaffolding for creating a plugin | — |
 | `other` | A plugin that does not fit the categories above | — |
 
 ## Installation
