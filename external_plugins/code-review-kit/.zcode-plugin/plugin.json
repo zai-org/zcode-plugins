@@ -1,0 +1,19 @@
+{
+  "name": "code-review-kit",
+  "version": "0.1.0",
+  "description": "Structured code review, conventional commits and PR descriptions performed by the agent on local git diffs. No API keys, no external services — the agent reads your diff, applies a severity-ordered checklist and reports actionable findings.",
+  "description_i18n": {
+    "en": "Structured code review, conventional commits and PR descriptions performed by the agent on local git diffs. No API keys, no external services — the agent reads your diff, applies a severity-ordered checklist and reports actionable findings.",
+    "zh-CN": "基于本地 git diff 的结构化代码评审、约定式提交信息与 PR 描述生成，全部由 agent 完成。无需 API 密钥、无需外部服务——agent 阅读你的改动，按严重程度逐项检查清单，并给出可执行的评审结论。"
+  },
+  "author": { "name": "Ajay Sharma" },
+  "keywords": [
+    "code-review",
+    "git",
+    "commit",
+    "pull-request",
+    "conventional-commits"
+  ],
+  "skills": "./skills",
+  "commands": "./commands"
+}

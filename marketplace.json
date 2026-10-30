@@ -1443,6 +1443,39 @@
         "mcp",
         "verification"
       ]
-    }
+    },
+    {
+  "name": "code-review-kit",
+  "source": "./external_plugins/code-review-kit",
+  "description": "Structured code review, conventional commits and PR descriptions performed by the agent on local git diffs. No API keys, no external services — the agent reads your diff, applies a severity-ordered checklist and reports actionable findings.",
+  "description_i18n": {
+    "en": "Structured code review, conventional commits and PR descriptions performed by the agent on local git diffs. No API keys, no external services — the agent reads your diff, applies a severity-ordered checklist and reports actionable findings.",
+    "zh-CN": "基于本地 git diff 的结构化代码评审、约定式提交信息与 PR 描述生成，全部由 agent 完成。无需 API 密钥、无需外部服务——agent 阅读你的改动，按严重程度逐项检查清单，并给出可执行的评审结论。"
+  },
+  "version": "0.1.0",
+  "author": {
+    "name": "Ajay Sharma"
+  },
+  "category": "developer-tools",
+  "keywords": [
+    "code-review",
+    "git",
+    "commit",
+    "pull-request",
+    "conventional-commits"
+  ],
+  "examplePrompts": [
+    "Review my staged changes before I commit",
+    "Review this branch against main and tell me what must be fixed before merge",
+    "Write a conventional commit message for what's staged"
+  ],
+  "examplePrompts_i18n": {
+    "zh-CN": [
+      "在我提交之前评审暂存的改动",
+      "对照 main 评审这个分支，告诉我合并前必须修复什么",
+      "为暂存的改动写一条约定式提交信息"
+    ]
+  }
+}
   ]
 }
