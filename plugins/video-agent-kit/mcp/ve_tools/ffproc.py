@@ -20,6 +20,7 @@ forever (``server_common`` runs tools on ``ThreadPoolExecutor(max_workers=1)``).
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 import re as _re
 import shutil
 import subprocess
@@ -46,6 +47,32 @@ def run_proc(cmd: list[str], *args, timeout: float | None = None, **kwargs):
     if timeout is None:
         timeout = DEFAULT_TIMEOUT
     return subprocess.run(cmd, *args, timeout=timeout, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# ffconcat path escaping
+#
+# Concat demuxer scripts are not shell scripts, but they have their own quoting
+# rules. A literal apostrophe closes a single-quoted path, so a project such as
+# ``Director's cut`` is otherwise parsed as ``Directors cut`` and every concat
+# render fails with "No such file or directory".
+# ---------------------------------------------------------------------------
+
+def ffconcat_file_line(path: str | Path) -> str:
+    """Return one absolute, safely quoted ``file`` directive for ffconcat."""
+    value = Path(path).resolve().as_posix()
+    if "\n" in value or "\r" in value:
+        raise ValueError("ffconcat input paths must not contain line breaks")
+    escaped = value.replace("'", "'\\''")
+    return f"file '{escaped}'\n"
+
+
+def write_ffconcat_file(destination: str | Path, paths: Iterable[str | Path]) -> None:
+    """Write an UTF-8 ffconcat input list with every path escaped once."""
+    Path(destination).write_text(
+        "".join(ffconcat_file_line(path) for path in paths),
+        encoding="utf-8",
+    )
 
 
 # ---------------------------------------------------------------------------

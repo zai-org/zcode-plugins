@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
+from .ffproc import write_ffconcat_file
 from .fonts import ass_font_name
 from .result import ToolResult
 from .run_context import RunContext, clean_env
@@ -807,9 +808,7 @@ def _concat(parts: list[str], out: str) -> None:
         run(["ffmpeg", "-y", "-i", parts[0], "-c", "copy", out])
         return
     lst = out + ".txt"
-    with open(lst, "w") as f:
-        for p in parts:
-            f.write(f"file '{Path(p).resolve()}'\n")
+    write_ffconcat_file(lst, parts)
     # 切片已统一规格, 这里可安全 -c copy; 若仍报错回退重编
     r = run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
              "-c", "copy", out], check=False)
@@ -833,9 +832,7 @@ def _concat_audio_plain(parts: list[str], out: str,
         run(cmd)
         norm.append(np_)
     lst = out + ".txt"
-    with open(lst, "w") as f:
-        for p in norm:
-            f.write(f"file '{Path(p).resolve()}'\n")
+    write_ffconcat_file(lst, norm)
     run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", out])
 
 

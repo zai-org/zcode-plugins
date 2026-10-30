@@ -20,7 +20,7 @@ import json
 import os
 import re
 import subprocess
-from .ffproc import run_proc, escape_text
+from .ffproc import escape_text, run_proc, write_ffconcat_file
 from pathlib import Path
 
 from .fonts import ass_font_name, find_cjk_font
@@ -873,7 +873,8 @@ def lol_render(args: dict, ctx: RunContext) -> ToolResult:
     files, err = _render_segments(reel, match, outline, work)
     if err:
         return ToolResult(text=f"[ERROR] render failed: {err}")
-    lst = work / "concat.txt"; lst.write_text("".join(f"file '{os.path.abspath(f)}'\n" for f in files), encoding="utf-8")
+    lst = work / "concat.txt"
+    write_ffconcat_file(lst, files)
     base = work / "base.mp4"
     r = _ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(base)])
     if r.returncode:

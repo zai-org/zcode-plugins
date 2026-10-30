@@ -4,12 +4,12 @@ import json
 import math
 import shutil
 import subprocess
-from .ffproc import run_proc
+from .ffproc import run_proc, write_ffconcat_file
 import time
 from pathlib import Path
 from typing import Any
 
-from .render import cut_clip, ffconcat_escape, probe_video_size, source_has_audio, source_has_video
+from .render import cut_clip, probe_video_size, source_has_audio, source_has_video
 from .result import ToolResult
 from .run_context import RunContext, reject_input_output_collision
 from .timeline import file_sha256, media_duration_seconds
@@ -136,7 +136,7 @@ def op_splice(args: dict, ctx: RunContext) -> tuple[Path, list[str]]:
         cut_clip(clip, segment_path, target_width=target_width, target_height=target_height)
         segment_paths.append(segment_path)
     concat_file = work_dir / "concat.txt"
-    concat_file.write_text("".join(f"file '{ffconcat_escape(path)}'\n" for path in segment_paths), encoding="utf-8")
+    write_ffconcat_file(concat_file, segment_paths)
     cmd = [
         "ffmpeg", "-y",
         "-f", "concat", "-safe", "0", "-i", str(concat_file),

@@ -26,6 +26,8 @@
 
 `video-recap-workflows` 覆盖完整电影、足球、LoL 和篮球解说剪辑。电影解说使用 `detect_shots` / `arrange_footage` / `synthesize_narration` / `bind_narration` / `render_narrated`；足球使用 `soccer_ingest` / `soccer_arrange` / `soccer_tts` / `soccer_render`；LoL 与篮球复用 `lol_ingest` / `lol_arrange` / `lol_tts` / `lol_render`。这些流程通常产出 `out/final.mp4` 和 workflow-specific QC，而不是通用 `out/preview.mp4`。
 
+所有基于 FFmpeg concat demuxer 的拼接路径都会统一转义，因此源素材或项目目录名称中包含英文撇号（例如 `Editor's project`）时，预览渲染、基础拼接、语音压缩和 recap 工作流仍可正常读取文件。
+
 `out/media.json` 保留给源素材探测。`qc_preview` 和 `tts_generate` 内部做媒体探测时会写 `out/preview_media.json`、`out/tts_*_media.json` 这类 sidecar，不覆盖源素材 metadata。`validate_timeline` 和 `qc_preview` 会在报告中写入文件 hash；Stop hook 会拒绝已经过期的 validation / QC report。
 
 `schemas/video_observation.schema.json` 对应工具真实落盘的 observation package，即 `video_ingest` / `video_watch_segment` 生成的帧清单、sheet 清单、媒体元数据、抽帧参数和匹配转录。模型读图后的主观摘要、候选片段和风险判断应写入 `out/report.md` 或后续独立的 review 文件，不写回这个工具产物 schema。
