@@ -74,10 +74,11 @@ too.
    within about 55 s, so call it again while status is still `queued`/`running`
    (a generation takes 1–4 minutes). Do not invent your own sleep loop and do
    not treat the `task_id` as completion.
-4. **Judge** — on `success`, look at `preview_image_url` and show it to the
-   user before building on the result. On `failed`/`banned`, report
+4. **Judge** — on `success`, check the result before building on it: you may
+   look at the rendered image listed in `output_urls`, but never paste
+   `output_urls` into the reply. On `failed`/`banned`, report
    `failure_reason` honestly; failed-task credits are refunded automatically.
-   Do not silently re-roll a disappointing result — show the preview and ask;
+   Do not silently re-roll a disappointing result — say what is off and ask;
    re-rolling means creating a new task with the same prompt.
 5. **Post-process** (each step is a new billed task: create → `tripo_task_wait`;
    `input` takes a model task_id, a `file_token` or a public model URL unless
@@ -85,10 +86,12 @@ too.
    - `tripo_texture` — texture or re-texture a model.
    - `tripo_rig_check` → `tripo_rig` — check riggability before spending rig
      credits, then add a skeleton with the `rig_type` the check returned.
-     Prompt characters as **T-pose** at generation time; `spec: "mixamo"` for
-     Unity Humanoid / Mixamo pipelines. Leave `model` unset: `tripo_rig` picks
-     v3.0 for `biped` and the creature v2.5 rig for the other
-     body types, and its result says which preset family the rig takes.
+     Prompt characters as **T-pose** at generation time; `spec: "unity"` for
+     Unity Humanoid, `"mixamo"` for Mixamo pipelines. Always pass `model` by
+     body type: `"v3.0"` for `biped`, `"v2.5"` for the animal types the check
+     reports (`quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`).
+     The API's own default is still `v1.0-20240301`, which rigs bipeds only.
+     The `tripo_rig` result says which preset family the rig takes.
    - `tripo_animate` — presets on a **successful rig task** (≤5 per call,
      billed per animation). Preset names follow the rig model reported by
      `tripo_rig`: explicit legacy v1.0 rigs take `preset:biped:walk`,
@@ -97,25 +100,27 @@ too.
      (`preset:quadruped:walk`, …; avian has none); `animate_in_place: true`
      when game code drives movement.
    - `tripo_convert` — export GLTF/USDZ/FBX/OBJ/STL/3MF, optional retopology
-     via `face_limit`/`quad`. Quads cannot export GLTF. Any non-default option
-     bills as "complex convert".
+     via `face_limit`/`quad`. Quads cannot export GLTF. Any `face_limit`, or a
+     non-default `quad`, `flatten_bottom`, `texture_size`, `texture_format`,
+     `pivot_to_center_bottom` or `scale_factor`, bills as "complex convert".
    - `tripo_decimate` — high-poly → low-poly (`face_limit` 500–20000, bakes the
      original textures); `tripo_segment` → `tripo_mesh_complete` — split into
      parts and close the cuts; `tripo_mesh_edit` — redo one region of an
      existing mesh with P2 (`bbox` required). Stylize (lego / voxel /
      voronoi / minecraft) has been retired — there is no `tripo_stylize` tool.
-6. **Deliver** — result URLs (`model_url`, `preview_image_url`) **expire in
-   about 5 minutes**; never cache or re-print an old one — call
+6. **Deliver** — result URLs (`model_url` and `output_urls`) **expire after
+   about 2 hours**; never cache or re-print an old one — call
    `tripo_task_status` for fresh links. Download the file into the project
-   (`curl -L -o <path> "<url>"`) and give the local path as plain text in
+   (`curl -L -o <path> "<model_url>"`) and give the local path as plain text in
    backticks — never as a clickable link, the chat preview cannot render
-   meshes; offer the next real action: reveal it in the file manager
+   meshes — then also offer `model_url` as a single markdown download link;
+   offer the next real action: reveal it in the file manager
    (`open -R <path>` on macOS, `explorer /select,<path>` on Windows) or wire it
-   into the project. Only when no shell is available give the fresh link and
-   say it is short-lived, offering to refresh it on request. After a
-   `tripo_convert`, the native GLB and its preview stay on the earlier task —
-   fetch them with `tripo_task_status` on that task instead of paying for
-   another conversion.
+   into the project. Only when no shell is available give just the fresh
+   `model_url` link and say it is short-lived, offering to refresh it on
+   request. Do not paste other URLs from `output_urls`. After a
+   `tripo_convert`, the native GLB stays on the earlier task — fetch it with
+   `tripo_task_status` on that task instead of paying for another conversion.
 
 ## Scenario → tool chain
 
@@ -138,7 +143,8 @@ step is only worth its credits when the target really needs another format.
 - **Animated character** — T-pose reference first (`tripo_generate_image`
   with `template: "t_pose"` turns a character image into one) →
   `tripo_image_to_3d`/`tripo_text_to_3d` → `tripo_rig_check` → `tripo_rig`
-  (`spec: "mixamo"` for Unity Humanoid) → `tripo_animate` with the preset
+  (`model: "v3.0"`, or `"v2.5"` for an animal; `spec: "unity"` for Unity Humanoid) →
+  `tripo_animate` with the preset
   family named in the `tripo_rig` result: v3.0 humanoids
   `["preset:walk", "preset:idle"]`; creatures use their body-specific presets
   (e.g. `preset:quadruped:walk`); explicit v1.0 humanoids alone use
@@ -153,8 +159,10 @@ step is only worth its credits when the target really needs another format.
   tool's `input`; a local file goes through `tripo_upload_ticket`
   (`kind: "model"`, `format: "glb"`) → `tripo_import_model`, which yields a
   reusable task_id with a preview (`.gltf` is rejected — export `.glb`).
-- **Not a mesh** — `tripo_image_to_splat` outputs a Gaussian-splat `.ply`
-  scene for viewers, not an editable model; say so before running it.
+- **Not a mesh** — `tripo_image_to_splat` outputs a Gaussian-splat `.splat`
+  scene for viewers, not an editable model; say so before running it. If the
+  result has no `model_url`, the file is the `model_url` entry of `output_urls`;
+  deliver that one.
 
 ## Parameters that matter
 
@@ -175,8 +183,9 @@ step is only worth its credits when the target really needs another format.
   there was one. Confirm that cost like any other paid step.
 - 3D printing / untextured output: `texture: false, pbr: false` skips texture
   credits entirely; convert to `STL` (add `flatten_bottom: true` for stability).
-- `quad: true` (v3.1 or P2) needs a `tripo_convert` to FBX/OBJ/USDZ at the end;
-  P1 rejects `quad`.
+- `quad: true` (v3.1 or P2) is delivered as FBX directly, so FBX needs no
+  `tripo_convert`; a convert with `quad: true` always outputs FBX (GLTF is
+  rejected). P1 does not support `quad` (the tool strips it and notes it).
 
 ## Inputs
 
@@ -213,9 +222,10 @@ step is only worth its credits when the target really needs another format.
 - `tripo_balance` first when the user asks for several assets; confirm the
   whole batch and its cost once before generating more than one, then call the
   tools one asset at a time, and report `credits_consumed` after.
-- When a create call reports a full concurrency pool or a rate limit, wait for
-  running tasks to finish and retry with backoff instead of resubmitting in a
-  loop.
+- Error `2000` means that category's concurrency pool is full and no task was
+  created: retry after `Retry-After` or once a running task of the same
+  category finishes. Error `1007` is the request rate limit: wait a few
+  seconds and retry the same call. Never resubmit in a loop.
 - Insufficient balance errors: give the `plans_url` from `tripo_balance`
   (informational pricing page for this deployment's region) instead of retrying.
 

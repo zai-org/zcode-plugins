@@ -52,7 +52,7 @@ API Key。本构建的 MCP 只对接国内站；海外站账号请安装海外�
 
 ## 依赖、网络访问与副作用
 
-- **网络**：MCP 工具调用走 `https://developers.tripo3d.com/mcp`；授权页跳转到国内站 Tripo 控制台（developers.tripo3d.com）。生成结果通过 Tripo 的 CDN 短期链接（约 5 分钟过期）下载。
+- **网络**：MCP 工具调用走 `https://developers.tripo3d.com/mcp`；授权页跳转到国内站 Tripo 控制台（developers.tripo3d.com）。生成结果通过 Tripo 的 CDN 短期链接（约 2 小时过期）下载。
 - **账号与计费**：所有生成任务消耗你自己 Tripo 账号的积分，每次工具返回 `credits_consumed`；失败任务自动退款。批量生成前 skill 会先用 `tripo_plan` 草稿、查余额并确认。
 - **文件写入**：只在你要求把模型落到本地时，用 `curl` 把结果下载到项目目录；Hook 与 MCP 服务器本身不写任何文件。
 - **命令执行**：仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。插件不会安装或调用任何命令行客户端，MCP 失败、未授权、批量或本地落盘需求也不例外。

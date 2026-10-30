@@ -15,8 +15,8 @@ unless the user explicitly asks for PBR.
 
 The point of these recipes is that assets land in the project's own directory
 structure: after each final step download the file with
-`curl -L -o <project-art-dir>/<name>.<ext> "<model_url>"` (links expire in about
-5 minutes — fetch fresh ones with `tripo_task_status` if needed) and report the
+`curl -L -o <project-art-dir>/<name>.<ext> "<model_url>"` (links expire after about
+2 hours — fetch fresh ones with `tripo_task_status` if needed) and report the
 local path.
 
 ## Pick a budget first
@@ -34,8 +34,8 @@ model, texture options and estimated cost; re-confirm any paid model change.
 
 Two budget-related choices the defaults do not make for you:
 
-- **Quads at low poly** — P1 rejects `quad`; use `model: "P2", quad: true`
-  (face_limit 48–25000 quads, price depends on input and texture options;
+- **Quads at low poly** — P1 does not support `quad` (the tool strips it); use `model: "P2", quad: true`
+  (face_limit 48–25000 quads, price depends on texture options;
   confirm the estimate, output is FBX) or v3.1 with
   `smart_low_poly: true, quad: true` (face_limit 500–10000).
 - **v3.1 quality under a face cap** — explicitly set `model: "v3.1"` when the
@@ -51,7 +51,7 @@ Override the face budget when the project has a stricter one, e.g.
 → download the GLB (or → `tripo_convert` `{ format: "FBX" }` for Unity/Unreal).
 
 For a set of props, generate them one at a time and check each
-`preview_image_url` before continuing — a bad seed early is cheaper to catch
+result before continuing — a bad seed early is cheaper to catch
 than at the end of a batch. Confirm the total cost of the whole set with the
 user first (`tripo_plan`, `tripo_balance`), then call the tools one asset at a
 time, and use `tripo_task_list` to check the status of many task ids in one
@@ -91,11 +91,15 @@ skill).
 3. `tripo_rig_check` `{ input: <model task> }` — free. It gates the chain: not
    riggable → stop before spending rigging credits. Read the recommended
    `rig_type` (`biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`).
-4. `tripo_rig` `{ input: <model task>, rig_type: <from check>, spec: "mixamo", out_format: "fbx" }`
+4. `tripo_rig` `{ input: <model task>, model: "v3.0", rig_type: <from check>, spec: "mixamo", out_format: "fbx" }`
    — rig the **original model task**, not the check task. `spec: "mixamo"`
-   produces a Unity Humanoid-compatible skeleton. Leave `model` unset: `biped`
-   gets v3.0, the six creature body types get v2.5, and the
-   result names the preset family to use next.
+   gives Mixamo bone names (`"unity"` for Unity Humanoid, `"unreal"` for the UE
+   Mannequin); `spec` applies to `biped`
+   only, so drop it for the other body types (the tool rejects it). Pass
+   `model: "v3.0"` for `biped` and `model: "v2.5"` for the animal types
+   (`quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`): the API's
+   own default, v1.0, rigs bipeds only. The result names the preset family to
+   use next.
 5. `tripo_animate` `{ task_id: <rig task>, animations: [...], out_format: "fbx", animate_in_place: true }`
    — at most five clips, billed per clip. Explicit legacy v1.0 rigs take
    `preset:biped:idle` `preset:biped:walk` `preset:biped:run` `preset:biped:jump`
