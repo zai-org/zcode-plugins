@@ -1,0 +1,44 @@
+{
+  "description": "Session Relay hooks: SessionStart registers the session for model accounting; UserPromptSubmit delivers pending chat messages as context; Stop atomically claims the next task card plus chat and requests continuation. All handlers activate only in projects marked with relay/relay.enabled and fail open (empty output, exit 0).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/relay_hook.py", "SessionStart"],
+            "timeoutMs": 15000,
+            "statusMessage": "relay-up: registering session…"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/relay_hook.py", "UserPromptSubmit"],
+            "timeoutMs": 15000,
+            "statusMessage": "relay-up: checking messages…"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/relay_hook.py", "Stop"],
+            "timeoutMs": 15000,
+            "statusMessage": "relay-up: checking inbox…"
+          }
+        ]
+      }
+    ]
+  }
+}
