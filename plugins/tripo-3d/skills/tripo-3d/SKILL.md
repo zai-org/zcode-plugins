@@ -5,58 +5,30 @@ description: Generate a 3D model from a text prompt, a reference image, or an ex
 
 # Tripo 3D
 
-## Client attribution
+Generate engine-ready 3D assets with the Tripo MCP tools.
+The cost is not estimated by this document: show a live estimate if available,
+otherwise disclose that uncertainty and obtain explicit consent before any
+billed task. A plan is not a quote.
 
-Use `tripo-cli` 0.8.0 or later, pinned as `npx tripo-cli@0.8`. Check the
-version before using these contracts; if it is missing or older, ask before
-installing it or offer the authorized MCP path, never
-silently downgrade or switch accounts. The cost is not estimated by this document:
-show a live estimate if available, otherwise disclose that uncertainty and obtain
-explicit consent before any billed task. A plan is not a quote.
-On every CLI command, including each command
-in a pipeline and commands from references, set
-`TRIPO_DISTRIBUTION_CHANNEL=zcode_plugin`. Set `TRIPO_CLIENT_APP=zcode` only
-when running in ZCode; in the Claude compatibility host use `TRIPO_CLIENT_APP=claude`.
-If the host is unknown, leave `TRIPO_CLIENT_APP` unset; never infer it from the
-package name. Use a variable prefix in POSIX or set `$env:TRIPO_CLIENT_APP` and
-`$env:TRIPO_DISTRIBUTION_CHANNEL` in the same PowerShell call. Never save these
-values to an account profile. MCP sends only `X-Tripo-Distribution: zcode_plugin`;
-its client info identifies the actual host. OAuth and region selection stay the same.
+## Before you start
 
-Generate engine-ready 3D assets with Tripo. Two execution paths exist; pick one
-before doing anything else, and never pretend to run what this environment
-cannot run.
+The tool list must contain the Tripo tools (`tripo_text_to_3d`,
+`tripo_task_wait`, ...; ZCode prefixes them with the MCP server id, e.g.
+`mcp__…__tripo_text_to_3d` — the rest of this skill uses the bare names).
 
-## Pick the execution path
+If they are missing, the plugin's MCP server is almost always waiting for
+authorization or switched off, not absent. Stop and tell the user: open
+**设置 → MCP**, find the Tripo server under 「Plugin MCP 服务器」, click
+**打开授权** if the row says 「需要授权」 (or enable it), then start a new
+session. See Authorization below. Do not describe generations as if they had
+run.
 
-1. **MCP path** — the tool list contains Tripo tools (`tripo_text_to_3d`,
-   `tripo_task_wait`, ...; ZCode prefixes them with the MCP server id, e.g.
-   `mcp__…__tripo_text_to_3d` — the rest of this skill uses the bare names).
-   This is the default path.
-2. **Tripo tools missing** — the plugin's MCP server is almost always waiting
-   for authorization or switched off, not absent. Stop and tell the user first:
-   open **设置 → MCP**, find the Tripo server under 「Plugin MCP 服务器」,
-   click **打开授权** if the row says 「需要授权」 (or enable it), then start a
-   new session. See Authorization below. **Do not switch to `tripo-cli`
-   instead** — not for a balance check, not because a local `tripo login`
-   or `TRIPO_API_KEY` happens to exist (that may be a different account, and
-   the user installed this plugin to use MCP). Offer the CLI only as an
-   explicit alternative in the same message, and take it only if the user
-   picks it.
-3. **CLI path** — the user explicitly asked for the CLI, or the Tripo MCP
-   tools are present but the job needs what only a shell gives: bulk
-   generation (`tripo batch`) or artifacts written straight into the project
-   tree without a download step. Drive `tripo-cli` as described in the second
-   half of this skill.
-4. **Neither** — stop here and say so; do not describe generations as if
-   they had run.
-
-Local *files* do not require the CLI — MCP's `tripo_upload_ticket` covers both
-images and mesh files (see Inputs below).
-
----
-
-# MCP path
+MCP is the only execution path. Never install or run a command-line client
+instead — not for a balance check, not because a local login or
+`TRIPO_API_KEY` happens to exist (that may be a different account, and the
+user installed this plugin to use MCP). Local files and bulk jobs stay on MCP
+too: `tripo_upload_ticket` covers both images and mesh files (see Inputs
+below), and results are downloaded with `curl` (see Deliver).
 
 ## Authorization
 
@@ -70,8 +42,7 @@ for an API key in the chat.
 offer a region picker — it always opens the **国内站** console
 (developers.tripo3d.com, +86 SMS sign-in, Alipay top-up). An overseas-site
 account (developers.tripo3d.ai) will not work here: tell the user to install
-the overseas Tripo 3D plugin build, or use the CLI path with
-`login --region ov`.
+the overseas Tripo 3D plugin build.
 
 1. **设置 → MCP** → group 「Plugin MCP 服务器」 → the Tripo row shows
    「需要授权」 → click **打开授权**. The system browser opens the Tripo
@@ -87,8 +58,8 @@ Generations spend credits from the account the user connected. The connection
 is bound to the API key the user picked on the Tripo console during
 authorization (an account with no key gets `cli-default` created automatically;
 with exactly one key it is used as is). To revoke access, delete that key on
-the console's API Keys page — any other client sharing it (e.g. `tripo-cli`)
-loses access too.
+the console's API Keys page — any other client sharing that key loses access
+too.
 
 ## Workflow
 
@@ -132,15 +103,19 @@ loses access too.
      original textures); `tripo_segment` → `tripo_mesh_complete` — split into
      parts and close the cuts; `tripo_mesh_edit` — redo one region of an
      existing mesh with P2 (`bbox` required). Stylize (lego / voxel /
-     voronoi / minecraft) has been retired — there is no `tripo_stylize` tool
-     and no CLI `--then stylize` step.
+     voronoi / minecraft) has been retired — there is no `tripo_stylize` tool.
 6. **Deliver** — result URLs (`model_url`, `preview_image_url`) **expire in
    about 5 minutes**; never cache or re-print an old one — call
    `tripo_task_status` for fresh links. Download the file into the project
    (`curl -L -o <path> "<url>"`) and give the local path as plain text in
    backticks — never as a clickable link, the chat preview cannot render
-   meshes. Only when no shell is available give the fresh link and say it is
-   short-lived, offering to refresh it on request.
+   meshes; offer the next real action: reveal it in the file manager
+   (`open -R <path>` on macOS, `explorer /select,<path>` on Windows) or wire it
+   into the project. Only when no shell is available give the fresh link and
+   say it is short-lived, offering to refresh it on request. After a
+   `tripo_convert`, the native GLB and its preview stay on the earlier task —
+   fetch them with `tripo_task_status` on that task instead of paying for
+   another conversion.
 
 ## Scenario → tool chain
 
@@ -152,7 +127,7 @@ step is only worth its credits when the target really needs another format.
   explicit `model: "P2"` and a confirmed `face_limit` →
   `tripo_convert` `format: "FBX"` (`texture_size: 2048`) for Unity/Unreal;
   Three.js/Godot take the GLB as is.
-- **Game hero asset, PC / console** — explicit `model: "P2"`, `pbr: true`,
+- **Game hero asset, PC / console** — explicit `model: "P2"`,
   `texture_quality: "detailed"` → FBX only if the engine needs it.
 - **Film / render / close-ups** — `v3.1` with `geometry_quality: "detailed"`
   and `texture_quality: "detailed"` (both cost extra credits).
@@ -184,9 +159,20 @@ step is only worth its credits when the target really needs another format.
 ## Parameters that matter
 
 - **Choose the generation model explicitly**: P2 for game/realtime topology
-  (costs more credits than H/P1); P1 remains optional for lower cost and speed. Use v3.1
+  (costs more credits than H/P1); within the P series the default is P2, and P1 is
+  used only when the user names it or picks it for lower cost and speed. Use v3.1
   for film/render/print. This is plugin policy, not an API requirement. Confirm
   the model, texture options and cost; re-confirm any paid model change.
+- **PBR is opt-in.** Send `pbr: false` on every generation and `tripo_texture`
+  call unless the user explicitly asks for PBR materials (for example "with
+  PBR" or 「PBR 材质」); only then send `pbr: true`, which also forces
+  `texture: true`. The API turns PBR on when `pbr` is left out, so never omit
+  it. Detailed or high-quality textures do not mean PBR. PBR can still be added
+  later: when the user asks for it after a model is already generated, do not
+  regenerate. Call `tripo_texture` with that task as `input` and `pbr: true`: it
+  bills only the texture step, not the generation again, and keeps the geometry,
+  but the textures are regenerated, so pass the original reference image again if
+  there was one. Confirm that cost like any other paid step.
 - 3D printing / untextured output: `texture: false, pbr: false` skips texture
   credits entirely; convert to `STL` (add `flatten_bottom: true` for stability).
 - `quad: true` (v3.1 or P2) needs a `tripo_convert` to FBX/OBJ/USDZ at the end;
@@ -203,12 +189,14 @@ step is only worth its credits when the target really needs another format.
   known — ask for the path if only the picture is visible) goes through
   `tripo_upload_ticket`: run the `how_to` curl it returns in the shell
   (`curl -sS -X POST --data-binary @<file> -H "Content-Type: application/octet-stream" "<upload_url>"`)
-  and read `file_token` from the JSON response — no CLI login involved.
+  and read `file_token` from the JSON response.
 - Model files (GLB/FBX/OBJ/STL, ≤150 MB) use the same ticket with
   `kind: "model"` and `format`; the `file_token` then feeds
   `tripo_import_model` or any processing tool directly.
 - Task ids chain: a successful generation task is a valid `input` for every
-  processing tool, so never re-upload what Tripo already has.
+  processing tool, so never re-upload what Tripo already has. A task id only
+  resolves under the API key that created it; when an older task is not found,
+  upload the local model file instead.
 
 ## Other tools
 
@@ -222,172 +210,22 @@ step is only worth its credits when the target really needs another format.
 
 ## Spending the user's credits
 
-- `tripo_balance` first when the user asks for several assets; confirm before
-  generating more than one in a batch, and report `credits_consumed` after.
+- `tripo_balance` first when the user asks for several assets; confirm the
+  whole batch and its cost once before generating more than one, then call the
+  tools one asset at a time, and report `credits_consumed` after.
+- When a create call reports a full concurrency pool or a rate limit, wait for
+  running tasks to finish and retry with backoff instead of resubmitting in a
+  loop.
 - Insufficient balance errors: give the `plans_url` from `tripo_balance`
   (informational pricing page for this deployment's region) instead of retrying.
 
 ---
 
-# CLI path
-
-Everything below runs through the shell. One command turns a prompt or an
-image into local files: a model, a `preview.png` render, and a `task.json`
-record.
-
-## Before the first generation
-
-```bash
-npx tripo-cli@0.8 doctor        # verifies key, network, region, balance
-```
-
-Auth resolves from `TRIPO_API_KEY` (a `tsk_...` key) or a previous `tripo login`.
-If `doctor` reports no key, start the device login yourself — do not ask for
-permission first, and never ask the user to paste a key into the chat.
-
-Tripo has two regions with separate accounts and consoles:
-
-| region                | console                        | sign-in / top-up               |
-| --------------------- | ------------------------------ | ------------------------------ |
-| `cn` — China mainland | https://developers.tripo3d.com | +86 SMS sign-in, Alipay top-up |
-| `ov` — International  | https://developers.tripo3d.ai  | email sign-in, Stripe top-up   |
-
-Pick the region yourself only when the context already says which site the
-user's account is on — they mentioned it, `tripo whoami` shows a profile, or
-`TRIPO_REGION` is set. Otherwise ask one question before starting the login:
-"你的 Tripo 账号在国内站还是海外站？" An account lives in exactly one region,
-and starting the device flow on the wrong console sends the user to a site
-where their account does not exist. No account yet? China-mainland users
-should pick `cn` (Alipay top-up), everyone else `ov` — signing up during the
-login flow is fine and new accounts get free credits.
-
-```bash
-npx tripo-cli@0.8 login --region cn --yes       # or: --region ov
-```
-
-`--yes` forces the non-interactive device flow. The command prints a
-verification URL and a one-time code right away, then blocks until the user
-approves in a browser — up to 15 minutes. Do not kill it early, and do not
-wait for it to exit before talking to the user: read the URL and code from
-its output while it is still running (run it in the background or stream its
-stderr). **Show the user the full verification URL and the code verbatim**,
-plus the matching console address (`cn`: https://developers.tripo3d.com,
-`ov`: https://developers.tripo3d.ai), and walk them through every step —
-assume they have never seen this page:
-
-1. Open the verification URL in a browser.
-2. If the page asks to sign in, they are not logged in on the web either:
-   sign in — or sign up at the console address above; new accounts get
-   free credits — then return to the verification page.
-3. Type the one-time code into the **"Verification code"** field.
-4. An account that already has several API keys is asked to pick one — any
-   of them works, the CLI will use the chosen key. With no keys, one is
-   created automatically and there is nothing to choose.
-5. Click the **Authorize** button. The key arrives in the CLI and is stored —
-   nothing to copy by hand.
-
-When the command exits 0, re-run `doctor` and continue. Exit code 3 means the
-code expired or was denied — run the same login command again for a fresh
-code. If an older CLI rejects headless login with a usage error, fall back to
-asking the user to run `npx tripo-cli@0.8 login` in their own terminal.
-
-Installing globally (`npm install -g tripo-cli@0.8`) makes repeated calls faster and
-is what makes the bare `tripo` command exist — ask before doing it. Without a
-global install, run every `tripo ...` command in this and related skills as
-`npx tripo-cli@0.8 ...`; npx downloads the CLI on first use, so a fresh machine
-needs no manual install. If `npx` itself is missing, Node.js is not installed —
-have the user install Node.js LTS first. On China-mainland networks, when the
-npx download stalls, switch to the npmmirror registry and retry:
-`npm config set registry https://registry.npmmirror.com`.
-
-Exit code 3 means auth failed; run `tripo doctor`, which diagnoses key-vs-region
-mismatches (`ov` = international, `cn` = China mainland) and prints the exact fix.
-
-## The command
-
-```bash
-tripo make "a stylized treasure chest" --for game-mobile --json --yes
-tripo make concept.png --for game-pc --json --yes
-tripo make front.png back.png --json --yes           # 2-4 images -> multiview
-tripo make hero.glb --then texture,rig --json --yes  # import an existing mesh
-tripo make @last --then convert:fbx --json --yes     # continue from the last task
-```
-
-Input type is auto-detected: quoted text, an image path or URL, 2-4 images, a model
-file, or a task reference (`@last`, `@name`, a task id).
-
-A local image file is uploaded by the CLI itself — always reliable. An image
-URL is passed straight to the API and **fetched by Tripo's servers**, so when
-the user gives a URL, tell them explicitly: it must be publicly reachable and
-served through a CDN or globally accelerated host, or the server-side fetch
-can fail or time out (auth-protected, region-locked and slow-origin links all
-break). When in doubt, download the image locally first and pass the file
-path instead.
-
-- `--for <scenario>` picks model, parameters, chain and export format:
-  `game-mobile` `game-pc` `film` `print` `ar-web` `anim` `toy`.
-  The base generation already outputs GLB; some preset chains append a **paid**
-  convert step (`game-mobile`/`game-pc` → FBX, `print` → STL, `ar-web` → USDZ).
-  When the user only wants GLB, that convert buys a format nobody asked for —
-  use a chain-free preset instead (`toy` for low-poly, with `-p face_limit=...`)
-  or tell the user the extra format costs credits before running.
-- `--then <steps>` overrides the chain. Steps: `texture` `convert`
-  `import` `rig-check` `rig` `retarget` `segment` `complete` `decimate` `smartsegment` `uv`.
-  Arguments use `step:key=value`; a bare value maps to the step's primary argument
-  (`convert:fbx`, `decimate:5000`).
-- `-o, --out <dir>` sets the **parent** directory, not the artifact directory. `make`
-  always creates `<dir>/tripo-out/<name>-<id8>/` underneath it, so `-o ./assets` writes
-  `./assets/tripo-out/<name>-<id8>/model.glb`. Pass `-o` to keep artifacts inside the
-  project instead of the shell's working directory, but when the user asked for a file
-  at a specific path, **move it there after the run and report the final path** — `-o`
-  alone cannot put it there. (`tripo task get <id> --download -o <dir>` is the
-  exception: its `-o` is the final directory.)
-- `-p key=value` passes an API parameter, repeatable. Useful ones: `face_limit=15000`,
-  `texture=false pbr=false` (bare geometry, skips texture credits), `auto_size=true`,
-  `texture_quality=detailed`, `negative_prompt=...`. `--model` forces the generation
-  model (`tripo-v3.1` / `tripo-p1` / `tripo-p2` → wire `v3.1-20260211` /
-  `P1-20260311` / `P2-20260801`). `--dry-run` plans and validates with zero network
-  calls (no credits, no key) and prints the chosen wire-value `model`,
-  `steps[].payload`, `warnings` and `errors`; only run for real when `valid` is true.
-  After a chained run, report `credits_consumed` (total) and `credits_breakdown`
-  (per task); if the field is missing, `tripo task get <id> --json` each chain entry.
-
-## Rules that matter
-
-1. **`tripo make` is blocking.** It submits, polls, downloads, then exits. Wait for
-   the process to finish. Do not re-implement polling, do not set a timeout shorter
-   than the CLI's own (default 1800s), and do not treat a `task_id` appearing in the
-   logs as completion.
-2. **stdout is the contract.** With `--json`, stdout carries exactly one final JSON
-   line; progress goes to stderr. Parse the last stdout line, not the logs.
-3. **Branch on exit codes**, don't parse error text:
-   `0` ok · `1` fatal, and what `doctor` returns when a critical check fails ·
-   `2` bad parameters · `3` auth · `4` insufficient credits · `5` content
-   policy · `6` task failed (credits auto-refunded, `tripo redo` often succeeds) ·
-   `7` network · `8` not found — a task id only resolves under the key that created
-   it, so when an older task 404s, fall back to passing the local model file ·
-   `9` rate limit (retry with backoff).
-4. **Judge the result before moving on.** The result JSON gives `model_file` and
-   `preview`. Read `preview.png` to check the asset actually matches the request; if
-   it does not, `tripo redo` re-rolls with a new seed.
-5. **Never invent parameters.** Run `tripo docs --topic commands/make` for the full
-   flag list, or `tripo docs --topic common-errors` for the error table.
-6. **Pass `--model` explicitly.** Prefer `tripo-p2` for game/realtime
-   topology, retain `tripo-p1` for lower cost and speed, and `tripo-v3.1` for film/render/print.
-   Confirm cost before execution; presets are not a substitute for this choice.
-
-Download URLs returned by the API expire in about five minutes — never cache one.
-Re-run `tripo task get <id> --download` instead.
-
-
----
-
 # Capability reference
 
-Model versions, generation/processing parameters, 2D steps, list prices, CLI
-result shape and other commands: read [`references/capability.md`](references/capability.md)
-(same parameter names on MCP and CLI). MCP also has `tripo_plan` (confirm before
-spend) and `tripo_mesh_edit` (P2 regional redo).
+Model versions, generation/processing parameters, 2D steps and list prices:
+read [`references/capability.md`](references/capability.md). `tripo_plan`
+confirms before spend and `tripo_mesh_edit` redoes a P2 region.
 
 Retopology: `tripo_decimate` with explicit `model: "v3.0", smart_uv: true`
 combines retopology and UVs (35 tri / 40 quad credits). Standalone
