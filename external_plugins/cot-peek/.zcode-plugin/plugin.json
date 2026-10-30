@@ -1,0 +1,15 @@
+{
+  "name": "cot-peek",
+  "version": "1.0.2",
+  "description": "A floating ball that translates English reasoning traces into Chinese in real time, plus on-the-fly clipboard translation.",
+  "description_i18n": {
+    "en": "A floating ball that translates English reasoning traces into Chinese in real time, plus on-the-fly clipboard translation.",
+    "zh-CN": "思考小窗：悬浮球实时翻译英文思维链，半秒上屏，空闲零 CPU。附划词翻译，复制英文即出中文。"
+  },
+  "author": {
+    "name": "cobaltna"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "commands": "commands"
+}
