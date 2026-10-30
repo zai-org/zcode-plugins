@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "uteamup": {
+      "type": "http",
+      "url": "https://api.uteamup.com/mcp/read-only"
+    }
+  }
+}
