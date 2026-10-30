@@ -25,13 +25,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import importlib.util
 import importlib.metadata as importlib_metadata
 import json
 import os
+import site
 import shutil
 import subprocess
 import sys
+import sysconfig
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -42,9 +45,14 @@ PROJECT_DIR = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path.cwd())
 WEB_SCRIPTS = PLUGIN_ROOT / "skills" / "web-replicate" / "scripts"
 TPL_DIR = PLUGIN_ROOT / "skills" / "web-replicate" / "templates" / "default" / "template"
 NM_LOCAL_ROOT = Path(os.environ.get("NM_LOCAL_ROOT", "/tmp/webapp-node-modules"))
-PY = sys.executable or "python3"
+PY = sys.executable or ("python" if os.name == "nt" else "python3")
 # 命令行里用 PYQ: Windows 解释器路径常含空格, do_fix 又走 shell=True
 PYQ = f'"{PY}"' if " " in PY else PY
+PIP_INSTALL = f"{PYQ} -m pip install"
+if sys.prefix == sys.base_prefix:
+    PIP_INSTALL += " --user"
+    if (Path(sysconfig.get_path("stdlib")) / "EXTERNALLY-MANAGED").is_file():
+        PIP_INSTALL += " --break-system-packages"
 
 OS = ("macos" if sys.platform == "darwin"
       else "windows" if os.name == "nt" else "linux")
@@ -231,7 +239,7 @@ PY_MODULES = [
 ]
 
 CHECKS: list[Check] = [
-    Check("py", "python3 ≥ 3.10", "hook 与 MCP server 用了 3.10+ 语法 (X | Y 注解)",
+    Check("py", "Python ≥ 3.10", "hook 与 MCP server 用了 3.10+ 语法 (X | Y 注解)",
           probe_py_version,
           need="Python 3.10 或更高 (CC 调 hook/MCP 用的就是这个解释器)",
           fix=by_os(any=["# 换一个 3.10+ 解释器, 例如 conda create -n v2c python=3.12"]),
@@ -240,11 +248,11 @@ CHECKS: list[Check] = [
           "MCP server 本体 — 缺少或装到 2.x 会导致 deploy/clip_video 工具不存在",
           probe_mcp_sdk,
           need=f"pip 包 mcp=={MCP_SDK_VERSION} (2.x 已删除本插件使用的 Server decorator API)",
-          fix=[f"{PYQ} -m pip install --user --break-system-packages mcp=={MCP_SDK_VERSION}"],
+          fix=[f"{PIP_INSTALL} mcp=={MCP_SDK_VERSION}"],
           cheap=True, auto=True, needs="py"),
     *[Check(f"py-{mod}", f"python 包: {mod}", why, probe_module(mod),
             need=f"pip 包 {pkg} (装进上面那个解释器, 不是系统里随便哪个 python)",
-            fix=[f"{PYQ} -m pip install {pkg}"], cheap=True, auto=True, needs="py")
+            fix=[f"{PIP_INSTALL} {pkg}"], cheap=True, auto=True, needs="py")
       for mod, pkg, why in PY_MODULES],
     Check("ffmpeg", "ffmpeg + ffprobe", "video MCP 摄入 / clip 抽帧 / 时长探测 / url2video 把录制的 WebM 转成 MP4（必需）",
           probe_bins("ffmpeg", "ffprobe"),
@@ -364,7 +372,7 @@ def render(results: list[Result]) -> str:
         for cmd in r.check.fix:
             lines.append(f"       {cmd}")
     if any(r.check.auto for r in bad if r.status == "missing"):
-        lines.append(f"[env] 自动项可一把过: python3 {Path(__file__).name} --fix "
+        lines.append(f"[env] 自动项可一把过: {PYQ} {Path(__file__).name} --fix "
                      "(只跑上面标 自动可装 的命令)")
     return "\n".join(lines)
 
@@ -390,6 +398,11 @@ def do_fix(results: list[Result]) -> list[Result]:
             fixed.add(r.check.id)
     if not fixed:
         return results
+    user_site = site.getusersitepackages()
+    if (site.ENABLE_USER_SITE and isinstance(user_site, str)
+            and Path(user_site).is_dir() and user_site not in sys.path):
+        site.addsitedir(user_site)
+    importlib.invalidate_caches()
     recheck = {res.check.id: res for res in run_checks(only=fixed)}
     return [recheck.get(r.check.id, r) for r in results]
 
