@@ -4,18 +4,18 @@
 
 ## 0.1.5
 
-Game/realtime recipes explicitly prefer **P2** (more credits than H/P1); **P1**
-remains optional for lower cost and speed, and v3.1 for film/render/print. Rig defaults to v3.0, with
+Game/realtime recipes explicitly prefer **P2** (more credits than H/P1), the
+P-series default; **P1** is used only when the user names it or picks it for lower
+cost and speed, and v3.1 for film/render/print. Rig defaults to v3.0, with
 animation presets selected from the upstream rig model. Retopology v3.0's
 `smart_uv` and standalone `tripo_smart_uv` are distinct billed workflows.
 Fast textures require v3.5; `chat_image_1` is retired.
 
-The CLI path requires **0.8.0 or later**, run as `npx tripo-cli@0.8`; do not use
-npm `latest`. Verify the version before executing; if unavailable,
-stop rather than downgrade. A plan is not a price quote: cost is not estimated
+The plugin runs through the Tripo MCP tools only — there is no CLI path, and
+missing authorization is never a reason to switch to one. PBR stays off unless
+you explicitly ask for it. A plan is not a price quote: cost is not estimated
 here, and uncertainty needs explicit consent. Never switch accounts silently.
-MCP remains the default; missing authorization is not permission to use CLI.
-The hook also enforces source attribution and explicit model/billing decisions.
+The hook also enforces the PBR default and explicit model/billing decisions.
 
 The official Tripo plugin for ZCode. Generate textured 3D models from a text
 prompt or a reference image, with rigging, animation, retopology and format
@@ -24,17 +24,16 @@ project. Built for games, film, AR and 3D printing.
 
 Connect your **China-mainland** Tripo account once in the browser
 (developers.tripo3d.com) — no API key pasting. This build's MCP endpoint is
-China-only; overseas-site accounts need the overseas Tripo 3D plugin build, or
-the CLI with `--region ov`.
+China-only; overseas-site accounts need the overseas Tripo 3D plugin build.
 
 ## Components
 
 | Component | What it does |
 | --- | --- |
-| Skill `tripo-3d` | Main workflow: execution-path selection, authorization guidance, MCP workflow, scenario → tool-chain mapping, input handling, credit rules; plus an explicitly selected `tripo-cli` path |
+| Skill `tripo-3d` | Main workflow: tool check, authorization guidance, MCP workflow, scenario → tool-chain mapping, input handling, credit rules |
 | Skill `tripo-game-asset` | Game-asset recipes: budgeted low-poly props, LOD chains, rigged characters with locomotion clips, wiring into Unity/Unreal/Godot/Three.js |
 | MCP server `tripo` | Remote Streamable HTTP server `https://developers.tripo3d.com/mcp` (OAuth 2.1), including `tripo_plan`, generation, rigging, conversion and `tripo_smart_uv`; available tool schemas are authoritative |
-| Hook `SessionStart` | Injects seven rules: async waiting, link expiry, credit confirmation, browser authorization, honest failures, source/version gates and explicit model/billing decisions |
+| Hook `SessionStart` | Injects seven rules: async waiting, link expiry, credit confirmation, browser authorization, honest failures, PBR off by default and explicit model/billing decisions |
 
 ## Usage
 
@@ -59,7 +58,7 @@ The Tripo MCP server needs a one-time authorization:
    (developers.tripo3d.com — +86 SMS sign-in, Alipay top-up). There is no
    region picker on this page. You can sign up on the spot; new accounts get
    free credits. An international-site account will not authorize against this
-   build — use the overseas plugin or `tripo-cli` with `--region ov`.
+   build — use the overseas plugin.
 3. The page shows a one-time verification code and opens the Tripo console:
    sign in, type the code into **Verification code**, click **Authorize**.
 4. ZCode reconnects and loads the tools automatically. To revoke access,
@@ -79,12 +78,9 @@ The Tripo MCP server needs a one-time authorization:
 - **File writes**: only when you ask for the model on disk, the agent
   downloads it into your project with `curl`. The hook and the MCP server
   write nothing.
-- **Command execution**: on the MCP path, shell commands run only to upload a
-  local image/model (the `curl` returned by `tripo_upload_ticket`) or to
-  download a result. The optional [tripo-cli](https://www.npmjs.com/package/tripo-cli)
-  path (MIT) runs as `npx tripo-cli@0.8`, minimum 0.8.0. It runs only after the user explicitly chooses CLI
-  and confirms the account, region and billing plan; check the actual version first.
-  If it is unavailable, stop. There is no automatic fallback from MCP
+- **Command execution**: shell commands run only to upload a local image/model
+  (the `curl` returned by `tripo_upload_ticket`) or to download a result. The
+  plugin never installs or runs a command-line client, including after an MCP
   failure, missing authorization, batch work or a request to save files locally.
 - **Hook**: `hooks/session-start.mjs` needs `node` on PATH. It reads the
   event from stdin and prints a fixed text to stdout; no network, no file
@@ -98,6 +94,6 @@ The Tripo MCP server needs a one-time authorization:
 - Plugin: MIT, by [VAST](https://www.tripo3d.ai).
 - Both skills are ported from Tripo's official Kimi / Codex plugins (also
   maintained by VAST, MIT).
-- The MCP server and `tripo-cli` are official Tripo implementations;
+- The MCP server is an official Tripo implementation;
   generated content is subject to the
   [Tripo API content policy](https://platform.tripo3d.ai/docs).
