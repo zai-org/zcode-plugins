@@ -10,9 +10,9 @@ changed in `notes`.
 | model | MCP `model` | use for | limits |
 | --- | --- | --- | --- |
 | **v3.1** (default) | `v3.1` | high fidelity: film, render, print | full parameter set |
-| **P1** | `P1` | P series alternative, only when the user names it or picks it for lower cost and speed | `face_limit` 50–20000; no `quad`, `smart_low_poly`, `generate_parts`, `geometry_quality`; adds `export_uv` |
-| **P2** | `P2` → wire `P2-20260801` | default P-series model, preferred for game/realtime topology, with explicit user confirmation | `face_limit` 48–50000 tri / 48–25000 quad; supports `quad`, still no `smart_low_poly`, `generate_parts`, `geometry_quality`; costs more credits than H/P1, and price depends on input and texture options; confirm the estimate. Pass the generation model explicitly |
-| v3.0, v2.5 | `v3.0`, `v2.5` | legacy, only when the user asks | v2.5 has no `geometry_quality` |
+| **P1** | `P1` | P series alternative, only when the user names it or picks it for lower cost and speed | `face_limit` 50–20000; no `quad`, `smart_low_poly`, `generate_parts`, `geometry_quality` |
+| **P2** | `P2` → wire `P2-20260801` | default P-series model, preferred for game/realtime topology, with explicit user confirmation | `face_limit` 48–50000 tri / 48–25000 quad; supports `quad`, still no `smart_low_poly`, `generate_parts`, `geometry_quality`; costs more credits than H/P1, and price depends on texture options; confirm the estimate. Pass the generation model explicitly |
+| v3.0, v2.5 | `v3.0`, `v2.5` | legacy, only when the user asks | v2.5 has no `geometry_quality`, `quad`, `smart_low_poly`, `generate_parts`, `auto_size`, `compress` (stripped with a note) |
 
 Website model names map to these rows: H3.1 → `v3.1`, P1.0 → `P1`, P2.0 → `P2`.
 
@@ -32,22 +32,22 @@ Apply to `tripo_text_to_3d` / `tripo_image_to_3d` / `tripo_multiview_to_3d`.
 | param | default | notes |
 | --- | --- | --- |
 | `prompt`, `negative_prompt` | – | text input only; ≤1024 / ≤255 chars |
-| `face_limit` | adaptive | upper bound on triangles. v3.1 any; P1 50–20000; P2 48–50000 |
+| `face_limit` | adaptive | upper bound on triangles. v3.1 any; P1 50–20000; P2 48–50000 (48–25000 with `quad`) |
 | `texture`, `pbr` | `true`, see notes | **send `pbr: false` unless the user explicitly asks for PBR** (the API itself defaults it to true); `pbr: true` forces `texture: true`. `texture: false, pbr: false` = bare geometry, no texture credits |
 | `texture_quality` | `standard` | `standard` / `detailed` (HD, +10 credits) / `extreme` (8K, +20). API also has `fast` (v3.5 textures only; same price/size as `standard`): it needs `texture_version: "v3.5"` (`v3.5-20260815`), which the tool picks when `texture_version` is omitted; other texture versions are incompatible |
 | `texture_version` | derived from `model` | pins the texture model independently of geometry: `v3.5` (`v3.5-20260815`, newest), `v3.0` (`v3.0-20250812`, default for v3.x and P-series), `v2.5` (`v2.5-20250123`, default for v2.5). Pass the short name. All generation models incl. P1/P2 |
 | `delight` | `true` | v3.5 textures only (`texture_version: "v3.5"`): remove baked-in lighting from the reference image; `false` keeps original shading. Older texture versions ignore it |
 | `geometry_quality` | `standard` | `detailed` = Ultra geometry, finer detail up to 2M faces (+20). v3.x only |
-| `quad` | `false` | quad mesh (+5); **delivered as FBX** — quads cannot be stored in GLB. v3.x and P2 |
+| `quad` | `false` | quad mesh (+5 on v3.1, none on P2); **delivered as FBX** — quads cannot be stored in GLB. v3.x and P2 |
 | `smart_low_poly` | `false` | hand-modelled-style low-poly topology (+10); requires `face_limit` 500–20000 tri / 500–10000 quad. v3.x only |
-| `generate_parts` | `false` | editable segmented parts (+20). Requires `texture: false, pbr: false` (the tool flips them and notes it — re-texture afterwards with `tripo_texture`); `quad` is ignored; `smart_low_poly` wins and suppresses parts. v3.x only |
+| `generate_parts` | `false` | editable segmented parts (+20). Requires `texture: false, pbr: false` (the tool flips them and notes it — re-texture afterwards with `tripo_texture`); `quad` is ignored; `smart_low_poly: true` with it is rejected (upstream it would win and produce no parts) — choose one. v3.x only |
 | `auto_size` | `false` | scale the model to real-world metres (AR, engines) |
 | `compress` | – | `geometry` = meshopt-compressed output. v3.x only |
 | `model_seed`, `texture_seed`, `image_seed` | random | reproducibility: same seed → same geometry / textures / text-to-image stage. Keep `model_seed`, vary `texture_seed` to re-texture the same shape |
 | `enable_image_autofix` | `false` | image input: repair a low-quality / blurry / cropped photo first (slower) |
 | `texture_alignment` | `original_image` | image/multiview: `original_image` matches the picture, `geometry` matches the mesh |
 | `orientation` | `default` | image/multiview: `align_image` faces the model like the input viewpoint |
-| `export_uv` | `true` | P series only: `false` skips UV unwrap (faster, smaller file; UVs are created when texturing) |
+| `export_uv` | `true` | `false` skips UV unwrap (faster, smaller file; UVs are created when texturing) |
 | `export_orientation` | `+x` | forward axis `+x` `-x` `+y` `-y`. **Only for output that is not processed further**: downstream steps (texture, rig, convert…) read the default orientation and return a wrongly oriented `success` with no error. When a chain follows, leave it unset and pass `export_orientation` to the final `tripo_convert` instead |
 
 Multiview (2–4 images): `front` is mandatory and at least two views are needed;
@@ -82,21 +82,21 @@ except: `tripo_animate` (`task_id` of a successful rig task),
 
 | MCP tool | arguments and constraints |
 | --- | --- |
-| `tripo_texture` | `texture_quality` `standard`/`detailed`/`extreme`/`fast` (fast requires v3.5); `pbr` (send `false` unless the user explicitly asks for PBR); `texture_seed`; `texture_alignment`; `model` `v3.0` (`v3.0-20250812`, default) / `v3.5` (`v3.5-20260815`, newest; unlocks `delight` and `texture_quality: "fast"`) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. Guidance — exactly one of `prompt` (+ optional `style_image`), `image`, or `images` (4 views front/left/back/right). Re-textures any model, including imported files |
+| `tripo_texture` | `texture_quality` `standard`/`detailed`/`extreme`/`fast` (fast requires v3.5); `pbr` (send `false` unless the user explicitly asks for PBR); `texture_seed`; `texture_alignment`; `model` as the short name: `v3.0` (`v3.0-20250812`, default) / `v3.5` (`v3.5-20260815`, newest; unlocks `delight` and `texture_quality: "fast"`, picked automatically for them when `model` is omitted) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. Guidance — exactly one of `prompt` (+ optional `style_image`), `image`, or `images` (4 views front/left/back/right). Re-textures any model, including imported files |
 | `tripo_mesh_edit` | P2 regional regenerate: `input` (task_id / file_token / URL) + axis-aligned `bbox` in model space; optional `ref_image`. Rest of mesh kept. Billed separately |
 | `tripo_plan` | Free draft of the tool chain **before** any billed call; show the user and wait for confirmation. Skip only for pure reads (balance / usage / task status) |
-| `tripo_convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo` (FBX only). `quad` with `GLTF` is rejected. Any non-default option bills the complex tier (10 credits instead of 5) |
+| `tripo_convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo` (FBX only). `quad` with `GLTF` is rejected. A non-default `quad`, `flatten_bottom`/`flatten_bottom_threshold`, `texture_size`, `texture_format`, `pivot_to_center_bottom` or `scale_factor`, or any `face_limit`, bills the complex tier (10 credits instead of 5); the other options do not |
 | `tripo_import_model` | GLB/GLTF/FBX/OBJ/STL ≤150 MB via `file_token` or URL (`.gltf` only as a URL — upload `.glb`) |
 | `tripo_rig_check` | free. GLB input. Result: `riggable` and recommended `rig_type`: `biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`. Gate step — not riggable → stop; riggable → rig the **original model task**, not the check task |
-| `tripo_rig` | `model`: `v3.0-20260909` (`v3.0`) for biped/default, `others` and `actorcore`/`unity`/`unreal`/`vrm` specs; `v2.5-20260210` (`v2.5`) for the six creature body types. Both take `preset:walk` / `preset:idle` on bipeds and body-type clips on creatures. Explicit `v1.0-20240301` (`v1.0`) is legacy biped-only for 90+ `preset:biped:*` clips. Read the returned model before animation. `rig_type` comes from rig-check; rig the original model, not the check task. `spec` is biped-only; `out_format` is `glb`/`fbx`. |
+| `tripo_rig` | `model`: always pass it by body type: `v3.0` (`v3.0-20260909`) for `biped` and `others`, `v2.5` (`v2.5-20260210`, the official animal rig) for `quadruped`/`hexapod`/`octopod`/`avian`/`serpentine`/`aquatic`. When it is omitted the MCP sends v3.0 for every body type, and the API's own default is `v1.0-20240301`, which rigs bipeds only. v3.0 is required for `others` and the `actorcore`/`unity`/`unreal`/`vrm` specs. Both take `preset:walk` / `preset:idle` on bipeds and body-type clips on creatures. Explicit `v1.0-20240301` (`v1.0`) is legacy biped-only for 90+ `preset:biped:*` clips. Read the returned model before animation. `rig_type` comes from rig-check; rig the original model, not the check task. `spec` is biped-only; `out_format` is `glb`/`fbx`. |
 | `tripo_animate` | needs a rig task. `animations: [...]` (≤5, billed per clip). `out_format` `glb`/`fbx`, `animate_in_place` (no root motion — game code drives movement), `export_with_geometry` (true); `bake_animation` is deprecated — do not pass it (it is ignored) |
-| `tripo_segment` | `model` `v1.0-20250506` (geometry-based, default) or `v2.0-20260430` (semantic, beta) with `segmentation_granularity` `simple`/`balanced`/`detailed`, `split_by_connectivity` (true), `ref_image` (overrides the other two). The tool switches to v2.0 automatically when a v2-only argument is set |
+| `tripo_segment` | `model` `v1.0-20250506` (geometry-based, default) or `v2.0-20260430` (semantic, beta) with `segmentation_granularity` `simple`/`balanced`/`detailed`, `split_by_connectivity` (true), `ref_image` (overrides the other two). The tool switches to v2.0 automatically when a v2-only argument is set without `model`; an explicit `v1.0-20250506` with any of them is rejected and no task is created |
 | `tripo_mesh_complete` | needs a segment task. `completion_mode` `ai_completion` (default) / `quick_cap` (hole fill, cheaper); `part_names` (default all) |
 | `tripo_decimate` | `face_limit` target 500–20000 tri / 500–10000 with `quad: true` (docs quote 1000–20000); `bake` (true) bakes textures onto the low-poly; `part_names`. `model: "v1.0"` accepts up to 2 000 000 tri / 150 000 quad but requires `face_limit` and has no `bake`/`part_names`. The budget is a target, not a ceiling |
 | `tripo_smart_segment` | file_token/URL only. `seg_type` `model` (existing **GLB only**, 55 credits; default) or `image` (photo → auto-model → parts, 85); `granularity` `coarse`/`medium`/`fine`; `hint` describing the parts to find. Output: part labels, a PNG mask, the segmented GLB and the inner task ids. Unlike `tripo_segment`, it is an end-to-end pipeline |
 
 Animation presets depend on the rig model of the upstream rig task — read it
-from the `tripo_rig` result (biped defaults to v3.0). v3.0 and v2.5 biped rigs: `preset:idle` `preset:walk` `preset:run` `preset:dive`
+from the `tripo_rig` result (this skill passes v3.0 for bipeds and v2.5 for animal body types). v3.0 and v2.5 biped rigs: `preset:idle` `preset:walk` `preset:run` `preset:dive`
 `preset:climb` `preset:jump` `preset:slash` `preset:shoot` `preset:hurt`
 `preset:fall` `preset:turn`; creature rigs take only their body type's clip: `preset:quadruped:walk` `preset:hexapod:walk`
 `preset:octopod:walk` `preset:serpentine:march` `preset:aquatic:march` (avian and others have none). v1.0 rig
@@ -175,31 +175,31 @@ by 16; use 1088x1920 instead. No 1K/2K/4K tiers for chat_image models.
 
 ## Prices
 
-Historical examples only, not a current regional estimate. The effective region
-and date of the retained numbers below have not been verified.
-Numeric prices and add-ons anywhere in this file (including processing tables)
-are historical illustrations, not a price quote or dry-run estimate. A current
-estimate must name its source, region and date and match the exact model/options.
-If current regional pricing cannot estimate the request, report **not_estimated**
-(unestimated), not zero; disclose that uncertainty and obtain consent before
-billing. Never infer a fixed P2/P1 ratio or fill a plan with these static numbers.
+Official list prices from the Tripo pricing pages (developers.tripo3d.com/zh/pricing
+and developers.tripo3d.ai/pricing; the same numbers in both regions), checked on
+2026-10-30. Numeric prices and add-ons anywhere in this file (including processing
+tables) come from those pages. An estimate must name its source, region and date and
+match the exact model/options. If this table cannot price the request (a legacy model
+or anything not listed), report **not_estimated** (unestimated), not zero; disclose
+that uncertainty and obtain consent before billing. Never infer a fixed P2/P1 ratio.
 Afterwards use the usage ledger and task `credits_consumed` for actual spending;
 `balance` and `credits_consumed` are decimals, not integers:
 
-| operation (historical example only) | historical credits, not an estimate |
+| operation | official list credits |
 | --- | --- |
 | text-to-3D, v3.1 | 10 bare / 20 textured |
 | image- or multiview-to-3D, v3.1 | 20 bare / 30 textured |
 | text-to-3D, P1 | 30 bare / 40 textured (P2: 100 / 110) |
 | image- or multiview-to-3D, P1 | 40 bare / 50 textured (P2: 100 / 110) |
-| add-ons per generation | `texture_quality: "detailed"` +10, `"extreme"` +20, `geometry_quality: "detailed"` +20, `quad` +5, `smart_low_poly` +10, `generate_parts` +20 |
+| add-ons per generation | `texture_quality: "detailed"` +10, `"extreme"` +20; v3.1 only: `geometry_quality: "detailed"` +20, `quad` +5, `smart_low_poly` +10, `generate_parts` +20 (P2 `quad` has no surcharge) |
 | `tripo_texture` | 10 standard / 20 detailed / 30 extreme |
-| `tripo_convert` | 5, or 10 with any non-default option |
+| `tripo_convert` | 5, or 10 with a complex-tier option (see the convert row) |
 | `tripo_decimate` | 35 tri / 40 quad (v3.0; smart_uv included), 30 (v2.0), 10 (v1.0) |
+| `tripo_smart_uv` | 20 |
 | `tripo_segment` / `tripo_mesh_complete` | 40 / 50 (`quick_cap` 30) |
 | `tripo_smart_segment` | 85 image / 55 model |
 | `tripo_rig_check` / `tripo_rig` / `tripo_animate` | free / 25 / 10 per clip |
-| `tripo_generate_image` | 5 (seedream, banana 1K) – 20 (banana_pro 4K) by model and size tier |
+| `tripo_generate_image` | 5 (seedream, banana 1K) – 20 (banana_pro 4K) by model and size tier; GPT image `quality` `high` / `xhigh` / `max` 20–50 |
 | `tripo_image_to_multiview` / `tripo_edit_multiview` / `tripo_image_to_splat` | 10 / 5 per edited view / 30 |
 
 Credits are frozen at submission and released on failure, ban or cancellation —

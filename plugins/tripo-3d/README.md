@@ -6,8 +6,10 @@
 
 Game/realtime recipes explicitly prefer **P2** (more credits than H/P1), the
 P-series default; **P1** is used only when the user names it or picks it for lower
-cost and speed, and v3.1 for film/render/print. Rig defaults to v3.0, with
-animation presets selected from the upstream rig model. Retopology v3.0's
+cost and speed, and v3.1 for film/render/print. Rigs pass the model
+explicitly, v3.0 for bipeds and v2.5 for animals (the API's own default, v1.0,
+rigs bipeds only), with animation presets selected
+from the upstream rig model. Retopology v3.0's
 `smart_uv` and standalone `tripo_smart_uv` are distinct billed workflows.
 Fast textures require v3.5; `chat_image_1` is retired.
 
@@ -70,7 +72,7 @@ The Tripo MCP server needs a one-time authorization:
 - **Network**: MCP tool calls go to `https://developers.tripo3d.com/mcp`;
   authorization redirects to the China Tripo console
   (developers.tripo3d.com). Results are downloaded from Tripo's CDN through
-  short-lived links (about 5 minutes).
+  short-lived links (about 2 hours).
 - **Account and billing**: every generation spends credits from your own
   Tripo account; each tool reports `credits_consumed`, failed tasks are
   refunded automatically. The skill drafts the chain with `tripo_plan`,
