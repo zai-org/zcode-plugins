@@ -649,12 +649,24 @@ def _clip_as_frames(src: Path, raw_path: str, parsed: list[tuple[float, float]],
     except ValueError:
         max_frames = MAX_TOTAL_FRAMES
     max_frames = max(1, max_frames)
+    if max_frames < len(parsed):
+        return (f"[ERROR] V2C_CLIP_MAX_FRAMES={max_frames} cannot cover "
+                f"{len(parsed)} segments with at least one frame each. "
+                "Request fewer segments or increase the configured frame budget.")
     n_list = [max(1, round((e - s) * fps)) for (s, e) in parsed]
     total_n = sum(n_list)
     capped = total_n > max_frames
     if capped:
-        scale = max_frames / total_n
-        n_list = [max(1, int(n * scale)) for n in n_list]
+        # Reserve one frame per segment, then apportion the remaining budget
+        # over requested extra frames. Largest remainders avoid both overshoot
+        # from minimum-one clamping and unused budget from rounding down.
+        remaining = max_frames - len(n_list)
+        extra_total = total_n - len(n_list)
+        shares = [divmod((n - 1) * remaining, extra_total) for n in n_list]
+        n_list = [1 + whole for whole, _ in shares]
+        order = sorted(range(len(shares)), key=lambda i: shares[i][1], reverse=True)
+        for i in order[:max_frames - sum(n_list)]:
+            n_list[i] += 1
 
     image_paths: list[str] = []
     info_lines: list[str] = []
