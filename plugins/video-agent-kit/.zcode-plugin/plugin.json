@@ -1,6 +1,6 @@
 {
   "name": "video-agent-kit",
-  "version": "0.4.3",
+  "version": "0.4.5",
   "description": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。",
   "author": {
     "name": "Z.ai",
@@ -35,8 +35,9 @@
   "mcpServers": {
     "video-edit": {
       "type": "stdio",
-      "command": "python3",
+      "command": "node",
       "args": [
+        "${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs",
         "${CLAUDE_PLUGIN_ROOT}/mcp/video_edit_server.py"
       ],
       "cwd": "${CLAUDE_PROJECT_DIR}",

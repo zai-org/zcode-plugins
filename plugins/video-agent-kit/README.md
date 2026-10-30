@@ -51,7 +51,7 @@ skills/video-recap-workflows/SKILL.md
 处理完整电影/赛事/比赛回放的解说剪辑；`env-setup` 只管环境（体检 + 装依赖，
 跨 macOS / Windows / Linux），不碰剪辑任务。
 
-首次使用前装环境（推荐走体检脚本，它跨 macOS / Windows / Linux 且默认用国内镜像）：
+首次使用前装环境（推荐走体检脚本，它跨 macOS / Windows / Linux 且默认用国内镜像）。运行插件 Hook 和 `video-edit` MCP server 的前置条件是：宿主环境中可从 `PATH` 解析到 `node`，并安装 Python 3.10+：
 
 ```bash
 # 只体检：逐项报"要什么 / 缺了挂哪个能力 / 本平台怎么装"
@@ -67,6 +67,12 @@ python3 video-agent-kit/skills/env-setup/scripts/env_doctor.py --fix
 `libass`（缺了字幕烧录必挂，但只在渲染最后一步才炸）、本机中文字体的 cmap 是不是
 真覆盖中文（`fc-match` 对着没装的中文族会返回 DejaVu，烧出来是豆腐块而 ffmpeg
 退出码 0）、以及语音走的是哪条通道（在 ZCode 里就是"官方通道，本地无需 key"，不会催你配凭据）。
+
+Hook 和 `video-edit` MCP server 通过插件内置的 `hooks/run_python.mjs` 启动 Python，
+不会把宿主平台固定为 `python3`：Windows 优先使用 `py -3` / `python`，macOS、Linux
+优先使用 `python3` / `python`。入口命令使用宿主环境中位于 `PATH` 的 `node`；ZCode
+不会为第三方插件提供独立的 Node.js。请确保 Node.js 和 Python 3.10+ 都已安装。解析器
+只在解释器不存在时尝试下一个候选，脚本本身的退出码会原样返回。
 
 也可以手工只装 Python 依赖（注意 `scenedetect` 必须 `--no-deps`，否则会把 GUI 版
 opencv 盖到 `opencv-python-headless` 的 `cv2` 上，两个包一起坏）：
