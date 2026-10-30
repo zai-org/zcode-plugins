@@ -1443,6 +1443,26 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "baizhi-cloud-browser",
+      "source": "./external_plugins/baizhi-cloud-browser",
+      "description": "Connect ZCode to Baizhi Cloud Browser MCP for account checks and browser resource management.",
+      "description_i18n": {
+        "en": "Connect ZCode to Baizhi Cloud Browser MCP for account checks and browser resource management.",
+        "zh-CN": "将 ZCode 连接到百智云浏览器 MCP，查询账号并管理浏览器资源。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Baizhi Cloud Browser"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "baizhi",
+        "cloud-browser",
+        "mcp",
+        "browser"
+      ]
     }
   ]
 }

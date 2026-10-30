@@ -1,0 +1,30 @@
+{
+  "name": "baizhi-cloud-browser",
+  "version": "0.1.1",
+  "description": "Connect ZCode to Baizhi Cloud Browser MCP for account checks and browser resource management.",
+  "description_i18n": {
+    "en": "Connect ZCode to Baizhi Cloud Browser MCP for account checks and browser resource management.",
+    "zh-CN": "将 ZCode 连接到百智云浏览器 MCP，查询账号并管理浏览器资源。"
+  },
+  "author": {
+    "name": "Baizhi Cloud Browser"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://capybrowser.app.baizhi.cloud/",
+  "keywords": [
+    "baizhi",
+    "cloud-browser",
+    "mcp",
+    "browser"
+  ],
+  "mcpServers": ".mcp.json",
+  "userConfig": {
+    "capyApiKey": {
+      "title": "Capy API Key",
+      "description": "Your Baizhi Cloud Browser API key, without the Bearer prefix.",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
