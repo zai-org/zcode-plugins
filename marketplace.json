@@ -1443,6 +1443,35 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "respire",
+      "displayName": "respire",
+      "displayName_i18n": {
+        "en": "respire",
+        "zh-CN": "respire 记忆"
+      },
+      "source": "./external_plugins/respire",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/respire/icon.png",
+      "description": "respire local encrypted memory: every-round title-tier recall, one-prefix store, Stop storage check. Fully usable without the sidecar model.",
+      "description_i18n": {
+        "en": "respire local encrypted memory: every-round title-tier recall, one-prefix store, Stop storage check. Fully usable without the sidecar model.",
+        "zh-CN": "respire 本地加密记忆：每轮标题档自动召回、一句「记：」落库、Stop 存储检查，不装模型也完全可用。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "risense-ai",
+        "url": "https://github.com/risense-ai"
+      },
+      "homepage": "https://github.com/risense-ai/respire-zcode",
+      "category": "productivity",
+      "keywords": [
+        "memory",
+        "recall",
+        "hooks",
+        "local-first",
+        "rsrs"
+      ]
     }
   ]
 }
