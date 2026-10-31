@@ -1,8 +1,7 @@
 # session-stats
 
 Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average +
-latest request), token usage and cache hit rate — inspired by the DeepSeek Harness
-session stats. Zero third-party dependencies.
+latest request), token usage and cache hit rate. Zero third-party dependencies.
 
 ## Components
 

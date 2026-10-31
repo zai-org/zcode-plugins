@@ -1,6 +1,6 @@
 # session-stats — ZCode 会话统计插件
 
-在 ZCode 里复刻 DeepSeek Harness 的「会话统计」：轮次/步数、模型/工具耗时、
+ZCode 会话统计插件：轮次/步数、模型/工具耗时、
 TTFT、TPS（会话平均 + 最近请求）、token 用量与缓存命中率。零第三方依赖。
 
 ## 组件

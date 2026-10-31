@@ -8,7 +8,7 @@
 - input_tokens 已包含 cache_read_input_tokens（GLM 供应商实测），
   缓存命中 = cache_read / input；total = input + output
 - 子代理会话通过 session.parent_id 挂在主会话下，current 口径聚合主+子
-- 错误/取消的请求行同样计步计耗时（与 DeepSeek harness 口径一致）
+- 错误/取消的请求行同样计步计耗时
 """
 
 import json

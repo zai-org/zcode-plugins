@@ -3,7 +3,7 @@
   "version": "0.2.7",
   "description": "Session statistics panel for ZCode: turns/steps, model vs tool time, TTFT, TPS, token usage and cache hit rate, read-only from the local session database.",
   "description_i18n": {
-    "zh-CN": "会话统计：轮次/步数、模型/工具耗时、TTFT、TPS、token 用量与缓存命中率。只读本地会话数据库（db.sqlite），灵感来自 DeepSeek Harness 的会话统计。",
+    "zh-CN": "会话统计：轮次/步数、模型/工具耗时、TTFT、TPS、token 用量与缓存命中率。只读本地会话数据库（db.sqlite）。",
     "en": "Session statistics panel for ZCode: turns/steps, model vs tool time, TTFT, TPS, token usage and cache hit rate, read-only from the local session database."
   },
   "author": {
