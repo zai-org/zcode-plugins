@@ -1,0 +1,43 @@
+{
+  "name": "delivery-video",
+  "version": "1.0.0",
+  "description": "Turn a feature that actually runs into a trustworthy delivery demo video: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate (ffmpeg-based, self-contained pipeline).",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "skills/",
+    "examples/",
+    "README.md",
+    "README_CN.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh-skill-filesystem": ">=0.1.0-rc.6 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Lumos-789/delivery-video-plugin"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "delivery",
+    "demo-video",
+    "screen-recording",
+    "quality-gate",
+    "edge-tts",
+    "ffmpeg"
+  ]
+}
