@@ -1,0 +1,49 @@
+{
+  "name": "session-stats",
+  "version": "0.2.7",
+  "description": "Session statistics panel for ZCode: turns/steps, model vs tool time, TTFT, TPS, token usage and cache hit rate, read-only from the local session database.",
+  "description_i18n": {
+    "zh-CN": "会话统计：轮次/步数、模型/工具耗时、TTFT、TPS、token 用量与缓存命中率。只读本地会话数据库（db.sqlite）。",
+    "en": "Session statistics panel for ZCode: turns/steps, model vs tool time, TTFT, TPS, token usage and cache hit rate, read-only from the local session database."
+  },
+  "author": {
+    "name": "gary.liu"
+  },
+  "keywords": [
+    "stats",
+    "usage",
+    "tokens",
+    "cache",
+    "panel",
+    "mcp-apps"
+  ],
+  "license": "MIT",
+  "mcpServers": {
+    "session-stats": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/server/stats_server.py"
+      ],
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "stats-panel",
+        "title": {
+          "en": "Session Stats",
+          "zh-CN": "会话统计"
+        },
+        "server": "session-stats",
+        "resourceUri": "ui://session-stats/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "commands": "./commands"
+}
