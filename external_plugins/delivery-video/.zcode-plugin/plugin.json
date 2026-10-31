@@ -1,0 +1,26 @@
+{
+  "name": "delivery-video",
+  "version": "1.0.0",
+  "description": "Record, render and gate trustworthy delivery demo videos of real, working software — real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+  "description_i18n": {
+    "en": "Record, render and gate trustworthy delivery demo videos of real, working software — real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+    "zh-CN": "把真实运行的功能录成可交付的演示视频：真实录屏、edge-tts 旁白、逐字对齐字幕与确定性质量闸，产出到 1920x1080 成片与完整证据链。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/delivery-video-plugin",
+  "repository": "https://github.com/Lumos-789/delivery-video-plugin",
+  "license": "MIT",
+  "keywords": [
+    "delivery",
+    "demo-video",
+    "screen-recording",
+    "acceptance",
+    "quality-gate",
+    "edge-tts",
+    "ffmpeg"
+  ],
+  "skills": ["skills/delivery-video"]
+}
