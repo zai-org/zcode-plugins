@@ -1443,6 +1443,29 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "getmydata",
+      "source": "./external_plugins/getmydata",
+      "description": "Ask your AI assistant for public web data as JSON. Free sampling first, then one fixed price. No signup, no subscription.",
+      "description_i18n": {
+        "en": "Ask your AI assistant for public web data as JSON. Free sampling first, then one fixed price. No signup, no subscription.",
+        "zh-CN": "让你的 AI 助手把公开网页数据取回来，交付为 JSON。先免费抽样预览，再一次性固定报价。无需注册，无订阅。"
+      },
+      "version": "1.0.0",
+      "author": {
+        "name": "GetMyData",
+        "url": "https://getmydata.io"
+      },
+      "category": "utilities",
+      "keywords": [
+        "web-data",
+        "data-collection",
+        "public-data",
+        "json",
+        "dataset",
+        "mcp"
+      ]
     }
   ]
 }

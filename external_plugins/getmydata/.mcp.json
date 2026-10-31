@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "getmydata": {
+      "type": "http",
+      "url": "https://getmydata.io/mcp",
+      "enabled": true,
+      "timeoutMs": 120000
+    }
+  }
+}
