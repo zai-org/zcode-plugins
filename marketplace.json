@@ -14,6 +14,41 @@
   ],
   "plugins": [
     {
+      "name": "session-stats",
+      "componentTypes": [
+        "ui"
+      ],
+      "displayName": "Session Stats",
+      "displayName_i18n": {
+        "en": "Session Stats",
+        "zh-CN": "会话统计"
+      },
+      "source": "./external_plugins/session-stats",
+      "description": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",
+      "description_i18n": {
+        "en": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",
+        "zh-CN": "会话统计：轮次/步数、模型/工具耗时、TTFT、TPS（会话平均+最近请求）、token 用量与缓存命中率。零第三方依赖。"
+      },
+      "version": "0.2.7",
+      "author": {
+        "name": "gary.liu",
+        "url": "https://github.com/huantest2024"
+      },
+      "homepage": "https://github.com/huantest2024/zcode-session-stats",
+      "repository": "https://github.com/huantest2024/zcode-session-stats",
+      "license": "MIT",
+      "keywords": [
+        "stats",
+        "usage",
+        "tokens",
+        "cache",
+        "ttft",
+        "tps",
+        "panel"
+      ],
+      "category": "developer-tools"
+    },
+    {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
       "description": "CloudBase development skills and MCP integration for building, deploying, and troubleshooting Web, WeChat Mini Program, database, cloud function, CloudRun, storage, and AI projects.",
