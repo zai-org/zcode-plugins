@@ -1443,6 +1443,38 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "wechat-connector",
+      "source": "./external_plugins/wechat-connector",
+      "displayName": "WeChat Connector",
+      "displayName_i18n": {
+        "en": "WeChat Connector",
+        "zh-CN": "微信接入"
+      },
+      "description": "Send notifications to WeCom (WeChat Work) group robots via the official webhook API — outbound text and markdown group notifications from ZCode.",
+      "description_i18n": {
+        "en": "Send notifications to WeCom (WeChat Work) group robots via the official webhook API — outbound text and markdown group notifications from ZCode.",
+        "zh-CN": "通过企业微信群机器人官方 webhook 接口发送群通知:支持文本与 Markdown 消息、多渠道配置与频控处理。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "zhaohongjun20-creator",
+        "url": "https://github.com/zhaohongjun20-creator"
+      },
+      "homepage": "https://github.com/zhaohongjun20-creator/zcode-wechat",
+      "repository": "https://github.com/zhaohongjun20-creator/zcode-wechat",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "wechat",
+        "wecom",
+        "wechat-work",
+        "webhook",
+        "notification",
+        "group-robot",
+        "qyapi"
+      ]
     }
   ]
 }
