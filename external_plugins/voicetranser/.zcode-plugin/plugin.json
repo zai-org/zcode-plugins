@@ -1,0 +1,27 @@
+{
+  "name": "voicetranser",
+  "version": "1.0.0",
+  "description": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",
+  "description_i18n": {
+    "en": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",
+    "zh-CN": "macOS 本地按住说话语音输入：按住全局热键说话、松开即转写粘贴到光标处。纯本地 STT（Qwen3-ASR MLX / SenseVoice / mlx-whisper），零外部 API。内置技能引导 agent 完成安装、热键接线、launchd 常驻与排障。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/VoiceTranser",
+  "repository": "https://github.com/Lumos-789/VoiceTranser",
+  "license": "MIT",
+  "keywords": [
+    "voice-input",
+    "speech-to-text",
+    "dictation",
+    "macos",
+    "push-to-talk",
+    "local-first",
+    "qwen3-asr",
+    "sensevoice"
+  ],
+  "skills": ["skills/voicetranser"]
+}
