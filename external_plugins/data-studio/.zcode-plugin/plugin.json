@@ -1,0 +1,25 @@
+{
+  "name": "data-studio",
+  "version": "0.1.12",
+  "description": "Secure database access for AI agents via the data_studio__* MCP tools: 70+ SQL databases through SqlKit, Elasticsearch/OpenSearch/MongoDB/DynamoDB through DocKit. Credentials never leave your desktop apps.",
+  "description_i18n": {
+    "en": "Secure database access for AI agents via the data_studio__* MCP tools: 70+ SQL databases through SqlKit, Elasticsearch/OpenSearch/MongoDB/DynamoDB through DocKit. Credentials never leave your desktop apps.",
+    "zh-CN": "让 AI 编码助手通过 data_studio__* MCP 工具安全访问数据库:经 SqlKit 支持 70+ 种 SQL 数据库,经 DocKit 支持 Elasticsearch/OpenSearch/MongoDB/DynamoDB。凭据永不离开桌面应用。"
+  },
+  "author": {
+    "name": "GeekFun",
+    "url": "https://github.com/geek-fun"
+  },
+  "homepage": "https://www.geekfun.club/products/data-studio-agent/",
+  "repository": "https://github.com/geek-fun/data-studio-agent",
+  "license": "Apache-2.0",
+  "keywords": [
+    "database",
+    "sql",
+    "nosql",
+    "elasticsearch",
+    "mongodb",
+    "dynamodb",
+    "mcp"
+  ]
+}
