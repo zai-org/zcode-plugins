@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/runtime/team-hooks.mjs\"",
+            "timeout": 15,
+            "statusMessage": "agent-team SessionStart（策略/收件箱注入）"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/runtime/team-hooks.mjs\"",
+            "timeout": 15,
+            "statusMessage": "agent-team Stop（回合边界交付）"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/runtime/team-hooks.mjs\"",
+            "timeout": 15,
+            "statusMessage": "agent-team UserPromptSubmit（收件箱兜底注入）"
+          }
+        ]
+      }
+    ]
+  }
+}

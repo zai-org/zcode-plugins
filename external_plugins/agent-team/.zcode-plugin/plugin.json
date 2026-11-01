@@ -1,0 +1,70 @@
+{
+  "name": "agent-team",
+  "version": "0.4.3",
+  "description": "智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。",
+  "description_i18n": {
+    "en": "Agent Teams: spawn and coordinate teammate sessions with a shared task board and member messaging.",
+    "zh-CN": "智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。"
+  },
+  "author": {
+    "name": "Vincent Zuo",
+    "url": "https://github.com/Vincent-chk"
+  },
+  "license": "MIT",
+  "userConfig": {
+    "maxMembers": {
+      "title": "最大成员数",
+      "description": "团队内 teammate 数量上限（不含 Lead；含 failed）。",
+      "type": "number",
+      "default": 8
+    },
+    "maxTasks": {
+      "title": "最大任务数",
+      "description": "任务板任务数量上限。",
+      "type": "number",
+      "default": 256
+    },
+    "maxMessageBytes": {
+      "title": "单条消息字节上限",
+      "description": "成员间单条消息的最大字节数。",
+      "type": "number",
+      "default": 65536
+    },
+    "disposalTimeoutMs": {
+      "title": "处置超时（毫秒）",
+      "description": "团队处置（teammate 结算与回收）的超时时间。",
+      "type": "number",
+      "default": 5000
+    },
+    "interrupt": {
+      "title": "启用 interrupt_agent 工具",
+      "description": "关闭后团队成员只拿到 8 个工具（interrupt_agent 不注册）；域 API 仍可用。",
+      "type": "boolean",
+      "default": true
+    },
+    "leadMode": {
+      "title": "Lead 模式",
+      "description": "orchestrator（默认）：Lead 自主组队/分配/独立验收，专注编排不亲自实现；collaborator：保持原口径，由用户指示建队。取值：orchestrator 或 collaborator。",
+      "type": "string",
+      "default": "orchestrator"
+    }
+  },
+  "skills": "skills",
+  "commands": "commands",
+  "hooks": "hooks/hooks.json",
+  "ui": {
+    "surfaces": [
+      {
+        "id": "agent-team-panel",
+        "title": {
+          "zh-CN": "智能体团队",
+          "en": "Agent Team"
+        },
+        "icon": "users",
+        "server": "team-daemon",
+        "resourceUri": "ui://agent-team/team-panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
