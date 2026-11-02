@@ -291,19 +291,19 @@
       ? "入 " + fmtTok(lr["in"]) + " · 出 " + fmtTok(lr.out)
       : "累计 " + fmtTok((data.tokens || {}).total) + " tok";
     if (mode === "mini") {
-      return shownHtml + '<span class="sep">·</span>' + reqTokHtml;
+      return shownHtml + " " + reqTokHtml;
     }
     if (mode === "mid") {
       return "<b>" + (data.steps != null ? data.steps : 0) + " 步</b>" +
-        '<span class="sep">·</span>' + shownHtml +
-        '<span class="sep">·</span>' + reqTokHtml +
-        '<span class="sep">·</span>命中 ' + (hit != null ? hit : "—") + "%";
+        " " + shownHtml +
+        " " + reqTokHtml +
+        " 命中 " + (hit != null ? hit : "—") + "%";
     }
     return "<b>" + (data.turns != null ? data.turns : "—") + " 轮 " + (data.steps != null ? data.steps : 0) + " 步</b>" +
-      '<span class="sep">·</span>' + shownHtml +
+      " " + shownHtml +
       '<span class="dv"></span>' +
       reqTokHtml +
-      '<span class="sep">·</span>命中 ' + (hit != null ? hit : "—") + "%";
+      " 命中 " + (hit != null ? hit : "—") + "%";
   }
 
   /* 三档内容常驻为三个子 span，档位切换只改 display（无 innerHTML 重建 → 无闪现土壤） */
