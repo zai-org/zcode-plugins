@@ -6,7 +6,7 @@
 
   var ENDPOINT = "http://127.0.0.1:31710";
   var POLL_MS = 5000;
-  var data = null, lastOk = 0, fails = 0, popupOpen = false, pillMode = "full", openedAt = 0;
+  var data = null, lastOk = 0, fails = 0, popupOpen = false, pillMode = "full", openedAt = 0, lastToggleAt = 0;
   var rowEl = null, popEl = null, css = null;
 
   function fmtDur(ms) {
@@ -335,7 +335,9 @@
     el.className = "__sspills-row";
     el.style.cursor = "pointer";
     el.addEventListener("click", function (ev) {
-      // 点击 pill 任意位置都开合弹窗（不要求命中特定子元素，防重建竞态）
+      // 点击 pill 任意位置都开合弹窗；250ms 去抖防宿主合成重复点击（关了又开的闪烁）
+      if (Date.now() - lastToggleAt < 250) { ev.stopPropagation(); return; }
+      lastToggleAt = Date.now();
       setPopup(!popupOpen);
       ev.stopPropagation();
     });
@@ -523,6 +525,8 @@
     if (Date.now() - openedAt < 400) return; // 刚开启：忽略宿主合成的迟到点击，防秒关
     if (rowEl && !rowEl.contains(ev.target) && popEl && !popEl.contains(ev.target)) {
       setPopup(false);
+      // 关闭后短暂锁定 pill 布局，避免点击穿透触发的宿主重排让 pill 闪一下
+      lastScrollAt = Date.now();
     }
   }, true);
   window.addEventListener("resize", function () { requestLayout(); if (popupOpen) renderPopup(); });
