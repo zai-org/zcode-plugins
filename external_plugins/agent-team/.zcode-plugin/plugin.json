@@ -1,6 +1,6 @@
 {
   "name": "agent-team",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。",
   "description_i18n": {
     "en": "Agent Teams: spawn and coordinate teammate sessions with a shared task board and member messaging.",

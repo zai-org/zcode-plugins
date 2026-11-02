@@ -87,6 +87,7 @@ Create a teammate named reviewer to check the first three paragraphs of README f
 - **Failures are never silent; retries are bounded (0.4.1)**: when the Lead's model cannot be inherited (official coding plan, deleted/disabled Provider, unparseable state), spawning/resuming fails loudly with the reason — it never silently runs a different model. The failure shows in the member's diagnostics and pending messages are preserved. Deterministic rejections (plan/out-of-catalog) suspend auto-retry; transient faults (timeouts) back off 5s/15s/30s, at most 3 auto-retries. Switching the Lead back to a usable model — or sending a new message — resumes delivery and clears the stale error.
 - **Pre-spawn validation (0.4.1)**: when the Lead's model is not inheritable, `spawn_teammate` fails **before** registering the member — no failed member, no name consumed; after fixing the Lead's model the same name is reusable.
 - **Official coding plans cannot be inherited (hard boundary)**: members are independent CLI processes and the host does not hand subscription-plan credentials (`account:*` / `builtin:*` providers, e.g. GLM official coding plans) to them, so **inheriting an official coding-plan model is not supported**. Spawning/resuming while the Lead uses a plan model fails; switch the Lead to your own third-party model first (ZCode Settings → Model Services, add your own Provider + API key).
+- **Solo fallback when teammates are unavailable (0.5.1)**: when the Lead's confirmed model is an official plan model, the Lead is told once per session (SessionStart or the first prompt) that teammates cannot be spawned — it then does all the work itself instead of wasting turns on failing spawns. The note is non-permanent: if you switch the Lead to a third-party model mid-session and a spawn succeeds, the team works normally from then on.
 
 ### 3. `/team` for status
 
@@ -275,6 +276,7 @@ This plugin is a re-implementation of DSH Agent Teams on ZCode. The deviations b
 | D26 | `always` mode (pre-0.5.0 default `orchestrator`): the Lead proactively staffs/assigns/accepts and does not implement itself (except one-line fixes or when nobody can take it) |
 | D27 | Task `complete` means "submitted": the Lead must independently verify before acceptance; failures are `reopen`ed with concrete findings, passes append an acceptance note to the task |
 | D28 | Since 0.5.0 the default is `auto` (issue #9): no mode section is injected before a team exists; after the first teammate the on-demand section applies (delegation-value judgment with positive/negative examples); `off` disables injection and team tools entirely; legacy `orchestrator`/`collaborator` values migrate to `auto`; a stale pre-0.5.0 runtime-config is treated as unset |
+| D29 | When the Lead's confirmed model is an official plan model (issue #5), hooks inject a one-time solo note (do all work yourself, don't call spawn_teammate; non-permanent — a later successful spawn restores normal team use) and the spawn error message offers the same fallback; detection is optimistic (unknown/failed reads never trigger the note) |
 
 ## Documentation
 

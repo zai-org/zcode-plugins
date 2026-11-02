@@ -5,8 +5,8 @@ var __export = (target, all) => {
 };
 
 // src/hooks.ts
-import fs9 from "node:fs";
-import path10 from "node:path";
+import fs10 from "node:fs";
+import path11 from "node:path";
 
 // src/shared.ts
 import fs from "node:fs";
@@ -167,6 +167,7 @@ To message another teammate, use send_message({ target: "<teammate name>", messa
 var POLICY_PROBE_MARKER = "quartz-ember-73";
 var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
 var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
+var DEGRADED_SOLO_NOTE = "[agent-team] Teammates unavailable in this session: the Lead's model is an official plan model that teammate processes cannot inherit, so spawn_teammate will fail. Do all work yourself in this session and do not call spawn_teammate; if a spawn_teammate call succeeds later, use the team normally. To enable teammates, ask the user to switch the Lead to a self-configured third-party model.";
 function buildSessionStartContext(identityText, interrupt = true, modeSection) {
   const policy = teamPolicy(interrupt);
   const section = modeSection !== void 0 ? `
@@ -969,8 +970,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path11, errorMaps, issueData } = params;
-  const fullPath = [...path11, ...issueData.path || []];
+  const { data, path: path12, errorMaps, issueData } = params;
+  const fullPath = [...path12, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -1086,11 +1087,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path11, key) {
+  constructor(parent, value, path12, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path11;
+    this._path = path12;
     this._key = key;
   }
   get path() {
@@ -5293,17 +5294,393 @@ function recordLeadTurnEvent(teamDir, event2, now = Date.now()) {
     const prior = readLeadState(teamDir);
     writeLeadState(teamDir, {
       ...prior?.lastWakeAt !== void 0 ? { lastWakeAt: prior.lastWakeAt } : {},
+      ...prior?.soloNotifiedAt !== void 0 ? { soloNotifiedAt: prior.soloNotifiedAt } : {},
       active: event2 === "start",
       updatedAt: new Date(now).toISOString()
     });
   } catch {
   }
 }
+function markSoloNotified(teamDir, now = Date.now()) {
+  try {
+    const prior = readLeadState(teamDir);
+    writeLeadState(teamDir, {
+      ...prior?.lastWakeAt !== void 0 ? { lastWakeAt: prior.lastWakeAt } : {},
+      ...prior?.soloNotifiedAt !== void 0 ? { soloNotifiedAt: prior.soloNotifiedAt } : {},
+      active: prior?.active ?? false,
+      updatedAt: new Date(now).toISOString(),
+      soloNotifiedAt: new Date(now).toISOString()
+    });
+  } catch {
+  }
+}
+
+// src/provider/transcript.ts
+import fs9 from "node:fs";
+import os3 from "node:os";
+import path10 from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
+// src/provider/model-selection.ts
+function parseModelSelection(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return void 0;
+  const record = value;
+  const providerId = nonEmptyString(record.providerId);
+  const modelId = nonEmptyString(record.modelId);
+  if (providerId === void 0 || modelId === void 0) return void 0;
+  const options = record.options;
+  if (options !== void 0 && (typeof options !== "object" || options === null || Array.isArray(options))) {
+    return void 0;
+  }
+  let reasoningLevel;
+  const rawLevel = options !== void 0 ? options.reasoningLevel : record.reasoningLevel;
+  if (rawLevel !== void 0) {
+    reasoningLevel = nonEmptyString(rawLevel);
+    if (reasoningLevel === void 0) return void 0;
+  }
+  return { providerId, modelId, ...reasoningLevel !== void 0 ? { reasoningLevel } : {} };
+}
+function nonEmptyString(value) {
+  if (typeof value !== "string") return void 0;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : void 0;
+}
+
+// src/provider/transcript.ts
+function defaultDbPath() {
+  return process.env.TEAM_DB_PATH ?? path10.join(os3.homedir(), ".zcode", "cli", "db", "db.sqlite");
+}
+var TranscriptReader = class {
+  dbPath;
+  db = null;
+  dbMissing = false;
+  constructor(deps = {}) {
+    this.dbPath = deps.dbPath ?? defaultDbPath();
+  }
+  get path() {
+    return this.dbPath;
+  }
+  /** 库不存在 = 空库语义（探针方法走缺省值，不建临时库）。 */
+  missing() {
+    if (!this.dbMissing) this.dbMissing = !fs9.existsSync(this.dbPath);
+    else if (!fs9.existsSync(this.dbPath)) return true;
+    else this.dbMissing = false;
+    return this.dbMissing;
+  }
+  open() {
+    if (this.db !== null) return this.db;
+    if (!fs9.existsSync(this.dbPath)) {
+      throw new Error("transcript db missing");
+    }
+    this.db = new DatabaseSync(this.dbPath, { readOnly: true });
+    return this.db;
+  }
+  close() {
+    this.db?.close();
+    this.db = null;
+  }
+  /** 会话行实查；不存在 → undefined；读失败 → 抛错。 */
+  session(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      "SELECT id, parent_id, directory, task_type, title, time_created FROM session WHERE id = ?"
+    ).get(sessionId);
+    return row ?? void 0;
+  }
+  /** 找「目录 = cwd 且创建于 sinceMs 之后、首条真实用户文本 = firstPrompt」的会话（fresh spawn 探针）。 */
+  findSessionByFirstPrompt(args) {
+    if (this.missing()) return void 0;
+    const rows = this.open().prepare(
+      "SELECT id, time_created FROM session WHERE directory = ? AND time_created >= ? ORDER BY time_created ASC"
+    ).all(args.cwd, args.sinceMs - 2e3);
+    for (const row of rows) {
+      if (args.excludeSessionIds?.has(row.id)) continue;
+      const first = this.firstRealUserText(row.id);
+      if (first === args.firstPrompt) return row.id;
+    }
+    return void 0;
+  }
+  /** 首条「真实用户」消息的文本部分（跳过 hook/系统注入的 model-only 消息）。 */
+  firstRealUserText(sessionId) {
+    if (this.missing()) return null;
+    const rows = this.open().prepare(
+      `SELECT p.data pdata FROM message m JOIN part p ON p.message_id = m.id
+         WHERE m.session_id = ? AND json_extract(m.data,'$.role') = 'user'
+           AND json_extract(m.data,'$.semantics.origin') = 'real_user'
+           AND json_extract(p.data,'$.type') = 'text'
+         ORDER BY m.sequence, p.sequence LIMIT 1`
+    ).all(sessionId);
+    if (rows.length === 0) return null;
+    return extractText(rows[0].pdata);
+  }
+  /** 会话中是否已存在该文本的「真实用户」消息（delivered/去重探针：prompt 逐字落库）。 */
+  hasUserText(sessionId, text) {
+    if (this.missing()) return false;
+    const row = this.open().prepare(
+      `SELECT COUNT(*) n FROM message m JOIN part p ON p.message_id = m.id
+         WHERE m.session_id = ? AND json_extract(m.data,'$.role') = 'user'
+           AND json_extract(m.data,'$.semantics.origin') = 'real_user'
+           AND json_extract(p.data,'$.type') = 'text'
+           AND json_extract(p.data,'$.text') = ? LIMIT 1`
+    ).get(sessionId, text);
+    return row.n > 0;
+  }
+  /** 会话全部「真实用户」文本消息（时间序；轮次 prompt 审计/恰一次检索用）。 */
+  realUserTexts(sessionId) {
+    if (this.missing()) return [];
+    const rows = this.open().prepare(
+      `SELECT m.id mid, m.time_created tc, p.data pdata,
+                json_extract(m.data,'$.semantics.origin') origin,
+                json_extract(m.data,'$.modelSelection.modelId') model
+         FROM message m JOIN part p ON p.message_id = m.id
+         WHERE m.session_id = ? AND json_extract(m.data,'$.role') = 'user'
+           AND json_extract(m.data,'$.semantics.origin') = 'real_user'
+           AND json_extract(p.data,'$.type') = 'text'
+         ORDER BY m.sequence, p.sequence`
+    ).all(sessionId);
+    return rows.map((r) => ({
+      messageId: r.mid,
+      text: extractText(r.pdata) ?? "",
+      timeCreated: r.tc,
+      origin: r.origin,
+      modelId: r.model
+    }));
+  }
+  /** 会话最新使用的模型（成员行 model 字段实查；无消息 → undefined）。 */
+  latestModel(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT json_extract(m.data,'$.modelSelection.modelId') model FROM message m
+         WHERE m.session_id = ? AND json_extract(m.data,'$.modelSelection.modelId') IS NOT NULL
+         ORDER BY m.sequence DESC LIMIT 1`
+    ).get(sessionId);
+    return row?.model;
+  }
+  /**
+   * 最近一条「真实用户提交」（semantics.origin=real_user）消息携带的模型快照 + 提交时间。
+   * 0.4.0 三源判定的「提交证据」：宿主保存用户消息时写入该次提交的 modelSelection（本机源码核对），
+   * 输入框切换在提交瞬间即体现在这里——不依赖会话选模条目（issue #7 场景它可能滞后）。
+   * hook/系统注入的 user 消息（origin≠real_user）不算提交。
+   */
+  latestSubmissionSelection(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT m.time_created tc,
+                json_extract(m.data,'$.modelSelection.providerId') p,
+                json_extract(m.data,'$.modelSelection.modelId') mo,
+                json_extract(m.data,'$.modelSelection.options.reasoningLevel') lvl
+         FROM message m
+         WHERE m.session_id = ? AND json_extract(m.data,'$.role') = 'user'
+           AND json_extract(m.data,'$.semantics.origin') = 'real_user'
+           AND json_extract(m.data,'$.modelSelection.providerId') IS NOT NULL
+           AND json_extract(m.data,'$.modelSelection.modelId') IS NOT NULL
+         ORDER BY m.time_created DESC LIMIT 1`
+    ).get(sessionId);
+    if (row === void 0) return void 0;
+    const providerId = row.p.trim();
+    const modelId = row.mo.trim();
+    if (providerId.length === 0 || modelId.length === 0) return void 0;
+    const lvl = typeof row.lvl === "string" ? row.lvl.trim() : "";
+    return {
+      selection: { providerId, modelId, ...lvl.length > 0 ? { reasoningLevel: lvl } : {} },
+      at: row.tc
+    };
+  }
+  /** 会话选模条目 + 生效时间（UPSERT 单行；用于与提交快照比较「后来是否有 /model 修改」）。 */
+  latestModelSelectionTimed(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT data, MAX(COALESCE(time_updated, time_created), time_created) at FROM session_entry
+         WHERE session_id = ? AND type = 'runtime/model_selection'
+         ORDER BY time_created DESC LIMIT 1`
+    ).get(sessionId);
+    if (row === void 0) return void 0;
+    const selection = this.latestModelSelection(sessionId);
+    if (selection === void 0) return void 0;
+    return { selection, at: row.at };
+  }
+  /**
+   * 最近一次**主轮**实际模型调用（+ 开始时间）。query_source='main_turn' 过滤是 0.4.0 关键口径：
+   * compact/标题生成/goal 摘要/subagent/workflow 子轮的行属于辅助模型，绝不能当作 Lead 当前模型
+   * （实测本机取值域 = compact, goal_summary_title, main_turn, session_title, subagent,
+   * target_completion_verification, workflow_child）。
+   */
+  latestMainTurnUsage(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT provider_id, model_id, variant, started_at FROM model_usage
+         WHERE session_id = ? AND query_source = 'main_turn'
+         ORDER BY started_at DESC LIMIT 1`
+    ).get(sessionId);
+    if (row === void 0) return void 0;
+    const providerId = row.provider_id.trim();
+    const modelId = row.model_id.trim();
+    if (providerId.length === 0 || modelId.length === 0) return void 0;
+    const variant = typeof row.variant === "string" ? row.variant.trim() : "";
+    return {
+      selection: { providerId, modelId, ...variant.length > 0 ? { reasoningLevel: variant } : {} },
+      at: row.started_at
+    };
+  }
+  /**
+   * 会话库中最近一次 setModel 的选择（Round A 实证：条目为 UPSERT 单行，canonical id
+   * `<sessionId>:runtime-model-selection`，时间排序安全）。data 取嵌套 modelSelection 优先；
+   * 兼容旧行把 providerId/modelId/thoughtLevel 平铺在顶层的形态。
+   */
+  latestModelSelection(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT data FROM session_entry
+         WHERE session_id = ? AND type = 'runtime/model_selection'
+         ORDER BY time_created DESC LIMIT 1`
+    ).get(sessionId);
+    if (row === void 0) return void 0;
+    const data = parseOrNull(row.data);
+    if (data === null) return void 0;
+    const nested = parseModelSelection(data.modelSelection);
+    if (nested !== void 0) return nested;
+    const providerId = typeof data.providerId === "string" ? data.providerId.trim() : "";
+    const modelId = typeof data.modelId === "string" ? data.modelId.trim() : "";
+    if (providerId.length === 0 || modelId.length === 0) return void 0;
+    const thoughtLevel = typeof data.thoughtLevel === "string" ? data.thoughtLevel.trim() : "";
+    return {
+      providerId,
+      modelId,
+      ...thoughtLevel.length > 0 ? { reasoningLevel: thoughtLevel } : {}
+    };
+  }
+  /** 最近一次真实模型调用（session_entry 缺失时的继承兜底；variant = 思考强度）。 */
+  latestModelUsage(sessionId) {
+    if (this.missing()) return void 0;
+    const row = this.open().prepare(
+      `SELECT provider_id, model_id, variant FROM model_usage
+         WHERE session_id = ? ORDER BY started_at DESC LIMIT 1`
+    ).get(sessionId);
+    if (row === void 0) return void 0;
+    const providerId = row.provider_id.trim();
+    const modelId = row.model_id.trim();
+    if (providerId.length === 0 || modelId.length === 0) return void 0;
+    const variant = typeof row.variant === "string" ? row.variant.trim() : "";
+    return {
+      providerId,
+      modelId,
+      ...variant.length > 0 ? { reasoningLevel: variant } : {}
+    };
+  }
+  /** 完成回合导出（D3 fork 转录）：真实用户消息 + 助手文本；tool 部分记工具名。 */
+  exportTurns(sessionId) {
+    if (this.missing()) return [];
+    const rows = this.open().prepare(
+      `SELECT m.data mdata, p.data pdata FROM message m JOIN part p ON p.message_id = m.id
+         WHERE m.session_id = ?
+         ORDER BY m.sequence, p.sequence`
+    ).all(sessionId);
+    const turns = [];
+    for (const r of rows) {
+      const message = parseOrNull(r.mdata);
+      const part = parseOrNull(r.pdata);
+      if (message === null || part === null) continue;
+      const isUser = message.role === "user";
+      const isAssistant = message.role === "assistant";
+      const realUser = isUser && message.semantics?.origin === "real_user";
+      if (part.type === "text" && typeof part.text === "string") {
+        if (realUser) turns.push({ role: "user", text: part.text, toolNames: [] });
+        else if (isAssistant) turns.push({ role: "assistant", text: part.text, toolNames: [] });
+      } else if (isAssistant && part.type === "tool" && typeof part.tool === "string") {
+        const last = turns[turns.length - 1];
+        if (last !== void 0 && last.role === "assistant" && !last.toolNames.length) {
+          last.toolNames.push(part.tool);
+        } else {
+          turns.push({ role: "assistant", text: "", toolNames: [part.tool] });
+        }
+      }
+    }
+    return turns;
+  }
+  /**
+   * T5.7 成员会话查看视图导出（detail 合成数据源；只读、走 session_id 索引）：
+   * 时间序全量 part 行（text/tool 两型；其余 part 型跳过），损坏行跳过。
+   * 与 exportTurns 的区别：保留每条 part 的时间戳/role/工具状态（面板折叠行渲染），
+   * 不做回合聚合；hook 注入文本不落 transcript part（H14），framed 徽标由
+   * panel/detail.ts 以 events 回填（不改写原文）。
+   */
+  exportDetailParts(sessionId) {
+    if (this.missing()) return [];
+    const rows = this.open().prepare(
+      `SELECT m.data mdata, m.time_created mtc, p.data pdata, p.time_created ptc
+         FROM message m JOIN part p ON p.message_id = m.id
+         WHERE m.session_id = ?
+         ORDER BY m.sequence, p.sequence`
+    ).all(sessionId);
+    const out2 = [];
+    for (const r of rows) {
+      const message = parseOrNull(r.mdata);
+      const part = parseOrNull(r.pdata);
+      if (message === null || part === null) continue;
+      const role2 = message.role === "user" ? "user" : message.role === "assistant" ? "assistant" : void 0;
+      if (role2 === void 0) continue;
+      if (role2 === "user" && message.semantics?.origin !== "real_user") continue;
+      const ts2 = typeof r.ptc === "number" ? r.ptc : r.mtc;
+      if (part.type === "text" && typeof part.text === "string") {
+        out2.push({ ts: ts2, role: role2, kind: "text", text: part.text });
+      } else if (part.type === "tool" && typeof part.tool === "string") {
+        const status = typeof part.state?.status === "string" ? part.state.status : "unknown";
+        out2.push({
+          ts: ts2,
+          role: "assistant",
+          kind: "toolCall",
+          toolName: part.tool,
+          toolStatus: status,
+          ...part.state?.input !== void 0 ? { toolInput: part.state.input } : {},
+          ...part.state?.output !== void 0 ? { toolOutput: part.state.output } : {}
+        });
+      }
+    }
+    return out2;
+  }
+};
+function parseOrNull(raw2) {
+  try {
+    return JSON.parse(raw2);
+  } catch {
+    return null;
+  }
+}
+function extractText(partData) {
+  try {
+    const part = JSON.parse(partData);
+    return typeof part.text === "string" ? part.text : null;
+  } catch {
+    return null;
+  }
+}
+
+// src/provider/lead-model-probe.ts
+function probeLeadPlanModel(sessionId, dbPath = defaultDbPath()) {
+  try {
+    const reader = new TranscriptReader({ dbPath });
+    try {
+      const sources = [
+        reader.latestSubmissionSelection(sessionId),
+        reader.latestModelSelectionTimed(sessionId),
+        reader.latestMainTurnUsage(sessionId)
+      ].filter((source) => source !== void 0);
+      if (sources.length === 0) return { blocked: false };
+      const latest = sources.reduce((a, b) => b.at > a.at ? b : a).selection;
+      const isOfficialPlan = latest.providerId.startsWith("account:") || latest.providerId.startsWith("builtin:");
+      return isOfficialPlan ? { blocked: true, model: `${latest.providerId}/${latest.modelId}` } : { blocked: false };
+    } finally {
+      reader.close();
+    }
+  } catch {
+    return { blocked: false };
+  }
+}
 
 // src/hooks.ts
 function readStdin() {
   try {
-    return fs9.readFileSync(0, "utf8");
+    return fs10.readFileSync(0, "utf8");
   } catch {
     return "";
   }
@@ -5316,7 +5693,7 @@ try {
   input = { parse_error: true, raw_preview: raw.slice(0, 500) };
 }
 var DATA = dataDir();
-ensureDir(path10.join(DATA, "logs"));
+ensureDir(path11.join(DATA, "logs"));
 var event = (input.hook_event_name ?? process.env.ZCODE_HOOK_EVENT ?? "unknown").toLowerCase();
 var envOverlay = {};
 for (const k of Object.keys(process.env)) {
@@ -5338,7 +5715,7 @@ var logLine = {
   prompt_chars: promptText !== null ? promptText.length : null,
   source: input.source ?? null
 };
-appendJsonl(path10.join(DATA, "logs", "hooks.jsonl"), logLine);
+appendJsonl(path11.join(DATA, "logs", "hooks.jsonl"), logLine);
 var registry = readSessionRegistry(DATA);
 var sessionKey = rawSessionId !== null ? safeSessionKey(rawSessionId) : "";
 var selfEntry = rawSessionId !== null ? registry[sessionKey] : void 0;
@@ -5369,7 +5746,7 @@ function safeTeamDir(teamId) {
   if (!/^[A-Za-z0-9._-]+$/.test(teamId) || teamId === "." || teamId === "..") return null;
   const { teamDir } = teamPaths(DATA, teamId);
   try {
-    assertPathInside(path10.join(DATA, "teams"), teamDir);
+    assertPathInside(path11.join(DATA, "teams"), teamDir);
   } catch {
     return null;
   }
@@ -5412,6 +5789,14 @@ if (event === "sessionstart") {
     }
   }
   let context = buildSessionStartContext(identityText, interrupt, modeSection);
+  if (role.role === "lead" && !leadOff && rawSessionId !== null) {
+    const soloTeamDir = safeTeamDir(role.teamId);
+    if (soloTeamDir !== null && readLeadState(soloTeamDir)?.soloNotifiedAt === void 0 && probeLeadPlanModel(rawSessionId).blocked) {
+      context += `
+${DEGRADED_SOLO_NOTE}`;
+      markSoloNotified(soloTeamDir);
+    }
+  }
   let pending = [];
   if (role.role === "lead" && rawSessionId !== null) {
     const teamDir = safeTeamDir(role.teamId);
@@ -5447,15 +5832,22 @@ ${buildInboxContext(pending.map((m) => m.text))}`;
     if (teamDir !== null) {
       recordLeadTurnEvent(teamDir, "start");
       const pending = leadOff ? [] : await pendingForLead(teamDir, role.teamId);
-      if (pending.length > 0) {
+      const soloNeeded = !leadOff && readLeadState(teamDir)?.soloNotifiedAt === void 0 && probeLeadPlanModel(rawSessionId).blocked;
+      if (pending.length > 0 || soloNeeded) {
+        const parts = [];
+        if (soloNeeded) parts.push(DEGRADED_SOLO_NOTE);
+        if (pending.length > 0) parts.push(buildInboxContext(pending.map((m) => m.text)));
         await out({
           hookSpecificOutput: {
             hookEventName: "UserPromptSubmit",
-            additionalContext: buildInboxContext(pending.map((m) => m.text))
+            additionalContext: parts.join("\n")
           }
         });
-        writeReceipts(DATA, role.teamId, pending.map((m) => m.messageId), "userpromptsubmit");
-        await boundedAck("mailbox.ack", { session_id: rawSessionId, messageIds: pending.map((m) => m.messageId) });
+        if (soloNeeded) markSoloNotified(teamDir);
+        if (pending.length > 0) {
+          writeReceipts(DATA, role.teamId, pending.map((m) => m.messageId), "userpromptsubmit");
+          await boundedAck("mailbox.ack", { session_id: rawSessionId, messageIds: pending.map((m) => m.messageId) });
+        }
       }
     }
   }

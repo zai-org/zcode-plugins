@@ -87,6 +87,7 @@ zcode plugins enable agent-team@zcode-plugins-official
 - **失败绝不静默、重试有节制（0.4.1）**：Lead 的模型无法被成员继承时（官方 coding plan、Provider 被删除/禁用、解析不出），创建/续跑会直接报错并说明原因，不会悄悄用别的模型开跑；失败原因在成员行诊断可见，待处理消息保留不丢。同一失败不会无限重试：确定性拒绝（套餐/目录外）暂停自动重试，临时故障（超时等）按 5s/15s/30s 退避最多自动重试 3 次；Lead 换回可用模型或你再发一条新消息即自动恢复交付，恢复成功后旧错误提示自动消失。
 - **创建前校验（0.4.1）**：Lead 模型不可继承时，`spawn_teammate` 在登记成员**之前**就报错——不产生 failed 成员、不占用成员名；修正 Lead 模型后原名可直接重用。
 - **不支持继承官方 coding plan（硬性边界）**：成员是独立 CLI 进程，宿主不向它下发订阅套餐（`account:*` / `builtin:*` Provider，如智谱 GLM 官方 coding plan）的凭据，因此**不支持直接继承官方 coding plan 模型配置**。Lead 正在用套餐模型时创建/续跑成员会报错；请先在 ZCode 中把 Lead 切换到自配的第三方模型（ZCode 设置 → 模型服务，添加你自己的 Provider + API Key）。
+- **队友不可用时单 agent 兜底（0.5.1）**：Lead 的已确认模型是官方套餐时，插件会在会话开始（或首轮提问）一次性告知 Lead「队友无法孵化」——Lead 直接自己干全部工作，不再浪费轮次去试注定失败的建队。提示为非永久措辞：中途把 Lead 切到第三方模型后一旦 spawn 成功，团队功能即恢复正常使用。
 
 ### 3. `/team` 看状态
 
@@ -275,6 +276,7 @@ zcode plugins list --json        # 看 version / rootPath / dataPath / diagnosti
 | D26 | `always` 档（0.5.0 前的默认 `orchestrator`）：主动组队/分配/独立验收，不亲自实现（除一行级修复或无人可派） |
 | D27 | 任务 `complete` 是“提交”，Lead 需独立复核后才算验收完成；失败会 `reopen` 并附具体问题，通过则在任务描述里追加验收记录 |
 | D28 | 0.5.0 起默认 `auto`（issue #9）：建队前不注入任何模式段；首个队友创建后注入按需段（委派价值判断+正反例）；`off` 完全停注入并注销团队工具；旧值 `orchestrator`/`collaborator` 统一迁移 `auto`；0.5.0 前的 runtime-config 落盘视为过期 |
+| D29 | Lead 已确认模型为官方套餐时（issue #5），hook 每会话一次性注入单 agent 兜底提示（自己干全部工作、不试 spawn；非永久——后续 spawn 成功即恢复正常用队）；spawn 报错同步给出该出路；检测乐观（未知/读库失败绝不触发提示） |
 
 ## 文档
 

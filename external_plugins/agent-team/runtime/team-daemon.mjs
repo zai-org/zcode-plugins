@@ -22891,9 +22891,9 @@ var PANEL_RESOURCE_URI = "ui://agent-team/team-panel.html";
 var PANEL_SURFACE_ID = "agent-team-panel";
 var TEAM_TOOL_DEFINITIONS = [
   {
-    // 02 §9.3（〔issue #9 三档化 D28〕描述去 orchestrator 档位措辞，改模式中立的按需口径）
+    // 02 §9.3（〔issue #9 D28〕去档位措辞；〔issue #5 / D29〕补不可继承失败口径）
     name: "spawn_teammate",
-    description: "Create one named, durable teammate. Only the Team Lead may call this tool. Create teammates when the goal clearly benefits from delegation \u2014 multiple roles in parallel, disjoint write scopes, or long tasks needing their own context \u2014 within the member limit. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
+    description: "Create one named, durable teammate. Only the Team Lead may call this tool. Create teammates when the goal clearly benefits from delegation \u2014 multiple roles in parallel, disjoint write scopes, or long tasks needing their own context \u2014 within the member limit. If the Lead's model cannot be inherited (official plan model), the call fails \u2014 handle the work directly instead. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
     inputSchema: {
       type: "object",
       properties: {
@@ -25817,7 +25817,7 @@ var ResumePerTurnProvider = class {
     if (isOfficialPlan) {
       if (!throwOnUnusable) return void 0;
       throw new ModelInheritanceError(
-        `Lead \u5F53\u524D\u4F7F\u7528\u5B98\u65B9\u5957\u9910\u6A21\u578B\uFF08${model}\uFF09\uFF0C\u6210\u5458\u65E0\u6CD5\u7EE7\u627F\uFF08CLI \u8FDB\u7A0B\u62FF\u4E0D\u5230\u8BA2\u9605\u5957\u9910\u51ED\u636E\uFF09\u3002\u8BF7\u5728 ZCode \u4E2D\u5207\u6362\u5230\u81EA\u914D\u7684\u7B2C\u4E09\u65B9\u6A21\u578B\u540E\u91CD\u8BD5\u3002`,
+        `Lead \u5F53\u524D\u4F7F\u7528\u5B98\u65B9\u5957\u9910\u6A21\u578B\uFF08${model}\uFF09\uFF0C\u6210\u5458\u65E0\u6CD5\u7EE7\u627F\uFF08CLI \u8FDB\u7A0B\u62FF\u4E0D\u5230\u8BA2\u9605\u5957\u9910\u51ED\u636E\uFF09\u3002\u8BF7\u5728 ZCode \u4E2D\u5207\u6362\u5230\u81EA\u914D\u7684\u7B2C\u4E09\u65B9\u6A21\u578B\u540E\u91CD\u8BD5\uFF1B\u6216\u7531 Lead \u76F4\u63A5\u5B8C\u6210\u8BE5\u5DE5\u4F5C\uFF08\u5355 agent \u515C\u5E95\uFF09\u3002`,
         latest
       );
     }
