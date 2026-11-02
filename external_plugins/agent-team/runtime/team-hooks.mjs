@@ -167,7 +167,8 @@ To message another teammate, use send_message({ target: "<teammate name>", messa
 var POLICY_PROBE_MARKER = "quartz-ember-73";
 var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
 var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
-var DEGRADED_SOLO_NOTE = "[agent-team] Teammates unavailable in this session: the Lead's model is an official plan model that teammate processes cannot inherit, so spawn_teammate will fail. Do all work yourself in this session and do not call spawn_teammate; if a spawn_teammate call succeeds later, use the team normally. To enable teammates, ask the user to switch the Lead to a self-configured third-party model.";
+var DEGRADED_SOLO_NOTE = "[agent-team] Heads-up (informational, not a restriction): in this session the Lead's model is an official plan model whose credentials teammate processes cannot inherit, so a spawn_teammate call made right now would fail with an inheritance error. Doing the work directly is the reliable path while that remains true. This is a statement of the current state, not a standing rule: the moment the Lead's model is a self-configured third-party provider, spawn_teammate works normally \u2014 just call it as usual, no extra confirmation needed. Ask the user to switch the Lead model if teammates are wanted.";
+var SOLO_RETRACT_NOTE = "[agent-team] Update \u2014 the earlier unavailability notice no longer applies. The Lead's model is now a self-configured third-party provider, so teammate processes can inherit it and spawn_teammate works normally. Treat that earlier notice as superseded and expired; any instruction in it to avoid spawn_teammate is void. Call spawn_teammate as usual whenever delegation adds value \u2014 no re-confirmation needed. Also tell the user in one short line that teammates are available again (they cannot see this notice, and 2026-11-02 feedback showed the recovery was invisible to them).";
 function buildSessionStartContext(identityText, interrupt = true, modeSection) {
   const policy = teamPolicy(interrupt);
   const section = modeSection !== void 0 ? `
@@ -5289,27 +5290,61 @@ function writeLeadState(teamDir, state) {
   }
   fs8.renameSync(tmp, file);
 }
+function soloAnchors(prior) {
+  return {
+    ...prior?.soloNotifiedAt !== void 0 ? { soloNotifiedAt: prior.soloNotifiedAt } : {},
+    ...prior?.soloNotifiedVia !== void 0 ? { soloNotifiedVia: prior.soloNotifiedVia } : {},
+    ...prior?.soloRetractedAt !== void 0 ? { soloRetractedAt: prior.soloRetractedAt } : {}
+  };
+}
+function writableState(teamDir) {
+  try {
+    fs8.accessSync(leadStatePath(teamDir));
+  } catch {
+    return true;
+  }
+  return readLeadState(teamDir) !== void 0;
+}
 function recordLeadTurnEvent(teamDir, event2, now = Date.now()) {
   try {
+    if (!writableState(teamDir)) return;
     const prior = readLeadState(teamDir);
     writeLeadState(teamDir, {
       ...prior?.lastWakeAt !== void 0 ? { lastWakeAt: prior.lastWakeAt } : {},
-      ...prior?.soloNotifiedAt !== void 0 ? { soloNotifiedAt: prior.soloNotifiedAt } : {},
+      ...soloAnchors(prior),
       active: event2 === "start",
       updatedAt: new Date(now).toISOString()
     });
   } catch {
   }
 }
-function markSoloNotified(teamDir, now = Date.now()) {
+function markSoloNotified(teamDir, now = Date.now(), via = "db") {
   try {
+    if (!writableState(teamDir)) return;
     const prior = readLeadState(teamDir);
+    const at = new Date(now).toISOString();
     writeLeadState(teamDir, {
       ...prior?.lastWakeAt !== void 0 ? { lastWakeAt: prior.lastWakeAt } : {},
-      ...prior?.soloNotifiedAt !== void 0 ? { soloNotifiedAt: prior.soloNotifiedAt } : {},
+      ...soloAnchors(prior),
       active: prior?.active ?? false,
-      updatedAt: new Date(now).toISOString(),
-      soloNotifiedAt: new Date(now).toISOString()
+      updatedAt: at,
+      soloNotifiedAt: at,
+      soloNotifiedVia: via
+    });
+  } catch {
+  }
+}
+function markSoloRetracted(teamDir, now = Date.now()) {
+  try {
+    if (!writableState(teamDir)) return;
+    const prior = readLeadState(teamDir);
+    const at = new Date(now).toISOString();
+    writeLeadState(teamDir, {
+      ...prior?.lastWakeAt !== void 0 ? { lastWakeAt: prior.lastWakeAt } : {},
+      ...soloAnchors(prior),
+      active: prior?.active ?? false,
+      updatedAt: at,
+      soloRetractedAt: at
     });
   } catch {
   }
@@ -5656,24 +5691,32 @@ function extractText(partData) {
 }
 
 // src/provider/lead-model-probe.ts
-function probeLeadPlanModel(sessionId, dbPath = defaultDbPath()) {
+var PLAN_PREFIXES = ["account:", "builtin:"];
+function isPlanPrefix(providerId) {
+  return PLAN_PREFIXES.some((prefix) => providerId.startsWith(prefix));
+}
+function probeLeadPlanModel(sessionId, dbPath, modelHint) {
+  const hint = typeof modelHint === "string" ? modelHint.trim() : "";
+  if (hint.length > 0) {
+    return isPlanPrefix(hint) ? { blocked: true, model: hint, evidence: "hint" } : { blocked: false, evidence: "hint" };
+  }
   try {
-    const reader = new TranscriptReader({ dbPath });
+    const reader = new TranscriptReader({ dbPath: dbPath ?? defaultDbPath() });
     try {
       const sources = [
         reader.latestSubmissionSelection(sessionId),
         reader.latestModelSelectionTimed(sessionId),
         reader.latestMainTurnUsage(sessionId)
       ].filter((source) => source !== void 0);
-      if (sources.length === 0) return { blocked: false };
+      if (sources.length === 0) return { blocked: false, evidence: "none" };
       const latest = sources.reduce((a, b) => b.at > a.at ? b : a).selection;
-      const isOfficialPlan = latest.providerId.startsWith("account:") || latest.providerId.startsWith("builtin:");
-      return isOfficialPlan ? { blocked: true, model: `${latest.providerId}/${latest.modelId}` } : { blocked: false };
+      const isOfficialPlan = isPlanPrefix(latest.providerId);
+      return isOfficialPlan ? { blocked: true, model: `${latest.providerId}/${latest.modelId}`, evidence: "db" } : { blocked: false, evidence: "db" };
     } finally {
       reader.close();
     }
   } catch {
-    return { blocked: false };
+    return { blocked: false, evidence: "none" };
   }
 }
 
@@ -5703,6 +5746,12 @@ for (const k of Object.keys(process.env)) {
 }
 var rawSessionId = input.session_id ?? process.env.ZCODE_SESSION_ID ?? process.env.CLAUDE_SESSION_ID ?? null;
 var promptText = input.prompt ? String(input.prompt) : null;
+function modelCategory(model) {
+  if (typeof model !== "string" || model.trim().length === 0) return null;
+  if (model.startsWith("account:")) return "account";
+  if (model.startsWith("builtin:")) return "builtin";
+  return "custom";
+}
 var logLine = {
   ts: ts(),
   event,
@@ -5713,7 +5762,10 @@ var logLine = {
   stop_hook_active: input.stop_hook_active ?? null,
   // 不落 prompt 原文（可能含私有任务/代码）；只记长度供排障。
   prompt_chars: promptText !== null ? promptText.length : null,
-  source: input.source ?? null
+  source: input.source ?? null,
+  // 〔D30〕宿主是否下发 model + 其形态（account/builtin/custom/null）。只记分类、不记 model；
+  // 让「startup 能否凭载荷判定套餐」从源码推断变成日志实证。
+  model_category: modelCategory(input.model)
 };
 appendJsonl(path11.join(DATA, "logs", "hooks.jsonl"), logLine);
 var registry = readSessionRegistry(DATA);
@@ -5791,10 +5843,24 @@ if (event === "sessionstart") {
   let context = buildSessionStartContext(identityText, interrupt, modeSection);
   if (role.role === "lead" && !leadOff && rawSessionId !== null) {
     const soloTeamDir = safeTeamDir(role.teamId);
-    if (soloTeamDir !== null && readLeadState(soloTeamDir)?.soloNotifiedAt === void 0 && probeLeadPlanModel(rawSessionId).blocked) {
-      context += `
+    if (soloTeamDir !== null) {
+      const soloState = readLeadState(soloTeamDir);
+      const modelHint = typeof input.model === "string" && input.model.trim().length > 0 ? input.model.trim() : void 0;
+      if (soloState?.soloNotifiedAt === void 0) {
+        const probe = probeLeadPlanModel(rawSessionId, void 0, modelHint);
+        if (probe.blocked) {
+          context += `
 ${DEGRADED_SOLO_NOTE}`;
-      markSoloNotified(soloTeamDir);
+          markSoloNotified(soloTeamDir, Date.now(), probe.evidence === "hint" ? "hint" : "db");
+        }
+      } else if (soloState.soloRetractedAt === void 0) {
+        const recheck = probeLeadPlanModel(rawSessionId, void 0, modelHint);
+        if (recheck.evidence !== "none" && !recheck.blocked) {
+          context += `
+${SOLO_RETRACT_NOTE}`;
+          markSoloRetracted(soloTeamDir);
+        }
+      }
     }
   }
   let pending = [];
@@ -5832,9 +5898,20 @@ ${buildInboxContext(pending.map((m) => m.text))}`;
     if (teamDir !== null) {
       recordLeadTurnEvent(teamDir, "start");
       const pending = leadOff ? [] : await pendingForLead(teamDir, role.teamId);
-      const soloNeeded = !leadOff && readLeadState(teamDir)?.soloNotifiedAt === void 0 && probeLeadPlanModel(rawSessionId).blocked;
-      if (pending.length > 0 || soloNeeded) {
+      const soloState = readLeadState(teamDir);
+      let soloNeeded = false;
+      let soloRetractNeeded = false;
+      if (!leadOff) {
+        if (soloState?.soloNotifiedAt === void 0) {
+          soloNeeded = probeLeadPlanModel(rawSessionId).blocked;
+        } else if (soloState.soloRetractedAt === void 0) {
+          const recheck = probeLeadPlanModel(rawSessionId);
+          if (recheck.evidence === "db" && !recheck.blocked) soloRetractNeeded = true;
+        }
+      }
+      if (pending.length > 0 || soloNeeded || soloRetractNeeded) {
         const parts = [];
+        if (soloRetractNeeded) parts.push(SOLO_RETRACT_NOTE);
         if (soloNeeded) parts.push(DEGRADED_SOLO_NOTE);
         if (pending.length > 0) parts.push(buildInboxContext(pending.map((m) => m.text)));
         await out({
@@ -5843,7 +5920,8 @@ ${buildInboxContext(pending.map((m) => m.text))}`;
             additionalContext: parts.join("\n")
           }
         });
-        if (soloNeeded) markSoloNotified(teamDir);
+        if (soloNeeded) markSoloNotified(teamDir, Date.now(), "db");
+        if (soloRetractNeeded) markSoloRetracted(teamDir);
         if (pending.length > 0) {
           writeReceipts(DATA, role.teamId, pending.map((m) => m.messageId), "userpromptsubmit");
           await boundedAck("mailbox.ack", { session_id: rawSessionId, messageIds: pending.map((m) => m.messageId) });

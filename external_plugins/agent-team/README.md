@@ -41,7 +41,8 @@ After install and enable you need **no special command**: the teamwork policy is
 | Surface | How to trigger | What it does |
 |---|---|---|
 | Natural language (main channel) | Just state a goal / give orders | Everything: spawning teammates, assigning tasks, messaging; the policy is auto-injected and the model knows which team tools to use |
-| `/team` | Type `/team` | Prints a text summary of team status + panel/command entries (**read-only**, creates/modifies nothing) |
+| `/team` | Type `/team` | Prints a text summary of team status + panel/command entries (**read-only when called without arguments**, creates/modifies nothing) |
+| `/team <task>` | e.g. `/team expand this story into three characters` | **Actually runs the task with the team**: prints the status summary, then spawns teammates, assigns work, waits and summarizes (if the model cannot be inherited it says so and does the work directly) |
 | `/team-coordination` | Type `/team-coordination` (full name `agent-team:team-coordination`) | Manually (re)load the teamwork policy skill; use when a very long session has lost it |
 
 ### 1. Just state the goal (default `auto`: on-demand delegation)
@@ -87,11 +88,13 @@ Create a teammate named reviewer to check the first three paragraphs of README f
 - **Failures are never silent; retries are bounded (0.4.1)**: when the Lead's model cannot be inherited (official coding plan, deleted/disabled Provider, unparseable state), spawning/resuming fails loudly with the reason — it never silently runs a different model. The failure shows in the member's diagnostics and pending messages are preserved. Deterministic rejections (plan/out-of-catalog) suspend auto-retry; transient faults (timeouts) back off 5s/15s/30s, at most 3 auto-retries. Switching the Lead back to a usable model — or sending a new message — resumes delivery and clears the stale error.
 - **Pre-spawn validation (0.4.1)**: when the Lead's model is not inheritable, `spawn_teammate` fails **before** registering the member — no failed member, no name consumed; after fixing the Lead's model the same name is reusable.
 - **Official coding plans cannot be inherited (hard boundary)**: members are independent CLI processes and the host does not hand subscription-plan credentials (`account:*` / `builtin:*` providers, e.g. GLM official coding plans) to them, so **inheriting an official coding-plan model is not supported**. Spawning/resuming while the Lead uses a plan model fails; switch the Lead to your own third-party model first (ZCode Settings → Model Services, add your own Provider + API key).
-- **Solo fallback when teammates are unavailable (0.5.1)**: when the Lead's confirmed model is an official plan model, the Lead is told once per session (SessionStart or the first prompt) that teammates cannot be spawned — it then does all the work itself instead of wasting turns on failing spawns. The note is non-permanent: if you switch the Lead to a third-party model mid-session and a spawn succeeds, the team works normally from then on.
+- **Solo fallback when teammates are unavailable (0.5.1; timing refined in 0.5.2)**: when the Lead's confirmed model is an official plan model, the Lead is told once per session that teammates cannot be spawned — it then does all the work itself instead of wasting turns on failing spawns. Since 0.5.2 the decision is taken from the model the host reports at session start, so even a brand-new session knows before your first message (older hosts fall back to the first prompt). The note self-corrects: if you switch the Lead to a third-party model — before the first message or mid-session — the next prompt carries a one-time update that teammates are available again, and a successful spawn always restores normal team use.
 
 ### 3. `/team` for status
 
 Type `/team` any time: the first line reads "Members N · Shared tasks T", followed by one line per member and task (same wording as the panel dictionary), plus panel/command entries depending on the runtime. Refresh semantics: the desktop MCP Apps panel is live (subscription push, no manual refresh); on CLI every `/team` run is fresh.
+
+**With an argument it also does the work**: `/team <task description>` prints the summary and then actually builds the team — spawns members by role, creates shared tasks with write scopes when coordination is needed, waits for results and summarizes. Without arguments it stays strictly read-only.
 
 ### 4. `/team-coordination` to reload the policy
 
@@ -155,6 +158,9 @@ Edit under **Settings → Plugins → Agent Team**; changes apply to new tasks (
 ```bash
 # /team command: prints the team status text summary (desktop & CLI)
 /team
+
+# With an argument: runs the task with the team (spawn + assign + summarize)
+/team expand this story into three characters
 
 # Direct disk replay (same source as /team)
 node <plugin-dir>/runtime/team-ctl.mjs state <teamDir>            # text summary
@@ -256,7 +262,7 @@ This plugin is a re-implementation of DSH Agent Teams on ZCode. The deviations b
 | D5 | Member sessions stay out of the left task list by default; the panel offers a read-only member conversation view. Legacy visible rows can be archived with `sidebar-audit` |
 | D6 | The Lead still sees the host's built-in Task tools (cannot be disabled); teammates have Task disabled and team tools are policy-preferred |
 | D7 | One sentence about "file version conflicts" in the policy text is replaced with ZCode file-tool semantics; everything else is verbatim |
-| D8 | The coordinator is ephemeral: the daemon is reclaimed by the host when idle and any instance can take over; a momentary `TEAM_DISPOSED` error may appear during handover — just retry (measured takeover ≤5s) |
+| D8 | The coordinator is ephemeral: the daemon is reclaimed by the host when idle and any instance can take over; a momentary `TEAM_DISPOSED` error may appear during handover — just retry (measured takeover ≤5s for a truly dead coordinator; a stalled-but-alive holder is detected via PID liveness and given a bounded grace instead of being stolen from) |
 | D9 | No SessionEnd hook: disposal is best-effort at daemon exit plus reconciliation on next start; under very short grace only a reconcilable state may remain |
 | D10 | The policy is injected into message context by the SessionStart hook, not the system prompt; injected text does not land in the transcript; disabling hooks triggers a fail-loud warning |
 | D11 | Desktop callTool may hang / `Client closed` after daemon reclaim without recovering in that session; a new task recovers. Teammates use separate processes and are unaffected |
@@ -277,6 +283,8 @@ This plugin is a re-implementation of DSH Agent Teams on ZCode. The deviations b
 | D27 | Task `complete` means "submitted": the Lead must independently verify before acceptance; failures are `reopen`ed with concrete findings, passes append an acceptance note to the task |
 | D28 | Since 0.5.0 the default is `auto` (issue #9): no mode section is injected before a team exists; after the first teammate the on-demand section applies (delegation-value judgment with positive/negative examples); `off` disables injection and team tools entirely; legacy `orchestrator`/`collaborator` values migrate to `auto`; a stale pre-0.5.0 runtime-config is treated as unset |
 | D29 | When the Lead's confirmed model is an official plan model (issue #5), hooks inject a one-time solo note (do all work yourself, don't call spawn_teammate; non-permanent — a later successful spawn restores normal team use) and the spawn error message offers the same fallback; detection is optimistic (unknown/failed reads never trigger the note) |
+| D30 | 0.5.2: the solo note is decided first from the `model` the host passes to the SessionStart hook (brand-new sessions know at startup; the db three-source probe remains the fallback), and every later prompt reconciles it against the db — once the db confirms a non-plan model, a one-time retraction note restores normal team use |
+| D31 | 0.5.2: the build runs `node --check` on every runtime bundle and rebuilds up to 3 times on failure; the release packer re-checks the staged and unpacked trees (guards against torn writes on slow/external volumes) |
 
 ## Documentation
 

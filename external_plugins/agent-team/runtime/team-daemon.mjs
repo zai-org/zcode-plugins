@@ -18642,8 +18642,9 @@ function logErr(scope, msg, extra) {
 
 // src/coord/lock.ts
 import crypto from "node:crypto";
-import fs2 from "node:fs";
-import path2 from "node:path";
+import fs4 from "node:fs";
+import path4 from "node:path";
+import { spawnSync } from "node:child_process";
 
 // src/coord/identity.ts
 import { randomUUID } from "node:crypto";
@@ -18664,11 +18665,246 @@ function parseWriterId(writer) {
   return { bootId: id, pid };
 }
 
+// src/provider/procgroup.ts
+import { execFile } from "node:child_process";
+import fs3 from "node:fs";
+import path3 from "node:path";
+import { fileURLToPath } from "node:url";
+
+// src/provider/member-files.ts
+import fs2 from "node:fs";
+import path2 from "node:path";
+function teamEverCreated(teamDir, leadSessionId) {
+  let entries;
+  try {
+    entries = fs2.readdirSync(path2.join(teamDir, "members"));
+  } catch {
+    return false;
+  }
+  return entries.some((entry) => entry !== leadSessionId);
+}
+function memberPaths(teamDir, memberId) {
+  const memberDir = path2.join(teamDir, "members", memberId);
+  const runDir = path2.join(memberDir, "run");
+  return {
+    memberDir,
+    originFile: path2.join(memberDir, "origin.json"),
+    receiptsFile: path2.join(memberDir, "receipts.jsonl"),
+    stopBudgetFile: path2.join(memberDir, "stop-budget.json"),
+    runDir,
+    currentFile: path2.join(runDir, "current.json"),
+    drainMarkerFile: path2.join(runDir, "drain-requested.json"),
+    modelFailedFile: path2.join(memberDir, "model-failed.json")
+  };
+}
+function turnFile(runDir, turnId) {
+  return path2.join(runDir, `${turnId}.json`);
+}
+function writeJsonAtomic(file, value) {
+  fs2.mkdirSync(path2.dirname(file), { recursive: true, mode: 448 });
+  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`;
+  const fd = fs2.openSync(tmp, "w", 384);
+  try {
+    fs2.writeFileSync(fd, JSON.stringify(value, null, 2));
+    fs2.fsyncSync(fd);
+  } finally {
+    fs2.closeSync(fd);
+  }
+  fs2.renameSync(tmp, file);
+}
+function readJson(file) {
+  let raw;
+  try {
+    raw = fs2.readFileSync(file, "utf8");
+  } catch (err) {
+    if (err.code === "ENOENT") return void 0;
+    throw err;
+  }
+  return JSON.parse(raw);
+}
+function writeOrigin(paths, origin) {
+  writeJsonAtomic(paths.originFile, origin);
+}
+function readOrigin(paths) {
+  return readJson(paths.originFile);
+}
+function writeTurn(runDir, turn) {
+  writeJsonAtomic(turnFile(runDir, turn.turnId), turn);
+}
+function readTurn(runDir, turnId) {
+  return readJson(turnFile(runDir, turnId));
+}
+function setCurrentTurn(paths, turnId) {
+  writeJsonAtomic(paths.currentFile, { turnId });
+}
+function readCurrentTurnId(paths) {
+  return readJson(paths.currentFile)?.turnId;
+}
+function listTurns(runDir) {
+  let names;
+  try {
+    names = fs2.readdirSync(runDir);
+  } catch (err) {
+    if (err.code === "ENOENT") return [];
+    throw err;
+  }
+  return names.filter((n) => /^turn-\d+\.json$/.test(n)).sort((a, b) => turnNumber(a) - turnNumber(b)).map((n) => readJson(path2.join(runDir, n))).filter((t) => t !== void 0);
+}
+function turnNumber(name) {
+  return Number(name.slice("turn-".length, -".json".length));
+}
+function nextTurnId(runDir) {
+  let names = [];
+  try {
+    names = fs2.readdirSync(runDir);
+  } catch {
+  }
+  let max = 0;
+  for (const n of names) {
+    if (/^turn-\d+\.json$/.test(n)) max = Math.max(max, turnNumber(n));
+  }
+  return `turn-${max + 1}`;
+}
+function appendReceipt(paths, receipt) {
+  fs2.mkdirSync(path2.dirname(paths.receiptsFile), { recursive: true, mode: 448 });
+  const fd = fs2.openSync(paths.receiptsFile, "a", 384);
+  try {
+    fs2.writeFileSync(fd, JSON.stringify(receipt) + "\n");
+    fs2.fsyncSync(fd);
+  } finally {
+    fs2.closeSync(fd);
+  }
+}
+function readReceipts(paths) {
+  let raw;
+  try {
+    raw = fs2.readFileSync(paths.receiptsFile, "utf8");
+  } catch (err) {
+    if (err.code === "ENOENT") return [];
+    throw err;
+  }
+  const receipts = [];
+  for (const line of raw.split("\n")) {
+    if (line.trim().length === 0) continue;
+    receipts.push(JSON.parse(line));
+  }
+  return receipts;
+}
+function receiptMessageIds(paths) {
+  return new Set(readReceipts(paths).map((r) => r.messageId));
+}
+function readStopBudget(paths) {
+  return readJson(paths.stopBudgetFile);
+}
+function writeStopBudget(paths, budget) {
+  writeJsonAtomic(paths.stopBudgetFile, budget);
+}
+function readModelFailed(paths) {
+  return readJson(paths.modelFailedFile);
+}
+function writeModelFailed(paths, record2) {
+  writeJsonAtomic(paths.modelFailedFile, record2);
+}
+function clearModelFailed(paths) {
+  try {
+    fs2.unlinkSync(paths.modelFailedFile);
+  } catch {
+  }
+}
+
+// src/provider/procgroup.ts
+var HELPER_DEFAULT = path3.join(path3.dirname(fileURLToPath(import.meta.url)), "detach-helper.mjs");
+var SPAWN_HELPER_TIMEOUT_MS = 1e4;
+async function spawnDetached(spec) {
+  const dir = path3.dirname(spec.stdoutFile);
+  const specFile = spec.specFile ?? path3.join(dir, `${path3.basename(spec.stdoutFile, ".out")}.spec.json`);
+  const resultFile = spec.resultFile ?? path3.join(dir, `${path3.basename(spec.stdoutFile, ".out")}.spawn.json`);
+  const specDoc = {
+    command: spec.command,
+    argv: spec.argv,
+    cwd: spec.cwd,
+    stdoutFile: spec.stdoutFile,
+    resultFile
+  };
+  if (spec.persistEnv === true) specDoc.env = spec.env;
+  writeJsonAtomic(specFile, specDoc);
+  const helper = process.env.TEAM_DETACH_HELPER ?? HELPER_DEFAULT;
+  await new Promise((resolve, reject) => {
+    execFile(
+      process.execPath,
+      ["--", helper, specFile],
+      { timeout: SPAWN_HELPER_TIMEOUT_MS, cwd: spec.cwd, env: spec.env },
+      (err) => {
+        if (err) reject(new Error(`detach helper failed: ${err.message}`));
+        else resolve();
+      }
+    );
+  });
+  let result;
+  try {
+    result = JSON.parse(fs3.readFileSync(resultFile, "utf8"));
+  } catch (err) {
+    throw new Error(`detach helper produced no result file: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (typeof result.error === "string") {
+    throw new Error(`turn process launch failed: ${result.error}`);
+  }
+  return { pid: result.pid ?? null, pgid: result.pid ?? null, stdoutFile: spec.stdoutFile, specFile, resultFile };
+}
+function pidAlive(pid) {
+  if (pid === null || !Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err.code === "EPERM";
+  }
+}
+function pgidAlive(pgid) {
+  if (pgid === null || !Number.isInteger(pgid) || pgid <= 0) return false;
+  try {
+    process.kill(-pgid, 0);
+    return true;
+  } catch (err) {
+    return err.code === "EPERM";
+  }
+}
+async function killProcessGroup(pgid, graceMs) {
+  if (pgid === null || pgid <= 0) return true;
+  signalGroup(pgid, "SIGTERM");
+  for (let waited = 0; waited < graceMs; waited += 50) {
+    await sleep(50);
+    if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
+  }
+  if (pgidAlive(pgid) || pidAlive(pgid)) {
+    signalGroup(pgid, "SIGKILL");
+    for (let waited = 0; waited < 2e3; waited += 50) {
+      await sleep(50);
+      if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
+    }
+  }
+  return !pgidAlive(pgid) && !pidAlive(pgid);
+}
+function signalGroup(pgid, sig) {
+  try {
+    process.kill(-pgid, sig);
+  } catch (err) {
+    if (err.code !== "ESRCH") {
+      throw err;
+    }
+  }
+}
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // src/coord/lock.ts
 var DEFAULT_LOCK_TUNING = {
   heartbeatMs: 1e3,
   expiryMs: 4500,
-  pollMs: 200
+  pollMs: 200,
+  graceMs: 3e3,
+  hardExpiryMs: 15e3
 };
 var exitReleases = /* @__PURE__ */ new Set();
 var exitHookInstalled = false;
@@ -18740,15 +18976,18 @@ var CoordinatorLock = class {
       const observed = this.observe();
       if (!observed.exists) {
         if (Date.now() >= deadline) timeout();
-        await sleep(1);
+        await sleep2(1);
         continue;
       }
       if (observed.ageMs > this.tuning.expiryMs) {
-        this.steal(observed);
+        const outcome = await this.steal(observed);
+        if (outcome === "stolen") continue;
+        if (Date.now() >= deadline) timeout();
+        await sleep2(Math.min(this.tuning.pollMs, Math.max(deadline - Date.now(), 1)));
         continue;
       }
       if (Date.now() >= deadline) timeout();
-      await sleep(Math.min(this.tuning.pollMs, Math.max(deadline - Date.now(), 1)));
+      await sleep2(Math.min(this.tuning.pollMs, Math.max(deadline - Date.now(), 1)));
     }
   }
   /** 续持：owner inode + token 双 CAS 通过后写心跳；被抢/丢失 → false（onLost 恰一次）。 */
@@ -18764,9 +19003,13 @@ var CoordinatorLock = class {
     try {
       this.writeHeartbeat(held.token, now2);
     } catch (err) {
-      this.audit("renew-failed", { error: String(err) });
-      this.markLost(owner.info);
-      return false;
+      try {
+        this.writeHeartbeat(held.token, now2);
+      } catch (retryErr) {
+        this.audit("renew-failed", { error: String(err), retryError: String(retryErr) });
+        this.markLost(owner.info);
+        return false;
+      }
     }
     this.held = { ...held, info: { ...held.info, heartbeatAt: now2 } };
     return true;
@@ -18782,26 +19025,26 @@ var CoordinatorLock = class {
     this.held = null;
     if (held === null) return;
     try {
-      const fd = fs2.openSync(this.lockFile, "r");
+      const fd = fs4.openSync(this.lockFile, "r");
       try {
-        const stat = fs2.fstatSync(fd);
+        const stat = fs4.fstatSync(fd);
         if (stat.ino !== held.ino) {
           this.audit("release-skip", { reason: "inode-changed", expected: held.ino, actual: stat.ino });
           return;
         }
-        const info = JSON.parse(fs2.readFileSync(fd, "utf8"));
+        const info = JSON.parse(fs4.readFileSync(fd, "utf8"));
         if (info.token !== held.token || info.pid !== process.pid || info.bootId !== this.ownerBootId) {
           this.audit("release-skip", { reason: "owner-changed", previous: info });
           return;
         }
       } finally {
-        fs2.closeSync(fd);
+        fs4.closeSync(fd);
       }
-      if (fs2.statSync(this.lockFile).ino !== held.ino) {
+      if (fs4.statSync(this.lockFile).ino !== held.ino) {
         this.audit("release-skip", { reason: "inode-changed-before-unlink" });
         return;
       }
-      fs2.unlinkSync(this.lockFile);
+      fs4.unlinkSync(this.lockFile);
       this.audit("release", { via: "exit-handler" });
     } catch (err) {
       if (err.code === "ENOENT") return;
@@ -18832,42 +19075,56 @@ var CoordinatorLock = class {
     if (this.exitUnregister !== null) return;
     this.exitUnregister = registerExitRelease(() => this.releaseSync());
   }
-  /** 观察锁文件（不抢）。ageMs：可解析 = now-heartbeatAt（优先 token 心跳）；否则 now-mtime。 */
+  /** 观察锁文件（不抢）。ageMs：可解析 = now-heartbeatAt（优先 token 心跳）；否则 now-mtime。
+   *  〔D32〕同时给出持有者进程存活信号与心跳来源（回退路径不再静默不可诊断）。 */
   observe() {
     let raw;
     let stat;
     try {
-      stat = fs2.statSync(this.lockFile);
-      raw = fs2.readFileSync(this.lockFile, "utf8");
+      stat = fs4.statSync(this.lockFile);
+      raw = fs4.readFileSync(this.lockFile, "utf8");
     } catch {
-      return { exists: false, ageMs: Number.POSITIVE_INFINITY, parseable: false };
+      return { exists: false, ageMs: Number.POSITIVE_INFINITY, parseable: false, holderAlive: null, hbSource: "mtime" };
     }
     try {
       const info = JSON.parse(raw);
       if (typeof info.pid === "number" && typeof info.bootId === "string" && typeof info.heartbeatAt === "number") {
         let heartbeatAt = info.heartbeatAt;
+        let hbSource = "owner-fallback";
         if (typeof info.token === "string") {
           const hb = this.readHeartbeat(info.token);
-          if (hb !== void 0) heartbeatAt = hb;
+          if (hb !== void 0) {
+            heartbeatAt = hb;
+            hbSource = "token";
+          }
         }
         return {
           exists: true,
           info,
           ageMs: Date.now() - heartbeatAt,
           parseable: true,
-          ino: stat.ino
+          ino: stat.ino,
+          holderAlive: pidAlive(info.pid),
+          hbSource
         };
       }
     } catch {
     }
-    return { exists: true, ageMs: Date.now() - stat.mtimeMs, parseable: false, ino: stat.ino };
+    return {
+      exists: true,
+      ageMs: Date.now() - stat.mtimeMs,
+      parseable: false,
+      ino: stat.ino,
+      holderAlive: null,
+      hbSource: "mtime"
+    };
   }
   /** 审计痕迹（获取/释放/抢占/丢失；best-effort，无 fsync）。 */
   audit(event, detail) {
     if (this.auditFile === void 0) return;
     try {
-      fs2.mkdirSync(path2.dirname(this.auditFile), { recursive: true });
-      fs2.appendFileSync(
+      fs4.mkdirSync(path4.dirname(this.auditFile), { recursive: true });
+      fs4.appendFileSync(
         this.auditFile,
         JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), event, pid: process.pid, bootId: this.ownerBootId, detail }) + "\n",
         { mode: 384 }
@@ -18883,48 +19140,51 @@ var CoordinatorLock = class {
       bootId: this.ownerBootId,
       heartbeatAt: now2,
       acquiredAt: now2,
+      // 〔D32〕进程启动时刻估算（宽限路径做 PID 复用防护；旧锁无此字段则跳过校验）。
+      startedAt: now2 - Math.round(process.uptime() * 1e3),
       token
     };
     let fd;
     try {
-      fd = fs2.openSync(this.lockFile, "wx", 384);
+      fd = fs4.openSync(this.lockFile, "wx", 384);
     } catch (err) {
       if (err.code === "EEXIST") return null;
       throw err;
     }
     let ino;
     try {
-      fs2.writeFileSync(fd, JSON.stringify(info));
-      fs2.fsyncSync(fd);
-      ino = fs2.fstatSync(fd).ino;
+      fs4.writeFileSync(fd, JSON.stringify(info));
+      fs4.fsyncSync(fd);
+      ino = fs4.fstatSync(fd).ino;
     } catch (err) {
       try {
-        const stat = fs2.fstatSync(fd);
-        if (stat.ino === fs2.statSync(this.lockFile).ino) fs2.unlinkSync(this.lockFile);
+        const stat = fs4.fstatSync(fd);
+        if (stat.ino === fs4.statSync(this.lockFile).ino) fs4.unlinkSync(this.lockFile);
       } catch {
       }
       throw err;
     } finally {
-      fs2.closeSync(fd);
+      fs4.closeSync(fd);
     }
     this.held = { info, token, ino };
     try {
       this.writeHeartbeat(token, now2);
       this.cleanupForeignHeartbeats(token);
-    } catch {
+    } catch (err) {
+      this.audit("heartbeat-first-write-failed", { error: String(err) });
     }
     this.audit("acquire", { token: token.slice(0, 8), ino });
     return info;
   }
   readOwner() {
     try {
-      const fd = fs2.openSync(this.lockFile, "r");
+      const fd = fs4.openSync(this.lockFile, "r");
       try {
-        const stat = fs2.fstatSync(fd);
-        const info = JSON.parse(fs2.readFileSync(fd, "utf8"));
+        const stat = fs4.fstatSync(fd);
+        const info = JSON.parse(fs4.readFileSync(fd, "utf8"));
         return { info, ino: stat.ino };
       } finally {
-        fs2.closeSync(fd);
+        fs4.closeSync(fd);
       }
     } catch {
       return null;
@@ -18932,7 +19192,7 @@ var CoordinatorLock = class {
   }
   readHeartbeat(token) {
     try {
-      const parsed = JSON.parse(fs2.readFileSync(heartbeatFileFor(this.lockFile, token), "utf8"));
+      const parsed = JSON.parse(fs4.readFileSync(heartbeatFileFor(this.lockFile, token), "utf8"));
       if (parsed.token === token && typeof parsed.heartbeatAt === "number") return parsed.heartbeatAt;
     } catch {
     }
@@ -18942,11 +19202,11 @@ var CoordinatorLock = class {
     const file = heartbeatFileFor(this.lockFile, token);
     const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
     try {
-      fs2.writeFileSync(tmp, JSON.stringify({ token, heartbeatAt: at }), { mode: 384 });
-      fs2.renameSync(tmp, file);
+      fs4.writeFileSync(tmp, JSON.stringify({ token, heartbeatAt: at }), { mode: 384 });
+      fs4.renameSync(tmp, file);
     } catch (err) {
       try {
-        fs2.unlinkSync(tmp);
+        fs4.unlinkSync(tmp);
       } catch {
       }
       throw err;
@@ -18954,62 +19214,81 @@ var CoordinatorLock = class {
   }
   removeHeartbeat(token) {
     try {
-      fs2.unlinkSync(heartbeatFileFor(this.lockFile, token));
+      fs4.unlinkSync(heartbeatFileFor(this.lockFile, token));
     } catch {
     }
   }
   cleanupForeignHeartbeats(ownToken) {
     let names;
     try {
-      names = fs2.readdirSync(path2.dirname(this.lockFile));
+      names = fs4.readdirSync(path4.dirname(this.lockFile));
     } catch {
       return;
     }
-    const prefix = `${path2.basename(this.lockFile)}.hb-`;
+    const prefix = `${path4.basename(this.lockFile)}.hb-`;
     for (const name of names) {
       if (!name.startsWith(prefix) || name === `${prefix}${ownToken}`) continue;
       try {
-        fs2.unlinkSync(path2.join(path2.dirname(this.lockFile), name));
+        fs4.unlinkSync(path4.join(path4.dirname(this.lockFile), name));
       } catch {
       }
     }
   }
   /**
-   * 过期抢占：guard 单飞 → 重读复核 → rename 到 quarantine → 校验 inode。
+   * 过期抢占（〔D32〕双信号）：guard 单飞 → 重读复核 →
+   *   holderAlive=false（真崩溃）→ 立即 quarantine（kill -9 接任 ≤5s SLA 不变）；
+   *   holderAlive=true（stalled-but-alive）→ audit `steal-deferred` + 宽限 graceMs 复核：
+   *     宽限内心跳恢复/换代 → 放弃；仍过期且（已死 或 超过 hardExpiryMs 硬上限）→ quarantine；
+   *   holderAlive=null（锁不可解析）→ 维持旧行为（过期即抢）。
+   * 宽限路径做 PID 复用防护（锁内 startedAt 与 ps etimes 推算的启动时刻比对）。
    * 若 rename 到的不是观察到的 inode（竞争者刚换了新锁）→ 尝试归还并回滚。
    */
-  steal(observed) {
+  async steal(observed) {
     const guard = `${this.lockFile}.guard-${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
     let guardFd;
     try {
-      guardFd = fs2.openSync(guard, "wx", 384);
+      guardFd = fs4.openSync(guard, "wx", 384);
     } catch (err) {
-      if (err.code === "EEXIST") return;
+      if (err.code === "EEXIST") return "skipped";
       throw err;
     }
     try {
       const current = this.observe();
-      if (!current.exists || current.ageMs <= this.tuning.expiryMs) return;
+      if (!current.exists || current.ageMs <= this.tuning.expiryMs) return "skipped";
       if (observed.ino === void 0 || current.ino !== observed.ino || current.info?.token !== observed.info?.token) {
-        return;
+        return "skipped";
+      }
+      if (current.holderAlive === true && current.ageMs <= this.tuning.hardExpiryMs && !this.pidReused(current)) {
+        this.audit("steal-deferred", {
+          reason: "holder-alive",
+          ageMs: Math.round(current.ageMs),
+          graceMs: this.tuning.graceMs,
+          hbSource: current.hbSource,
+          previous: current.info
+        });
+        await sleep2(this.tuning.graceMs);
+        const re = this.observe();
+        if (!re.exists || re.ageMs <= this.tuning.expiryMs) return "deferred";
+        if (re.ino !== current.ino || re.info?.token !== current.info?.token) return "deferred";
+        if (re.holderAlive === true && re.ageMs <= this.tuning.hardExpiryMs) return "deferred";
       }
       const quarantine = `${this.lockFile}.stale-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
       try {
-        fs2.renameSync(this.lockFile, quarantine);
+        fs4.renameSync(this.lockFile, quarantine);
       } catch (err) {
-        if (err.code === "ENOENT") return;
+        if (err.code === "ENOENT") return "skipped";
         throw err;
       }
       let quarantinedIno = null;
       try {
-        quarantinedIno = fs2.statSync(quarantine).ino;
+        quarantinedIno = fs4.statSync(quarantine).ino;
       } catch {
         quarantinedIno = null;
       }
       if (quarantinedIno !== current.ino) {
         try {
-          fs2.linkSync(quarantine, this.lockFile);
-          fs2.unlinkSync(quarantine);
+          fs4.linkSync(quarantine, this.lockFile);
+          fs4.unlinkSync(quarantine);
           this.audit("steal-rollback", { reason: "inode-mismatch", quarantinedIno, expected: current.ino });
         } catch (rollbackErr) {
           this.audit("steal-rollback-failed", {
@@ -19020,24 +19299,46 @@ var CoordinatorLock = class {
             quarantine
           });
         }
-        return;
+        return "skipped";
       }
       this.audit("steal", {
         reason: current.parseable ? "heartbeat-expired" : "unparseable-and-aged",
+        holderAlive: current.holderAlive,
+        hbSource: current.hbSource,
         previous: current.info ?? { mtimeAgeMs: Math.round(current.ageMs) },
         quarantine
       });
       if (typeof current.info?.token === "string") this.removeHeartbeat(current.info.token);
+      return "stolen";
     } finally {
       try {
-        fs2.closeSync(guardFd);
+        fs4.closeSync(guardFd);
       } catch {
       }
       try {
-        fs2.unlinkSync(guard);
+        fs4.unlinkSync(guard);
       } catch {
       }
     }
+  }
+  /**
+   * 〔D32〕PID 复用防护（仅宽限路径调用）：锁内 startedAt 与 `ps -o etime=` 推算的启动时刻
+   * 偏差 >3s → 认定 PID 已被复用（原持有者已死）→ 跳过宽限按死亡处理。
+   * 旧锁无 startedAt / ps 不可用 / 解析失败 → 返回 false（保守：维持宽限，不误杀活人）。
+   * etime 跨平台（macOS 无 etimes；格式 mm:ss | hh:mm:ss | d-hh:mm:ss）。
+   */
+  pidReused(observed) {
+    const startedAt = observed.info?.startedAt;
+    const pid = observed.info?.pid;
+    if (typeof startedAt !== "number" || typeof pid !== "number" || !Number.isInteger(pid) || pid <= 0) {
+      return false;
+    }
+    const r = spawnSync("ps", ["-o", "etime=", "-p", String(pid)], { encoding: "utf8" });
+    if (r.status !== 0) return false;
+    const elapsedSec = parseEtime(r.stdout.trim());
+    if (!Number.isFinite(elapsedSec) || elapsedSec < 0) return false;
+    const estimatedStart = Date.now() - elapsedSec * 1e3;
+    return Math.abs(estimatedStart - startedAt) > 3e3;
   }
   markLost(previous) {
     if (this.held === null) return;
@@ -19047,13 +19348,30 @@ var CoordinatorLock = class {
     this.onLost?.({ previous });
   }
 };
-function sleep(ms) {
+function sleep2(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function parseEtime(raw) {
+  let s = raw.trim();
+  if (s.length === 0) return Number.NaN;
+  let days = 0;
+  const dash = s.indexOf("-");
+  if (dash !== -1) {
+    days = Number.parseInt(s.slice(0, dash), 10);
+    s = s.slice(dash + 1);
+  }
+  const parts = s.split(":").map((p) => Number.parseInt(p, 10));
+  if (parts.some((p) => !Number.isFinite(p) || p < 0)) return Number.NaN;
+  let sec;
+  if (parts.length === 3) sec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+  else if (parts.length === 2) sec = parts[0] * 60 + parts[1];
+  else return Number.NaN;
+  return days * 86400 + sec;
 }
 
 // src/coord/journal.ts
-import fs5 from "node:fs";
-import path4 from "node:path";
+import fs7 from "node:fs";
+import path6 from "node:path";
 
 // src/domain/events.ts
 var IMAGE_MEDIA_TYPES = ["png", "jpeg", "webp", "gif"];
@@ -19548,7 +19866,7 @@ function assertAppendable(teamId, committed, candidate) {
 }
 
 // src/coord/lockfile.ts
-import fs3 from "node:fs";
+import fs5 from "node:fs";
 function observeLockFileFor(lockFile, writer) {
   const identity = parseWriterId(writer);
   if (identity === void 0) {
@@ -19556,7 +19874,7 @@ function observeLockFileFor(lockFile, writer) {
   }
   let raw;
   try {
-    raw = fs3.readFileSync(lockFile, "utf8");
+    raw = fs5.readFileSync(lockFile, "utf8");
   } catch (err) {
     return { ok: false, reason: `lock unreadable: ${err.code ?? String(err)}` };
   }
@@ -19576,8 +19894,8 @@ function observeLockFileFor(lockFile, writer) {
 }
 
 // src/coord/replay.ts
-import fs4 from "node:fs";
-import path3 from "node:path";
+import fs6 from "node:fs";
+import path5 from "node:path";
 var checkpointDocSchema = external_exports.strictObject({
   kind: external_exports.literal("agent-team-checkpoint"),
   stateVersion: external_exports.literal(TEAM_PROJECTION_STATE_VERSION),
@@ -19588,16 +19906,16 @@ var checkpointDocSchema = external_exports.strictObject({
   view: external_exports.unknown()
 });
 function checkpointPath(teamDir) {
-  return path3.join(teamDir, "checkpoint.json");
+  return path5.join(teamDir, "checkpoint.json");
 }
 async function load(teamDir, teamId) {
   const startedAt = Date.now();
-  const eventsFile = path3.join(teamDir, "events.jsonl");
+  const eventsFile = path5.join(teamDir, "events.jsonl");
   const raw = readBufferOrEmpty(eventsFile);
   let checkpointIgnored;
   let doc;
   try {
-    const rawDoc = fs4.readFileSync(checkpointPath(teamDir), "utf8");
+    const rawDoc = fs6.readFileSync(checkpointPath(teamDir), "utf8");
     const parsed = checkpointDocSchema.safeParse(JSON.parse(rawDoc));
     if (!parsed.success) {
       checkpointIgnored = `checkpoint invalid: ${parsed.error.issues[0]?.message ?? "schema mismatch"}`;
@@ -19685,7 +20003,7 @@ async function load(teamDir, teamId) {
   };
 }
 async function writeCheckpoint(teamDir, input) {
-  const eventsFile = path3.join(teamDir, "events.jsonl");
+  const eventsFile = path5.join(teamDir, "events.jsonl");
   const byteOffset = input.byteOffset ?? countBytesOfLines(eventsFile, input.seq);
   const doc = {
     kind: "agent-team-checkpoint",
@@ -19696,21 +20014,21 @@ async function writeCheckpoint(teamDir, input) {
     state: input.state,
     view: input.view
   };
-  fs4.mkdirSync(teamDir, { recursive: true, mode: 448 });
+  fs6.mkdirSync(teamDir, { recursive: true, mode: 448 });
   const target = checkpointPath(teamDir);
   const tmp = `${target}.tmp-${process.pid}`;
-  const fd = fs4.openSync(tmp, "w", 384);
+  const fd = fs6.openSync(tmp, "w", 384);
   try {
-    fs4.writeFileSync(fd, JSON.stringify(doc));
-    fs4.fsyncSync(fd);
+    fs6.writeFileSync(fd, JSON.stringify(doc));
+    fs6.fsyncSync(fd);
   } finally {
-    fs4.closeSync(fd);
+    fs6.closeSync(fd);
   }
-  fs4.renameSync(tmp, target);
+  fs6.renameSync(tmp, target);
 }
 function readBufferOrEmpty(file) {
   try {
-    return fs4.readFileSync(file);
+    return fs6.readFileSync(file);
   } catch {
     return Buffer.alloc(0);
   }
@@ -19770,8 +20088,8 @@ var TeamJournal = class _TeamJournal {
   constructor(teamDir, teamId, opts = {}) {
     this.teamDir = teamDir;
     this.teamId = teamId;
-    this.eventsFile = path4.join(teamDir, "events.jsonl");
-    this.lockFile = path4.join(teamDir, "coordinator.lock");
+    this.eventsFile = path6.join(teamDir, "events.jsonl");
+    this.lockFile = path6.join(teamDir, "coordinator.lock");
     this.opts = { maxLineBytes: 65536, checkpointEvery: 256, enforceLock: true, ...opts };
   }
   /**
@@ -19791,9 +20109,9 @@ var TeamJournal = class _TeamJournal {
     this.writer = writer;
     this.cache = loaded.state;
     this.committedCount = loaded.seq;
-    fs5.mkdirSync(this.teamDir, { recursive: true, mode: 448 });
-    this.appendFd = fs5.openSync(this.eventsFile, "a", 384);
-    this.bytesCommitted = fs5.statSync(this.eventsFile).size;
+    fs7.mkdirSync(this.teamDir, { recursive: true, mode: 448 });
+    this.appendFd = fs7.openSync(this.eventsFile, "a", 384);
+    this.bytesCommitted = fs7.statSync(this.eventsFile).size;
     return loaded;
   }
   /** 追加前不变量 + 落盘 + fsync + 内存态推进 + 通知 + 应答。非法事件绝不落盘（硬断言）。 */
@@ -19828,10 +20146,10 @@ var TeamJournal = class _TeamJournal {
       }
       if (this.appendFd === null) throw new Error("journal writer not open (call openWriter first)");
       const lineBytes = Buffer.byteLength(raw);
-      fs5.writeSync(this.appendFd, raw);
+      fs7.writeSync(this.appendFd, raw);
       this.opts.crashHook?.("append:after", { seq });
       this.opts.crashHook?.("fsync:before", { seq });
-      fs5.fsyncSync(this.appendFd);
+      fs7.fsyncSync(this.appendFd);
       this.opts.crashHook?.("fsync:after", { seq });
       this.cache = next;
       this.committedCount = seq;
@@ -19871,7 +20189,7 @@ var TeamJournal = class _TeamJournal {
   }
   async close() {
     if (this.appendFd !== null) {
-      fs5.closeSync(this.appendFd);
+      fs7.closeSync(this.appendFd);
       this.appendFd = null;
     }
     await this.writeCheckpointNow();
@@ -19911,7 +20229,7 @@ var TeamJournal = class _TeamJournal {
 async function readAllLines(eventsFile) {
   let raw;
   try {
-    raw = fs5.readFileSync(eventsFile, "utf8");
+    raw = fs7.readFileSync(eventsFile, "utf8");
   } catch {
     return [];
   }
@@ -19925,28 +20243,28 @@ async function readAllLines(eventsFile) {
 
 // src/coord/paths.ts
 import { createHash } from "node:crypto";
-import fs6 from "node:fs";
-import path5 from "node:path";
+import fs8 from "node:fs";
+import path7 from "node:path";
 import os2 from "node:os";
 var MAX_SOCKET_PATH = 96;
 function teamPaths(dataRoot, teamId) {
-  const teamsRoot = path5.join(dataRoot, "teams");
-  const teamDir = path5.join(teamsRoot, safeTeamId(teamId));
+  const teamsRoot = path7.join(dataRoot, "teams");
+  const teamDir = path7.join(teamsRoot, safeTeamId(teamId));
   return {
     dataRoot,
     teamId,
     teamDir,
-    eventsFile: path5.join(teamDir, "events.jsonl"),
-    checkpointFile: path5.join(teamDir, "checkpoint.json"),
-    lockFile: path5.join(teamDir, "coordinator.lock"),
-    auditFile: path5.join(teamDir, "coordinator.audit.jsonl"),
-    socketCandidate: path5.join(teamDir, "coordinator.sock")
+    eventsFile: path7.join(teamDir, "events.jsonl"),
+    checkpointFile: path7.join(teamDir, "checkpoint.json"),
+    lockFile: path7.join(teamDir, "coordinator.lock"),
+    auditFile: path7.join(teamDir, "coordinator.audit.jsonl"),
+    socketCandidate: path7.join(teamDir, "coordinator.sock")
   };
 }
 function ensureTeamDir(paths) {
-  fs6.mkdirSync(paths.teamDir, { recursive: true, mode: 448 });
+  fs8.mkdirSync(paths.teamDir, { recursive: true, mode: 448 });
   try {
-    fs6.chmodSync(paths.teamDir, 448);
+    fs8.chmodSync(paths.teamDir, 448);
   } catch {
   }
   return paths.teamDir;
@@ -19958,44 +20276,44 @@ function safeTeamId(teamId) {
   return escaped;
 }
 function resolveSocketPath(teamDir) {
-  const candidate = path5.join(teamDir, "coordinator.sock");
+  const candidate = path7.join(teamDir, "coordinator.sock");
   if (candidate.length <= MAX_SOCKET_PATH) {
-    return { socketPath: candidate, fallback: false, registryFile: path5.join(teamDir, "socket.path") };
+    return { socketPath: candidate, fallback: false, registryFile: path7.join(teamDir, "socket.path") };
   }
   const hash = createHash("sha256").update(candidate).digest("hex").slice(0, 16);
-  const tmpRoot = fs6.realpathSync(os2.tmpdir());
-  const fallbackDir = path5.join(tmpRoot, "agent-team-sockets");
-  fs6.mkdirSync(fallbackDir, { recursive: true, mode: 448 });
+  const tmpRoot = fs8.realpathSync(os2.tmpdir());
+  const fallbackDir = path7.join(tmpRoot, "agent-team-sockets");
+  fs8.mkdirSync(fallbackDir, { recursive: true, mode: 448 });
   try {
-    fs6.chmodSync(fallbackDir, 448);
+    fs8.chmodSync(fallbackDir, 448);
   } catch {
   }
-  const fallbackPath = path5.join(fallbackDir, `at-${hash}.sock`);
-  return { socketPath: fallbackPath, fallback: true, registryFile: path5.join(teamDir, "socket.path") };
+  const fallbackPath = path7.join(fallbackDir, `at-${hash}.sock`);
+  return { socketPath: fallbackPath, fallback: true, registryFile: path7.join(teamDir, "socket.path") };
 }
 function discoverSocketPath(teamDir) {
-  const registryFile = path5.join(teamDir, "socket.path");
+  const registryFile = path7.join(teamDir, "socket.path");
   try {
-    const registered = fs6.readFileSync(registryFile, "utf8").trim();
+    const registered = fs8.readFileSync(registryFile, "utf8").trim();
     if (registered.length > 0) return registered;
   } catch {
   }
   return resolveSocketPath(teamDir).socketPath;
 }
 function writeSocketRegistry(teamDir, socketPath) {
-  fs6.mkdirSync(teamDir, { recursive: true, mode: 448 });
-  fs6.writeFileSync(path5.join(teamDir, "socket.path"), socketPath + "\n", { mode: 384 });
+  fs8.mkdirSync(teamDir, { recursive: true, mode: 448 });
+  fs8.writeFileSync(path7.join(teamDir, "socket.path"), socketPath + "\n", { mode: 384 });
 }
 function removeSocketRegistryIf(teamDir, socketPath) {
-  const file = path5.join(teamDir, "socket.path");
+  const file = path7.join(teamDir, "socket.path");
   try {
-    const current = fs6.readFileSync(file, "utf8").trim();
+    const current = fs8.readFileSync(file, "utf8").trim();
     if (current !== socketPath) return;
   } catch {
     return;
   }
   try {
-    fs6.unlinkSync(file);
+    fs8.unlinkSync(file);
   } catch {
   }
 }
@@ -20046,6 +20364,11 @@ var JournalTeamStore = class _JournalTeamStore {
   get committedSeq() {
     return this.journal.committedSeq;
   }
+  /** 〔D33〕原始事件行（含 ts）：provisioning 对账宽限读事件年龄；只读全量回放，不持锁。 */
+  async readEventLines() {
+    const lines = await this.journal.readAll();
+    return lines.map((line) => ({ ts: line.ts, event: line.event }));
+  }
   transact(op) {
     return this.journal.transact(op);
   }
@@ -20069,8 +20392,8 @@ var JournalTeamStore = class _JournalTeamStore {
 
 // src/coord/rpc.ts
 import net from "node:net";
-import fs7 from "node:fs";
-import path6 from "node:path";
+import fs9 from "node:fs";
+import path8 from "node:path";
 import crypto2 from "node:crypto";
 var COORDINATOR_UNAVAILABLE_MESSAGE = "Agent Teams coordinator is unavailable (between coordinators); retry the request shortly";
 var SUN_PATH_LIMIT = 104;
@@ -20107,7 +20430,7 @@ var RpcServer = class {
   }
   async listen(opts = {}) {
     const callTimeoutMs = opts.callTimeoutMs ?? 1e4;
-    if (fs7.existsSync(this.socketPath)) {
+    if (fs9.existsSync(this.socketPath)) {
       const active = await probeActiveSocket(this.socketPath);
       if (active) {
         throw new Error(
@@ -20115,7 +20438,7 @@ var RpcServer = class {
         );
       }
       try {
-        fs7.unlinkSync(this.socketPath);
+        fs9.unlinkSync(this.socketPath);
       } catch {
       }
     }
@@ -20162,8 +20485,8 @@ var RpcServer = class {
       server2.listen(this.socketPath, () => {
         this.server = server2;
         try {
-          fs7.chmodSync(this.socketPath, 384);
-          this.socketIno = fs7.statSync(this.socketPath).ino;
+          fs9.chmodSync(this.socketPath, 384);
+          this.socketIno = fs9.statSync(this.socketPath).ino;
         } catch (err) {
           this.server = null;
           try {
@@ -20197,9 +20520,9 @@ var RpcServer = class {
     let preserve = null;
     if (ino !== null) {
       try {
-        if (fs7.statSync(this.socketPath).ino !== ino) {
+        if (fs9.statSync(this.socketPath).ino !== ino) {
           const quarantine = `${this.socketPath}.preserve-${process.pid}-${crypto2.randomBytes(4).toString("hex")}`;
-          fs7.renameSync(this.socketPath, quarantine);
+          fs9.renameSync(this.socketPath, quarantine);
           preserve = { quarantine };
         }
       } catch {
@@ -20208,7 +20531,7 @@ var RpcServer = class {
     await new Promise((resolve) => server2.close(() => resolve()));
     if (preserve !== null) {
       try {
-        fs7.renameSync(preserve.quarantine, this.socketPath);
+        fs9.renameSync(preserve.quarantine, this.socketPath);
       } catch (err) {
         process.stderr.write(
           JSON.stringify({
@@ -20417,19 +20740,19 @@ function probeActiveSocket(socketPath, timeoutMs = 500) {
   });
 }
 function rpcTokenPath(teamDir) {
-  return path6.join(teamDir, "rpc.token");
+  return path8.join(teamDir, "rpc.token");
 }
 function readRpcToken(teamDir) {
   try {
-    const token = fs7.readFileSync(rpcTokenPath(teamDir), "utf8").trim();
+    const token = fs9.readFileSync(rpcTokenPath(teamDir), "utf8").trim();
     return token.length > 0 ? token : void 0;
   } catch {
     return void 0;
   }
 }
 function writeRpcToken(teamDir, token) {
-  fs7.mkdirSync(teamDir, { recursive: true, mode: 448 });
-  fs7.writeFileSync(rpcTokenPath(teamDir), token + "\n", { mode: 384 });
+  fs9.mkdirSync(teamDir, { recursive: true, mode: 448 });
+  fs9.writeFileSync(rpcTokenPath(teamDir), token + "\n", { mode: 384 });
 }
 function newRpcToken() {
   return crypto2.randomBytes(24).toString("hex");
@@ -21016,6 +21339,8 @@ function classifySelectionFailure(message) {
 
 // src/domain/roster.ts
 var NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+var PROVISIONING_GRACE_MS = 6e4;
+var PROVISIONING_RECHECK_MS = 1e4;
 var TeamRoster = class {
   constructor(deps) {
     this.deps = deps;
@@ -21025,6 +21350,8 @@ var TeamRoster = class {
     );
   }
   statusListeners = /* @__PURE__ */ new Set();
+  /** 〔D33〕defer 复核定时器（成员 id → timer；一次性、unref）。 */
+  recheckTimers = /* @__PURE__ */ new Map();
   recoveryDone;
   /** 成员状态变化边（Activity 唤醒源之二；settle/interrupt 后触发）。 */
   onMemberStatus(listener) {
@@ -21192,7 +21519,16 @@ var TeamRoster = class {
   // ---------------------------------------------------------------- 恢复对账（§5.4）
   /** 对每个 provisioning 且不存活的成员执行四条件对账；C3：恢复自身抛错仅警告。
    *  返回摘要（第四轮最小扩展）：orphans = 本轮识别的失联成员；settled = 本轮定案者
-   *  （active/failed 任一去向；幂等竞态下相位已被他方定案也计入——结局已持久）。 */
+   *  （active/failed 任一去向；幂等竞态下相位已被他方定案也计入——结局已持久）；
+   *  〔D33〕deferred = 本轮因宽限跳过判定的成员（事件年龄 < graceMs 且 origin 未落盘）。
+   *
+   *  〔D33 事件年龄宽限，2026-11-02〕锁易主/恢复触发的 reconcile 与 in-flight spawn 竞态：
+   *  origin.json 在 createChild 之后才落盘（resume-provider.ts），此前 readProvisioningRecord
+   *  恒 undefined，旧逻辑会把仍在正常供给的成员误判 failed（sess_cabd748c 实测：锁被假死抢走后
+   *  新协调者构造即 reconcile，两个 in-flight 成员被误杀）。现以 journal 中该成员最后一条
+   *  team/member(provisioning) 事件的 ts 计龄：尚未确认首轮受理（记录缺失或 accepted 未置位）
+   *  且年龄 < graceMs → 跳过本轮并排一次性 recheck（10s）；年龄 ≥ graceMs 或恢复抛错 → 照旧
+   *  定案（真故障不被掩盖）。store 未实现 readEventLines（内存桩）→ 无宽限（旧语义）。 */
   async reconcileProvisioning() {
     const state = this.loadState();
     const pending = state.members.filter(
@@ -21200,10 +21536,13 @@ var TeamRoster = class {
     );
     const orphans = pending.map((m) => m.id);
     const settled = [];
+    const deferred = [];
+    const ages = await this.provisioningEventAges();
     for (const member of pending) {
       try {
         let failure;
         let active = false;
+        let recoveryThrew = false;
         try {
           const record2 = this.deps.recon.readProvisioningRecord(member.id);
           if (record2 === void 0) {
@@ -21214,7 +21553,14 @@ var TeamRoster = class {
             failure = "persisted child Session does not match the provisioned continuation";
           }
         } catch (err) {
+          recoveryThrew = true;
           failure = `child Session recovery failed: ${errorMessage(err)}`;
+        }
+        const ageMs = ages?.get(member.id);
+        if (!active && !recoveryThrew && ageMs !== void 0 && ageMs < PROVISIONING_GRACE_MS) {
+          deferred.push(member.id);
+          this.scheduleProvisioningRecheck(member.id);
+          continue;
         }
         await this.settleProvisioning(member.id, active ? "active" : "failed", failure);
         settled.push(member.id);
@@ -21225,7 +21571,47 @@ var TeamRoster = class {
         );
       }
     }
-    return { orphans, settled };
+    return { orphans, settled, deferred };
+  }
+  /** 〔D33〕每个成员最后一条 team/member(provisioning) 事件的年龄（ms）；无端口/读失败 → undefined。 */
+  async provisioningEventAges() {
+    const read = this.deps.store.readEventLines;
+    if (read === void 0) return void 0;
+    try {
+      const lines = await read.call(this.deps.store);
+      const lastTs = /* @__PURE__ */ new Map();
+      for (const line of lines) {
+        const e = line.event;
+        if (e?.type !== "team/member") continue;
+        const id = e.member?.id;
+        if (typeof id !== "string") continue;
+        if (e.member?.phase !== "provisioning") continue;
+        const at = Date.parse(line.ts);
+        if (Number.isNaN(at)) continue;
+        const prev = lastTs.get(id);
+        if (prev === void 0 || at > prev) lastTs.set(id, at);
+      }
+      const now2 = Date.now();
+      const ages = /* @__PURE__ */ new Map();
+      for (const [id, at] of lastTs) ages.set(id, now2 - at);
+      return ages;
+    } catch {
+      return void 0;
+    }
+  }
+  /** 〔D33〕defer 后的一次性复核（不阻塞、不叠加：同成员在途则跳过）。 */
+  scheduleProvisioningRecheck(memberId) {
+    if (this.recheckTimers.has(memberId)) return;
+    const timer = setTimeout(() => {
+      this.recheckTimers.delete(memberId);
+      void this.reconcileProvisioning().then(
+        () => void 0,
+        () => void 0
+        // C3：对账自身抛错仅警告语义由调用方承担
+      );
+    }, PROVISIONING_RECHECK_MS);
+    timer.unref?.();
+    this.recheckTimers.set(memberId, timer);
   }
   // ---------------------------------------------------------------- listMembers（§5.5）
   listMembers(callerId) {
@@ -21912,7 +22298,7 @@ var MockProvider = class {
     this.startCalls += 1;
     const outcome = this.program.startOutcome ?? { kind: "accept" };
     if (this.program.startDelayMs && this.program.startDelayMs > 0) {
-      await sleep2(this.program.startDelayMs);
+      await sleep3(this.program.startDelayMs);
     }
     if (outcome.kind === "hang") {
       await new Promise((_, reject) => {
@@ -21948,7 +22334,7 @@ var MockProvider = class {
   async deliver(args) {
     this.deliverCalls += 1;
     if (this.program.deliverDelayMs && this.program.deliverDelayMs > 0) {
-      await sleep2(this.program.deliverDelayMs);
+      await sleep3(this.program.deliverDelayMs);
     }
     const child = this.teamChildren.get(args.memberId);
     if (child === void 0 || !child.alive) {
@@ -22003,7 +22389,7 @@ var MockProvider = class {
   async drain(args) {
     this.drainCalls += 1;
     if (this.program.drainError !== void 0) throw this.program.drainError;
-    await sleep2(Math.min(args.timeoutMs, 5));
+    await sleep3(Math.min(args.timeoutMs, 5));
     for (const child of this.teamChildren.values()) {
       if (child.alive) {
         child.alive = false;
@@ -22081,7 +22467,7 @@ var MockProvider = class {
     return randomUUID2();
   }
 };
-function sleep2(ms) {
+function sleep3(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -23112,10 +23498,10 @@ function withFailLoud(result, identity) {
 }
 
 // src/mcp/identity.ts
-import fs8 from "node:fs";
-import path7 from "node:path";
+import fs10 from "node:fs";
+import path9 from "node:path";
 function sessionMapPath(dataRoot) {
-  return path7.join(dataRoot, "session-map.json");
+  return path9.join(dataRoot, "session-map.json");
 }
 function safeSessionKey(sessionId) {
   return sessionId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 128);
@@ -23129,12 +23515,12 @@ function withRegistryLock(dataRoot, fn) {
   let fd = null;
   while (Date.now() - started < 2e3) {
     try {
-      fd = fs8.openSync(lock, "wx", 384);
+      fd = fs10.openSync(lock, "wx", 384);
       break;
     } catch {
       try {
-        const stat = fs8.statSync(lock);
-        if (Date.now() - stat.mtimeMs > 5e3) fs8.unlinkSync(lock);
+        const stat = fs10.statSync(lock);
+        if (Date.now() - stat.mtimeMs > 5e3) fs10.unlinkSync(lock);
       } catch {
       }
       const until = Date.now() + 20;
@@ -23147,8 +23533,8 @@ function withRegistryLock(dataRoot, fn) {
   } finally {
     if (fd !== null) {
       try {
-        fs8.closeSync(fd);
-        fs8.unlinkSync(lock);
+        fs10.closeSync(fd);
+        fs10.unlinkSync(lock);
       } catch {
       }
     }
@@ -23156,7 +23542,7 @@ function withRegistryLock(dataRoot, fn) {
 }
 function readSessionRegistry(dataRoot) {
   try {
-    const parsed = JSON.parse(fs8.readFileSync(sessionMapPath(dataRoot), "utf8"));
+    const parsed = JSON.parse(fs10.readFileSync(sessionMapPath(dataRoot), "utf8"));
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
     return parsed;
   } catch {
@@ -23166,18 +23552,18 @@ function readSessionRegistry(dataRoot) {
 function upsertSessionEntry(dataRoot, sessionId, patch) {
   const file = sessionMapPath(dataRoot);
   try {
-    fs8.mkdirSync(path7.dirname(file), { recursive: true });
+    fs10.mkdirSync(path9.dirname(file), { recursive: true });
     withRegistryLock(dataRoot, () => {
       let registry2 = {};
       try {
-        const parsed = JSON.parse(fs8.readFileSync(file, "utf8"));
+        const parsed = JSON.parse(fs10.readFileSync(file, "utf8"));
         if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
           registry2 = parsed;
         }
       } catch (err) {
         if (err.code !== "ENOENT") {
           try {
-            fs8.renameSync(file, `${file}.corrupt-${Date.now()}`);
+            fs10.renameSync(file, `${file}.corrupt-${Date.now()}`);
           } catch {
           }
         }
@@ -23186,14 +23572,14 @@ function upsertSessionEntry(dataRoot, sessionId, patch) {
       const prior = registry2[key] ?? {};
       registry2[key] = { ...prior, ...patch, session_id: sessionId };
       const tmp = `${file}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
-      const fd = fs8.openSync(tmp, "w", 384);
+      const fd = fs10.openSync(tmp, "w", 384);
       try {
-        fs8.writeFileSync(fd, JSON.stringify(registry2, null, 2));
-        fs8.fsyncSync(fd);
+        fs10.writeFileSync(fd, JSON.stringify(registry2, null, 2));
+        fs10.fsyncSync(fd);
       } finally {
-        fs8.closeSync(fd);
+        fs10.closeSync(fd);
       }
-      fs8.renameSync(tmp, file);
+      fs10.renameSync(tmp, file);
     });
   } catch {
   }
@@ -23266,147 +23652,6 @@ function touch(opts, sessionId, entry, source) {
   };
   if (entry.session_id === void 0 || source === "hook-map") patch.session_id = sessionId;
   upsertSessionEntry(opts.dataRoot, sessionId, patch);
-}
-
-// src/provider/member-files.ts
-import fs9 from "node:fs";
-import path8 from "node:path";
-function teamEverCreated(teamDir, leadSessionId) {
-  let entries;
-  try {
-    entries = fs9.readdirSync(path8.join(teamDir, "members"));
-  } catch {
-    return false;
-  }
-  return entries.some((entry) => entry !== leadSessionId);
-}
-function memberPaths(teamDir, memberId) {
-  const memberDir = path8.join(teamDir, "members", memberId);
-  const runDir = path8.join(memberDir, "run");
-  return {
-    memberDir,
-    originFile: path8.join(memberDir, "origin.json"),
-    receiptsFile: path8.join(memberDir, "receipts.jsonl"),
-    stopBudgetFile: path8.join(memberDir, "stop-budget.json"),
-    runDir,
-    currentFile: path8.join(runDir, "current.json"),
-    drainMarkerFile: path8.join(runDir, "drain-requested.json"),
-    modelFailedFile: path8.join(memberDir, "model-failed.json")
-  };
-}
-function turnFile(runDir, turnId) {
-  return path8.join(runDir, `${turnId}.json`);
-}
-function writeJsonAtomic(file, value) {
-  fs9.mkdirSync(path8.dirname(file), { recursive: true, mode: 448 });
-  const tmp = `${file}.tmp-${process.pid}-${Date.now()}`;
-  const fd = fs9.openSync(tmp, "w", 384);
-  try {
-    fs9.writeFileSync(fd, JSON.stringify(value, null, 2));
-    fs9.fsyncSync(fd);
-  } finally {
-    fs9.closeSync(fd);
-  }
-  fs9.renameSync(tmp, file);
-}
-function readJson(file) {
-  let raw;
-  try {
-    raw = fs9.readFileSync(file, "utf8");
-  } catch (err) {
-    if (err.code === "ENOENT") return void 0;
-    throw err;
-  }
-  return JSON.parse(raw);
-}
-function writeOrigin(paths, origin) {
-  writeJsonAtomic(paths.originFile, origin);
-}
-function readOrigin(paths) {
-  return readJson(paths.originFile);
-}
-function writeTurn(runDir, turn) {
-  writeJsonAtomic(turnFile(runDir, turn.turnId), turn);
-}
-function readTurn(runDir, turnId) {
-  return readJson(turnFile(runDir, turnId));
-}
-function setCurrentTurn(paths, turnId) {
-  writeJsonAtomic(paths.currentFile, { turnId });
-}
-function readCurrentTurnId(paths) {
-  return readJson(paths.currentFile)?.turnId;
-}
-function listTurns(runDir) {
-  let names;
-  try {
-    names = fs9.readdirSync(runDir);
-  } catch (err) {
-    if (err.code === "ENOENT") return [];
-    throw err;
-  }
-  return names.filter((n) => /^turn-\d+\.json$/.test(n)).sort((a, b) => turnNumber(a) - turnNumber(b)).map((n) => readJson(path8.join(runDir, n))).filter((t) => t !== void 0);
-}
-function turnNumber(name) {
-  return Number(name.slice("turn-".length, -".json".length));
-}
-function nextTurnId(runDir) {
-  let names = [];
-  try {
-    names = fs9.readdirSync(runDir);
-  } catch {
-  }
-  let max = 0;
-  for (const n of names) {
-    if (/^turn-\d+\.json$/.test(n)) max = Math.max(max, turnNumber(n));
-  }
-  return `turn-${max + 1}`;
-}
-function appendReceipt(paths, receipt) {
-  fs9.mkdirSync(path8.dirname(paths.receiptsFile), { recursive: true, mode: 448 });
-  const fd = fs9.openSync(paths.receiptsFile, "a", 384);
-  try {
-    fs9.writeFileSync(fd, JSON.stringify(receipt) + "\n");
-    fs9.fsyncSync(fd);
-  } finally {
-    fs9.closeSync(fd);
-  }
-}
-function readReceipts(paths) {
-  let raw;
-  try {
-    raw = fs9.readFileSync(paths.receiptsFile, "utf8");
-  } catch (err) {
-    if (err.code === "ENOENT") return [];
-    throw err;
-  }
-  const receipts = [];
-  for (const line of raw.split("\n")) {
-    if (line.trim().length === 0) continue;
-    receipts.push(JSON.parse(line));
-  }
-  return receipts;
-}
-function receiptMessageIds(paths) {
-  return new Set(readReceipts(paths).map((r) => r.messageId));
-}
-function readStopBudget(paths) {
-  return readJson(paths.stopBudgetFile);
-}
-function writeStopBudget(paths, budget) {
-  writeJsonAtomic(paths.stopBudgetFile, budget);
-}
-function readModelFailed(paths) {
-  return readJson(paths.modelFailedFile);
-}
-function writeModelFailed(paths, record2) {
-  writeJsonAtomic(paths.modelFailedFile, record2);
-}
-function clearModelFailed(paths) {
-  try {
-    fs9.unlinkSync(paths.modelFailedFile);
-  } catch {
-  }
 }
 
 // src/mcp/handlers.ts
@@ -23573,98 +23818,6 @@ import path17 from "node:path";
 // src/provider/lead-wake.ts
 import fs11 from "node:fs";
 import path10 from "node:path";
-
-// src/provider/procgroup.ts
-import { execFile } from "node:child_process";
-import fs10 from "node:fs";
-import path9 from "node:path";
-import { fileURLToPath } from "node:url";
-var HELPER_DEFAULT = path9.join(path9.dirname(fileURLToPath(import.meta.url)), "detach-helper.mjs");
-var SPAWN_HELPER_TIMEOUT_MS = 1e4;
-async function spawnDetached(spec) {
-  const dir = path9.dirname(spec.stdoutFile);
-  const specFile = spec.specFile ?? path9.join(dir, `${path9.basename(spec.stdoutFile, ".out")}.spec.json`);
-  const resultFile = spec.resultFile ?? path9.join(dir, `${path9.basename(spec.stdoutFile, ".out")}.spawn.json`);
-  const specDoc = {
-    command: spec.command,
-    argv: spec.argv,
-    cwd: spec.cwd,
-    stdoutFile: spec.stdoutFile,
-    resultFile
-  };
-  if (spec.persistEnv === true) specDoc.env = spec.env;
-  writeJsonAtomic(specFile, specDoc);
-  const helper = process.env.TEAM_DETACH_HELPER ?? HELPER_DEFAULT;
-  await new Promise((resolve, reject) => {
-    execFile(
-      process.execPath,
-      ["--", helper, specFile],
-      { timeout: SPAWN_HELPER_TIMEOUT_MS, cwd: spec.cwd, env: spec.env },
-      (err) => {
-        if (err) reject(new Error(`detach helper failed: ${err.message}`));
-        else resolve();
-      }
-    );
-  });
-  let result;
-  try {
-    result = JSON.parse(fs10.readFileSync(resultFile, "utf8"));
-  } catch (err) {
-    throw new Error(`detach helper produced no result file: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  if (typeof result.error === "string") {
-    throw new Error(`turn process launch failed: ${result.error}`);
-  }
-  return { pid: result.pid ?? null, pgid: result.pid ?? null, stdoutFile: spec.stdoutFile, specFile, resultFile };
-}
-function pidAlive(pid) {
-  if (pid === null || !Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return err.code === "EPERM";
-  }
-}
-function pgidAlive(pgid) {
-  if (pgid === null || !Number.isInteger(pgid) || pgid <= 0) return false;
-  try {
-    process.kill(-pgid, 0);
-    return true;
-  } catch (err) {
-    return err.code === "EPERM";
-  }
-}
-async function killProcessGroup(pgid, graceMs) {
-  if (pgid === null || pgid <= 0) return true;
-  signalGroup(pgid, "SIGTERM");
-  for (let waited = 0; waited < graceMs; waited += 50) {
-    await sleep3(50);
-    if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
-  }
-  if (pgidAlive(pgid) || pidAlive(pgid)) {
-    signalGroup(pgid, "SIGKILL");
-    for (let waited = 0; waited < 2e3; waited += 50) {
-      await sleep3(50);
-      if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
-    }
-  }
-  return !pgidAlive(pgid) && !pidAlive(pgid);
-}
-function signalGroup(pgid, sig) {
-  try {
-    process.kill(-pgid, sig);
-  } catch (err) {
-    if (err.code !== "ESRCH") {
-      throw err;
-    }
-  }
-}
-function sleep3(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// src/provider/lead-wake.ts
 var WAKE_COOLDOWN_MS = 3e4;
 var WAKE_LOCK_STALE_MS = 12e4;
 var WAKE_PROMPT = "[agent-team] \u4F60\u6709\u5F85\u6536\u56E2\u961F\u6D88\u606F\u3002\u8BF7\u53EA\u5904\u7406\u6536\u4EF6\u7BB1\uFF08\u8BFB\u53D6\u5E76\u56DE\u590D\u6458\u8981\uFF09\uFF0C\u4E0D\u8981\u6267\u884C\u5176\u4ED6\u4EFB\u52A1\u3002";
@@ -23776,7 +23929,13 @@ async function maybeWakeLead(args) {
         stdoutFile
       });
     }
-    writeLeadState(args.teamDir, { ...state, lastWakeAt: new Date(now2).toISOString() });
+    writeLeadState(args.teamDir, {
+      ...state,
+      // 竞态保护：await launch 期间被拉起的 resume 回合可能已写锚/回合状态 → 重读合并，
+      // 不让这次 lastWakeAt 旧快照覆盖（soloNotifiedAt 丢失 = 下回合重复注入）。
+      ...readLeadState(args.teamDir) ?? {},
+      lastWakeAt: new Date(now2).toISOString()
+    });
     return { woke: true, reason: "launched" };
   } catch (err) {
     return { woke: false, reason: `spawn-failed: ${err instanceof Error ? err.message : String(err)}` };
