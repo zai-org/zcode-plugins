@@ -4,6 +4,7 @@
 
 ## 0.1.5
 
+A user's explicitly chosen compatible model overrides usage-based defaults.
 Game/realtime recipes explicitly prefer **P2** (more credits than H/P1), the
 P-series default; **P1** is used only when the user names it or picks it for lower
 cost and speed, and v3.1 for film/render/print. Rigs pass the model
@@ -15,8 +16,9 @@ Fast textures require v3.5; `chat_image_1` is retired.
 
 The plugin runs through the Tripo MCP tools only — there is no CLI path, and
 missing authorization is never a reason to switch to one. PBR stays off unless
-you explicitly ask for it. A plan is not a price quote: cost is not estimated
-here, and uncertainty needs explicit consent. Never switch accounts silently.
+you explicitly ask for it. A plan is advisory, not a price quote or budget lock.
+Show estimated or unestimated costs, cite the source, region and date of any
+static list estimate, and obtain explicit consent. Never switch accounts silently.
 The hook also enforces the PBR default and explicit model/billing decisions.
 
 The official Tripo plugin for ZCode. Generate textured 3D models from a text
@@ -74,8 +76,8 @@ The Tripo MCP server needs a one-time authorization:
   (developers.tripo3d.com). Results are downloaded from Tripo's CDN through
   short-lived links (about 2 hours).
 - **Account and billing**: every generation spends credits from your own
-  Tripo account; each tool reports `credits_consumed`, failed tasks are
-  refunded automatically. The skill drafts the chain with `tripo_plan`,
+  Tripo account; use task status and the usage ledger for actual charges. Failed
+  tasks are refunded automatically. The skill drafts the chain with `tripo_plan`,
   checks the balance and asks before generating a batch.
 - **File writes**: only when you ask for the model on disk, the agent
   downloads it into your project with `curl`. The hook and the MCP server
