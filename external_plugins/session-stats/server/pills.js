@@ -42,7 +42,7 @@
   css = document.createElement("style");
   css.textContent =
     ".__sspills-row{position:absolute;bottom:10px;transform:translateX(-50%);" +
-    "display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
+    "display:inline-flex;align-items:center;gap:6px;z-index:30;transition:left .12s ease;}" +
     ".__sspills-pill{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;" +
     "border-radius:8px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);" +
     "color:rgba(232,235,241,.88);font:500 13px/1 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;" +
@@ -552,11 +552,49 @@
   mo.observe(document.documentElement, {
     childList: true, subtree: true, attributes: true, attributeFilter: ["data-session-id"],
   });
-  /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：ResizeObserver 直接触发重布局 */
+  /* 立即钳制：输入框尺寸突变（侧栏开合）时先保证 pill 不压原生控件，
+     防抖布局随后再正式归位。避免防抖窗口期内 pill 悬在旧位置形成「留痕」。 */
+  function clampNow() {
+    if (dead || !rowEl || rowEl.style.display === "none") return;
+    var dock = visibleDock();
+    if (!dock) return;
+    var trig = dock.querySelector('[data-testid="chat-model-select-trigger"]');
+    if (!trig) return;
+    var trigRect = trig.getBoundingClientRect();
+    var dockRect = dock.getBoundingClientRect();
+    var leftChip = findChipByText(dock, "电脑操作") || findChipByText(dock, "完全访问");
+    var leftEdge = leftChip ? leftChip.getBoundingClientRect().right : dockRect.left + 60;
+    var bandCy = leftChip
+      ? (leftChip.getBoundingClientRect().top + leftChip.getBoundingClientRect().bottom) / 2
+      : (trigRect.top + trigRect.bottom) / 2;
+    var rightEdge = trigRect.left;
+    var btns = dock.querySelectorAll("button,[role='button']");
+    for (var bi = 0; bi < btns.length; bi++) {
+      var br = btns[bi].getBoundingClientRect();
+      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge &&
+          Math.abs((br.top + br.bottom) / 2 - bandCy) < 22) rightEdge = br.left;
+    }
+    var pw = rowEl.offsetWidth || 0;
+    if (!pw) return;
+    if (rightEdge - leftEdge < pw + 24) {
+      rowEl.style.display = "none"; // 空隙已不够：先隐，等防抖布局选到合适档位再显
+      return;
+    }
+    var centerX = (leftEdge + rightEdge) / 2;
+    var newLeft = Math.round(centerX - dockRect.left);
+    var curLeft = parseFloat(rowEl.style.left || "0") || 0;
+    if (Math.abs(newLeft - curLeft) > 1) {
+      rowEl.style.left = newLeft + "px";
+      lastLeft = newLeft;
+    }
+  }
+
+  /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：
+     立即钳制防留痕 + 防抖触发完整布局 */
   var ro = null;
   var roTimer = 0;
   if (typeof ResizeObserver !== "undefined") {
-    ro = new ResizeObserver(function () { requestLayout(); });
+    ro = new ResizeObserver(function () { clampNow(); requestLayout(); });
     roTimer = setInterval(function () {
       if (dead) { clearInterval(roTimer); roTimer = 0; return; }
       var d = visibleDock();
