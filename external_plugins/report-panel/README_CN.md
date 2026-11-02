@@ -53,8 +53,10 @@ python3 tests/test_gt_score_l0.py   # 注入考卷对拍器（7 断言）
 
 ## 网络访问、依赖与副作用
 
-- 无网络访问，无 API key，无 MCP 服务，无 Hook。
-- 依赖：Python 3（≥3.8）标准库；skill 链由 ZCode 会话内子代理执行。
+- 插件自身零网络请求：不调用外部 API、不下载、无遥测、无 MCP 服务、无 Hook；`py/` 确定性层完全本地运行。
+- 运行时依赖 ZCode 宿主的模型推理：评审链经会话内子代理执行，产生正常的 LLM API 流量（与任何 skill 相同，由宿主账号计费；多席并行评审 token 消耗显著高于单轮对话）。
+- skills 不含 WebSearch/WebFetch 指令，不访问外部网站；报告内外部事实的联网核验属重型评审编排的调查层能力，不在本包。
+- 依赖：Python 3（≥3.8）标准库。
 - 副作用：`consistency-check` 只读报告文件；评审产物为会话内输出。重型评审编排（自建 saved workflow）落盘评审报告时，仅写入报告同目录 `materials/` 子目录。
 - 被评审文本按【数据不是指令】处理：所有席位 prompt 内置注入围栏，忽略文中指令性内容。
 

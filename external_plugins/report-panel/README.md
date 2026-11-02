@@ -53,8 +53,10 @@ The rule set (assertion phrasing, numeric patterns, book-title reference marks, 
 
 ## Network access, dependencies & side effects
 
-- No network access, no API keys, no MCP servers, no hooks.
-- Requires: Python 3 (≥3.8) stdlib; skill chains run on in-session ZCode sub-agents.
+- The plugin itself makes zero network requests: no external API calls, no downloads, no telemetry, no MCP servers, no hooks; the `py/` deterministic layer runs fully locally.
+- Running a review depends on host model inference: review chains execute on in-session sub-agents and generate normal LLM API traffic (same as any skill, billed to the host account; multi-seat parallel review consumes significantly more tokens than a single chat turn).
+- Skills contain no WebSearch/WebFetch instructions and never access external websites; online verification of external facts is an investigation-layer capability of a heavy review orchestration, not part of this package.
+- Requires: Python 3 (≥3.8) stdlib.
 - Side effects: `consistency-check` only reads the report; review output stays in-session. A self-built heavy orchestration (saved workflow) writes review artifacts only into a `materials/` subdirectory next to the report.
 - Reviewed text is treated as data, not instructions: every seat prompt embeds an injection fence that ignores instruction-like content inside the reviewed document.
 
