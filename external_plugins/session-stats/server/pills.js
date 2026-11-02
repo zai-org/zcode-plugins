@@ -445,14 +445,22 @@
     } else {
       leftEdge = dockRect.left + 60;
     }
-    /* 右边界 = 左 chip 右侧所有按钮（模型选择器、上下文查看图标等）中最近者的左边缘——
-       空隙里有什么原生控件都自动避开，绝不覆盖 */
+    /* 右边界 = 左 chip 右侧、与 chip 同一水平带的按钮（模型选择器、上下文图标等）中
+       最近者的左边缘。垂直带过滤（±22px）排除悬浮在输入条上方的「回到底部」按钮、
+       提示条等——它们不该影响 pill 的空隙计算。 */
     var trigRect = trig.getBoundingClientRect();
+    var leftChipRect = leftChip ? leftChip.getBoundingClientRect() : null;
+    var bandCy = leftChipRect
+      ? (leftChipRect.top + leftChipRect.bottom) / 2
+      : (trigRect.top + trigRect.bottom) / 2;
     var rightEdge = trigRect.left;
     var btns = dock.querySelectorAll("button,[role='button']");
     for (var bi = 0; bi < btns.length; bi++) {
       var br = btns[bi].getBoundingClientRect();
-      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge) rightEdge = br.left;
+      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge &&
+          Math.abs((br.top + br.bottom) / 2 - bandCy) < 22) {
+        rightEdge = br.left;
+      }
     }
     var gap = rightEdge - leftEdge;
     var dockW = stableWidth(dockRect.width); // 档位判定用稳定宽度，过渡帧不换档
