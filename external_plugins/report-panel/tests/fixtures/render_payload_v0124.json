@@ -1,0 +1,44 @@
+{
+  "report_path": "tests/fixtures/_out_v0124/评审报告_v0.12.4_fixture_00000000_000000.md",
+  "log_path": "tests/fixtures/_out_v0124/过程台账_v0.12.4_fixture_00000000_000000.md",
+  "clusters": [
+    { "id": "C1", "title": "投资额与分项矛盾", "member_ids": ["R1-F1"], "reviewers": ["R1"], "correlated": false, "severity": "A", "zone": "财务", "dims": ["数字"] },
+    { "id": "C2", "title": "实验证据空心", "member_ids": ["R2-F1", "XH1"], "reviewers": ["R2"], "correlated": true, "severity": "B", "zone": "方法", "dims": ["结构"] }
+  ],
+  "member_findings": [
+    { "id": "R1-F1", "location": "L12", "quote": "总投资489亿元", "problem": "与分项之和不闭合", "severity": "A", "verify": "可复算:489≠分项和452" },
+    { "id": "R2-F1", "location": "L40", "quote": "实验表明性能更优", "problem": "无对应实验数据", "severity": "B", "verify": "仅可人工复检" },
+    { "id": "XH1", "location": "L40", "quote": "实验表明性能更优", "problem": "空心证据（确定性检测）", "severity": "A", "verify": "应出现:L40±40行内对应实验数据（表/图/消融）" }
+  ],
+  "investigations": [
+    { "target": "R1-F1", "label": "复算不符", "verdict": "维持", "final_severity": "A", "evidence": "bash 复算 452≠489 成立", "provenance": "bash" },
+    { "target": "XH1", "label": "已验证", "verdict": "维持", "final_severity": "A", "evidence": "全文回查无实验数据表", "provenance": "bash" }
+  ],
+  "final_tiers": [
+    { "id": "C1", "tier": "A", "note": "调查复算不符维持（复算级证据）" },
+    { "id": "C2", "tier": "B" }
+  ],
+  "new_items": [
+    { "id": "J1", "location": "L77", "quote": "占全球18%", "problem": "法官新增数字意见（未核）", "severity": "A", "confidence": "M", "fix": "复核分母", "verify": "可复算:1.5/7.8=19.2%≠18%" },
+    { "id": "J2", "location": "L88", "quote": "结构完整", "problem": "法官新增结构意见", "severity": "B", "confidence": "L", "fix": "", "verify": "仅可人工复检" }
+  ],
+  "blind_a": 2,
+  "unverified_j_ids": ["J1"],
+  "display": {
+    "report_name": "fixture", "version": "v0.12.4-standard", "verdict": "REVISE",
+    "narrative": "（fixture 叙述段）", "banner": "",
+    "blockers_md": "", "mustfix_md": "1. 修复 C1 投资额",
+    "gapdisp_md": "| 样例漏检 | 已处置 |",
+    "dimtable_md": "| 数字一致性 | 已覆盖（C1） |",
+    "struct_hint": "无需重排", "dev_recommended": "不改",
+    "diseases_md": "无", "standing_objection": "无",
+    "depth": "standard", "seat_summary": "3（含确定性席）",
+    "findings_total": 3, "blind_a": 2, "clusters_total": 2,
+    "inv_total": 4, "inv_breakdown": "确定性stub 1｜quote-grep 0｜后核 1｜派单目标 2",
+    "materials": "materials", "headline": "{}",
+    "assert_count": 3, "coverage_pct": 90, "coverage_basis": "fixture",
+    "dims_adjudicated": 1, "dims_total": 10,
+    "cov_assert": "通过", "py_dir": "py", "blind_fail_n": 0, "script_n": 0, "hollow_n": 1,
+    "inv_composition": "调查组·1→R1-F1"
+  }
+}

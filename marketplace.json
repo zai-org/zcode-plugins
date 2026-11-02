@@ -1443,6 +1443,38 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "report-panel",
+      "source": "./external_plugins/report-panel",
+      "description": "Adversarial review panel for long-form Chinese reports written by AI: parallel blind review with a 4-tier verdict, deterministic Python consistency gates, restructure proposals, an appeal channel, and revision regression checks. Delivers findings only — it never edits the manuscript.",
+      "description_i18n": {
+        "en": "Adversarial review panel for long-form Chinese reports written by AI: parallel blind review with a 4-tier verdict, deterministic Python consistency gates, restructure proposals, an appeal channel, and revision regression checks. Delivers findings only — it never edits the manuscript.",
+        "zh-CN": "AI 长报告对抗评审团：多席盲评（四档判定+release_blockers）+ 一致性硬校验（python 确定性门禁）+ 结构重排 + 复议申辩 + 修订回归验证。只出意见不改稿。"
+      },
+      "version": "0.13.3",
+      "author": {
+        "name": "wenyu"
+      },
+      "category": "productivity",
+      "keywords": [
+        "review",
+        "adversarial",
+        "consistency",
+        "report",
+        "red-team",
+        "fact-checking"
+      ],
+      "examplePrompts": [
+        "Run an adversarial review of this report and give me a verdict with severity-ranked findings",
+        "Check this report for numeric contradictions and inconsistent calibers before we ship it"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "对这份报告跑对抗评审，给四档判定和分级意见清单",
+          "交付前核查全文数字矛盾与口径不一致"
+        ]
+      }
     }
   ]
 }
