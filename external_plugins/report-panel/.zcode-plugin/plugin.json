@@ -1,0 +1,22 @@
+{
+  "name": "report-panel",
+  "description": "Adversarial review panel for long-form Chinese reports written by AI: parallel blind review with a 4-tier verdict, deterministic Python consistency gates, restructure proposals, an appeal channel, and revision regression checks. Delivers findings only — it never edits the manuscript.",
+  "description_i18n": {
+    "en": "Adversarial review panel for long-form Chinese reports written by AI: parallel blind review with a 4-tier verdict, deterministic Python consistency gates, restructure proposals, an appeal channel, and revision regression checks. Delivers findings only — it never edits the manuscript.",
+    "zh-CN": "AI 长报告对抗评审团：多席盲评（四档判定+release_blockers）+ 一致性硬校验（python 确定性门禁）+ 结构重排 + 复议申辩 + 修订回归验证。只出意见不改稿。"
+  },
+  "version": "0.13.3",
+  "author": {
+    "name": "wenyu"
+  },
+  "keywords": [
+    "review",
+    "adversarial",
+    "consistency",
+    "report",
+    "red-team",
+    "fact-checking"
+  ],
+  "skills": "./skills",
+  "commands": "./commands"
+}

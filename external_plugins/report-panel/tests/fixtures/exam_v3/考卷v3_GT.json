@@ -1,0 +1,182 @@
+[
+ {
+  "id": "XH1",
+  "cls": "hollow_evidence",
+  "tag": "within_section",
+  "sev": "A",
+  "lane": "det_XH",
+  "anchor_line": 6,
+  "planted_lines": [
+   7
+  ],
+  "planted_text": [
+   "实验表明，工业大模型赋能数字化车间后综合良品率可提升八成以上，部署成本可在半年内收回，相关技术路线已无实质瓶颈。"
+  ],
+  "why": "实验表明句式命中HOLLOW_PAT+句内无数据锚（八成=中文数词）+考卷无数据表（附表不入卷）——hollow_scan必报（XH A级直通）"
+ },
+ {
+  "id": "XH2",
+  "cls": "hollow_evidence",
+  "tag": "within_section",
+  "sev": "A",
+  "lane": "det_XH",
+  "anchor_line": 9,
+  "planted_lines": [
+   10
+  ],
+  "planted_text": [
+   "试点城市评估显示，该协同模式使区域物流成本大幅降低，跨部门服务效率显著提升，已具备全面推广条件。"
+  ],
+  "why": "v0.8.1 A3 比较级族真题：大幅降低+显著提升命中 HOLLOW_DEGREE_PAT+非前瞻框架（评估显示…使…）+句内无锚+无表——纯新族链路（克隆v2配方改服务业主题）"
+ },
+ {
+  "id": "X1",
+  "cls": "total_mismatch",
+  "tag": "within_section",
+  "sev": "A",
+  "lane": "det_X",
+  "anchor_line": 12,
+  "planted_lines": [
+   13
+  ],
+  "planted_text": [
+   "上述促消费支持资金合计4800亿元，其中消费品以旧换新2500亿元、服务业贷款贴息600亿元、县域商业体系建设500亿元。"
+  ],
+  "why": "分项和 2500+600+500=3600 ≠ 合计4800；同单位组4值、mx=4800>2500*1.5、dev=33.3%∈(2%,400%]——X门禁必发（克隆考卷v2已验证配方）"
+ },
+ {
+  "id": "N1",
+  "cls": "control",
+  "tag": "within_section",
+  "sev": null,
+  "lane": "-",
+  "anchor_line": 13,
+  "planted_lines": [
+   14
+  ],
+  "planted_text": [
+   "经验表明，以旧换新补贴对耐用消费品零售的拉动约为 2.7 倍。"
+  ],
+  "why": "阴性对照①：句式家族命中但句内有数值锚（2.7倍）——hollow_scan 应放过"
+ },
+ {
+  "id": "XP1",
+  "cls": "pct_mismatch",
+  "tag": "within_section",
+  "sev": "A",
+  "lane": "det_XP",
+  "anchor_line": 16,
+  "planted_lines": [
+   17
+  ],
+  "planted_text": [
+   "在1000亿元设备更新专项资金中，贷款贴息安排650亿元、融资担保与风险补偿350亿元，贴息资金占比52%。"
+  ],
+  "why": "650/1000=65% ≠ 52%声称；同单位对+金额规范尺度≥千万+超3pp容差——XP门禁必发；行含占比提示词（克隆v2配方）"
+ },
+ {
+  "id": "EXT1",
+  "cls": "dangling",
+  "tag": "within_section",
+  "sev": "B",
+  "lane": "llm",
+  "anchor_line": 17,
+  "planted_lines": [
+   18
+  ],
+  "planted_text": [
+   "对照《“高效办成一件事”2026年度第二批重点事项清单》部署的23项重点事项，逐项对齐投资项目审批改革举措。"
+  ],
+  "why": "真实文档+错误属性：清单实为13项、国办2026-09-23印发（训练截止后）——未背过+仅WebSearch可核，专考外部事实通道；引用悬空属性（23项）须查证"
+ },
+ {
+  "id": "AUD1",
+  "cls": "audience_mismatch",
+  "tag": "within_section",
+  "sev": "B",
+  "lane": "llm",
+  "anchor_line": 20,
+  "planted_lines": [
+   21
+  ],
+  "planted_text": [
+   "出口企业结汇按 CFETS 中间价加点 87pips 执行，配套 NDF 剥离与 IRS 曲线骑乘安排。"
+  ],
+  "why": "公文语域突现未解释交易台行话（pips/NDF/曲线骑乘）——受众适配维度（统计公报读者=公众）"
+ },
+ {
+  "id": "MET1",
+  "cls": "scope_overreach",
+  "tag": "cross_section",
+  "sev": "B",
+  "lane": "llm",
+  "anchor_line": 23,
+  "planted_lines": [
+   24
+  ],
+  "planted_text": [
+   "综合各领域测算表明，全年城镇调查失业率均值将稳定回落至4.6%以内，显著低于主要经济体。"
+  ],
+  "why": "无出处的确定性长期预测；\"测算表明\"不在 HOLLOW_PAT 家族、\"显著低于\"不在比较级族——空心通道不触发，考方法学维度"
+ },
+ {
+  "id": "CS1",
+  "cls": "metric_conflict",
+  "tag": "cross_section",
+  "sev": "A",
+  "lane": "llm",
+  "anchor_line": 27,
+  "planted_lines": [
+   28
+  ],
+  "planted_text": [
+   "补充统计显示，1—8月份社会消费品零售总额334218亿元、创年内新高。"
+  ],
+  "why": "与考卷L11\"社会消费品零售总额327569亿元\"同指标同口径不同值；建卷实测：本项进入XS疑点簇\"费品零售总额\"（数据席证据可见双值）——比考卷v2 CS1（ikey不聚、纯席位比对）略易，两轮对比时须记入"
+ },
+ {
+  "id": "CS2",
+  "cls": "metric_conflict",
+  "tag": "cross_section",
+  "sev": "A",
+  "lane": "llm",
+  "anchor_line": 29,
+  "planted_lines": [
+   30
+  ],
+  "planted_text": [
+   "按全年汇总口径，全国城镇调查失业率均值约为4.8%。"
+  ],
+  "why": "与L16\"城镇调查失业率平均值5.2%\"跨节矛盾（同指标不同值）；\"汇总\"非门禁关键词——确定性层不触发，须席位比对"
+ },
+ {
+  "id": "N2",
+  "cls": "control",
+  "tag": "global",
+  "sev": null,
+  "lane": "-",
+  "anchor_line": 41,
+  "planted_lines": [
+   42
+  ],
+  "planted_text": [
+   "上述统计现代化建设专项经费合计4800万元。"
+  ],
+  "why": "阴性对照②：合计句但仅1个万元值（组内<3）且邻窗（附注⑥定义区±3行）无同单位数字——X 应放过"
+ },
+ {
+  "id": "SAFE1",
+  "cls": "safety_baseline",
+  "tag": "within_section",
+  "sev": "A",
+  "lane": "llm",
+  "anchor_line": 47,
+  "planted_lines": [
+   48
+  ],
+  "planted_text": [
+   "国家统计系统企业数据直报平台按行业标准完成信息安全等级保护备案，企业端直报通道默认开放远程写入权限，便于跨单位协同处置。"
+  ],
+  "why": "安全基线埋雷（关键控制指令默认开放远程写入）——A2 维度三态裁决+查漏须借此揪出（克隆v2配方改统计直报主题）"
+ }
+]
