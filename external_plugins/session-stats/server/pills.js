@@ -381,6 +381,8 @@
      - 档位判定用「稳定宽度」（宽度持续 300ms 才认），过渡帧不换档
      - 档位带真滞回（±24px），临界宽度不反复跳
      - 空隙不足先降档；连续 4 次放不下才隐藏，条件恢复立即回来 */
+  var dead = false;      // teardown 后置 true：一切异步回调早退，死实例不碰 DOM
+  var lastLeft = -9999, lastBottom = -9999;
   var layoutTimer = 0;
   var shrinkStreak = 0;
   var basisW = 0;      // 稳定宽度（档位判定基准）
@@ -389,13 +391,19 @@
   var lastScrollAt = 0; // 滚动豁免：滚动后 700ms 内不布局（滚动中会话顶栏/输入条有过渡动画）
 
   function requestLayout() {
+    if (dead) return;
     if (layoutTimer) clearTimeout(layoutTimer);
     layoutTimer = setTimeout(function () {
       layoutTimer = 0;
+      if (dead) return;
       var quiet = Date.now() - lastScrollAt;
       if (quiet < 700) {
         // 滚动豁免期内：推迟到豁免期结束再布局
-        layoutTimer = setTimeout(function () { layoutTimer = 0; layout(); }, 700 - quiet + 20);
+        layoutTimer = setTimeout(function () {
+          layoutTimer = 0;
+          if (dead) return;
+          layout();
+        }, 700 - quiet + 20);
         return;
       }
       layout();
@@ -427,6 +435,7 @@
   }
 
   function layout() {
+    if (dead) return;
     purgeForeign();
     var dock = visibleDock();
     if (!dock) {
@@ -500,9 +509,12 @@
     pillMode = chosen;
     setModeSpans(chosen);
     var centerX = (leftEdge + rightEdge) / 2;
-    rowEl.style.left = Math.round(centerX - dockRect.left) + "px";
+    var newLeft = Math.round(centerX - dockRect.left);
     var pillH = rowEl.offsetHeight || 30;
-    rowEl.style.bottom = Math.max(0, Math.round((dockRect.bottom - (trigRect.top + trigRect.height / 2)) - pillH / 2)) + "px";
+    var newBottom = Math.max(0, Math.round((dockRect.bottom - (trigRect.top + trigRect.height / 2)) - pillH / 2));
+    /* 位置亚像素防抖：变化 ≤1px 不应用（悬浮态量出的亚像素抖动直接吞掉） */
+    if (Math.abs(newLeft - lastLeft) > 1) { rowEl.style.left = newLeft + "px"; lastLeft = newLeft; }
+    if (Math.abs(newBottom - lastBottom) > 1) { rowEl.style.bottom = newBottom + "px"; lastBottom = newBottom; }
     rowEl.style.display = "";
     /* 宽度已变但尚未稳定：再排一次布局，让稳定宽度有机会生效 */
     if (pendingW) setTimeout(requestLayout, 340);
@@ -541,11 +553,14 @@
     childList: true, subtree: true, attributes: true, attributeFilter: ["data-session-id"],
   });
   /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：ResizeObserver 直接触发重布局 */
+  var ro = null;
+  var roTimer = 0;
   if (typeof ResizeObserver !== "undefined") {
-    var ro = new ResizeObserver(function () { requestLayout(); });
-    var roTimer = setInterval(function () {
+    ro = new ResizeObserver(function () { requestLayout(); });
+    roTimer = setInterval(function () {
+      if (dead) { clearInterval(roTimer); roTimer = 0; return; }
       var d = visibleDock();
-      if (d) { ro.observe(d); clearInterval(roTimer); }
+      if (d) { ro.observe(d); clearInterval(roTimer); roTimer = 0; }
     }, 2000);
   }
   requestLayout();
@@ -556,8 +571,12 @@
   var pollTimer = setInterval(poll, POLL_MS);
 
   window.__SSPILLS_TEARDOWN__ = function () {
+    dead = true; // 先置死：所有异步回调（延迟布局/rAF/定时器）从此早退，死实例不再碰 DOM
     try { mo.disconnect(); } catch (e) {}
     try { clearInterval(pollTimer); } catch (e) {}
+    try { clearInterval(roTimer); } catch (e) {}
+    try { clearTimeout(layoutTimer); } catch (e) {}
+    try { ro && ro.disconnect(); } catch (e) {}
     try { css.remove(); } catch (e) {}
     try { rowEl && rowEl.remove(); } catch (e) {}
     try { popEl && popEl.remove(); } catch (e) {}
