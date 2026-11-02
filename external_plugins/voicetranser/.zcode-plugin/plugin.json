@@ -1,6 +1,6 @@
 {
   "name": "voicetranser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",
   "description_i18n": {
     "en": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",

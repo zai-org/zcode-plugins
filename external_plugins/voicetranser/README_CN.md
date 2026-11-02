@@ -4,6 +4,8 @@ macOS 本地按住说话语音输入：按住全局热键说话、松开即转�
 
 本插件提供的是 **agent 技能**，不内嵌工具本体。安装后对 agent 说「帮我装 VoiceTranser」，它就会走完整条链：前置检查、clone、依赖、模型下载、launchd 常驻服务、Karabiner 热键接线、辅助功能权限，最后用内置 8 项自检脚本验证收工。日常排障与引擎切换也由它接管。
 
+工具本体从上游仓库拉取，因此安装需要网络和下面列出的依赖。launchd 步骤会用 `install_launchd.py` 按当前 checkout 路径生成 plist；仓库里那份 plist 是作者本机示例，不会直接复制到用户机器。
+
 ## 你会得到什么
 
 - 🎙️ **按住说话** — Karabiner `right_option` 按住录音松开出稿（也可用 Raycast/Hammerspoon 触发 `/toggle`）

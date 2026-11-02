@@ -28,10 +28,13 @@ Fully local (zero external APIs). Repo: https://github.com/Lumos-789/VoiceTranse
 3. **First-run check**: `uv run python -m voicetranser --config` must print config without error.
 4. **Service (recommended)**:
    ```
-   cp com.voicetranser-sense.plist ~/Library/LaunchAgents/
-   launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.voicetranser-sense.plist
+   uv run python install_launchd.py
    curl -s localhost:9877/status   # expect {"status": "idle"}; model preloads in background
    ```
+   `install_launchd.py` writes a per-user plist whose `ProgramArguments` and
+   `WorkingDirectory` point at this checkout, then loads it. Do not copy the
+   repository's `com.voicetranser-sense.plist`: that file contains the author's
+   local paths. Use `--port`, `--engine`, or `--no-load` when needed.
 5. **Hotkey — Karabiner-Elements** complex modification (user must have Karabiner installed; add to `~/.config/karabiner/karabiner.json` → `profiles[].complex_modifications.rules`, then enable in the Karabiner UI):
    ```json
    {
