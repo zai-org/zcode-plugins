@@ -293,6 +293,10 @@
     var reqTokHtml = lr
       ? "入 " + fmtTok(lr["in"]) + " · 出 " + fmtTok(lr.out)
       : "累计 " + fmtTok((data.tokens || {}).total) + " tok";
+    if (mode === "micro") {
+      // 最窄档：只剩实时速度（参照同款统计条的 compact 形态），保证窄输入框也放得下
+      return shownHtml;
+    }
     if (mode === "mini") {
       return shownHtml + " " + reqTokHtml;
     }
@@ -319,7 +323,7 @@
     var pill = rowEl.querySelector(".__sspills-pill");
     if (!pill) return;
     modeSpans = {};
-    var modes = ["full", "mid", "mini"];
+    var modes = ["full", "mid", "mini", "micro"];
     for (var i = 0; i < modes.length; i++) {
       var s = pill.querySelector(".__sspills-mode[data-mode='" + modes[i] + "']");
       if (!s) { // 不存在才创建，防热更新边界下重复追加
@@ -338,7 +342,7 @@
     rowEl.classList.toggle("stale", stale);
     ensureModeSpans();
     if (!modeSpans) return;
-    var modes = ["full", "mid", "mini"];
+    var modes = ["full", "mid", "mini", "micro"];
     for (var i = 0; i < modes.length; i++) {
       var m = modes[i];
       var body = pillBody(m);
@@ -348,7 +352,7 @@
   }
   function setModeSpans(mode) {
     if (!modeSpans) return;
-    var modes = ["full", "mid", "mini"];
+    var modes = ["full", "mid", "mini", "micro"];
     for (var i = 0; i < modes.length; i++) {
       modeSpans[modes[i]].style.display = modes[i] === mode ? "" : "none";
     }
@@ -514,7 +518,7 @@
     else want = dockW >= 700 + HY ? "full" : (dockW >= 460 + HY ? "mid" : "mini");
 
     var order = [want];
-    var all = ["full", "mid", "mini"];
+    var all = ["full", "mid", "mini", "micro"];
     for (var ai = 0; ai < all.length; ai++) {
       if (all[ai] !== want) order.push(all[ai]);
     }
@@ -527,13 +531,10 @@
       if (gap >= rowEl.offsetWidth + 24) { chosen = mode; break; }
     }
     if (!chosen) {
-      /* 连续放不下才隐藏；一旦隐藏，由 5 秒轮询/宽度变化自动重试恢复 */
-      shrinkStreak++;
-      if (shrinkStreak >= 4 || rowEl.style.display === "none") {
-        rowEl.style.display = "none";
-        return;
-      }
-      return; // 给动画中的侧栏一点缓冲，下一帧再试
+      /* 放不下就立即隐藏——宁可暂时不显示，也绝不停在旧位置压住模型选择器/发送按钮 */
+      shrinkStreak = 0;
+      rowEl.style.display = "none";
+      return;
     }
     shrinkStreak = 0;
     pillMode = chosen;
@@ -546,6 +547,26 @@
     if (Math.abs(newLeft - lastLeft) > 1) { rowEl.style.left = newLeft + "px"; lastLeft = newLeft; }
     if (Math.abs(newBottom - lastBottom) > 1) { rowEl.style.bottom = newBottom + "px"; lastBottom = newBottom; }
     rowEl.style.display = "";
+    /* 落位自校正：绝对定位的包含块可能被宿主 transform 改写（侧栏动画等），
+       量出实际中心与目标中心的偏差回写一次；校正后仍越界就隐藏，绝不压住原生控件。
+       校正期间关掉 left 过渡，否则量到的是动画中间值，会把自己越修越偏。 */
+    rowEl.style.transition = "none";
+    for (var pass = 0; pass < 2; pass++) {
+      var rr = rowEl.getBoundingClientRect();
+      if (!rr.width) break;
+      var delta = centerX - (rr.left + rr.width / 2);
+      if (Math.abs(delta) < 1.5) break;
+      var curLeft = parseFloat(rowEl.style.left || "0") || 0;
+      var fixedLeft = Math.round(curLeft + delta);
+      rowEl.style.left = fixedLeft + "px";
+      lastLeft = fixedLeft;
+    }
+    var fr = rowEl.getBoundingClientRect();
+    rowEl.style.transition = "";
+    if (fr.width > 0 && (fr.left < leftEdge - 2 || fr.right > rightEdge + 2)) {
+      rowEl.style.display = "none"; // 实测仍压到原生控件：本帧不显示
+      return;
+    }
     /* 宽度已变但尚未稳定：再排一次布局，让稳定宽度有机会生效 */
     if (pendingW) setTimeout(requestLayout, 340);
   }
