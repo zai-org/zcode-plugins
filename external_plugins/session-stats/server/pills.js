@@ -6,8 +6,8 @@
 
   var ENDPOINT = "http://127.0.0.1:31710";
   var POLL_MS = 5000;
-  var data = null, lastOk = 0, fails = 0, popupOpen = false, pillMode = "full";
-  var rowEl = null, popEl = null, css = null, lastHtml = "";
+  var data = null, lastOk = 0, fails = 0, popupOpen = false, pillMode = "full", openedAt = 0;
+  var rowEl = null, popEl = null, css = null;
 
   function fmtDur(ms) {
     if (ms == null) return "—";
@@ -133,7 +133,17 @@
       '<div class="foot">' + foot + "</div>";
   }
 
+  /* 自愈：僵尸实例可能把 popEl 从 body 里删掉，用前先确保挂载 */
+  function ensurePopEl() {
+    if (!popEl) {
+      popEl = document.createElement("div");
+      popEl.className = "__sspills-pop";
+    }
+    if (!popEl.isConnected) document.body.appendChild(popEl);
+  }
+
   function renderPopup() {
+    ensurePopEl();
     if (!popEl) return;
     popEl.innerHTML = popupHtml();
     if (popupOpen && rowEl) {
@@ -165,8 +175,10 @@
 
   function setPopup(open) {
     popupOpen = open;
+    ensurePopEl();
     if (!popEl) return;
     popEl.style.display = open ? "block" : "none";
+    openedAt = open ? Date.now() : 0;
     if (open) renderPopup();
   }
 
@@ -203,6 +215,7 @@
   function poll() {
     var sid = currentSessionId();
     lastSid = sid;
+    requestLayout(); // 每次轮询统一走调度器（宽度比对交给 ResizeObserver）
     if (sid === "draft") {
       // 新会话（尚未产生请求）：显示空态，不去借别的会话的数据
       data = { draft: true, session_source: "draft" };
@@ -218,7 +231,7 @@
       .then(function (j) {
         data = j; lastOk = Date.now(); fails = 0;
         render();
-        layout();
+        requestLayout();
         if (popupOpen) renderPopup();
       })
       .catch(function () {
@@ -247,14 +260,11 @@
     return null;
   }
 
-  function pillEl(ico, body) {
-    return '<span class="__sspills-pill" data-act="detail">' +
-      '<span class="ico">' + ico + "</span>" + body + "</span>";
-  }
-  function pillHtml(mode) {
-    if (!data) return pillEl("⏱", "加载中…");
-    if (data.draft) return pillEl("⏱", "新会话 · 暂无统计");
-    if (data.error) return pillEl("⏱", "统计不可用");
+  function pillBody(mode) {
+    // 三档内容的内层 HTML（外层 pill 壳由 makeRow 常驻创建，切换只改 display，零重建）
+    if (!data) return "加载中…";
+    if (data.draft) return "新会话 · 暂无统计";
+    if (data.error) return "统计不可用";
     var t = data.tokens || {};
     var lt = liveTps(data);
     var shown = lt ? Math.round(lt.v * 10) / 10 : data.tps;
@@ -262,40 +272,82 @@
       ? shown + ' tok/s' + (lt && lt.inflight ? '<span class="live">●</span>' : "")
       : "—";
     if (mode === "mini") {
-      // 迷你版：实时 TPS + token 消耗量
-      return pillEl("⏱", shownHtml + '<span class="sep">·</span><b>' + fmtTok(t.total) + " tok</b>");
+      return shownHtml + '<span class="sep">·</span><b>' + fmtTok(t.total) + " tok</b>";
     }
     if (mode === "mid") {
-      // 中档：步数 + 速度 + 消耗量 + 缓存命中（去"轮"字与分隔竖线，紧凑单行）
-      return pillEl("⏱",
-        "<b>" + (data.steps != null ? data.steps : 0) + " 步</b>" +
+      return "<b>" + (data.steps != null ? data.steps : 0) + " 步</b>" +
         '<span class="sep">·</span>' + shownHtml +
         '<span class="sep">·</span><b>' + fmtTok(t.total) + "</b>" +
-        '<span class="sep">·</span>命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%");
+        '<span class="sep">·</span>命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%";
     }
-    return pillEl("⏱",
-      "<b>" + (data.turns != null ? data.turns : "—") + " 轮 " + (data.steps != null ? data.steps : 0) + " 步</b>" +
+    return "<b>" + (data.turns != null ? data.turns : "—") + " 轮 " + (data.steps != null ? data.steps : 0) + " 步</b>" +
       '<span class="sep">·</span>' + shownHtml +
       '<span class="dv"></span>' +
       "<b>" + fmtTok(t.total) + " tok</b>" +
-      '<span class="sep">·</span>缓存命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%");
+      '<span class="sep">·</span>缓存命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%";
+  }
+
+  /* 三档内容常驻为三个子 span，档位切换只改 display（无 innerHTML 重建 → 无闪现土壤） */
+  var modeSpans = null; // { full, mid, mini }
+  var lastBody = {};    // 每档上次渲染的内容缓存
+  function ensureModeSpans() {
+    if (modeSpans && modeSpans.full && modeSpans.full.isConnected) return;
+    var pill = rowEl.querySelector(".__sspills-pill");
+    if (!pill) return;
+    modeSpans = {};
+    var modes = ["full", "mid", "mini"];
+    for (var i = 0; i < modes.length; i++) {
+      var s = pill.querySelector(".__sspills-mode[data-mode='" + modes[i] + "']");
+      if (!s) { // 不存在才创建，防热更新边界下重复追加
+        s = document.createElement("span");
+        s.className = "__sspills-mode";
+        s.setAttribute("data-mode", modes[i]);
+        s.style.display = "none";
+        pill.appendChild(s);
+      }
+      modeSpans[modes[i]] = s;
+    }
   }
   function render() {
     if (!rowEl) return;
     var stale = Date.now() - lastOk > 9e5;
     rowEl.classList.toggle("stale", stale);
-    var html = pillHtml(pillMode);
-    if (html !== lastHtml) { rowEl.innerHTML = html; lastHtml = html; }
+    ensureModeSpans();
+    if (!modeSpans) return;
+    var modes = ["full", "mid", "mini"];
+    for (var i = 0; i < modes.length; i++) {
+      var m = modes[i];
+      var body = pillBody(m);
+      if (body !== lastBody[m]) { modeSpans[m].innerHTML = body; lastBody[m] = body; }
+    }
+    if (rowEl.style.display !== "none") setModeSpans(pillMode);
+  }
+  function setModeSpans(mode) {
+    if (!modeSpans) return;
+    var modes = ["full", "mid", "mini"];
+    for (var i = 0; i < modes.length; i++) {
+      modeSpans[modes[i]].style.display = modes[i] === mode ? "" : "none";
+    }
   }
 
   function makeRow() {
     var el = document.createElement("div");
     el.className = "__sspills-row";
+    el.style.cursor = "pointer";
     el.addEventListener("click", function (ev) {
-      var act = ev.target && ev.target.closest && ev.target.closest("[data-act='detail']");
-      if (act) setPopup(!popupOpen);
+      // 点击 pill 任意位置都开合弹窗（不要求命中特定子元素，防重建竞态）
+      setPopup(!popupOpen);
       ev.stopPropagation();
     });
+    // pill 外壳（含图标）：三档内容 span 由 ensureModeSpans 挂进来
+    var pill = document.createElement("span");
+    pill.className = "__sspills-pill";
+    pill.setAttribute("data-act", "detail");
+    var ico = document.createElement("span");
+    ico.className = "ico";
+    ico.textContent = "⏱";
+    pill.appendChild(ico);
+    el.appendChild(pill);
     return el;
   }
 
@@ -310,20 +362,51 @@
     return null;
   }
 
-  /* 只取「可见」的输入条容器——多标签页时隐藏标签页的 dock 也在 DOM 里，
-     拿第一个会量到错误几何（重叠的根因）。 */
+  /* 只取「可见」的输入条容器——多标签页时隐藏标签页的 dock 也在 DOM 里。
+     不能用 offsetParent 判断（fixed 定位/特殊容器下恒为 null，可见也会误判为隐藏），
+     改用实测宽度 > 0。 */
   function visibleDock() {
     var docks = document.querySelectorAll("[data-v4-composer-dock-content]");
     for (var i = 0; i < docks.length; i++) {
-      if (docks[i].offsetParent !== null) return docks[i];
+      var r = docks[i].getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return docks[i];
     }
     return docks[0] || null;
   }
 
-  /* 布局：pill 放进「左侧 chip 组 ↔ 模型选择器」之间的空隙并居中；
-     放不下完整版 → 自动缩窄为迷你版（实时 TPS + token 消耗量）；再放不下才隐藏。
-     垂直对齐模型选择器中心线。 */
+  /* 布局调度器：所有触发点只置脏标记，每帧最多执行一次完整布局。
+     - 单次布局内一次性量取全部几何（同一 dock、同一帧），杜绝跨 dock/过期 rect
+     - 档位判定带真滞回（±24px），临界宽度不再反复跳档
+     - 空隙不足时先降档；连续 4 次（≈2 秒）都放不下才隐藏，恢复条件一到立即回来 */
+  var layoutDirty = true;
+  var layoutScheduled = false;
+  var shrinkStreak = 0;
+
+  function requestLayout() {
+    layoutDirty = true;
+    if (layoutScheduled) return;
+    layoutScheduled = true;
+    requestAnimationFrame(function () {
+      layoutScheduled = false;
+      if (layoutDirty) { layoutDirty = false; layout(); }
+    });
+  }
+
+  /* 清扫幽灵实例：React 重建 dock 会泄漏旧 rowEl（代码只追新不删旧），
+     泄漏元素停留旧档位与新 pill 叠加闪现。每次布局前清掉一切非当前实例。 */
+  function purgeForeign() {
+    var rows = document.querySelectorAll(".__sspills-row");
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] !== rowEl && rows[i].parentNode) rows[i].parentNode.removeChild(rows[i]);
+    }
+    var pops = document.querySelectorAll(".__sspills-pop");
+    for (var j = 0; j < pops.length; j++) {
+      if (pops[j] !== popEl && pops[j].parentNode) pops[j].parentNode.removeChild(pops[j]);
+    }
+  }
+
   function layout() {
+    purgeForeign();
     var dock = visibleDock();
     if (!dock) {
       if (rowEl) { rowEl.remove(); }
@@ -333,42 +416,64 @@
       if (!rowEl) rowEl = makeRow();
       dock.appendChild(rowEl);
     }
+    var dockRect = dock.getBoundingClientRect();
     var trig = dock.querySelector('[data-testid="chat-model-select-trigger"]');
     if (!trig) { rowEl.style.display = "none"; return; }
     var leftChip = findChipByText(dock, "电脑操作") || findChipByText(dock, "完全访问");
-    var leftEdge, rightEdge;
+    var leftEdge;
     if (leftChip) {
       leftEdge = leftChip.getBoundingClientRect().right;
-      rightEdge = trig.getBoundingClientRect().left;
     } else {
-      var dr0 = dock.getBoundingClientRect();
-      leftEdge = dr0.left + 60;
-      rightEdge = trig.getBoundingClientRect().left;
+      leftEdge = dockRect.left + 60;
+    }
+    /* 右边界 = 左 chip 右侧所有按钮（模型选择器、上下文查看图标等）中最近者的左边缘——
+       空隙里有什么原生控件都自动避开，绝不覆盖 */
+    var trigRect = trig.getBoundingClientRect();
+    var rightEdge = trigRect.left;
+    var btns = dock.querySelectorAll("button,[role='button']");
+    for (var bi = 0; bi < btns.length; bi++) {
+      var br = btns[bi].getBoundingClientRect();
+      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge) rightEdge = br.left;
     }
     var gap = rightEdge - leftEdge;
-    var dockW = dock.getBoundingClientRect().width;
-    /* 档位随输入框宽度：宽 → 完整版；中 → 中档；窄 → 迷你版。
-       落位再按空隙校验，放不下自动降一档，保证不重叠。 */
-    var order;
-    if (dockW >= 700) order = ["full", "mid", "mini"];
-    else if (dockW >= 460) order = ["mid", "mini"];
-    else order = ["mini"];
+    var dockW = dockRect.width;
+
+    /* 档位判定：按 dock 宽度 + 真滞回（升降门槛错开 48px），临界宽度稳定不跳 */
+    var HY = 24;
+    var want;
+    if (pillMode === "full") want = dockW >= 700 - HY ? "full" : (dockW >= 460 - HY ? "mid" : "mini");
+    else if (pillMode === "mid") want = dockW >= 700 + HY ? "full" : (dockW >= 460 - HY ? "mid" : "mini");
+    else want = dockW >= 700 + HY ? "full" : (dockW >= 460 + HY ? "mid" : "mini");
+
+    var order = [want];
+    var all = ["full", "mid", "mini"];
+    for (var ai = 0; ai < all.length; ai++) {
+      if (all[ai] !== want) order.push(all[ai]);
+    }
     var chosen = null;
+    ensureModeSpans();
     for (var mi = 0; mi < order.length; mi++) {
       var mode = order[mi];
-      var html = pillHtml(mode);
-      if (html !== lastHtml) { rowEl.innerHTML = html; lastHtml = html; }
+      setModeSpans(mode); // 纯 display 切换，零重建
       rowEl.style.display = "";
       if (gap >= rowEl.offsetWidth + 24) { chosen = mode; break; }
     }
-    if (!chosen) { rowEl.style.display = "none"; return; }
+    if (!chosen) {
+      /* 连续放不下才隐藏；一旦隐藏，由 5 秒轮询/宽度变化自动重试恢复 */
+      shrinkStreak++;
+      if (shrinkStreak >= 4 || rowEl.style.display === "none") {
+        rowEl.style.display = "none";
+        return;
+      }
+      return; // 给动画中的侧栏一点缓冲，下一帧再试
+    }
+    shrinkStreak = 0;
     pillMode = chosen;
-    var dockRect = dock.getBoundingClientRect();
+    setModeSpans(chosen);
     var centerX = (leftEdge + rightEdge) / 2;
     rowEl.style.left = Math.round(centerX - dockRect.left) + "px";
-    var tr = trig.getBoundingClientRect();
     var pillH = rowEl.offsetHeight || 30;
-    rowEl.style.bottom = Math.max(0, Math.round((dockRect.bottom - (tr.top + tr.height / 2)) - pillH / 2)) + "px";
+    rowEl.style.bottom = Math.max(0, Math.round((dockRect.bottom - (trigRect.top + trigRect.height / 2)) - pillH / 2)) + "px";
     rowEl.style.display = "";
   }
 
@@ -378,25 +483,35 @@
     scheduled = true;
     requestAnimationFrame(function () {
       scheduled = false;
-      layout();
+      requestLayout();
       var sid = currentSessionId();
       if (sid !== lastSid) poll();
     });
   }
 
   document.addEventListener("click", function (ev) {
-    if (popupOpen && rowEl && !rowEl.contains(ev.target) && popEl && !popEl.contains(ev.target)) {
+    if (!popupOpen) return;
+    if (Date.now() - openedAt < 400) return; // 刚开启：忽略宿主合成的迟到点击，防秒关
+    if (rowEl && !rowEl.contains(ev.target) && popEl && !popEl.contains(ev.target)) {
       setPopup(false);
     }
   }, true);
-  window.addEventListener("resize", function () { layout(); if (popupOpen) renderPopup(); });
+  window.addEventListener("resize", function () { requestLayout(); if (popupOpen) renderPopup(); });
   document.addEventListener("scroll", function () { if (popupOpen) renderPopup(); }, true);
 
   var mo = new MutationObserver(schedule);
   mo.observe(document.documentElement, {
     childList: true, subtree: true, attributes: true, attributeFilter: ["data-session-id"],
   });
-  layout();
+  /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：ResizeObserver 直接触发重布局 */
+  if (typeof ResizeObserver !== "undefined") {
+    var ro = new ResizeObserver(function () { requestLayout(); });
+    var roTimer = setInterval(function () {
+      var d = visibleDock();
+      if (d) { ro.observe(d); clearInterval(roTimer); }
+    }, 2000);
+  }
+  requestLayout();
   popEl = document.createElement("div");
   popEl.className = "__sspills-pop";
   document.body.appendChild(popEl);
