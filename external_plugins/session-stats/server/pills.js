@@ -48,9 +48,10 @@
     "color:rgba(232,235,241,.88);font:500 13px/1 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;" +
     "cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s;}" +
     ".__sspills-pill:hover{border-color:rgba(122,162,247,.55);background:rgba(122,162,247,.08);}" +
-    ".__sspills-pill .ico{opacity:.6;}" +
+    ".__sspills-pill .ico{display:inline-flex;align-items:center;}" +
+    ".__sspills-pill .ico svg{width:14px;height:14px;display:block;}" +
     ".__sspills-pill b{font-weight:600;}" +
-    ".__sspills-pill .sep{opacity:.35;}" +
+    ".__sspills-pill .sep{opacity:.5;margin:0 6px;}" +
     ".__sspills-pill .dv{opacity:.3;margin:0 4px;border-left:1px solid currentColor;height:12px;}" +
     ".__sspills-pill .live{color:#9ece6a;font-size:8px;margin-left:4px;}" +
     ".__sspills-row.stale .__sspills-pill{opacity:.4;}" +
@@ -102,6 +103,7 @@
       ["输入（含缓存）", fmtTok(t.input) + "（读 " + fmtTok(t.cache_read) + " / 写 " + fmtTok(t.cache_write) + "）"],
       ["输出", fmtTok(t.output) + "（含推理 " + fmtTok(t.reasoning) + "）"],
       ["总 token", fmtTok(t.total)],
+      ["未命中缓存 token", fmtTok(Math.max(0, (t.input || 0) - (t.cache_read || 0)))],
       ["缓存命中率", d.cache_hit_pct != null ? d.cache_hit_pct + "%" : "—"],
     ];
     // 最近一次完成的请求：输入/输出/缓存命中
@@ -112,6 +114,7 @@
     if (lr && lr["in"] > 0) {
       r2.push(["最近请求 输入", fmtTok(lr["in"])]);
       r2.push(["最近请求 输出", fmtTok(lr.out)]);
+      r2.push(["最近请求 未命中缓存", fmtTok(Math.max(0, lr["in"] - (lr.cread || 0)))]);
       r2.push(["最近请求 缓存命中", Math.round((lr.cread || 0) * 1000 / lr["in"]) / 10 + "%"]);
     }
     var r3 = (d.models || []).slice(0, 5).map(function (m) {
@@ -295,15 +298,17 @@
     }
     if (mode === "mid") {
       return "<b>" + (data.steps != null ? data.steps : 0) + " 步</b>" +
-        " " + shownHtml +
+        '<span class="sep">·</span>' + shownHtml +
         " " + reqTokHtml +
-        " 命中 " + (hit != null ? hit : "—") + "%";
+        '<span class="sep">·</span>' +
+        "缓存命中 " + (hit != null ? hit : "—") + "%";
     }
     return "<b>" + (data.turns != null ? data.turns : "—") + " 轮 " + (data.steps != null ? data.steps : 0) + " 步</b>" +
-      " " + shownHtml +
+      '<span class="sep">·</span>' + shownHtml +
       '<span class="dv"></span>' +
       reqTokHtml +
-      " 命中 " + (hit != null ? hit : "—") + "%";
+      '<span class="sep">·</span>' +
+      "缓存命中 " + (hit != null ? hit : "—") + "%";
   }
 
   /* 三档内容常驻为三个子 span，档位切换只改 display（无 innerHTML 重建 → 无闪现土壤） */
@@ -366,7 +371,13 @@
     pill.setAttribute("data-act", "detail");
     var ico = document.createElement("span");
     ico.className = "ico";
-    ico.textContent = "⏱";
+    // 仪表盘图标（gauge-outline，16 viewBox / 1px 描边），与应用内统计图标同源
+    ico.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke-width="1">' +
+      '<path d="M3.4041 13.096C2.49514 12.187 1.87614 11.0288 1.62537 9.76798C1.37459 8.50716 1.50331 7.20028 1.99525 6.01261C2.48719 4.82494 3.32025 3.80981 4.3891 3.09557C5.45795 2.38134 6.71458 2.00008 8.0001 2C9.28563 2.00008 10.5423 2.38134 11.6111 3.09557C12.68 3.80981 13.513 4.82494 14.005 6.01261C14.4969 7.20028 14.6256 8.50716 14.3748 9.76798C14.1241 11.0288 13.5051 12.187 12.5961 13.096" stroke="currentColor"></path>' +
+      '<path d="M8 8.49994L11.6114 4.88855" stroke="currentColor"></path>' +
+      '<path d="M8 9.75C8.69036 9.75 9.25 9.19036 9.25 8.5C9.25 7.80964 8.69036 7.25 8 7.25C7.30964 7.25 6.75 7.80964 6.75 8.5C6.75 9.19036 7.30964 9.75 8 9.75Z" fill="currentColor"></path>' +
+      "</svg>";
     pill.appendChild(ico);
     el.appendChild(pill);
     return el;
