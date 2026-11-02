@@ -384,11 +384,18 @@
   var basisW = 0;      // 稳定宽度（档位判定基准）
   var pendingW = 0;    // 待确认的新宽度
   var pendingSince = 0;
+  var lastScrollAt = 0; // 滚动豁免：滚动后 700ms 内不布局（滚动中会话顶栏/输入条有过渡动画）
 
   function requestLayout() {
     if (layoutTimer) clearTimeout(layoutTimer);
     layoutTimer = setTimeout(function () {
       layoutTimer = 0;
+      var quiet = Date.now() - lastScrollAt;
+      if (quiet < 700) {
+        // 滚动豁免期内：推迟到豁免期结束再布局
+        layoutTimer = setTimeout(function () { layoutTimer = 0; layout(); }, 700 - quiet + 20);
+        return;
+      }
       layout();
     }, 180);
   }
@@ -511,7 +518,11 @@
     }
   }, true);
   window.addEventListener("resize", function () { requestLayout(); if (popupOpen) renderPopup(); });
-  document.addEventListener("scroll", function () { if (popupOpen) renderPopup(); }, true);
+  document.addEventListener("scroll", function () {
+    lastScrollAt = Date.now();
+    if (popupOpen) renderPopup();
+    requestLayout(); // 记录豁免；滚动停稳后会补执行一次
+  }, true);
 
   var mo = new MutationObserver(schedule);
   mo.observe(document.documentElement, {
