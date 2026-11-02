@@ -260,31 +260,50 @@
     return null;
   }
 
+  /* 最近一次完整（已完成）请求：底部横条展示它的输入+输出 token 与缓存命中率 */
+  function latestReq(d) {
+    if (!d || !d.recent) return null;
+    for (var i = 0; i < d.recent.length; i++) {
+      var r = d.recent[i];
+      if (r.done_at != null && r["in"] > 0) return r;
+    }
+    return null;
+  }
+  function reqHitPct(r) {
+    if (!r || !(r["in"] > 0)) return null;
+    return Math.round((r.cread || 0) * 1000 / r["in"]) / 10;
+  }
+
   function pillBody(mode) {
     // 三档内容的内层 HTML（外层 pill 壳由 makeRow 常驻创建，切换只改 display，零重建）
     if (!data) return "加载中…";
     if (data.draft) return "新会话 · 暂无统计";
     if (data.error) return "统计不可用";
-    var t = data.tokens || {};
     var lt = liveTps(data);
     var shown = lt ? Math.round(lt.v * 10) / 10 : data.tps;
     var shownHtml = shown != null
       ? shown + ' tok/s' + (lt && lt.inflight ? '<span class="live">●</span>' : "")
       : "—";
+    var lr = latestReq(data);
+    var hit = reqHitPct(lr);
+    // 最近请求 token 段：入 X / 出 Y（无数据时退回会话累计）
+    var reqTokHtml = lr
+      ? "入 " + fmtTok(lr["in"]) + " · 出 " + fmtTok(lr.out)
+      : "累计 " + fmtTok((data.tokens || {}).total) + " tok";
     if (mode === "mini") {
-      return shownHtml + '<span class="sep">·</span><b>' + fmtTok(t.total) + " tok</b>";
+      return shownHtml + '<span class="sep">·</span>' + reqTokHtml;
     }
     if (mode === "mid") {
       return "<b>" + (data.steps != null ? data.steps : 0) + " 步</b>" +
         '<span class="sep">·</span>' + shownHtml +
-        '<span class="sep">·</span><b>' + fmtTok(t.total) + "</b>" +
-        '<span class="sep">·</span>命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%";
+        '<span class="sep">·</span>' + reqTokHtml +
+        '<span class="sep">·</span>命中 ' + (hit != null ? hit : "—") + "%";
     }
     return "<b>" + (data.turns != null ? data.turns : "—") + " 轮 " + (data.steps != null ? data.steps : 0) + " 步</b>" +
       '<span class="sep">·</span>' + shownHtml +
       '<span class="dv"></span>' +
-      "<b>" + fmtTok(t.total) + " tok</b>" +
-      '<span class="sep">·</span>缓存命中 ' + (data.cache_hit_pct != null ? data.cache_hit_pct : "—") + "%";
+      reqTokHtml +
+      '<span class="sep">·</span>命中 ' + (hit != null ? hit : "—") + "%";
   }
 
   /* 三档内容常驻为三个子 span，档位切换只改 display（无 innerHTML 重建 → 无闪现土壤） */
