@@ -1,6 +1,6 @@
 {
   "name": "agent-team",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "description": "智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。",
   "description_i18n": {
     "en": "Agent Teams: spawn and coordinate teammate sessions with a shared task board and member messaging.",
@@ -44,9 +44,9 @@
     },
     "leadMode": {
       "title": "Lead 模式",
-      "description": "orchestrator（默认）：Lead 自主组队/分配/独立验收，专注编排不亲自实现；collaborator：保持原口径，由用户指示建队。取值：orchestrator 或 collaborator。",
+      "description": "off：完全关闭智能体团队（不注入团队上下文、不注册团队工具）；auto（默认）：按需委派——建队前默认单 agent 直接处理，建队后按委派价值判断是否走团队流程；always：始终主动编排（自主拆活/组队/分派/独立验收）。旧值 orchestrator/collaborator 将按 auto 处理。取值：off、auto 或 always。",
       "type": "string",
-      "default": "orchestrator"
+      "default": "auto"
     }
   },
   "skills": "skills",

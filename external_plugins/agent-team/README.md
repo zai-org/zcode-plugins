@@ -44,19 +44,19 @@ After install and enable you need **no special command**: the teamwork policy is
 | `/team` | Type `/team` | Prints a text summary of team status + panel/command entries (**read-only**, creates/modifies nothing) |
 | `/team-coordination` | Type `/team-coordination` (full name `agent-team:team-coordination`) | Manually (re)load the teamwork policy skill; use when a very long session has lost it |
 
-### 1. Just state the goal (default orchestrator mode)
+### 1. Just state the goal (default `auto`: on-demand delegation)
 
-Start a **new task** (old tasks do not refresh plugin capabilities) and describe the goal. With the default `leadMode: orchestrator`, the Lead decomposes the work, forms a team, assigns tasks and independently accepts them — no step-by-step steering needed:
+Start a **new task** (old tasks do not refresh plugin capabilities) and describe the goal. Since 0.5.0 the default `leadMode: auto` follows on-demand delegation semantics: with no team spawned yet, the session behaves like a plain single agent — questions, small single-file changes and read-only summaries are handled directly; for goals that clearly benefit from multiple roles in parallel, disjoint write scopes, or long tasks needing their own context, the Lead forms a team:
 
 ```text
 Push two things in parallel: one teammate adds unit tests for src/utils, another reviews the wording of README and CHANGELOG, then summarize.
 ```
 
-The Lead's chain: spawn teammates → create tasks on the shared board with owners → wait for completion → independently verify (read diffs, run tests) → report back to you once accepted (D26/D27).
+Once a team exists in the session (durable — inactive/failed members count), the Lead judges each request by delegation value: delegate work that is worth the team workflow — tasks with acceptance criteria, owners and independent verification (D26/D27) — and handle the rest directly with a one-line reason (issue #9 / D28).
 
-### 2. Direct orders (collaborator mode / when you want precise control)
+### 2. Precise control and the other two modes
 
-Set `leadMode` to `collaborator` and the Lead waits for your instruction before forming a team; at any time you can also just give explicit orders:
+At any time you can give explicit orders:
 
 ```text
 Create a teammate named reviewer, have it check the first three paragraphs of README for typos, then summarize its findings.
@@ -69,6 +69,8 @@ Send reviewer a message: focus on mixed Chinese/English punctuation.
 ```text
 List the current members and task statuses.
 ```
+
+Two more modes: `always` restores the pre-0.5.0 proactive orchestration from the very first message (decompose, staff up, assign, verify — no step-by-step steering needed); `off` disables Agent Teams entirely (no team context injected, no team tools registered).
 
 The model maps these phrasings to the right tools (`spawn_teammate` / `send_message` / `list_agents` / `team_task_list` …); you never need to remember tool names.
 
@@ -103,14 +105,14 @@ Using "create reviewer to check README typos" as the example:
 
 1. The "Agent Team" panel appears in the conversation (the `spawn_teammate` result carries a panel-open hint and the desktop opens it), showing `lead` (current session) and `reviewer`;
 2. `reviewer` starts working; tasks and statuses change on the panel/board;
-3. `reviewer` reports back; the Lead (in orchestrator mode, after independent verification) summarizes for you;
+3. `reviewer` reports back; the Lead (after independent verification, when it delegated the work) summarizes for you;
 4. `reviewer`'s session is a hidden child session — it never appears next to the Lead in the left task list.
 
-## Tool reference (9 model-visible tools; 8 with `interrupt:false`)
+## Tool reference (9 model-visible tools; 8 with `interrupt:false`; 0 with `leadMode:off`)
 
 | Tool | Who uses it | Purpose |
 |---|---|---|
-| `spawn_teammate` | Lead | Create a named persistent teammate (`context: fresh\|fork`; model auto-follows the Lead, no separate parameter; in orchestrator mode the Lead proactively staffs up) |
+| `spawn_teammate` | Lead | Create a named persistent teammate (`context: fresh\|fork`; model auto-follows the Lead, no separate parameter; staff up when the goal clearly benefits from delegation) |
 | `send_message` | Everyone | Message another member: delivered at the nearest turn boundary while running; wakes/resumes an idle member |
 | `list_agents` | Everyone | List Lead + all teammates with targets and availability (`inactive` = no turn running, not a failure) |
 | `interrupt_agent` | Lead | Interrupt a teammate's current turn, preserving its pending inbox (**not registered when disabled → 8 tools**) |
@@ -133,7 +135,7 @@ Edit under **Settings → Plugins → Agent Team**; changes apply to new tasks (
 | `maxMessageBytes` | 65536 | Max bytes per member-to-member message |
 | `disposalTimeoutMs` | 5000 | Timeout for team disposal (settlement and reclaim) |
 | `interrupt` | true | When off, the model gets 8 tools (`interrupt_agent` is not registered) |
-| `leadMode` | orchestrator | `orchestrator`: the Lead staffs, assigns and accepts work independently; `collaborator`: waits for your instruction |
+| `leadMode` | auto | `auto`: on-demand delegation (plain single agent until a team exists, then judge by delegation value); `always`: always orchestrate proactively; `off`: disable Agent Teams entirely (no injection, 0 team tools). Legacy values `orchestrator`/`collaborator` are treated as `auto` (issue #9) |
 
 ## Network access, dependencies and side effects
 
@@ -270,8 +272,9 @@ This plugin is a re-implementation of DSH Agent Teams on ZCode. The deviations b
 | D23 | Historical event names/old checkpoints auto-upgrade: legacy `team/message` normalizes to `team/message/queued`, old delivered structures to string arrays; historical teams stay readable |
 | D24 | Policy text injects on SessionStart (startup/resume); in very long Lead sessions it may be lost to context compaction — reload the skill or start a new task |
 | D25 | The plugin writes only two whitelisted points in the host task index (session-hiding anchor tombstone, `sidebar-audit --apply`); `db.sqlite` is strictly read-only |
-| D26 | The Lead defaults to `orchestrator`: proactively staffs/assigns/accepts and does not implement itself (except one-line fixes or when nobody can take it); `collaborator` restores "waits for your instruction" |
+| D26 | `always` mode (pre-0.5.0 default `orchestrator`): the Lead proactively staffs/assigns/accepts and does not implement itself (except one-line fixes or when nobody can take it) |
 | D27 | Task `complete` means "submitted": the Lead must independently verify before acceptance; failures are `reopen`ed with concrete findings, passes append an acceptance note to the task |
+| D28 | Since 0.5.0 the default is `auto` (issue #9): no mode section is injected before a team exists; after the first teammate the on-demand section applies (delegation-value judgment with positive/negative examples); `off` disables injection and team tools entirely; legacy `orchestrator`/`collaborator` values migrate to `auto`; a stale pre-0.5.0 runtime-config is treated as unset |
 
 ## Documentation
 

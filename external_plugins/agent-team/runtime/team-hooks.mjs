@@ -53,8 +53,18 @@ function serializeCause(cause, seen) {
 }
 
 // src/domain/config.ts
+var DEFAULT_LEAD_MODE = "auto";
+var LEGACY_LEAD_MODE_MAP = {
+  orchestrator: "auto",
+  collaborator: "auto"
+};
+function normalizeLeadMode(raw2) {
+  if (typeof raw2 !== "string") return void 0;
+  if (raw2 === "off" || raw2 === "auto" || raw2 === "always") return raw2;
+  return LEGACY_LEAD_MODE_MAP[raw2];
+}
 function validateLeadMode(raw2) {
-  return raw2 === "collaborator" ? "collaborator" : "orchestrator";
+  return normalizeLeadMode(raw2) ?? DEFAULT_LEAD_MODE;
 }
 
 // src/shared.ts
@@ -78,8 +88,11 @@ function readRuntimeConfig() {
   try {
     const raw2 = fs.readFileSync(runtimeConfigPath(), "utf8");
     const parsed = JSON.parse(raw2);
-    if (parsed.version !== 1 || typeof parsed.interrupt !== "boolean") return void 0;
-    return { ...parsed, leadMode: parsed.leadMode === "collaborator" ? "collaborator" : "orchestrator" };
+    if (typeof parsed.interrupt !== "boolean") return void 0;
+    if (parsed.version !== 2) {
+      return { ...parsed, version: 2 };
+    }
+    return { ...parsed, leadMode: normalizeLeadMode(parsed.leadMode) };
   } catch {
     return void 0;
   }
@@ -103,11 +116,10 @@ function readHostLeadModeOverride(homedir = os.homedir()) {
     }
   }
   if (strings.length === 0) return void 0;
-  const first = strings[0];
-  if (strings.every((v) => v === first) && (first === "orchestrator" || first === "collaborator")) {
-    return validateLeadMode(first);
-  }
-  return void 0;
+  const normalized = strings.map((v) => normalizeLeadMode(v));
+  if (normalized.some((v) => v === void 0)) return void 0;
+  const first = normalized[0];
+  return normalized.every((v) => v === first) ? first : void 0;
 }
 function appendJsonl(file, obj) {
   fs.appendFileSync(file, JSON.stringify(obj) + "\n", { mode: 384 });
@@ -154,16 +166,17 @@ To message another teammate, use send_message({ target: "<teammate name>", messa
 }
 var POLICY_PROBE_MARKER = "quartz-ember-73";
 var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
-function buildSessionStartContext(identityText, interrupt = true, leadMode) {
+var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
+function buildSessionStartContext(identityText, interrupt = true, modeSection) {
   const policy = teamPolicy(interrupt);
-  const orchestration = leadMode === "orchestrator" ? `
-${HOOK_POLICY_PREFIX} ${ORCHESTRATOR_SECTION_TEXT}` : "";
+  const section = modeSection !== void 0 ? `
+${HOOK_POLICY_PREFIX} ${modeSection}` : "";
   const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
 ${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
   return `${HOOK_POLICY_PREFIX} ${policy}
-${HOOK_POLICY_PREFIX} ${identityText}${orchestration}${probe}`;
+${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
 }
-var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true, "orchestrator");
+var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
 
 // src/mcp/identity.ts
 import fs2 from "node:fs";
@@ -5056,6 +5069,15 @@ function withFailure(state, rawLine) {
 // src/provider/member-files.ts
 import fs6 from "node:fs";
 import path6 from "node:path";
+function teamEverCreated(teamDir, leadSessionId) {
+  let entries;
+  try {
+    entries = fs6.readdirSync(path6.join(teamDir, "members"));
+  } catch {
+    return false;
+  }
+  return entries.some((entry) => entry !== leadSessionId);
+}
 function memberPaths(teamDir, memberId) {
   const memberDir = path6.join(teamDir, "members", memberId);
   const runDir = path6.join(memberDir, "run");
@@ -5325,6 +5347,11 @@ var role = resolveHookRole({
   spawnIdentityEnv: process.env.TEAM_SPAWN_IDENTITY,
   sessionId: rawSessionId ?? ""
 });
+var runtimeConfig = readRuntimeConfig();
+var leadMode = validateLeadMode(
+  process.env.TEAM_LEAD_MODE !== void 0 ? process.env.TEAM_LEAD_MODE : readHostLeadModeOverride() ?? runtimeConfig?.leadMode
+);
+var leadOff = role.role === "lead" && leadMode === "off";
 function out(obj) {
   return new Promise((resolve) => {
     process.stdout.write(JSON.stringify(obj), () => resolve());
@@ -5372,32 +5399,43 @@ if (event === "sessionstart") {
     });
   }
   const identityText = role.role === "teammate" ? identityTeammateText(role.name) : IDENTITY_LEAD_TEXT;
-  const runtimeConfig = readRuntimeConfig();
   const interrupt = process.env.TEAM_INTERRUPT !== void 0 ? process.env.TEAM_INTERRUPT !== "false" : runtimeConfig?.interrupt ?? true;
-  const leadMode = validateLeadMode(
-    process.env.TEAM_LEAD_MODE !== void 0 ? process.env.TEAM_LEAD_MODE : readHostLeadModeOverride() ?? runtimeConfig?.leadMode
-  );
-  let context = buildSessionStartContext(identityText, interrupt, role.role === "lead" ? leadMode : void 0);
+  let modeSection;
+  if (role.role === "lead") {
+    if (leadMode === "always") {
+      modeSection = ORCHESTRATOR_SECTION_TEXT;
+    } else if (leadMode === "auto") {
+      const teamDir = safeTeamDir(role.teamId);
+      if (teamDir !== null && teamEverCreated(teamDir, role.teamId)) {
+        modeSection = ON_DEMAND_SECTION_TEXT;
+      }
+    }
+  }
+  let context = buildSessionStartContext(identityText, interrupt, modeSection);
   let pending = [];
   if (role.role === "lead" && rawSessionId !== null) {
     const teamDir = safeTeamDir(role.teamId);
     if (teamDir !== null) {
       recordLeadTurnEvent(teamDir, "start");
-      pending = await pendingForLead(teamDir, role.teamId);
-      if (pending.length > 0) {
-        context += `
+      if (!leadOff) {
+        pending = await pendingForLead(teamDir, role.teamId);
+        if (pending.length > 0) {
+          context += `
 ${buildInboxContext(pending.map((m) => m.text))}`;
+        }
       }
     }
   }
-  await out({
-    hookSpecificOutput: {
-      hookEventName: "SessionStart",
-      additionalContext: context
-    }
-  });
+  if (!leadOff) {
+    await out({
+      hookSpecificOutput: {
+        hookEventName: "SessionStart",
+        additionalContext: context
+      }
+    });
+  }
   if (role.role === "lead" && rawSessionId !== null) {
-    if (pending.length > 0) {
+    if (!leadOff && pending.length > 0) {
       writeReceipts(DATA, role.teamId, pending.map((m) => m.messageId), "sessionstart");
       await boundedAck("mailbox.ack", { session_id: rawSessionId, messageIds: pending.map((m) => m.messageId) });
     }
@@ -5408,7 +5446,7 @@ ${buildInboxContext(pending.map((m) => m.text))}`;
     const teamDir = safeTeamDir(role.teamId);
     if (teamDir !== null) {
       recordLeadTurnEvent(teamDir, "start");
-      const pending = await pendingForLead(teamDir, role.teamId);
+      const pending = leadOff ? [] : await pendingForLead(teamDir, role.teamId);
       if (pending.length > 0) {
         await out({
           hookSpecificOutput: {
@@ -5426,7 +5464,7 @@ ${buildInboxContext(pending.map((m) => m.text))}`;
     const teamDir = safeTeamDir(role.teamId);
     if (teamDir !== null) {
       recordLeadTurnEvent(teamDir, "stop");
-      const pending = await pendingForLead(teamDir, role.teamId);
+      const pending = leadOff ? [] : await pendingForLead(teamDir, role.teamId);
       if (pending.length > 0) {
         const runKey = runKeyFor(input.stop_hook_active);
         const budgetPaths = memberPaths(teamDir, role.teamId);

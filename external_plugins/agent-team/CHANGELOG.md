@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 — 2026-11-02
+
+描述：智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。
+
+- **Lead 模式三档化（issue #9 / 偏差 D28）**：`leadMode` 从二值（orchestrator/collaborator）改为三档——
+  - `auto`（**新默认**，按需委派）：会话未建过队时不注入任何模式段（普通单 agent 语义，简单任务直接处理，不再为委派而委派）；该会话曾创建过团队后（`members/` 存在成员目录即持久判定，含 inactive/failed）注入**按需段**（委派价值门槛 + 正反例：问答/单文件小改/调研汇总由 Lead 直接处理并说明一句理由，多角色并行/写域互斥/长任务 fork/点名成员走团队流程），验收与等待语义不变；
+  - `always`：保留原 orchestrator 主动编排行为（自主拆活、组队、分派、独立验收）；
+  - `off`：完全关闭——hook 不注入任何团队上下文（策略/身份/收件箱/Stop block 全停，session-map 与轮次记录等内部副作用保留），daemon 不注册团队工具（tools/list 0 个，直连调用被拒）。
+- **旧值迁移**：`orchestrator`/`collaborator` 统一按 `auto` 处理（daemon 记迁移告警）；runtime-config 升 v2——0.5.0 前落盘的旧文件 leadMode 视为过期回落默认，升级用户不被锁进激进档；宿主 config 直读层归一后判定（旧值→auto 接受）。
+- **auto 档中途首建队**：SessionStart 只在 startup/resume 触发，首成员 `spawn_teammate` 成功结果尾部以独立 text 块附一行 `FIRST_SPAWN_NOTE` 指引（不改结果 JSON），后续 resume 自然补全按需段。
+- **三通道同步**：工具描述去档位措辞改模式中立（spawn_teammate / team_task_update 两处）；`skills/team-coordination/SKILL.md` 编排节重写为三档（含按需段逐字引用）；文本审计扩为 24 项（D26/D28 三态两文本）。
+- e2e：S7 改显式 `always` 跑编排旅程；新增 S8 auto 默认链冒烟（简单任务不建队 + 注入无模式段 + runtime-config=auto）；U-O1 重写为 auto 默认链口径（db 级无模式段断言），U-O2 改旧值迁移场景。
+- 本地验收：**869 用例 / 73 文件**全部通过（基线 849 + 20）；覆盖率 statements **91.65%**、branches **85.19%**、functions **92.58%**、lines **93.42%**，门槛不变；`npm run check` 与文本审计 24 项通过。
+
 ## 0.4.3 — 2026-11-01
 
 描述：智能体团队：在会话中创建并协调多个 teammate 子会话、共享任务板与成员消息。

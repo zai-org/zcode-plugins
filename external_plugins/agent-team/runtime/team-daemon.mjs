@@ -18430,8 +18430,18 @@ function coerceInteger(raw) {
   if (typeof raw === "string" && /^-?\d+$/.test(raw.trim())) return Number(raw.trim());
   return void 0;
 }
+var DEFAULT_LEAD_MODE = "auto";
+var LEGACY_LEAD_MODE_MAP = {
+  orchestrator: "auto",
+  collaborator: "auto"
+};
+function normalizeLeadMode(raw) {
+  if (typeof raw !== "string") return void 0;
+  if (raw === "off" || raw === "auto" || raw === "always") return raw;
+  return LEGACY_LEAD_MODE_MAP[raw];
+}
 function validateLeadMode(raw) {
-  return raw === "collaborator" ? "collaborator" : "orchestrator";
+  return normalizeLeadMode(raw) ?? DEFAULT_LEAD_MODE;
 }
 
 // src/shared.ts
@@ -18460,7 +18470,7 @@ function writeRuntimeConfig(input) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.tmp-${process.pid}`;
   const doc = {
-    version: 1,
+    version: 2,
     interrupt: input.interrupt,
     leadMode: input.leadMode,
     limits: input.limits,
@@ -22517,17 +22527,17 @@ var IDENTITY_LEAD_TEXT = `You are the Team Lead named "lead".
 Use list_agents({}) to find your teammates and their names.
 To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
 var POLICY_PROBE_MARKER = "quartz-ember-73";
-var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
-function buildSessionStartContext(identityText, interrupt = true, leadMode2) {
+var FIRST_SPAWN_NOTE = "[agent-team] Team mode is now active: this is the first teammate of this session. From now on, judge each request by delegation value \u2014 handle simple work directly with a one-line reason, and use the team for work that benefits from multiple roles, parallel execution, or disjoint write scopes.";
+function buildSessionStartContext(identityText, interrupt = true, modeSection) {
   const policy = teamPolicy(interrupt);
-  const orchestration = leadMode2 === "orchestrator" ? `
-${HOOK_POLICY_PREFIX} ${ORCHESTRATOR_SECTION_TEXT}` : "";
+  const section = modeSection !== void 0 ? `
+${HOOK_POLICY_PREFIX} ${modeSection}` : "";
   const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
 ${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
   return `${HOOK_POLICY_PREFIX} ${policy}
-${HOOK_POLICY_PREFIX} ${identityText}${orchestration}${probe}`;
+${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
 }
-var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true, "orchestrator");
+var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
 var FAIL_LOUD_WARNING = "[agent-team] \u8B66\u544A\uFF1A\u672A\u68C0\u6D4B\u5230\u672C\u4F1A\u8BDD\u7684\u7B56\u7565\u6CE8\u5165\uFF08SessionStart hook \u53EF\u80FD\u672A\u751F\u6548\uFF09\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u4E14 hooks \u58F0\u660E\u5B58\u5728\uFF1B\u56E2\u961F\u5DE5\u5177\u4ECD\u53EF\u8C03\u7528\uFF0C\u4F46\u6A21\u578B\u53EF\u80FD\u672A\u52A0\u8F7D\u5B8C\u6574\u534F\u4F5C\u7B56\u7565\u3002";
 var NO_PROGRESS_REASON = "no-active-peer";
 var NO_PROGRESS_MESSAGE = "No other Team member is running or provisioning. wait_agent cannot make progress or wake inactive teammates. Re-list with list_agents and team_task_list, then use send_message to wake each required inactive teammate before waiting again.";
@@ -22881,9 +22891,9 @@ var PANEL_RESOURCE_URI = "ui://agent-team/team-panel.html";
 var PANEL_SURFACE_ID = "agent-team-panel";
 var TEAM_TOOL_DEFINITIONS = [
   {
-    // 02 §9.3
+    // 02 §9.3（〔issue #9 三档化 D28〕描述去 orchestrator 档位措辞，改模式中立的按需口径）
     name: "spawn_teammate",
-    description: "Create one named, durable teammate. Only the Team Lead may call this tool. In orchestrator mode, create teammates proactively when the goal benefits from delegation, within the member limit. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
+    description: "Create one named, durable teammate. Only the Team Lead may call this tool. Create teammates when the goal clearly benefits from delegation \u2014 multiple roles in parallel, disjoint write scopes, or long tasks needing their own context \u2014 within the member limit. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
     inputSchema: {
       type: "object",
       properties: {
@@ -23020,9 +23030,9 @@ var TEAM_TOOL_DEFINITIONS = [
     }
   },
   {
-    // 02 §9.12
+    // 02 §9.12（〔issue #9 三档化 D28〕描述去 orchestrator 档位措辞）
     name: "team_task_update",
-    description: "Compare-and-set a shared task action using the latest revision from team_task_get or team_task_list. In orchestrator mode, the Lead verifies a completed task and reopens it with concrete findings on failure.",
+    description: "Compare-and-set a shared task action using the latest revision from team_task_get or team_task_list. When the Lead verifies a completed task, reopen it with concrete findings on failure.",
     inputSchema: {
       type: "object",
       properties: {
@@ -23063,6 +23073,7 @@ var TEAM_TOOL_DEFINITIONS = [
 ];
 var TEAM_TOOL_NAMES = new Set(TEAM_TOOL_DEFINITIONS.map((t) => t.name));
 function teamToolDefinitions(options = {}) {
+  if (options.leadMode === "off") return [];
   const interrupt = options.interrupt ?? true;
   return interrupt ? TEAM_TOOL_DEFINITIONS : TEAM_TOOL_DEFINITIONS.filter((t) => t.name !== "interrupt_agent");
 }
@@ -23257,172 +23268,18 @@ function touch(opts, sessionId, entry, source) {
   upsertSessionEntry(opts.dataRoot, sessionId, patch);
 }
 
-// src/mcp/handlers.ts
-async function handleTeamToolCall(opts, tool) {
-  let identity;
-  try {
-    identity = resolveIdentity({
-      dataRoot: opts.dataRoot,
-      meta: opts.meta,
-      bootTimeMs: opts.bootTimeMs,
-      ...opts.now !== void 0 ? { now: opts.now } : {}
-    });
-  } catch (err) {
-    return errorResult(err);
-  }
-  try {
-    const result = await dispatch(opts, identity, tool);
-    return withFailLoud(successResult(result), identity);
-  } catch (err) {
-    return withFailLoud(errorResult(err), identity);
-  }
-}
-async function dispatch(opts, identity, tool) {
-  const { backend: backend2, args } = opts;
-  switch (tool) {
-    case "spawn_teammate":
-      return backend2.spawnTeammate(identity, {
-        name: args.name,
-        description: args.description,
-        prompt: args.prompt,
-        ...args.context !== void 0 ? { context: args.context } : {}
-      });
-    case "send_message":
-      guardNonEmptyString(args.message, "message");
-      return backend2.sendMessage(identity, { target: args.target, message: args.message });
-    case "list_agents":
-      return backend2.listAgents(identity);
-    case "interrupt_agent":
-      if (!backend2.interruptEnabled) throw new TypeError("unsupported team tool: interrupt_agent");
-      return backend2.interruptAgent(identity, { target: args.target });
-    // 0.4.0 注销 member_set_model case（工具面 9 个；未知工具由上游分派拒绝）。
-    case "wait_agent":
-      return backend2.waitAgent(
-        identity,
-        { ...args.timeout_ms !== void 0 ? { timeout_ms: args.timeout_ms } : {} },
-        opts.emitProgress,
-        opts.signal
-      );
-    case "team_task_create":
-      return backend2.taskCreate(identity, {
-        subject: args.subject,
-        description: args.description,
-        ...args.blocked_by !== void 0 ? { blocked_by: args.blocked_by } : {},
-        ...args.write_scopes !== void 0 ? { write_scopes: args.write_scopes } : {}
-      });
-    case "team_task_list":
-      if (args.ready !== void 0 && typeof args.ready !== "boolean") {
-        throw invalidArg('param "ready" must be a boolean');
-      }
-      if (args.cursor !== void 0) guardSafeInteger(args.cursor, "cursor");
-      if (args.limit !== void 0) guardSafeInteger(args.limit, "limit");
-      if (args.status !== void 0 && args.status !== "pending" && args.status !== "in_progress" && args.status !== "completed") {
-        throw invalidArg('param "status" must be one of pending, in_progress, completed');
-      }
-      return backend2.taskList(identity, {
-        ...args.status !== void 0 ? { status: args.status } : {},
-        ...args.owner !== void 0 ? { owner: args.owner } : {},
-        ...args.ready !== void 0 ? { ready: args.ready } : {},
-        ...args.cursor !== void 0 ? { cursor: args.cursor } : {},
-        ...args.limit !== void 0 ? { limit: args.limit } : {}
-      });
-    case "team_task_get":
-      return backend2.taskGet(identity, { task_id: args.task_id });
-    case "team_task_update":
-      return backend2.taskUpdate(identity, {
-        task_id: args.task_id,
-        expected_revision: args.expected_revision,
-        action: args.action,
-        ...args.subject !== void 0 ? { subject: args.subject } : {},
-        ...args.description !== void 0 ? { description: args.description } : {},
-        ...args.blocked_by !== void 0 ? { blocked_by: args.blocked_by } : {},
-        ...args.write_scopes !== void 0 ? { write_scopes: args.write_scopes } : {},
-        ...args.owner !== void 0 ? { owner: args.owner } : {}
-      });
-    default:
-      throw new TypeError(`unsupported team tool: ${tool}`);
-  }
-}
-function invalidArg(message) {
-  return new TeamError("TEAM_INVALID_ARGUMENT", message);
-}
-function guardNonEmptyString(v, key) {
-  if (typeof v !== "string" || v.length === 0) {
-    throw invalidArg(`param "${key}" must be a non-empty string`);
-  }
-}
-function guardSafeInteger(v, key) {
-  if (typeof v !== "number" || !Number.isSafeInteger(v)) {
-    throw invalidArg(`param "${key}" must be a safe integer`);
-  }
-}
-function isTeamTool(name) {
-  return TEAM_TOOL_NAMES.has(name);
-}
-
-// src/mcp/registry.ts
-function listTeamTools(options = {}) {
-  return teamToolDefinitions(options).map((t) => ({
-    name: t.name,
-    description: t.description,
-    inputSchema: t.inputSchema,
-    ...t._meta !== void 0 ? { _meta: t._meta } : {}
-  }));
-}
-async function callTeamTool(input, notifier) {
-  const emitProgress = buildProgressSink(input, notifier);
-  return handleTeamToolCall(
-    {
-      backend: input.backend,
-      dataRoot: input.dataRoot,
-      bootTimeMs: input.bootTimeMs,
-      meta: input.meta,
-      args: input.args,
-      ...emitProgress !== void 0 ? { emitProgress } : {},
-      ...input.signal !== void 0 ? { signal: input.signal } : {},
-      ...input.now !== void 0 ? { now: input.now } : {}
-    },
-    input.name
-  );
-}
-function buildProgressSink(input, notifier) {
-  if (input.name !== "wait_agent") return void 0;
-  const token = input.meta?.progressToken;
-  if (notifier === void 0 || token === void 0) return void 0;
-  if (typeof token !== "string" && typeof token !== "number") return void 0;
-  return async (progress, message) => {
-    try {
-      await notifier.sendNotification({
-        method: "notifications/progress",
-        params: {
-          progressToken: token,
-          progress,
-          ...message !== void 0 ? { message } : {}
-        }
-      });
-    } catch {
-    }
-  };
-}
-
-// src/provider/resume-provider.ts
-import { createHash as createHash2 } from "node:crypto";
-import fs18 from "node:fs";
-import path17 from "node:path";
-
-// src/provider/lead-wake.ts
-import fs11 from "node:fs";
-import path10 from "node:path";
-
-// src/provider/procgroup.ts
-import { execFile } from "node:child_process";
-import fs10 from "node:fs";
-import path9 from "node:path";
-import { fileURLToPath } from "node:url";
-
 // src/provider/member-files.ts
 import fs9 from "node:fs";
 import path8 from "node:path";
+function teamEverCreated(teamDir, leadSessionId) {
+  let entries;
+  try {
+    entries = fs9.readdirSync(path8.join(teamDir, "members"));
+  } catch {
+    return false;
+  }
+  return entries.some((entry) => entry !== leadSessionId);
+}
 function memberPaths(teamDir, memberId) {
   const memberDir = path8.join(teamDir, "members", memberId);
   const runDir = path8.join(memberDir, "run");
@@ -23552,7 +23409,176 @@ function clearModelFailed(paths) {
   }
 }
 
+// src/mcp/handlers.ts
+async function handleTeamToolCall(opts, tool) {
+  if (opts.leadMode === "off") {
+    return errorResult(
+      new TypeError(`unsupported team tool: ${tool} (leadMode "off" \u2014 Agent Teams disabled)`)
+    );
+  }
+  let identity;
+  try {
+    identity = resolveIdentity({
+      dataRoot: opts.dataRoot,
+      meta: opts.meta,
+      bootTimeMs: opts.bootTimeMs,
+      ...opts.now !== void 0 ? { now: opts.now } : {}
+    });
+  } catch (err) {
+    return errorResult(err);
+  }
+  const probeFirstSpawn = opts.leadMode === "auto" && tool === "spawn_teammate" && !teamEverCreated(teamPaths(opts.dataRoot, identity.teamId).teamDir, identity.teamId);
+  try {
+    const result = await dispatch(opts, identity, tool);
+    const success = withFailLoud(successResult(result), identity);
+    return probeFirstSpawn ? { ...success, content: [...success.content, { type: "text", text: FIRST_SPAWN_NOTE }] } : success;
+  } catch (err) {
+    return withFailLoud(errorResult(err), identity);
+  }
+}
+async function dispatch(opts, identity, tool) {
+  const { backend: backend2, args } = opts;
+  switch (tool) {
+    case "spawn_teammate":
+      return backend2.spawnTeammate(identity, {
+        name: args.name,
+        description: args.description,
+        prompt: args.prompt,
+        ...args.context !== void 0 ? { context: args.context } : {}
+      });
+    case "send_message":
+      guardNonEmptyString(args.message, "message");
+      return backend2.sendMessage(identity, { target: args.target, message: args.message });
+    case "list_agents":
+      return backend2.listAgents(identity);
+    case "interrupt_agent":
+      if (!backend2.interruptEnabled) throw new TypeError("unsupported team tool: interrupt_agent");
+      return backend2.interruptAgent(identity, { target: args.target });
+    // 0.4.0 注销 member_set_model case（工具面 9 个；未知工具由上游分派拒绝）。
+    case "wait_agent":
+      return backend2.waitAgent(
+        identity,
+        { ...args.timeout_ms !== void 0 ? { timeout_ms: args.timeout_ms } : {} },
+        opts.emitProgress,
+        opts.signal
+      );
+    case "team_task_create":
+      return backend2.taskCreate(identity, {
+        subject: args.subject,
+        description: args.description,
+        ...args.blocked_by !== void 0 ? { blocked_by: args.blocked_by } : {},
+        ...args.write_scopes !== void 0 ? { write_scopes: args.write_scopes } : {}
+      });
+    case "team_task_list":
+      if (args.ready !== void 0 && typeof args.ready !== "boolean") {
+        throw invalidArg('param "ready" must be a boolean');
+      }
+      if (args.cursor !== void 0) guardSafeInteger(args.cursor, "cursor");
+      if (args.limit !== void 0) guardSafeInteger(args.limit, "limit");
+      if (args.status !== void 0 && args.status !== "pending" && args.status !== "in_progress" && args.status !== "completed") {
+        throw invalidArg('param "status" must be one of pending, in_progress, completed');
+      }
+      return backend2.taskList(identity, {
+        ...args.status !== void 0 ? { status: args.status } : {},
+        ...args.owner !== void 0 ? { owner: args.owner } : {},
+        ...args.ready !== void 0 ? { ready: args.ready } : {},
+        ...args.cursor !== void 0 ? { cursor: args.cursor } : {},
+        ...args.limit !== void 0 ? { limit: args.limit } : {}
+      });
+    case "team_task_get":
+      return backend2.taskGet(identity, { task_id: args.task_id });
+    case "team_task_update":
+      return backend2.taskUpdate(identity, {
+        task_id: args.task_id,
+        expected_revision: args.expected_revision,
+        action: args.action,
+        ...args.subject !== void 0 ? { subject: args.subject } : {},
+        ...args.description !== void 0 ? { description: args.description } : {},
+        ...args.blocked_by !== void 0 ? { blocked_by: args.blocked_by } : {},
+        ...args.write_scopes !== void 0 ? { write_scopes: args.write_scopes } : {},
+        ...args.owner !== void 0 ? { owner: args.owner } : {}
+      });
+    default:
+      throw new TypeError(`unsupported team tool: ${tool}`);
+  }
+}
+function invalidArg(message) {
+  return new TeamError("TEAM_INVALID_ARGUMENT", message);
+}
+function guardNonEmptyString(v, key) {
+  if (typeof v !== "string" || v.length === 0) {
+    throw invalidArg(`param "${key}" must be a non-empty string`);
+  }
+}
+function guardSafeInteger(v, key) {
+  if (typeof v !== "number" || !Number.isSafeInteger(v)) {
+    throw invalidArg(`param "${key}" must be a safe integer`);
+  }
+}
+function isTeamTool(name) {
+  return TEAM_TOOL_NAMES.has(name);
+}
+
+// src/mcp/registry.ts
+function listTeamTools(options = {}) {
+  return teamToolDefinitions(options).map((t) => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.inputSchema,
+    ...t._meta !== void 0 ? { _meta: t._meta } : {}
+  }));
+}
+async function callTeamTool(input, notifier) {
+  const emitProgress = buildProgressSink(input, notifier);
+  return handleTeamToolCall(
+    {
+      backend: input.backend,
+      dataRoot: input.dataRoot,
+      bootTimeMs: input.bootTimeMs,
+      meta: input.meta,
+      args: input.args,
+      ...input.leadMode !== void 0 ? { leadMode: input.leadMode } : {},
+      ...emitProgress !== void 0 ? { emitProgress } : {},
+      ...input.signal !== void 0 ? { signal: input.signal } : {},
+      ...input.now !== void 0 ? { now: input.now } : {}
+    },
+    input.name
+  );
+}
+function buildProgressSink(input, notifier) {
+  if (input.name !== "wait_agent") return void 0;
+  const token = input.meta?.progressToken;
+  if (notifier === void 0 || token === void 0) return void 0;
+  if (typeof token !== "string" && typeof token !== "number") return void 0;
+  return async (progress, message) => {
+    try {
+      await notifier.sendNotification({
+        method: "notifications/progress",
+        params: {
+          progressToken: token,
+          progress,
+          ...message !== void 0 ? { message } : {}
+        }
+      });
+    } catch {
+    }
+  };
+}
+
+// src/provider/resume-provider.ts
+import { createHash as createHash2 } from "node:crypto";
+import fs18 from "node:fs";
+import path17 from "node:path";
+
+// src/provider/lead-wake.ts
+import fs11 from "node:fs";
+import path10 from "node:path";
+
 // src/provider/procgroup.ts
+import { execFile } from "node:child_process";
+import fs10 from "node:fs";
+import path9 from "node:path";
+import { fileURLToPath } from "node:url";
 var HELPER_DEFAULT = path9.join(path9.dirname(fileURLToPath(import.meta.url)), "detach-helper.mjs");
 var SPAWN_HELPER_TIMEOUT_MS = 1e4;
 async function spawnDetached(spec) {
@@ -26812,8 +26838,14 @@ if (!config2.ok) {
 var interruptEnabled = (process.env.TEAM_INTERRUPT ?? "true") !== "false";
 var leadModeRaw = process.env.TEAM_LEAD_MODE;
 var leadMode = validateLeadMode(leadModeRaw);
-if (leadModeRaw !== void 0 && leadModeRaw !== "orchestrator" && leadModeRaw !== "collaborator") {
+var leadModeNormalized = normalizeLeadMode(leadModeRaw);
+if (leadModeRaw !== void 0 && leadModeNormalized === void 0) {
   logErr("daemon", `invalid TEAM_LEAD_MODE ${JSON.stringify(leadModeRaw)} \u2014 falling back to "${leadMode}"`);
+} else if (leadModeRaw === "orchestrator" || leadModeRaw === "collaborator") {
+  logErr(
+    "daemon",
+    `legacy TEAM_LEAD_MODE ${JSON.stringify(leadModeRaw)} mapped to "auto" (issue #9) \u2014 use "always" for proactive orchestration`
+  );
 }
 if (config2.ok) {
   writeRuntimeConfig({ interrupt: interruptEnabled, leadMode, limits: config2.values });
@@ -27026,7 +27058,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   appendJsonl(path20.join(DATA, "logs", "requests.jsonl"), { ts: ts(), method: "tools/list" });
   const debugTools = process.env.TEAM_DEBUG_TOOLS === "1";
   const supportTools = debugTools ? TOOLS : TOOLS.filter((t) => t.name !== "team_ping");
-  return { tools: [...supportTools, ...listTeamTools({ interrupt: backend.interruptEnabled })] };
+  return { tools: [...supportTools, ...listTeamTools({ interrupt: backend.interruptEnabled, leadMode })] };
 });
 server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
   const { name, arguments: args, _meta } = req.params;
@@ -27134,6 +27166,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req, extra) => {
         name,
         args: args ?? {},
         meta,
+        leadMode,
         signal: extra.signal
       },
       // progress 保活：仅 wait_agent + 宿主 progressToken 在场时发（registry 内判定）；

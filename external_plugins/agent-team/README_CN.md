@@ -44,19 +44,19 @@ zcode plugins enable agent-team@zcode-plugins-official
 | `/team` | 会话里输入 `/team` | 输出团队状态文本摘要 + 面板/命令入口（**只读**，不创建/修改任何数据） |
 | `/team-coordination` | 输入 `/team-coordination`（全名 `agent-team:team-coordination`） | 手动（重新）加载团队协作策略 skill；长会话策略丢失后恢复用 |
 
-### 1. 直接说目标（默认 orchestrator 模式）
+### 1. 直接说目标（默认 `auto`：按需委派）
 
-新建一个任务（**必须是新任务**——旧任务不会刷新插件能力），直接描述目标即可。默认 `leadMode: orchestrator` 下 Lead 会自主拆活、组队、分派并独立验收，不需要逐条指挥：
+新建一个任务（**必须是新任务**——旧任务不会刷新插件能力），直接描述目标即可。0.5.0 起默认 `leadMode: auto` 为按需委派语义：会话还没建过队时就是普通单 agent——问答、单文件小改动、纯调研汇总直接处理，不为委派而委派；目标明显值得协作（多角色并行、写域互斥分人、长任务需要独立上下文）时 Lead 才组队：
 
 ```text
 帮我并行推进两件事：一边给 src/utils 补单元测试，一边审查 README 与 CHANGELOG 的措辞，完成后汇总。
 ```
 
-Lead 的动作链：创建队友 → 在共享任务板建任务并指定 owner → 等待各成员完成 → 独立复核（读 diff、跑测试）→ 验收通过后汇总给你（D26/D27）。
+会话里建过队后（持久判定——inactive/failed 成员也算），Lead 按委派价值逐请求判断：值得走团队流程的才委派（带验收标准、owner 与独立复核的任务，D26/D27），其余自己直接处理并说明一句理由（issue #9 / D28）。
 
-### 2. 点名指挥（collaborator 模式 / 想精确控制时）
+### 2. 点名指挥与另外两档
 
-把 `leadMode` 配置为 `collaborator` 后 Lead 等你指示再建队；任何时候想精确控制，也直接下指令：
+任何时候想精确控制，直接下指令：
 
 ```text
 创建一个叫 reviewer 的队友，让它检查 README 前三段的错别字，然后汇总它的结论。
@@ -69,6 +69,8 @@ Lead 的动作链：创建队友 → 在共享任务板建任务并指定 owner 
 ```text
 列一下现在的成员和任务状态。
 ```
+
+另外两档：`always` 恢复 0.5.0 之前的主动编排（从首条消息起自主拆活、组队、分派、验收，无需逐条指挥）；`off` 完全关闭智能体团队（不注入任何团队上下文、不注册团队工具）。
 
 模型会把这些话术映射到对应工具（`spawn_teammate` / `send_message` / `list_agents` / `team_task_list` …），你不需要记工具名。
 
@@ -103,14 +105,14 @@ Lead 的动作链：创建队友 → 在共享任务板建任务并指定 owner 
 
 1. 会话里出现「智能体团队」面板（`spawn_teammate` 的结果携带面板打开提示，桌面上会定向打开），成员区显示 `lead`（当前会话）与 `reviewer`；
 2. `reviewer` 创建并开始工作，面板/任务板出现任务与状态变化；
-3. `reviewer` 完成后向 Lead 汇报，Lead（orchestrator 下先独立复核）汇总给你；
+3. `reviewer` 完成后向 Lead 汇报，Lead（委派出去的工作先独立复核）汇总给你；
 4. `reviewer` 的会话是隐藏子会话，不会和 Lead 平级出现在左侧任务栏。
 
-## 工具速查（模型可见 9 个；`interrupt:false` 时 8 个）
+## 工具速查（模型可见 9 个；`interrupt:false` 时 8 个；`leadMode:off` 时 0 个）
 
 | 工具 | 谁用 | 作用 |
 |---|---|---|
-| `spawn_teammate` | Lead | 创建一个有名字的持久队友（`context: fresh\|fork`；模型自动跟随 Lead，无独立参数；orchestrator 模式下 Lead 会主动组队） |
+| `spawn_teammate` | Lead | 创建一个有名字的持久队友（`context: fresh\|fork`；模型自动跟随 Lead，无独立参数；目标明显值得委派时再组队） |
 | `send_message` | 全体 | 给另一个成员发消息：运行中在最近回合边界送达；空闲则拉起/恢复一轮 |
 | `list_agents` | 全体 | 列出 Lead 与全部队友的 target 与可用状态（`inactive` = 当前无回合，不代表任务失败） |
 | `interrupt_agent` | Lead | 中断一个队友当前回合，保留其待处理收件箱（**配置关闭时此工具不注册 → 8 个**） |
@@ -133,7 +135,7 @@ Lead 的动作链：创建队友 → 在共享任务板建任务并指定 owner 
 | `maxMessageBytes` | 65536 | 成员间单条消息的最大字节数 |
 | `disposalTimeoutMs` | 5000 | 团队处置（结算与回收）的超时时间 |
 | `interrupt` | true | 关闭后模型只拿到 8 个工具（`interrupt_agent` 不注册） |
-| `leadMode` | orchestrator | `orchestrator`：Lead 自主组队、分配、独立验收；`collaborator`：等你指示再建队 |
+| `leadMode` | auto | `auto`：按需委派（建队前=普通单 agent，建队后按委派价值判断）；`always`：始终主动编排；`off`：完全关闭智能体团队（不注入、0 团队工具）。旧值 `orchestrator`/`collaborator` 按 `auto` 处理（issue #9） |
 
 ## 网络访问、依赖与副作用
 
@@ -270,8 +272,9 @@ zcode plugins list --json        # 看 version / rootPath / dataPath / diagnosti
 | D23 | 历史事件名/旧 checkpoint 自动兼容：旧 `team/message` 归一为 `team/message/queued`，旧 delivered 结构归一为字符串数组；历史团队数据可读 |
 | D24 | 策略文本在 SessionStart（startup/resume）注入；Lead 极长会话中途可能因上下文压缩丢失，可重新加载 skill 或开新任务 |
 | D25 | 插件只写宿主任务索引的两个白名单点（会话隔离 anchor 墓碑、`sidebar-audit --apply`）；`db.sqlite` 一律只读 |
-| D26 | Lead 默认 `orchestrator` 模式：主动组队/分配/独立验收，不亲自实现（除一行级修复或无人可派）；`collaborator` 恢复“等你指示” |
+| D26 | `always` 档（0.5.0 前的默认 `orchestrator`）：主动组队/分配/独立验收，不亲自实现（除一行级修复或无人可派） |
 | D27 | 任务 `complete` 是“提交”，Lead 需独立复核后才算验收完成；失败会 `reopen` 并附具体问题，通过则在任务描述里追加验收记录 |
+| D28 | 0.5.0 起默认 `auto`（issue #9）：建队前不注入任何模式段；首个队友创建后注入按需段（委派价值判断+正反例）；`off` 完全停注入并注销团队工具；旧值 `orchestrator`/`collaborator` 统一迁移 `auto`；0.5.0 前的 runtime-config 落盘视为过期 |
 
 ## 文档
 
