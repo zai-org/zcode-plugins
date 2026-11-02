@@ -34,25 +34,20 @@
     if (!id) return "—";
     return id.length > 26 ? id.slice(0, 23) + "…" : id;
   }
-  function stripWs(s) {
-    return String(s).replace(/\s+/g, "");
-  }
-
 
   css = document.createElement("style");
   css.textContent =
-    ".__sspills-row{position:absolute;bottom:10px;transform:translateX(-50%);" +
-    "display:inline-flex;align-items:center;gap:6px;z-index:30;transition:left .12s ease;}" +
-    ".__sspills-pill{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 12px;" +
-    "border-radius:8px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);" +
-    "color:rgba(232,235,241,.88);font:500 13px/1 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;" +
-    "cursor:pointer;white-space:nowrap;transition:border-color .15s,background .15s;}" +
-    ".__sspills-pill:hover{border-color:rgba(122,162,247,.55);background:rgba(122,162,247,.08);}" +
+    ".__sspills-row{position:fixed;display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
+    ".__sspills-pill{display:inline-flex;align-items:center;gap:6px;height:20px;padding:1px 8px;" +
+    "border-radius:6px;background:transparent;border:0;color:rgba(232,235,241,.55);" +
+    "font:500 12px/20px 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;font-variant-numeric:tabular-nums;" +
+    "cursor:pointer;white-space:nowrap;transition:background .15s,color .15s;}" +
+    ".__sspills-pill:hover{background:rgba(255,255,255,.06);color:rgba(232,235,241,.82);}" +
     ".__sspills-pill .ico{display:inline-flex;align-items:center;}" +
     ".__sspills-pill .ico svg{width:14px;height:14px;display:block;}" +
-    ".__sspills-pill b{font-weight:600;}" +
-    ".__sspills-pill .sep{opacity:.5;margin:0 6px;}" +
-    ".__sspills-pill .dv{opacity:.3;margin:0 4px;border-left:1px solid currentColor;height:12px;}" +
+    ".__sspills-pill b{font-weight:600;color:rgba(232,235,241,.72);}" +
+    ".__sspills-pill .sep{opacity:.45;margin:0 6px;}" +
+    ".__sspills-pill .dv{opacity:.25;margin:0 5px;border-left:1px solid currentColor;height:11px;}" +
     ".__sspills-pill .live{color:#9ece6a;font-size:8px;margin-left:4px;}" +
     ".__sspills-row.stale .__sspills-pill{opacity:.4;}" +
     ".__sspills-pop{position:fixed;display:none;width:400px;max-width:calc(100vw - 16px);z-index:2147483000;" +
@@ -70,8 +65,9 @@
     ".__sspills-pop .div{height:1px;background:rgba(255,255,255,.09);margin:7px 0;}" +
     ".__sspills-pop .foot{color:rgba(232,235,241,.4);font-size:11px;margin-top:2px;}" +
     "@media (prefers-color-scheme: light){" +
-    ".__sspills-pill{background:rgba(0,0,0,.045);border-color:rgba(0,0,0,.12);color:rgba(28,30,36,.88);}" +
-    ".__sspills-pill:hover{border-color:rgba(59,91,219,.5);background:rgba(59,91,219,.06);}" +
+    ".__sspills-pill{color:rgba(28,30,36,.55);}" +
+    ".__sspills-pill:hover{background:rgba(0,0,0,.05);color:rgba(28,30,36,.85);}" +
+    ".__sspills-pill b{color:rgba(28,30,36,.72);}" +
     ".__sspills-pop{background:#fff;border-color:rgba(0,0,0,.14);color:rgba(28,30,36,.9);" +
     "box-shadow:0 10px 36px rgba(0,0,0,.18);}" +
     ".__sspills-pop td.k{color:rgba(28,30,36,.52);}" +
@@ -387,17 +383,6 @@
     return el;
   }
 
-  function stripWs(s) {
-    return String(s).replace(/\s+/g, "");
-  }
-  function findChipByText(root, txt) {
-    var btns = root.querySelectorAll("button,[role='button']");
-    for (var i = 0; i < btns.length; i++) {
-      if (stripWs(btns[i].textContent) === txt) return btns[i];
-    }
-    return null;
-  }
-
   /* 只取「可见」的输入条容器——多标签页时隐藏标签页的 dock 也在 DOM 里。
      不能用 offsetParent 判断（fixed 定位/特殊容器下恒为 null，可见也会误判为隐藏），
      改用实测宽度 > 0。 */
@@ -412,16 +397,10 @@
 
   /* 布局调度器：所有触发点只置脏标记，界面稳定后才执行一次完整布局。
      - 尾随防抖 180ms：滚轮滑动/侧栏动画等过渡帧全部跳过，只在静止后布局一次
-     - 档位判定用「稳定宽度」（宽度持续 300ms 才认），过渡帧不换档
-     - 档位带真滞回（±24px），临界宽度不反复跳
-     - 空隙不足先降档；连续 4 次放不下才隐藏，条件恢复立即回来 */
+     - 统计行挂在输入条下方（fixed），宽度只取决于输入条宽度：按「宽→窄」挑第一个放得下的档位 */
   var dead = false;      // teardown 后置 true：一切异步回调早退，死实例不碰 DOM
-  var lastLeft = -9999, lastBottom = -9999;
+  var lastLeft = -9999, lastTop = -9999;
   var layoutTimer = 0;
-  var shrinkStreak = 0;
-  var basisW = 0;      // 稳定宽度（档位判定基准）
-  var pendingW = 0;    // 待确认的新宽度
-  var pendingSince = 0;
   var lastScrollAt = 0; // 滚动豁免：滚动后 700ms 内不布局（滚动中会话顶栏/输入条有过渡动画）
 
   function requestLayout() {
@@ -442,17 +421,6 @@
       }
       layout();
     }, 180);
-  }
-
-  function stableWidth(w) {
-    if (!basisW || Math.abs(w - basisW) <= 2) {
-      if (!basisW) basisW = w;
-      pendingW = 0;
-      return basisW;
-    }
-    if (Math.abs(w - pendingW) > 2) { pendingW = w; pendingSince = Date.now(); }
-    else if (Date.now() - pendingSince > 300) { basisW = pendingW; pendingW = 0; }
-    return basisW;
   }
 
   /* 清扫幽灵实例：React 重建 dock 会泄漏旧 rowEl（代码只追新不删旧），
@@ -476,99 +444,45 @@
       if (rowEl) { rowEl.remove(); }
       return;
     }
-    if (!rowEl || rowEl.parentElement !== dock || !rowEl.isConnected) {
-      if (!rowEl) rowEl = makeRow();
-      dock.appendChild(rowEl);
-    }
     var dockRect = dock.getBoundingClientRect();
-    var trig = dock.querySelector('[data-testid="chat-model-select-trigger"]');
-    if (!trig) { rowEl.style.display = "none"; return; }
-    var leftChip = findChipByText(dock, "电脑操作") || findChipByText(dock, "完全访问");
-    var leftEdge;
-    if (leftChip) {
-      leftEdge = leftChip.getBoundingClientRect().right;
-    } else {
-      leftEdge = dockRect.left + 60;
+    if (!(dockRect.width > 0 && dockRect.height > 0)) {
+      if (rowEl) rowEl.style.display = "none";
+      return;
     }
-    /* 右边界 = 左 chip 右侧、与 chip 同一水平带的按钮（模型选择器、上下文图标等）中
-       最近者的左边缘。垂直带过滤（±22px）排除悬浮在输入条上方的「回到底部」按钮、
-       提示条等——它们不该影响 pill 的空隙计算。 */
-    var trigRect = trig.getBoundingClientRect();
-    var leftChipRect = leftChip ? leftChip.getBoundingClientRect() : null;
-    var bandCy = leftChipRect
-      ? (leftChipRect.top + leftChipRect.bottom) / 2
-      : (trigRect.top + trigRect.bottom) / 2;
-    var rightEdge = trigRect.left;
-    var btns = dock.querySelectorAll("button,[role='button']");
-    for (var bi = 0; bi < btns.length; bi++) {
-      var br = btns[bi].getBoundingClientRect();
-      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge &&
-          Math.abs((br.top + br.bottom) / 2 - bandCy) < 22) {
-        rightEdge = br.left;
-      }
+    /* 统计行挂在输入条下方（fixed 挂 body），不再和 chip/模型选择器抢同一行空间 */
+    if (!rowEl || !rowEl.isConnected) {
+      if (!rowEl) rowEl = makeRow();
+      document.body.appendChild(rowEl);
     }
-    var gap = rightEdge - leftEdge;
-    var dockW = stableWidth(dockRect.width); // 档位判定用稳定宽度，过渡帧不换档
-
-    /* 档位判定：按稳定宽度 + 真滞回（升降门槛错开 48px），临界宽度稳定不跳 */
-    var HY = 24;
-    var want;
-    if (pillMode === "full") want = dockW >= 700 - HY ? "full" : (dockW >= 460 - HY ? "mid" : "mini");
-    else if (pillMode === "mid") want = dockW >= 700 + HY ? "full" : (dockW >= 460 - HY ? "mid" : "mini");
-    else want = dockW >= 700 + HY ? "full" : (dockW >= 460 + HY ? "mid" : "mini");
-
-    var order = [want];
-    var all = ["full", "mid", "mini", "micro"];
-    for (var ai = 0; ai < all.length; ai++) {
-      if (all[ai] !== want) order.push(all[ai]);
-    }
-    var chosen = null;
     ensureModeSpans();
-    for (var mi = 0; mi < order.length; mi++) {
-      var mode = order[mi];
+    var avail = Math.round(dockRect.width - 24); // 左右各留 12px，与输入条左缘对齐
+    var all = ["full", "mid", "mini", "micro"];
+    var chosen = null;
+    for (var ai = 0; ai < all.length; ai++) {
+      var mode = all[ai];
       setModeSpans(mode); // 纯 display 切换，零重建
       rowEl.style.display = "";
-      if (gap >= rowEl.offsetWidth + 24) { chosen = mode; break; }
+      // 换档时多留 8px 余量，防止内容在临界宽度上反复升降档
+      var need = rowEl.offsetWidth + (mode === pillMode ? 0 : 8);
+      if (avail >= need) { chosen = mode; break; }
     }
     if (!chosen) {
-      /* 放不下就立即隐藏——宁可暂时不显示，也绝不停在旧位置压住模型选择器/发送按钮 */
-      shrinkStreak = 0;
+      rowEl.style.display = "none"; // 连 micro 都放不下：宁可隐藏也不压住界面
+      return;
+    }
+    pillMode = chosen;
+    setModeSpans(chosen);
+    var pillH = rowEl.offsetHeight || 20;
+    var top = Math.round(dockRect.bottom + 4);
+    /* 输入条下方没有一行空间（小窗/贴底布局）→ 不显示，绝不上移压住输入条 */
+    if (top + pillH > window.innerHeight - 2) {
       rowEl.style.display = "none";
       return;
     }
-    shrinkStreak = 0;
-    pillMode = chosen;
-    setModeSpans(chosen);
-    var centerX = (leftEdge + rightEdge) / 2;
-    var newLeft = Math.round(centerX - dockRect.left);
-    var pillH = rowEl.offsetHeight || 30;
-    var newBottom = Math.max(0, Math.round((dockRect.bottom - (trigRect.top + trigRect.height / 2)) - pillH / 2));
-    /* 位置亚像素防抖：变化 ≤1px 不应用（悬浮态量出的亚像素抖动直接吞掉） */
-    if (Math.abs(newLeft - lastLeft) > 1) { rowEl.style.left = newLeft + "px"; lastLeft = newLeft; }
-    if (Math.abs(newBottom - lastBottom) > 1) { rowEl.style.bottom = newBottom + "px"; lastBottom = newBottom; }
+    var left = Math.round(dockRect.left + 12);
+    if (Math.abs(left - lastLeft) > 1) { rowEl.style.left = left + "px"; lastLeft = left; }
+    if (Math.abs(top - lastTop) > 1) { rowEl.style.top = top + "px"; lastTop = top; }
     rowEl.style.display = "";
-    /* 落位自校正：绝对定位的包含块可能被宿主 transform 改写（侧栏动画等），
-       量出实际中心与目标中心的偏差回写一次；校正后仍越界就隐藏，绝不压住原生控件。
-       校正期间关掉 left 过渡，否则量到的是动画中间值，会把自己越修越偏。 */
-    rowEl.style.transition = "none";
-    for (var pass = 0; pass < 2; pass++) {
-      var rr = rowEl.getBoundingClientRect();
-      if (!rr.width) break;
-      var delta = centerX - (rr.left + rr.width / 2);
-      if (Math.abs(delta) < 1.5) break;
-      var curLeft = parseFloat(rowEl.style.left || "0") || 0;
-      var fixedLeft = Math.round(curLeft + delta);
-      rowEl.style.left = fixedLeft + "px";
-      lastLeft = fixedLeft;
-    }
-    var fr = rowEl.getBoundingClientRect();
-    rowEl.style.transition = "";
-    if (fr.width > 0 && (fr.left < leftEdge - 2 || fr.right > rightEdge + 2)) {
-      rowEl.style.display = "none"; // 实测仍压到原生控件：本帧不显示
-      return;
-    }
-    /* 宽度已变但尚未稳定：再排一次布局，让稳定宽度有机会生效 */
-    if (pendingW) setTimeout(requestLayout, 340);
   }
 
   var scheduled = false;
@@ -592,10 +506,11 @@
       lastScrollAt = Date.now();
     }
   }, true);
-  window.addEventListener("resize", function () { requestLayout(); if (popupOpen) renderPopup(); });
+  window.addEventListener("resize", function () { clampNow(); requestLayout(); if (popupOpen) renderPopup(); });
   document.addEventListener("scroll", function () {
     lastScrollAt = Date.now();
     if (popupOpen) renderPopup();
+    clampNow();       // 统计行跟随输入条移动（fixed 坐标，滚轮时不能等防抖）
     requestLayout(); // 记录豁免；滚动停稳后会补执行一次
   }, true);
 
@@ -603,41 +518,23 @@
   mo.observe(document.documentElement, {
     childList: true, subtree: true, attributes: true, attributeFilter: ["data-session-id"],
   });
-  /* 立即钳制：输入框尺寸突变（侧栏开合）时先保证 pill 不压原生控件，
-     防抖布局随后再正式归位。避免防抖窗口期内 pill 悬在旧位置形成「留痕」。 */
+  /* 立即贴位：输入框尺寸/位置突变（侧栏开合、滚动）时先把统计行跟到位，
+     防抖布局随后再决定档位。坐标是视口坐标，fixed 定位直接用，没有包含块换算问题。 */
   function clampNow() {
-    if (dead || !rowEl || rowEl.style.display === "none") return;
+    if (dead || !rowEl) return;
     var dock = visibleDock();
     if (!dock) return;
-    var trig = dock.querySelector('[data-testid="chat-model-select-trigger"]');
-    if (!trig) return;
-    var trigRect = trig.getBoundingClientRect();
     var dockRect = dock.getBoundingClientRect();
-    var leftChip = findChipByText(dock, "电脑操作") || findChipByText(dock, "完全访问");
-    var leftEdge = leftChip ? leftChip.getBoundingClientRect().right : dockRect.left + 60;
-    var bandCy = leftChip
-      ? (leftChip.getBoundingClientRect().top + leftChip.getBoundingClientRect().bottom) / 2
-      : (trigRect.top + trigRect.bottom) / 2;
-    var rightEdge = trigRect.left;
-    var btns = dock.querySelectorAll("button,[role='button']");
-    for (var bi = 0; bi < btns.length; bi++) {
-      var br = btns[bi].getBoundingClientRect();
-      if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge &&
-          Math.abs((br.top + br.bottom) / 2 - bandCy) < 22) rightEdge = br.left;
-    }
-    var pw = rowEl.offsetWidth || 0;
-    if (!pw) return;
-    if (rightEdge - leftEdge < pw + 24) {
-      rowEl.style.display = "none"; // 空隙已不够：先隐，等防抖布局选到合适档位再显
+    if (!(dockRect.width > 0)) return;
+    var pillH = rowEl.offsetHeight || 20;
+    var top = Math.round(dockRect.bottom + 4);
+    if (rowEl.style.display !== "none" && (top + pillH > window.innerHeight - 2 || dockRect.width - 24 < rowEl.offsetWidth)) {
+      rowEl.style.display = "none"; // 空间不够先隐，等布局选档
       return;
     }
-    var centerX = (leftEdge + rightEdge) / 2;
-    var newLeft = Math.round(centerX - dockRect.left);
-    var curLeft = parseFloat(rowEl.style.left || "0") || 0;
-    if (Math.abs(newLeft - curLeft) > 1) {
-      rowEl.style.left = newLeft + "px";
-      lastLeft = newLeft;
-    }
+    var left = Math.round(dockRect.left + 12);
+    if (Math.abs(left - lastLeft) > 1) { rowEl.style.left = left + "px"; lastLeft = left; }
+    if (Math.abs(top - lastTop) > 1) { rowEl.style.top = top + "px"; lastTop = top; }
   }
 
   /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：
