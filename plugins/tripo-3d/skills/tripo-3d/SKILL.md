@@ -6,9 +6,10 @@ description: Generate a 3D model from a text prompt, a reference image, or an ex
 # Tripo 3D
 
 Generate engine-ready 3D assets with the Tripo MCP tools.
-The cost is not estimated by this document: show a live estimate if available,
-otherwise disclose that uncertainty and obtain explicit consent before any
-billed task. A plan is not a quote.
+Use a live estimate if available. A dated list-price estimate may be shown with
+its source, region and date, but is not a live quote; disclose any unestimated
+steps and obtain explicit consent before any billed task. A plan is advisory,
+not a budget limit or an authorization ticket.
 
 ## Before you start
 
@@ -63,13 +64,25 @@ too.
 
 ## Workflow
 
-1. **Plan** — for any billed generation or chain, call `tripo_plan` first,
-   show the draft to the user, and wait for explicit confirmation. Skip only
-   for pure reads (`tripo_balance`, `tripo_usage`, `tripo_task_status` /
-   `tripo_task_list`).
+1. **Plan** — for any billed generation or chain, call `tripo_plan` first.
+   For `tripo_text_to_3d`, `tripo_image_to_3d` and `tripo_multiview_to_3d`
+   steps only, supply a structured `generation` object; include the exact
+   `prompt` for text-to-3D. Never attach `generation` to other tools, including
+   `tripo_image_to_splat`. Free-text `params` alone leave the model unresolved.
+   For these three generation tools, review the exact payload with `dry_run` only
+   when the connected tool schema exposes it. For other steps review their actual
+   schemas and current pricing without inventing a `dry_run` argument. Resolve
+   conflicts with explicit requirements before billing; do not accept silently
+   stripped requirements.
+   Show each billed step, selected model, options and estimate or
+   `not_estimated` to the user, and wait for explicit confirmation. Skip the
+   plan only for pure reads (`tripo_balance`, `tripo_usage`, `tripo_task_status`
+   / `tripo_task_list`). Re-plan and reconfirm changed paid steps.
 2. **Create** — `tripo_text_to_3d` for prompts (Chinese or English, concrete
    nouns + style + materials), `tripo_image_to_3d` for images. Both return a
-   `task_id` immediately.
+   `task_id` immediately. If creation times out without a `task_id`, do not
+   automatically retry: check the original account's balance and task history
+   when available, then ask the user before considering another submission.
 3. **Wait** — call `tripo_task_wait` with the `task_id`; each call returns
    within about 55 s, so call it again while status is still `queued`/`running`
    (a generation takes 1–4 minutes). Do not invent your own sleep loop and do
@@ -80,10 +93,12 @@ too.
    `failure_reason` honestly; failed-task credits are refunded automatically.
    Do not silently re-roll a disappointing result — say what is off and ask;
    re-rolling means creating a new task with the same prompt.
-5. **Post-process** (each step is a new billed task: create → `tripo_task_wait`;
-   `input` takes a model task_id, a `file_token` or a public model URL unless
-   noted):
-   - `tripo_texture` — texture or re-texture a model.
+5. **Post-process** (each asynchronous task requires `tripo_task_wait`; check
+   billing for each step — `tripo_rig_check` is free. `input` takes a model
+   task_id, a `file_token` or a public model URL unless noted):
+   - `tripo_texture` — texture or re-texture a model. Provide guidance for an
+     imported mesh; it may be omitted for a Tripo-generated model. Re-supply
+     the original reference image when re-texturing a model made from one.
    - `tripo_rig_check` → `tripo_rig` — check riggability before spending rig
      credits, then add a skeleton with the `rig_type` the check returned.
      Prompt characters as **T-pose** at generation time; `spec: "unity"` for
@@ -105,9 +120,10 @@ too.
      `pivot_to_center_bottom` or `scale_factor`, bills as "complex convert".
    - `tripo_decimate` — high-poly → low-poly (`face_limit` 500–20000, bakes the
      original textures); `tripo_segment` → `tripo_mesh_complete` — split into
-     parts and close the cuts; `tripo_mesh_edit` — redo one region of an
-     existing mesh with P2 (`bbox` required). Stylize (lego / voxel /
-     voronoi / minecraft) has been retired — there is no `tripo_stylize` tool.
+     parts and close the cuts. `tripo_mesh_edit` can redo one region of an
+     existing mesh with P2 (`bbox` required). It is experimental; use it only
+     when the connected server's actual tool list exposes it. Stylize (lego /
+     voxel / voronoi / minecraft) has been retired — there is no `tripo_stylize` tool.
 6. **Deliver** — result URLs (`model_url` and `output_urls`) **expire after
    about 2 hours**; never cache or re-print an old one — call
    `tripo_task_status` for fresh links. Download the file into the project
@@ -121,12 +137,17 @@ too.
    request. Do not paste other URLs from `output_urls`. After a
    `tripo_convert`, the native GLB stays on the earlier task — fetch it with
    `tripo_task_status` on that task instead of paying for another conversion.
+   Call `tripo_usage` with all workflow task IDs and report actual total and
+   per-task charges; if the ledger is unavailable, say the amount is pending.
 
 ## Scenario → tool chain
 
-Pick the chain from what the user is building; every arrow is a billed task
-followed by `tripo_task_wait`. GLB is the native output — a `tripo_convert`
-step is only worth its credits when the target really needs another format.
+Pick the chain from what the user is building; each asynchronous task must
+finish before a dependent step runs. Check each tool's billing and input rules:
+`tripo_rig_check` is free and rig uses the original model, not the check task.
+The examples below are suggestions only; an explicitly requested compatible
+model overrides the usage-based default. GLB is the native output — a
+`tripo_convert` step is only worth its credits when the target needs another format.
 
 - **Game prop, mobile / WebGL / many instances** — generate with
   explicit `model: "P2"` and a confirmed `face_limit` →
@@ -149,9 +170,9 @@ step is only worth its credits when the target really needs another format.
   `["preset:walk", "preset:idle"]`; creatures use their body-specific presets
   (e.g. `preset:quadruped:walk`); explicit v1.0 humanoids alone use
   `preset:biped:*`.
-- **LOD chain** — generate once → one `tripo_decimate` per level
-  (`face_limit` is a target, not a hard ceiling — say so when the project has
-  a strict budget).
+- **LOD chain** — generate once → one `tripo_decimate` per level, each using
+  the original generation task as input, not the previous LOD (`face_limit` is
+  a target, not a hard ceiling — say so when the project has a strict budget).
 - **Better views of one image** — `tripo_image_to_multiview` →
   `tripo_multiview_to_3d` with `multiview_task_id`; when the user already has
   2–4 orthographic views, `tripo_multiview_to_3d` takes them directly.
@@ -166,13 +187,17 @@ step is only worth its credits when the target really needs another format.
 
 ## Parameters that matter
 
-- **Choose the generation model explicitly**: P2 for game/realtime topology
-  (costs more credits than H/P1); within the P series the default is P2, and P1 is
-  used only when the user names it or picks it for lower cost and speed. Use v3.1
-  for film/render/print. This is plugin policy, not an API requirement. Confirm
-  the model, texture options and cost; re-confirm any paid model change.
-- **PBR is opt-in.** Send `pbr: false` on every generation and `tripo_texture`
-  call unless the user explicitly asks for PBR materials (for example "with
+- **Choose the generation model explicitly**: the user's explicitly chosen model
+  wins over usage-based defaults. If it conflicts with required features, explain
+  the conflict and ask before changing model or dropping a requirement. Otherwise,
+  P2 is preferred for game/realtime topology (costs more credits than H/P1);
+  within the P series the default is P2, and P1 is used only when the user names it
+  or picks it for lower cost and speed. Use v3.1 for film/render/print. This is
+  plugin policy, not an API requirement. Confirm the model, texture options and
+  cost; re-confirm any paid model change.
+- **PBR is opt-in.** Send `pbr: false` on every `tripo_text_to_3d`,
+  `tripo_image_to_3d`, `tripo_multiview_to_3d` and `tripo_texture` call unless
+  the user explicitly asks for PBR materials (for example "with
   PBR" or 「PBR 材质」); only then send `pbr: true`, which also forces
   `texture: true`. The API turns PBR on when `pbr` is left out, so never omit
   it. Detailed or high-quality textures do not mean PBR. PBR can still be added
@@ -185,7 +210,8 @@ step is only worth its credits when the target really needs another format.
   credits entirely; convert to `STL` (add `flatten_bottom: true` for stability).
 - `quad: true` (v3.1 or P2) is delivered as FBX directly, so FBX needs no
   `tripo_convert`; a convert with `quad: true` always outputs FBX (GLTF is
-  rejected). P1 does not support `quad` (the tool strips it and notes it).
+  rejected). P1 does not support `quad`; if the user requests both, stop and
+  ask which requirement to change before creating a paid task.
 
 ## Inputs
 
@@ -202,10 +228,11 @@ step is only worth its credits when the target really needs another format.
 - Model files (GLB/FBX/OBJ/STL, ≤150 MB) use the same ticket with
   `kind: "model"` and `format`; the `file_token` then feeds
   `tripo_import_model` or any processing tool directly.
-- Task ids chain: a successful generation task is a valid `input` for every
-  processing tool, so never re-upload what Tripo already has. A task id only
-  resolves under the API key that created it; when an older task is not found,
-  upload the local model file instead.
+- Task ids chain: use a successful model task where the processing tool accepts
+  it. Animation requires a successful rig task, mesh completion a segment task,
+  and smart segmentation a file token or URL. Rig uses the original model task,
+  not a rig-check task. A task id only resolves under the API key that created
+  it; when an older task is not found, upload the local model file instead.
 
 ## Other tools
 
@@ -214,8 +241,8 @@ step is only worth its credits when the target really needs another format.
   per-stage breakdown when a chain misbehaves.
 - `tripo_task_list` — status of up to 100 task ids in one call (batches).
 - `tripo_usage` — recent per-task credit spend (includes per-task breakdown).
-- `tripo_mesh_edit` — P2 regional regenerate (`bbox` + optional
-  `ref_image`).
+- `tripo_mesh_edit` — experimental P2 regional regenerate (`bbox` + optional
+  `ref_image`); use only if the connected server lists it.
 
 ## Spending the user's credits
 
@@ -235,9 +262,10 @@ step is only worth its credits when the target really needs another format.
 
 Model versions, generation/processing parameters, 2D steps and list prices:
 read [`references/capability.md`](references/capability.md). `tripo_plan`
-confirms before spend and `tripo_mesh_edit` redoes a P2 region.
+is advisory and requires confirmation before spend; `tripo_mesh_edit` redoes a
+P2 region only when the connected server lists the experimental tool.
 
 Retopology: `tripo_decimate` with explicit `model: "v3.0", smart_uv: true`
-combines retopology and UVs (35 tri / 40 quad credits). Standalone
+combines retopology and UVs; check current pricing. Standalone
 `tripo_smart_uv` is a separate billed UV-layout task for inputs up to 80,000
 equivalent triangles; confirm the choice and cost. See the capability reference.

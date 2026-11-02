@@ -1,9 +1,10 @@
 # Capability reference
 
 Mirrors the official API docs so the agent never has to send the user there.
-Pass these parameters as MCP tool arguments. The tools auto-fix the linkage
-rules below (pbr→texture, model-specific strips, quad→FBX) and report what they
-changed in `notes`.
+Pass these parameters as MCP tool arguments. Tools may adjust linkage rules
+(pbr→texture, model-specific strips, quad→FBX) and report changes in `notes`.
+Preflight explicit user requirements first: if an adjustment would remove or
+change one, resolve the conflict with the user before creating a paid task.
 
 ## Models
 
@@ -16,9 +17,11 @@ changed in `notes`.
 
 Website model names map to these rows: H3.1 → `v3.1`, P1.0 → `P1`, P2.0 → `P2`.
 
-Selection policy: explicitly choose P2 for game/realtime topology; within the
-P series the default is P2, and P1 is used only when the user names it or picks
-it for lower cost and speed; v3.1 for film/render/print.
+Selection policy: the explicitly requested model wins over use-based defaults;
+resolve incompatible requirements with the user before any paid call. Otherwise,
+explicitly choose P2 for game/realtime topology; within the P series the default
+is P2, and P1 is used only when the user names it or picks it for lower cost and
+speed; v3.1 for film/render/print.
 This is plugin guidance, not an API requirement. Do not rely on implicit routing
 or infer a generation model from face_limit. Confirm the model, texture options
 and estimated cost before a billed call; re-confirm any paid model change.
@@ -59,9 +62,8 @@ Multiview (2–4 images): `front` is mandatory and at least two views are needed
 ## Retopology and UV workflows
 
 `tripo_decimate` defaults to v2.0. Explicit `model: "v3.0"` supports
-`smart_uv: true` in the same task: 35 credits triangle / 40 quad, versus
-30 for v2.0; smart_uv adds no extra charge. Confirm this model/cost change
-before submitting. With any other model, `smart_uv: true` is rejected and no
+`smart_uv: true` in the same task. Check current pricing and confirm any
+model/cost change before submitting. With any other model, `smart_uv: true` is rejected and no
 task is created. v2.0/v3.0 targets: 500–20000 triangles or 500–10000 quads.
 The face budget is a target, not a ceiling. The combined task has no UV preview.
 
@@ -75,19 +77,19 @@ paid task for integrated smart_uv without confirming the extra cost.
 
 ## Processing steps
 
-Every tool takes a model task_id, a `file_token` or a model URL as `input`,
-except: `tripo_animate` (`task_id` of a successful rig task),
+Most mesh processing tools accept a model task_id, a `file_token` or a model URL
+as `input`. Check each tool's schema; for example: `tripo_animate` (`task_id` of a successful rig task),
 `tripo_mesh_complete` (`task_id` of a successful segment task) and
 `tripo_smart_segment` (file_token or URL only, never a task_id).
 
 | MCP tool | arguments and constraints |
 | --- | --- |
-| `tripo_texture` | `texture_quality` `standard`/`detailed`/`extreme`/`fast` (fast requires v3.5); `pbr` (send `false` unless the user explicitly asks for PBR); `texture_seed`; `texture_alignment`; `model` as the short name: `v3.0` (`v3.0-20250812`, default) / `v3.5` (`v3.5-20260815`, newest; unlocks `delight` and `texture_quality: "fast"`, picked automatically for them when `model` is omitted) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. Guidance — exactly one of `prompt` (+ optional `style_image`), `image`, or `images` (4 views front/left/back/right). Re-textures any model, including imported files |
-| `tripo_mesh_edit` | P2 regional regenerate: `input` (task_id / file_token / URL) + axis-aligned `bbox` in model space; optional `ref_image`. Rest of mesh kept. Billed separately |
-| `tripo_plan` | Free draft of the tool chain **before** any billed call; show the user and wait for confirmation. Skip only for pure reads (balance / usage / task status) |
+| `tripo_texture` | `texture_quality` `standard`/`detailed`/`extreme`/`fast` (fast requires v3.5); `pbr` (send `false` unless the user explicitly asks for PBR); `texture_seed`; `texture_alignment`; `model` as the short name: `v3.0` (`v3.0-20250812`, default) / `v3.5` (`v3.5-20260815`, newest; unlocks `delight` and `texture_quality: "fast"`, picked automatically for them when `model` is omitted) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. Guidance — select one of `prompt` (+ optional `style_image`), `image`, `images` (4 views front/left/back/right), or native `texture_prompt`; native `texture_prompt` cannot be combined with the shortcut fields. Provide guidance for imported meshes; it may be omitted for Tripo-generated models. Re-supply the original reference image when re-texturing a model made from one. Re-textures any model, including imported files |
+| `tripo_mesh_edit` | Experimental P2 regional regenerate: use only when listed by the connected server. `input` (task_id / file_token / URL) + axis-aligned `bbox` in model space; optional `ref_image`. Rest of mesh kept. Billed separately |
+| `tripo_plan` | Free advisory draft **before** any billed call. Pass structured `generation` only for `tripo_text_to_3d`, `tripo_image_to_3d` and `tripo_multiview_to_3d`; text-to-3D requires its exact prompt. Do not add `generation` to other steps such as `tripo_image_to_splat`. Review `dry_run` only for these three when their connected schemas expose it; validate other steps against their own schemas. Free-text `params` alone leave the model unresolved. Show billed steps and estimates or `not_estimated`, then wait for explicit confirmation; not a quote or budget lock. Skip only for pure reads |
 | `tripo_convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo` (FBX only). `quad` with `GLTF` is rejected. A non-default `quad`, `flatten_bottom`/`flatten_bottom_threshold`, `texture_size`, `texture_format`, `pivot_to_center_bottom` or `scale_factor`, or any `face_limit`, bills the complex tier (10 credits instead of 5); the other options do not |
 | `tripo_import_model` | GLB/GLTF/FBX/OBJ/STL ≤150 MB via `file_token` or URL (`.gltf` only as a URL — upload `.glb`) |
-| `tripo_rig_check` | free. GLB input. Result: `riggable` and recommended `rig_type`: `biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`. Gate step — not riggable → stop; riggable → rig the **original model task**, not the check task |
+| `tripo_rig_check` | free. Input: successful model task ID, `file_token`, or public model URL; documented file formats are GLB, FBX, OBJ and STL (up to 150 MB). Result: `riggable` and recommended `rig_type`: `biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`. Gate step — not riggable → stop; riggable → rig the **original model task**, not the check task |
 | `tripo_rig` | `model`: always pass it by body type: `v3.0` (`v3.0-20260909`) for `biped` and `others`, `v2.5` (`v2.5-20260210`, the official animal rig) for `quadruped`/`hexapod`/`octopod`/`avian`/`serpentine`/`aquatic`. When it is omitted the MCP sends v3.0 for every body type, and the API's own default is `v1.0-20240301`, which rigs bipeds only. v3.0 is required for `others` and the `actorcore`/`unity`/`unreal`/`vrm` specs. Both take `preset:walk` / `preset:idle` on bipeds and body-type clips on creatures. Explicit `v1.0-20240301` (`v1.0`) is legacy biped-only for 90+ `preset:biped:*` clips. Read the returned model before animation. `rig_type` comes from rig-check; rig the original model, not the check task. `spec` is biped-only; `out_format` is `glb`/`fbx`. |
 | `tripo_animate` | needs a rig task. `animations: [...]` (≤5, billed per clip). `out_format` `glb`/`fbx`, `animate_in_place` (no root motion — game code drives movement), `export_with_geometry` (true); `bake_animation` is deprecated — do not pass it (it is ignored) |
 | `tripo_segment` | `model` `v1.0-20250506` (geometry-based, default) or `v2.0-20260430` (semantic, beta) with `segmentation_granularity` `simple`/`balanced`/`detailed`, `split_by_connectivity` (true), `ref_image` (overrides the other two). The tool switches to v2.0 automatically when a v2-only argument is set without `model`; an explicit `v1.0-20250506` with any of them is rejected and no task is created |
@@ -127,7 +129,10 @@ or `inputs`), `tripo_image_to_multiview`, `tripo_edit_multiview`,
   and OpenAI `chat_image_2`,
   `chat_image_2.5_flare` (faster), `chat_image_2.5_sunburst` (edits keep
   untouched regions closer to the original). `chat_image_1` is retired (2026-10-23)
-  and `chat_image_1.5` retires on 2026-12-01: pick `chat_image_2` or a 2.5 model.
+  and `chat_image_1.5` retires on 2026-12-01. Before retirement it remains
+  available where supported; respect a user's explicit selection. After retirement
+  explain alternatives such as `chat_image_2` or a 2.5 model and confirm any
+  replacement or changed cost; never silently substitute a paid model.
   GPT-image options: `quality` `low`/`medium`/`high` (`chat_image_2`; 2.5 also
   `xhigh`/`max`; omitted = `low`); `background` `auto`/`opaque`/`transparent`
   (2.5 only; `transparent` needs `output_format: "png"`).
@@ -194,7 +199,7 @@ Afterwards use the usage ledger and task `credits_consumed` for actual spending;
 | add-ons per generation | `texture_quality: "detailed"` +10, `"extreme"` +20; v3.1 only: `geometry_quality: "detailed"` +20, `quad` +5, `smart_low_poly` +10, `generate_parts` +20 (P2 `quad` has no surcharge) |
 | `tripo_texture` | 10 standard / 20 detailed / 30 extreme |
 | `tripo_convert` | 5, or 10 with a complex-tier option (see the convert row) |
-| `tripo_decimate` | 35 tri / 40 quad (v3.0; smart_uv included), 30 (v2.0), 10 (v1.0) |
+| `tripo_decimate` | Check current pricing for the selected model and options; mark not_estimated if unavailable |
 | `tripo_smart_uv` | 20 |
 | `tripo_segment` / `tripo_mesh_complete` | 40 / 50 (`quick_cap` 30) |
 | `tripo_smart_segment` | 85 image / 55 model |

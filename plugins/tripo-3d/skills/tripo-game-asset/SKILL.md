@@ -8,10 +8,11 @@ description: Recipes for producing game-ready 3D assets with Tripo and wiring th
 Recipes on top of the `tripo-3d` skill. Read that skill first — it covers
 authorization, the `tripo_task_wait` loop (call again while
 `queued`/`running`), credit rules and the full parameter reference. Every
-recipe runs through the Tripo MCP tools only. Every arrow below is a billed
-task followed by `tripo_task_wait`; the `input` of each step is the previous
-step's `task_id`. Every generation and `tripo_texture` call sends `pbr: false`
-unless the user explicitly asks for PBR.
+recipe runs through the Tripo MCP tools only. Wait for every asynchronous task
+before its dependent step; billing and inputs vary: `tripo_rig_check` is free,
+and rig uses the original model task rather than the check task. Each
+`tripo_text_to_3d`, `tripo_image_to_3d`, `tripo_multiview_to_3d` and
+`tripo_texture` call sends `pbr: false` unless the user explicitly asks for PBR.
 
 The point of these recipes is that assets land in the project's own directory
 structure: after each final step download the file with
@@ -21,10 +22,13 @@ local path.
 
 ## Pick a budget first
 
-Explicitly choose P2 for game/realtime topology; within the P series the default
-is P2, and P1 is used only when the user names it or picks it for lower cost and
-speed; v3.1 for film/render/print. Confirm the selected
-model, texture options and estimated cost; re-confirm any paid model change.
+An explicitly requested model takes priority over these recipes. If it cannot
+support a requested feature, explain the conflict and ask before changing the
+model or dropping the feature. Otherwise, explicitly choose P2 for game/realtime
+topology; within the P series the default is P2, and P1 is used only when the
+user names it or picks it for lower cost and speed; v3.1 for film/render/print.
+Confirm the selected model, texture options and estimated or unestimated cost;
+re-confirm any paid model change. The example calls below use defaults only.
 
 | target                        | generation call                                              | export                                       |
 | ----------------------------- | ------------------------------------------------------------ | -------------------------------------------- |
@@ -34,7 +38,8 @@ model, texture options and estimated cost; re-confirm any paid model change.
 
 Two budget-related choices the defaults do not make for you:
 
-- **Quads at low poly** — P1 does not support `quad` (the tool strips it); use `model: "P2", quad: true`
+- **Quads at low poly** — P1 does not support `quad`. If the user requested both,
+  ask which to change before submitting; otherwise use `model: "P2", quad: true`
   (face_limit 48–25000 quads, price depends on texture options;
   confirm the estimate, output is FBX) or v3.1 with
   `smart_low_poly: true, quad: true` (face_limit 500–10000).
@@ -134,6 +139,6 @@ asset manifest — rather than stopping at "the file is generated". Check the
 preview first so a wrong asset does not get wired in.
 
 Retopology: `tripo_decimate` with explicit `model: "v3.0", smart_uv: true`
-combines retopology and UVs (35 tri / 40 quad credits). Standalone
+combines retopology and UVs; check current pricing. Standalone
 `tripo_smart_uv` is a separate billed UV-layout task for inputs up to 80,000
 equivalent triangles; confirm the choice and cost. See the capability reference.
