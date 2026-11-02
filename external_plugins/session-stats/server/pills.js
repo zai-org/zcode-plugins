@@ -374,22 +374,34 @@
     return docks[0] || null;
   }
 
-  /* 布局调度器：所有触发点只置脏标记，每帧最多执行一次完整布局。
-     - 单次布局内一次性量取全部几何（同一 dock、同一帧），杜绝跨 dock/过期 rect
-     - 档位判定带真滞回（±24px），临界宽度不再反复跳档
-     - 空隙不足时先降档；连续 4 次（≈2 秒）都放不下才隐藏，恢复条件一到立即回来 */
-  var layoutDirty = true;
-  var layoutScheduled = false;
+  /* 布局调度器：所有触发点只置脏标记，界面稳定后才执行一次完整布局。
+     - 尾随防抖 180ms：滚轮滑动/侧栏动画等过渡帧全部跳过，只在静止后布局一次
+     - 档位判定用「稳定宽度」（宽度持续 300ms 才认），过渡帧不换档
+     - 档位带真滞回（±24px），临界宽度不反复跳
+     - 空隙不足先降档；连续 4 次放不下才隐藏，条件恢复立即回来 */
+  var layoutTimer = 0;
   var shrinkStreak = 0;
+  var basisW = 0;      // 稳定宽度（档位判定基准）
+  var pendingW = 0;    // 待确认的新宽度
+  var pendingSince = 0;
 
   function requestLayout() {
-    layoutDirty = true;
-    if (layoutScheduled) return;
-    layoutScheduled = true;
-    requestAnimationFrame(function () {
-      layoutScheduled = false;
-      if (layoutDirty) { layoutDirty = false; layout(); }
-    });
+    if (layoutTimer) clearTimeout(layoutTimer);
+    layoutTimer = setTimeout(function () {
+      layoutTimer = 0;
+      layout();
+    }, 180);
+  }
+
+  function stableWidth(w) {
+    if (!basisW || Math.abs(w - basisW) <= 2) {
+      if (!basisW) basisW = w;
+      pendingW = 0;
+      return basisW;
+    }
+    if (Math.abs(w - pendingW) > 2) { pendingW = w; pendingSince = Date.now(); }
+    else if (Date.now() - pendingSince > 300) { basisW = pendingW; pendingW = 0; }
+    return basisW;
   }
 
   /* 清扫幽灵实例：React 重建 dock 会泄漏旧 rowEl（代码只追新不删旧），
@@ -436,9 +448,9 @@
       if (br.width > 0 && br.left > leftEdge + 4 && br.left < rightEdge) rightEdge = br.left;
     }
     var gap = rightEdge - leftEdge;
-    var dockW = dockRect.width;
+    var dockW = stableWidth(dockRect.width); // 档位判定用稳定宽度，过渡帧不换档
 
-    /* 档位判定：按 dock 宽度 + 真滞回（升降门槛错开 48px），临界宽度稳定不跳 */
+    /* 档位判定：按稳定宽度 + 真滞回（升降门槛错开 48px），临界宽度稳定不跳 */
     var HY = 24;
     var want;
     if (pillMode === "full") want = dockW >= 700 - HY ? "full" : (dockW >= 460 - HY ? "mid" : "mini");
@@ -475,6 +487,8 @@
     var pillH = rowEl.offsetHeight || 30;
     rowEl.style.bottom = Math.max(0, Math.round((dockRect.bottom - (trigRect.top + trigRect.height / 2)) - pillH / 2)) + "px";
     rowEl.style.display = "";
+    /* 宽度已变但尚未稳定：再排一次布局，让稳定宽度有机会生效 */
+    if (pendingW) setTimeout(requestLayout, 340);
   }
 
   var scheduled = false;
