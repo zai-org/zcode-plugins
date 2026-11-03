@@ -58,7 +58,7 @@ API Key。本构建的 MCP 只对接国内站；海外站账号请安装海外�
 - **文件写入**：只在你要求把模型落到本地时，用 `curl` 把结果下载到项目目录；Hook 与 MCP 服务器本身不写任何文件。
 - **命令执行**：仅在上传本地图片/模型（`tripo_upload_ticket` 返回的 curl）或下载结果时运行 shell 命令。插件不会安装或调用任何命令行客户端，MCP 失败、未授权、批量或本地落盘需求也不例外。
 - **Hook**：`hooks/session-start.mjs` 依赖 PATH 中的 `node`，只从 stdin 读取事件、向 stdout 输出一段固定文本，不访问网络、不读写文件。
-- **不采集任何数据**：插件本体不含遥测；账号凭据由 ZCode 的凭据存储管理，不经过对话。
+- **遥测**：插件本体没有独立的分析 SDK。已部署的 Tripo MCP 服务启用分析时，可以记录工具调用结果、任务元数据及能够解析出的 Tripo 账号 ID。插件声明非凭据请求头 `X-Tripo-Distribution: zcode_plugin`；宿主透传时，服务端会分别记录分发渠道和识别出的客户端（如 ZCode、Claude 或 unknown）。埋点不包含提示词、API Key、OAuth token、文件路径或签名下载链接。账号凭据由 ZCode 的凭据存储管理，不经过对话。
 
 ## 来源与许可
 
