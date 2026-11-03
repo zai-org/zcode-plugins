@@ -1443,6 +1443,36 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "twelvedata",
+      "source": "./external_plugins/twelvedata",
+      "description": "Twelve Data market data in ZCode: symbol search, real-time and historical prices, technical indicators, fundamentals, and reference data for stocks, ETFs, forex, and crypto through the official Twelve Data MCP server.",
+      "description_i18n": {
+        "en": "Twelve Data market data in ZCode: symbol search, real-time and historical prices, technical indicators, fundamentals, and reference data for stocks, ETFs, forex, and crypto through the official Twelve Data MCP server.",
+        "zh-CN": "在 ZCode 中使用 Twelve Data 市场数据：通过官方 Twelve Data MCP 服务查询股票、ETF、外汇和加密货币的代码搜索、实时与历史行情、技术指标、基本面和参考数据。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Twelve Data",
+        "url": "https://twelvedata.com"
+      },
+      "category": "finance",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/twelvedata/icon.png",
+      "displayName": "Twelve Data",
+      "displayName_i18n": {
+        "en": "Twelve Data",
+        "zh-CN": "Twelve Data"
+      },
+      "keywords": [
+        "twelvedata",
+        "finance",
+        "market-data",
+        "stocks",
+        "forex",
+        "crypto",
+        "mcp"
+      ]
     }
   ]
 }
