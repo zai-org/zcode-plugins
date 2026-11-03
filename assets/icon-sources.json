@@ -2559,5 +2559,14 @@
     "homepage": "https://www.liblib.tv",
     "mimeType": "image/png",
     "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
+  },
+  {
+    "name": "twelvedata",
+    "icon": "twelvedata/icon.png",
+    "source": "https://twelvedata.com/build/favicons/favicon-512.png",
+    "matchedBy": "official-homepage-icon",
+    "homepage": "https://twelvedata.com",
+    "mimeType": "image/png",
+    "sha256": "bfb386759537c6652c302b987b19b2b9f2754a24e925c48e4cca7e733e7b8f40"
   }
 ]

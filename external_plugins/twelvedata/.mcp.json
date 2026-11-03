@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "twelvedata": {
+      "type": "http",
+      "url": "https://mcp.twelvedata.com/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    }
+  }
+}
