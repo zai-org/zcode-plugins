@@ -20,6 +20,7 @@ import kicad_launch as kl  # noqa: E402
 
 FIXTURE = HERE / "fixtures" / "pcbnew-translocated.ips"
 FAST = dict(stable_s=0.2, socket_s=0.4, report_s=0.5, poll_s=0.02)
+SCHEDULE_S = 5.0
 
 PCBNEW = r'''#!/usr/bin/env python3
 import os
@@ -111,7 +112,10 @@ class LaunchTest(unittest.TestCase):
 
     def launch(self, **kw):
         child_env = dict(os.environ)
-        return kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.reports, socket_dir=self.sockets, env=child_env, **{**FAST, **kw})
+        timings = {**FAST, "stable_s": getattr(self, "stable_s", FAST["stable_s"]), **kw}
+        if os.environ.get("FAKE_MODE") in {"crash", "odd_crash", "die"}:
+            timings["stable_s"] = max(timings["stable_s"], SCHEDULE_S)
+        return kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.reports, socket_dir=self.sockets, env=child_env, **timings)
 
     def log(self, name):
         f = self.tmp / name
@@ -128,10 +132,13 @@ class LaunchTest(unittest.TestCase):
         """
         self.exe.write_text(f"#!/bin/sh\nexit {code}\n")
         self.exe.chmod(self.exe.stat().st_mode | stat.S_IXUSR)
+        # The workspace runs packages concurrently. Give the deliberately short-
+        # lived child enough CPU scheduling time before calling it a healthy GUI.
+        self.stable_s = SCHEDULE_S
 
     def test_exact_child_stays_up_and_creates_live_socket(self):
         t = time.monotonic()
-        self.assertEqual(self.launch(), (True, "opened in PCB Editor.app; live KiCad API socket ready"))
+        self.assertEqual(self.launch(socket_s=SCHEDULE_S), (True, "opened in PCB Editor.app; live KiCad API socket ready"))
         self.assertGreaterEqual(time.monotonic() - t, FAST["stable_s"], "must watch the exact process for the whole stability window")
         self.assertEqual(self.log("argv"), [str(self.pcb)])
         self.assertEqual(self.log("xattr.log"), [], "nothing to diagnose when it runs")
@@ -157,7 +164,15 @@ class LaunchTest(unittest.TestCase):
         child_env = dict(os.environ)
         child_env.pop("KICAD_CONFIG_HOME", None)
         child_env.pop("KICAD_DOCUMENTS_HOME", None)
-        ok, _ = kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.reports, socket_dir=self.sockets, env=child_env, **FAST)
+        ok, _ = kl.launch_editor(
+            self.editor,
+            self.pcb,
+            self.app_dir,
+            report_dir=self.reports,
+            socket_dir=self.sockets,
+            env=child_env,
+            **{**FAST, "socket_s": SCHEDULE_S},
+        )
         self.assertTrue(ok)
         self.assertEqual(self.log("child-env"), ["KICAD_CONFIG_HOME=<unset>", "KICAD_DOCUMENTS_HOME=<unset>"])
 
@@ -263,7 +278,15 @@ class LaunchTest(unittest.TestCase):
 
     def test_missing_report_directory(self):
         self.make_editor_exit_immediately()
-        ok, note = kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.tmp / "no-such-dir", socket_dir=self.sockets, env=dict(os.environ), **FAST)
+        ok, note = kl.launch_editor(
+            self.editor,
+            self.pcb,
+            self.app_dir,
+            report_dir=self.tmp / "no-such-dir",
+            socket_dir=self.sockets,
+            env=dict(os.environ),
+            **{**FAST, "stable_s": self.stable_s},
+        )
         self.assertFalse(ok)
         self.assertIn("exit 9", note)
 
