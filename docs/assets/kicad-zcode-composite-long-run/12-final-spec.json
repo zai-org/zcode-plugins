@@ -1,0 +1,658 @@
+{
+ "name": "power_clock_shift_led_controller",
+ "outline": {
+  "width_mm": 70.0,
+  "height_mm": 48.0,
+  "corner_radius_mm": 1.5
+ },
+ "layers": 2,
+ "parts": [
+  {
+   "ref": "J1",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "value": "5V in",
+   "x_mm": 8.0,
+   "y_mm": 6.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "U1",
+   "symbol": "Regulator_Linear:AP2112K-3.3",
+   "footprint": "Package_TO_SOT_SMD:SOT-23-5",
+   "value": "AP2112K-3.3",
+   "x_mm": 13.0,
+   "y_mm": 9.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C1",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "value": "1uF",
+   "x_mm": 12.0,
+   "y_mm": 18.0,
+   "rotation": 90.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C2",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "value": "1uF",
+   "x_mm": 15.5,
+   "y_mm": 14.5,
+   "rotation": 90.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "J2",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "value": "3V3 out",
+   "x_mm": 8.0,
+   "y_mm": 13.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "U2",
+   "symbol": "Timer:NE555D",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "value": "NE555D",
+   "x_mm": 26.0,
+   "y_mm": 10.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R1",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "1k",
+   "x_mm": 20.0,
+   "y_mm": 5.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R2",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "68k",
+   "x_mm": 32.0,
+   "y_mm": 5.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C3",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "value": "10uF",
+   "x_mm": 33.0,
+   "y_mm": 15.0,
+   "rotation": 90.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C4",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "value": "100nF",
+   "x_mm": 26.0,
+   "y_mm": 4.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C5",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "value": "10nF",
+   "x_mm": 19.0,
+   "y_mm": 15.0,
+   "rotation": 90.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "U3",
+   "symbol": "74xx:74HC595",
+   "footprint": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "value": "74HC595",
+   "x_mm": 40.0,
+   "y_mm": 22.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "C6",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "value": "100nF",
+   "x_mm": 48.0,
+   "y_mm": 15.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "J3",
+   "symbol": "Connector_Generic:Conn_01x04",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
+   "value": "SER RCLK SRCLR QH'",
+   "x_mm": 62.0,
+   "y_mm": 4.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "J4",
+   "symbol": "Connector_Generic:Conn_01x09",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical",
+   "value": "3V3 QA QB QC QD QE QF QG QH",
+   "x_mm": 66.0,
+   "y_mm": 14.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R3",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 22.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D1",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 22.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R4",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 25.4,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D2",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 25.4,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R5",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 28.8,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D3",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 28.8,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R6",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 32.2,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D4",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 32.2,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R7",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 35.6,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D5",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 35.6,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R8",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 39.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D6",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 39.0,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R9",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 42.4,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D7",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 42.4,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "R10",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "value": "470",
+   "x_mm": 14.0,
+   "y_mm": 45.8,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  },
+  {
+   "ref": "D8",
+   "symbol": "Device:LED",
+   "footprint": "LED_SMD:LED_0603_1608Metric",
+   "value": "green",
+   "x_mm": 8.0,
+   "y_mm": 45.8,
+   "rotation": 0.0,
+   "side": "top",
+   "lcsc": null,
+   "no_thermal_vias": false
+  }
+ ],
+ "nets": [
+  {
+   "name": "VIN",
+   "pins": [
+    "J1.1",
+    "U1.1",
+    "U1.3",
+    "C1.1",
+    "U2.8",
+    "U2.4",
+    "R1.1",
+    "C4.1"
+   ]
+  },
+  {
+   "name": "+3V3",
+   "pins": [
+    "U1.5",
+    "C2.1",
+    "J2.1",
+    "U3.16",
+    "C6.1",
+    "J4.1"
+   ]
+  },
+  {
+   "name": "GND",
+   "pins": [
+    "J1.2",
+    "U1.2",
+    "C1.2",
+    "C2.2",
+    "J2.2",
+    "U2.1",
+    "C3.2",
+    "C4.2",
+    "C5.2",
+    "U3.8",
+    "U3.13",
+    "C6.2",
+    "D1.1",
+    "D2.1",
+    "D3.1",
+    "D4.1",
+    "D5.1",
+    "D6.1",
+    "D7.1",
+    "D8.1"
+   ]
+  },
+  {
+   "name": "DISCH",
+   "pins": [
+    "U2.7",
+    "R1.2",
+    "R2.1"
+   ]
+  },
+  {
+   "name": "THR",
+   "pins": [
+    "U2.6",
+    "U2.2",
+    "R2.2",
+    "C3.1"
+   ]
+  },
+  {
+   "name": "CTRL",
+   "pins": [
+    "U2.5",
+    "C5.1"
+   ]
+  },
+  {
+   "name": "CLK",
+   "pins": [
+    "U2.3",
+    "U3.11"
+   ]
+  },
+  {
+   "name": "SER",
+   "pins": [
+    "J3.1",
+    "U3.14"
+   ]
+  },
+  {
+   "name": "RCLK",
+   "pins": [
+    "J3.2",
+    "U3.12"
+   ]
+  },
+  {
+   "name": "SRCLR",
+   "pins": [
+    "J3.3",
+    "U3.10"
+   ]
+  },
+  {
+   "name": "QHP",
+   "pins": [
+    "J3.4",
+    "U3.9"
+   ]
+  },
+  {
+   "name": "QA",
+   "pins": [
+    "U3.15",
+    "R3.1",
+    "J4.2"
+   ]
+  },
+  {
+   "name": "QB",
+   "pins": [
+    "U3.1",
+    "R4.1",
+    "J4.3"
+   ]
+  },
+  {
+   "name": "QC",
+   "pins": [
+    "U3.2",
+    "R5.1",
+    "J4.4"
+   ]
+  },
+  {
+   "name": "QD",
+   "pins": [
+    "U3.3",
+    "R6.1",
+    "J4.5"
+   ]
+  },
+  {
+   "name": "QE",
+   "pins": [
+    "U3.4",
+    "R7.1",
+    "J4.6"
+   ]
+  },
+  {
+   "name": "QF",
+   "pins": [
+    "U3.5",
+    "R8.1",
+    "J4.7"
+   ]
+  },
+  {
+   "name": "QG",
+   "pins": [
+    "U3.6",
+    "R9.1",
+    "J4.8"
+   ]
+  },
+  {
+   "name": "QH",
+   "pins": [
+    "U3.7",
+    "R10.1",
+    "J4.9"
+   ]
+  },
+  {
+   "name": "L1",
+   "pins": [
+    "R3.2",
+    "D1.2"
+   ]
+  },
+  {
+   "name": "L2",
+   "pins": [
+    "R4.2",
+    "D2.2"
+   ]
+  },
+  {
+   "name": "L3",
+   "pins": [
+    "R5.2",
+    "D3.2"
+   ]
+  },
+  {
+   "name": "L4",
+   "pins": [
+    "R6.2",
+    "D4.2"
+   ]
+  },
+  {
+   "name": "L5",
+   "pins": [
+    "R7.2",
+    "D5.2"
+   ]
+  },
+  {
+   "name": "L6",
+   "pins": [
+    "R8.2",
+    "D6.2"
+   ]
+  },
+  {
+   "name": "L7",
+   "pins": [
+    "R9.2",
+    "D7.2"
+   ]
+  },
+  {
+   "name": "L8",
+   "pins": [
+    "R10.2",
+    "D8.2"
+   ]
+  }
+ ],
+ "power_nets": [
+  "VIN",
+  "+3V3"
+ ],
+ "ground_nets": [
+  "GND"
+ ],
+ "ground_pour": true,
+ "no_connect": [],
+ "mounting_holes": [
+  {
+   "x_mm": 3.0,
+   "y_mm": 3.0,
+   "drill_mm": 3.2,
+   "keepout_mm": 1.0
+  },
+  {
+   "x_mm": 67.0,
+   "y_mm": 3.0,
+   "drill_mm": 3.2,
+   "keepout_mm": 1.0
+  },
+  {
+   "x_mm": 3.0,
+   "y_mm": 45.0,
+   "drill_mm": 3.2,
+   "keepout_mm": 1.0
+  },
+  {
+   "x_mm": 67.0,
+   "y_mm": 45.0,
+   "drill_mm": 3.2,
+   "keepout_mm": 1.0
+  }
+ ],
+ "fiducials": [],
+ "keepouts": [],
+ "rules": {
+  "signal_width_mm": 0.25,
+  "power_width_mm": 0.5,
+  "clearance_mm": 0.2,
+  "via_diameter_mm": 0.6,
+  "via_drill_mm": 0.3,
+  "edge_clearance_mm": 0.3
+ }
+}

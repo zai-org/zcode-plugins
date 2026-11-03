@@ -1,0 +1,1173 @@
+{
+ "type": "pcb_report",
+ "title": "power_clock_shift_led_controller",
+ "generated_at": "2026-11-03T16:05:47+00:00",
+ "ready_to_order": true,
+ "blocking_problems": [],
+ "board": {
+  "width_mm": 70.0,
+  "height_mm": 48.0,
+  "layers": 2,
+  "corner_radius_mm": 1.5,
+  "mounting_holes": 4
+ },
+ "design_rules": {
+  "signal_width_mm": 0.25,
+  "power_width_mm": 0.5,
+  "clearance_mm": 0.2,
+  "via_diameter_mm": 0.6,
+  "via_drill_mm": 0.3,
+  "edge_clearance_mm": 0.3
+ },
+ "checks": {
+  "spec": {
+   "ok": true,
+   "n_errors": 0,
+   "n_warnings": 0,
+   "issues": []
+  },
+  "drc": {
+   "passed": true,
+   "errors": 0,
+   "warnings": 4,
+   "unconnected": 0,
+   "by_type": {
+    "silk_over_copper": 4
+   },
+   "violations": [
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of H1",
+       "x_mm": 3.0,
+       "y_mm": 3.0
+      },
+      {
+       "what": "NPTH pad of H1",
+       "x_mm": 3.0,
+       "y_mm": 3.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of H2",
+       "x_mm": 67.0,
+       "y_mm": 3.0
+      },
+      {
+       "what": "NPTH pad of H2",
+       "x_mm": 67.0,
+       "y_mm": 3.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of H4",
+       "x_mm": 67.0,
+       "y_mm": 45.0
+      },
+      {
+       "what": "NPTH pad of H4",
+       "x_mm": 67.0,
+       "y_mm": 45.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of H3",
+       "x_mm": 3.0,
+       "y_mm": 45.0
+      },
+      {
+       "what": "NPTH pad of H3",
+       "x_mm": 3.0,
+       "y_mm": 45.0
+      }
+     ]
+    }
+   ],
+   "unconnected_items": [],
+   "kicad_version": "10.0.6"
+  },
+  "routing": {
+   "complete": true,
+   "unrouted": [],
+   "warnings": [],
+   "stats": {
+    "passes": 1,
+    "nets_routed": 26,
+    "vias": 49,
+    "segments": 269,
+    "unrouted_connections": 0,
+    "length_mm": 875.51,
+    "seconds": 7.62,
+    "grid_mm": 0.1,
+    "expansions": 1344313,
+    "searches": 65
+   },
+   "tracks": 269,
+   "vias": 49
+  }
+ },
+ "pin_table": [
+  {
+   "ref": "C1",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "VIN"
+  },
+  {
+   "ref": "C1",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "C2",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "+3V3"
+  },
+  {
+   "ref": "C2",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "C3",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "THR"
+  },
+  {
+   "ref": "C3",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "C4",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "VIN"
+  },
+  {
+   "ref": "C4",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "C5",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "CTRL"
+  },
+  {
+   "ref": "C5",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "C6",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "+3V3"
+  },
+  {
+   "ref": "C6",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D1",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D1",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L1"
+  },
+  {
+   "ref": "D2",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D2",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L2"
+  },
+  {
+   "ref": "D3",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D3",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L3"
+  },
+  {
+   "ref": "D4",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D4",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L4"
+  },
+  {
+   "ref": "D5",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D5",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L5"
+  },
+  {
+   "ref": "D6",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D6",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L6"
+  },
+  {
+   "ref": "D7",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D7",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L7"
+  },
+  {
+   "ref": "D8",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D8",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L8"
+  },
+  {
+   "ref": "J1",
+   "pin": "1",
+   "name": "Pin_1",
+   "type": "passive",
+   "net": "VIN"
+  },
+  {
+   "ref": "J1",
+   "pin": "2",
+   "name": "Pin_2",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "J2",
+   "pin": "1",
+   "name": "Pin_1",
+   "type": "passive",
+   "net": "+3V3"
+  },
+  {
+   "ref": "J2",
+   "pin": "2",
+   "name": "Pin_2",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "J3",
+   "pin": "1",
+   "name": "Pin_1",
+   "type": "passive",
+   "net": "SER"
+  },
+  {
+   "ref": "J3",
+   "pin": "2",
+   "name": "Pin_2",
+   "type": "passive",
+   "net": "RCLK"
+  },
+  {
+   "ref": "J3",
+   "pin": "3",
+   "name": "Pin_3",
+   "type": "passive",
+   "net": "SRCLR"
+  },
+  {
+   "ref": "J3",
+   "pin": "4",
+   "name": "Pin_4",
+   "type": "passive",
+   "net": "QHP"
+  },
+  {
+   "ref": "J4",
+   "pin": "1",
+   "name": "Pin_1",
+   "type": "passive",
+   "net": "+3V3"
+  },
+  {
+   "ref": "J4",
+   "pin": "2",
+   "name": "Pin_2",
+   "type": "passive",
+   "net": "QA"
+  },
+  {
+   "ref": "J4",
+   "pin": "3",
+   "name": "Pin_3",
+   "type": "passive",
+   "net": "QB"
+  },
+  {
+   "ref": "J4",
+   "pin": "4",
+   "name": "Pin_4",
+   "type": "passive",
+   "net": "QC"
+  },
+  {
+   "ref": "J4",
+   "pin": "5",
+   "name": "Pin_5",
+   "type": "passive",
+   "net": "QD"
+  },
+  {
+   "ref": "J4",
+   "pin": "6",
+   "name": "Pin_6",
+   "type": "passive",
+   "net": "QE"
+  },
+  {
+   "ref": "J4",
+   "pin": "7",
+   "name": "Pin_7",
+   "type": "passive",
+   "net": "QF"
+  },
+  {
+   "ref": "J4",
+   "pin": "8",
+   "name": "Pin_8",
+   "type": "passive",
+   "net": "QG"
+  },
+  {
+   "ref": "J4",
+   "pin": "9",
+   "name": "Pin_9",
+   "type": "passive",
+   "net": "QH"
+  },
+  {
+   "ref": "R1",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "VIN"
+  },
+  {
+   "ref": "R1",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "DISCH"
+  },
+  {
+   "ref": "R2",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "DISCH"
+  },
+  {
+   "ref": "R2",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "THR"
+  },
+  {
+   "ref": "R3",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QA"
+  },
+  {
+   "ref": "R3",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L1"
+  },
+  {
+   "ref": "R4",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QB"
+  },
+  {
+   "ref": "R4",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L2"
+  },
+  {
+   "ref": "R5",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QC"
+  },
+  {
+   "ref": "R5",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L3"
+  },
+  {
+   "ref": "R6",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QD"
+  },
+  {
+   "ref": "R6",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L4"
+  },
+  {
+   "ref": "R7",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QE"
+  },
+  {
+   "ref": "R7",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L5"
+  },
+  {
+   "ref": "R8",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QF"
+  },
+  {
+   "ref": "R8",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L6"
+  },
+  {
+   "ref": "R9",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QG"
+  },
+  {
+   "ref": "R9",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L7"
+  },
+  {
+   "ref": "R10",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QH"
+  },
+  {
+   "ref": "R10",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L8"
+  },
+  {
+   "ref": "U1",
+   "pin": "1",
+   "name": "VIN",
+   "type": "power_in",
+   "net": "VIN"
+  },
+  {
+   "ref": "U1",
+   "pin": "2",
+   "name": "GND",
+   "type": "power_in",
+   "net": "GND"
+  },
+  {
+   "ref": "U1",
+   "pin": "3",
+   "name": "EN",
+   "type": "input",
+   "net": "VIN"
+  },
+  {
+   "ref": "U1",
+   "pin": "4",
+   "name": "NC",
+   "type": "no_connect",
+   "net": "NC",
+   "hidden": true
+  },
+  {
+   "ref": "U1",
+   "pin": "5",
+   "name": "VOUT",
+   "type": "power_out",
+   "net": "+3V3"
+  },
+  {
+   "ref": "U2",
+   "pin": "1",
+   "name": "GND",
+   "type": "power_in",
+   "net": "GND"
+  },
+  {
+   "ref": "U2",
+   "pin": "2",
+   "name": "TRIG",
+   "type": "input",
+   "net": "THR"
+  },
+  {
+   "ref": "U2",
+   "pin": "3",
+   "name": "OUT",
+   "type": "output",
+   "net": "CLK"
+  },
+  {
+   "ref": "U2",
+   "pin": "4",
+   "name": "RST",
+   "type": "input",
+   "net": "VIN"
+  },
+  {
+   "ref": "U2",
+   "pin": "5",
+   "name": "CONT",
+   "type": "passive",
+   "net": "CTRL"
+  },
+  {
+   "ref": "U2",
+   "pin": "6",
+   "name": "THRES",
+   "type": "input",
+   "net": "THR"
+  },
+  {
+   "ref": "U2",
+   "pin": "7",
+   "name": "DISCH",
+   "type": "input",
+   "net": "DISCH"
+  },
+  {
+   "ref": "U2",
+   "pin": "8",
+   "name": "VCC",
+   "type": "power_in",
+   "net": "VIN"
+  },
+  {
+   "ref": "U3",
+   "pin": "1",
+   "name": "QB",
+   "type": "tri_state",
+   "net": "QB"
+  },
+  {
+   "ref": "U3",
+   "pin": "2",
+   "name": "QC",
+   "type": "tri_state",
+   "net": "QC"
+  },
+  {
+   "ref": "U3",
+   "pin": "3",
+   "name": "QD",
+   "type": "tri_state",
+   "net": "QD"
+  },
+  {
+   "ref": "U3",
+   "pin": "4",
+   "name": "QE",
+   "type": "tri_state",
+   "net": "QE"
+  },
+  {
+   "ref": "U3",
+   "pin": "5",
+   "name": "QF",
+   "type": "tri_state",
+   "net": "QF"
+  },
+  {
+   "ref": "U3",
+   "pin": "6",
+   "name": "QG",
+   "type": "tri_state",
+   "net": "QG"
+  },
+  {
+   "ref": "U3",
+   "pin": "7",
+   "name": "QH",
+   "type": "tri_state",
+   "net": "QH"
+  },
+  {
+   "ref": "U3",
+   "pin": "8",
+   "name": "GND",
+   "type": "power_in",
+   "net": "GND"
+  },
+  {
+   "ref": "U3",
+   "pin": "9",
+   "name": "QH'",
+   "type": "output",
+   "net": "QHP"
+  },
+  {
+   "ref": "U3",
+   "pin": "10",
+   "name": "SRCLR",
+   "type": "input",
+   "net": "SRCLR"
+  },
+  {
+   "ref": "U3",
+   "pin": "11",
+   "name": "SRCLK",
+   "type": "input",
+   "net": "CLK"
+  },
+  {
+   "ref": "U3",
+   "pin": "12",
+   "name": "RCLK",
+   "type": "input",
+   "net": "RCLK"
+  },
+  {
+   "ref": "U3",
+   "pin": "13",
+   "name": "OE",
+   "type": "input",
+   "net": "GND"
+  },
+  {
+   "ref": "U3",
+   "pin": "14",
+   "name": "SER",
+   "type": "input",
+   "net": "SER"
+  },
+  {
+   "ref": "U3",
+   "pin": "15",
+   "name": "QA",
+   "type": "tri_state",
+   "net": "QA"
+  },
+  {
+   "ref": "U3",
+   "pin": "16",
+   "name": "VCC",
+   "type": "power_in",
+   "net": "+3V3"
+  }
+ ],
+ "pin_table_text": "Ref  Pin  Name   Type        Net\n---  ---  -----  ----------  -----\nC1   1    ~      passive     VIN\nC1   2    ~      passive     GND\nC2   1    ~      passive     +3V3\nC2   2    ~      passive     GND\nC3   1    ~      passive     THR\nC3   2    ~      passive     GND\nC4   1    ~      passive     VIN\nC4   2    ~      passive     GND\nC5   1    ~      passive     CTRL\nC5   2    ~      passive     GND\nC6   1    ~      passive     +3V3\nC6   2    ~      passive     GND\nD1   1    K      passive     GND\nD1   2    A      passive     L1\nD2   1    K      passive     GND\nD2   2    A      passive     L2\nD3   1    K      passive     GND\nD3   2    A      passive     L3\nD4   1    K      passive     GND\nD4   2    A      passive     L4\nD5   1    K      passive     GND\nD5   2    A      passive     L5\nD6   1    K      passive     GND\nD6   2    A      passive     L6\nD7   1    K      passive     GND\nD7   2    A      passive     L7\nD8   1    K      passive     GND\nD8   2    A      passive     L8\nJ1   1    Pin_1  passive     VIN\nJ1   2    Pin_2  passive     GND\nJ2   1    Pin_1  passive     +3V3\nJ2   2    Pin_2  passive     GND\nJ3   1    Pin_1  passive     SER\nJ3   2    Pin_2  passive     RCLK\nJ3   3    Pin_3  passive     SRCLR\nJ3   4    Pin_4  passive     QHP\nJ4   1    Pin_1  passive     +3V3\nJ4   2    Pin_2  passive     QA\nJ4   3    Pin_3  passive     QB\nJ4   4    Pin_4  passive     QC\nJ4   5    Pin_5  passive     QD\nJ4   6    Pin_6  passive     QE\nJ4   7    Pin_7  passive     QF\nJ4   8    Pin_8  passive     QG\nJ4   9    Pin_9  passive     QH\nR1   1    ~      passive     VIN\nR1   2    ~      passive     DISCH\nR2   1    ~      passive     DISCH\nR2   2    ~      passive     THR\nR3   1    ~      passive     QA\nR3   2    ~      passive     L1\nR4   1    ~      passive     QB\nR4   2    ~      passive     L2\nR5   1    ~      passive     QC\nR5   2    ~      passive     L3\nR6   1    ~      passive     QD\nR6   2    ~      passive     L4\nR7   1    ~      passive     QE\nR7   2    ~      passive     L5\nR8   1    ~      passive     QF\nR8   2    ~      passive     L6\nR9   1    ~      passive     QG\nR9   2    ~      passive     L7\nR10  1    ~      passive     QH\nR10  2    ~      passive     L8\nU1   1    VIN    power_in    VIN\nU1   2    GND    power_in    GND\nU1   3    EN     input       VIN\nU1   4    NC     no_connect  NC\nU1   5    VOUT   power_out   +3V3\nU2   1    GND    power_in    GND\nU2   2    TRIG   input       THR\nU2   3    OUT    output      CLK\nU2   4    RST    input       VIN\nU2   5    CONT   passive     CTRL\nU2   6    THRES  input       THR\nU2   7    DISCH  input       DISCH\nU2   8    VCC    power_in    VIN\nU3   1    QB     tri_state   QB\nU3   2    QC     tri_state   QC\nU3   3    QD     tri_state   QD\nU3   4    QE     tri_state   QE\nU3   5    QF     tri_state   QF\nU3   6    QG     tri_state   QG\nU3   7    QH     tri_state   QH\nU3   8    GND    power_in    GND\nU3   9    QH'    output      QHP\nU3   10   SRCLR  input       SRCLR\nU3   11   SRCLK  input       CLK\nU3   12   RCLK   input       RCLK\nU3   13   OE     input       GND\nU3   14   SER    input       SER\nU3   15   QA     tri_state   QA\nU3   16   VCC    power_in    +3V3",
+ "bom": [
+  {
+   "comment": "1uF",
+   "designators": "C1,C2",
+   "refs": [
+    "C1",
+    "C2"
+   ],
+   "footprint": "C_0805_2012Metric",
+   "footprint_id": "Capacitor_SMD:C_0805_2012Metric",
+   "quantity": 2,
+   "lcsc": "",
+   "symbol": "Device:C"
+  },
+  {
+   "comment": "10uF",
+   "designators": "C3",
+   "refs": [
+    "C3"
+   ],
+   "footprint": "C_0805_2012Metric",
+   "footprint_id": "Capacitor_SMD:C_0805_2012Metric",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Device:C"
+  },
+  {
+   "comment": "100nF",
+   "designators": "C4,C6",
+   "refs": [
+    "C4",
+    "C6"
+   ],
+   "footprint": "C_0603_1608Metric",
+   "footprint_id": "Capacitor_SMD:C_0603_1608Metric",
+   "quantity": 2,
+   "lcsc": "",
+   "symbol": "Device:C"
+  },
+  {
+   "comment": "10nF",
+   "designators": "C5",
+   "refs": [
+    "C5"
+   ],
+   "footprint": "C_0603_1608Metric",
+   "footprint_id": "Capacitor_SMD:C_0603_1608Metric",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Device:C"
+  },
+  {
+   "comment": "green",
+   "designators": "D1,D2,D3,D4,D5,D6,D7,D8",
+   "refs": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8"
+   ],
+   "footprint": "LED_0603_1608Metric",
+   "footprint_id": "LED_SMD:LED_0603_1608Metric",
+   "quantity": 8,
+   "lcsc": "",
+   "symbol": "Device:LED"
+  },
+  {
+   "comment": "5V in",
+   "designators": "J1",
+   "refs": [
+    "J1"
+   ],
+   "footprint": "PinHeader_1x02_P2.54mm_Vertical",
+   "footprint_id": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Connector_Generic:Conn_01x02"
+  },
+  {
+   "comment": "3V3 out",
+   "designators": "J2",
+   "refs": [
+    "J2"
+   ],
+   "footprint": "PinHeader_1x02_P2.54mm_Vertical",
+   "footprint_id": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Connector_Generic:Conn_01x02"
+  },
+  {
+   "comment": "SER RCLK SRCLR QH'",
+   "designators": "J3",
+   "refs": [
+    "J3"
+   ],
+   "footprint": "PinHeader_1x04_P2.54mm_Vertical",
+   "footprint_id": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Connector_Generic:Conn_01x04"
+  },
+  {
+   "comment": "3V3 QA QB QC QD QE QF QG QH",
+   "designators": "J4",
+   "refs": [
+    "J4"
+   ],
+   "footprint": "PinHeader_1x09_P2.54mm_Vertical",
+   "footprint_id": "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Vertical",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Connector_Generic:Conn_01x09"
+  },
+  {
+   "comment": "1k",
+   "designators": "R1",
+   "refs": [
+    "R1"
+   ],
+   "footprint": "R_0603_1608Metric",
+   "footprint_id": "Resistor_SMD:R_0603_1608Metric",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Device:R"
+  },
+  {
+   "comment": "68k",
+   "designators": "R2",
+   "refs": [
+    "R2"
+   ],
+   "footprint": "R_0603_1608Metric",
+   "footprint_id": "Resistor_SMD:R_0603_1608Metric",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Device:R"
+  },
+  {
+   "comment": "470",
+   "designators": "R3,R4,R5,R6,R7,R8,R9,R10",
+   "refs": [
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8",
+    "R9",
+    "R10"
+   ],
+   "footprint": "R_0603_1608Metric",
+   "footprint_id": "Resistor_SMD:R_0603_1608Metric",
+   "quantity": 8,
+   "lcsc": "",
+   "symbol": "Device:R"
+  },
+  {
+   "comment": "AP2112K-3.3",
+   "designators": "U1",
+   "refs": [
+    "U1"
+   ],
+   "footprint": "SOT-23-5",
+   "footprint_id": "Package_TO_SOT_SMD:SOT-23-5",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Regulator_Linear:AP2112K-3.3"
+  },
+  {
+   "comment": "NE555D",
+   "designators": "U2",
+   "refs": [
+    "U2"
+   ],
+   "footprint": "SOIC-8_3.9x4.9mm_P1.27mm",
+   "footprint_id": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Timer:NE555D"
+  },
+  {
+   "comment": "74HC595",
+   "designators": "U3",
+   "refs": [
+    "U3"
+   ],
+   "footprint": "SOIC-16_3.9x9.9mm_P1.27mm",
+   "footprint_id": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "74xx:74HC595"
+  }
+ ],
+ "nets": {
+  "VIN": [
+   "J1.1",
+   "U1.1",
+   "U1.3",
+   "C1.1",
+   "U2.8",
+   "U2.4",
+   "R1.1",
+   "C4.1"
+  ],
+  "+3V3": [
+   "U1.5",
+   "C2.1",
+   "J2.1",
+   "U3.16",
+   "C6.1",
+   "J4.1"
+  ],
+  "GND": [
+   "J1.2",
+   "U1.2",
+   "C1.2",
+   "C2.2",
+   "J2.2",
+   "U2.1",
+   "C3.2",
+   "C4.2",
+   "C5.2",
+   "U3.8",
+   "U3.13",
+   "C6.2",
+   "D1.1",
+   "D2.1",
+   "D3.1",
+   "D4.1",
+   "D5.1",
+   "D6.1",
+   "D7.1",
+   "D8.1"
+  ],
+  "DISCH": [
+   "U2.7",
+   "R1.2",
+   "R2.1"
+  ],
+  "THR": [
+   "U2.6",
+   "U2.2",
+   "R2.2",
+   "C3.1"
+  ],
+  "CTRL": [
+   "U2.5",
+   "C5.1"
+  ],
+  "CLK": [
+   "U2.3",
+   "U3.11"
+  ],
+  "SER": [
+   "J3.1",
+   "U3.14"
+  ],
+  "RCLK": [
+   "J3.2",
+   "U3.12"
+  ],
+  "SRCLR": [
+   "J3.3",
+   "U3.10"
+  ],
+  "QHP": [
+   "J3.4",
+   "U3.9"
+  ],
+  "QA": [
+   "U3.15",
+   "R3.1",
+   "J4.2"
+  ],
+  "QB": [
+   "U3.1",
+   "R4.1",
+   "J4.3"
+  ],
+  "QC": [
+   "U3.2",
+   "R5.1",
+   "J4.4"
+  ],
+  "QD": [
+   "U3.3",
+   "R6.1",
+   "J4.5"
+  ],
+  "QE": [
+   "U3.4",
+   "R7.1",
+   "J4.6"
+  ],
+  "QF": [
+   "U3.5",
+   "R8.1",
+   "J4.7"
+  ],
+  "QG": [
+   "U3.6",
+   "R9.1",
+   "J4.8"
+  ],
+  "QH": [
+   "U3.7",
+   "R10.1",
+   "J4.9"
+  ],
+  "L1": [
+   "R3.2",
+   "D1.2"
+  ],
+  "L2": [
+   "R4.2",
+   "D2.2"
+  ],
+  "L3": [
+   "R5.2",
+   "D3.2"
+  ],
+  "L4": [
+   "R6.2",
+   "D4.2"
+  ],
+  "L5": [
+   "R7.2",
+   "D5.2"
+  ],
+  "L6": [
+   "R8.2",
+   "D6.2"
+  ],
+  "L7": [
+   "R9.2",
+   "D7.2"
+  ],
+  "L8": [
+   "R10.2",
+   "D8.2"
+  ]
+ },
+ "fab": {
+  "gerber_files": [
+   "power_clock_shift_led_controller-B_Cu.gbl",
+   "power_clock_shift_led_controller-B_Mask.gbs",
+   "power_clock_shift_led_controller-B_Paste.gbp",
+   "power_clock_shift_led_controller-B_Silkscreen.gbo",
+   "power_clock_shift_led_controller-Edge_Cuts.gm1",
+   "power_clock_shift_led_controller-F_Cu.gtl",
+   "power_clock_shift_led_controller-F_Mask.gts",
+   "power_clock_shift_led_controller-F_Paste.gtp",
+   "power_clock_shift_led_controller-F_Silkscreen.gto",
+   "power_clock_shift_led_controller-NPTH.drl",
+   "power_clock_shift_led_controller-PTH.drl",
+   "power_clock_shift_led_controller-job.gbrjob"
+  ],
+  "gerber_zip_sha256": "38c34566fc2695a031de36a3633e17964af7cf34980f8117bd3a606542c25ce9"
+ },
+ "sources": {
+  "spec_artifact_id": "a_96931266",
+  "pcb_artifact_id": "a_a8d0d129",
+  "kicad_version": "10.0.6"
+ },
+ "limitations": [
+  "2-layer boards only; no RF/microwave, high-voltage/creepage, HDI/microvias, impedance control, differential pairs or length matching.",
+  "Automatic placement is NOT done: part positions come from the spec. Routing is a simple grid router (45-degree tracks, through vias).",
+  "Pin names/numbers come from the official KiCad libraries; they were NOT cross-checked against datasheets. Verify critical pins (power, polarity) yourself.",
+  "No schematic is produced; the spec checker replaces ERC. DRC does not check electrical correctness, only manufacturability rules.",
+  "BOM/pos files are bare-board helpers: part availability, LCSC numbers and pick-and-place rotation offsets are NOT verified (no PCBA support yet)."
+ ],
+ "human_signoff_checklist": [
+  "I checked the pin table: every power/ground/polarity pin goes to the net I intend.",
+  "I reviewed the top and bottom renders and the board outline/size.",
+  "I understand custom boards are not refundable if the design is wrong."
+ ]
+}
