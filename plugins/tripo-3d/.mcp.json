@@ -8,6 +8,15 @@
       "headers": {
         "X-Tripo-Distribution": "zcode_plugin"
       }
+    },
+    "tripo-global": {
+      "type": "http",
+      "url": "https://openapi-mcp.tripo3d.ai/mcp",
+      "enabled": true,
+      "timeoutMs": 90000,
+      "headers": {
+        "X-Tripo-Distribution": "zcode_plugin"
+      }
     }
   }
 }

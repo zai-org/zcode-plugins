@@ -1,6 +1,6 @@
 ---
 name: tripo-3d
-description: Generate a 3D model from a text prompt, a reference image, or an existing mesh, and deliver it as GLB, FBX, OBJ, STL, USDZ or 3MF. Use when the user asks for a 3D asset, model, mesh, prop, character or texture for a game, renderer, viewer, AR scene or 3D print — including requests like "make me a low-poly X", "turn this image into 3D", "rig this character", "convert this model to FBX", or "generate placeholder assets". 中文触发词：生成3D模型、建模、3D素材、把图片变成3D、图生3D、文生3D、骨骼绑定、绑骨、角色动画、贴图、纹理、低模、低多边形、减面、3D打印、手办、格式转换（FBX/GLB/OBJ/STL/USDZ/3MF）。Also use to re-run, convert or inspect a previous Tripo generation.
+description: Generate a 3D model from a text prompt, a reference image, or an existing mesh, and deliver it as GLB, FBX, OBJ, STL, USDZ or 3MF. Use when the user asks for a 3D asset, model, mesh, prop, character or texture for a game, renderer, viewer, AR scene or 3D print — including requests like "make me a low-poly X", "turn this image into 3D", "rig this character", "convert this model to FBX", or "generate placeholder assets", and the same requests in any language (text-to-3D, image-to-3D, rigging, character animation, texturing, low-poly or face reduction, 3D-printed figurines, format conversion). Also use to re-run, convert or inspect a previous Tripo generation.
 ---
 
 # Tripo 3D
@@ -15,14 +15,17 @@ not a budget limit or an authorization ticket.
 
 The tool list must contain the Tripo tools (`tripo_text_to_3d`,
 `tripo_task_wait`, ...; ZCode prefixes them with the MCP server id, e.g.
-`mcp__…__tripo_text_to_3d` — the rest of this skill uses the bare names).
+`mcp__…__tripo_text_to_3d` — the rest of this skill uses the bare names). The
+server id in the prefix tells the region: `tripo` is the China site,
+`tripo-global` is the international site.
 
-If they are missing, the plugin's MCP server is almost always waiting for
-authorization or switched off, not absent. Stop and tell the user: open
-**设置 → MCP**, find the Tripo server under 「Plugin MCP 服务器」, click
-**打开授权** if the row says 「需要授权」 (or enable it), then start a new
-session. See Authorization below. Do not describe generations as if they had
-run.
+If they are missing, the plugin's MCP servers are almost always waiting for
+authorization or switched off, not absent. Stop, ask which site the user's
+Tripo account is on, and tell them: open **Settings → MCP Servers**, find that
+region's server under "Plugin MCP servers", click **Open authorization** if the
+row says "Authorization required" (if it says "Plugin disabled", enable the
+Tripo 3D plugin first), then start a new session. See Authorization below.
+Do not describe generations as if they had run.
 
 MCP is the only execution path. Never install or run a command-line client
 instead — not for a balance check, not because a local login or
@@ -38,15 +41,26 @@ account. ZCode runs the OAuth flow but never opens a browser on its own — the
 user has to click once. Your job is to guide them through the pages; never ask
 for an API key in the chat.
 
-**This plugin build talks to the China-mainland MCP**
-(`https://developers.tripo3d.com/mcp`). The authorization page does **not**
-offer a region picker — it always opens the **国内站** console
-(developers.tripo3d.com, +86 SMS sign-in, Alipay top-up). An overseas-site
-account (developers.tripo3d.ai) will not work here: tell the user to install
-the overseas Tripo 3D plugin build.
+**The plugin ships one MCP server per Tripo region.** An account lives in
+exactly one region, and neither authorization page offers a region picker:
 
-1. **设置 → MCP** → group 「Plugin MCP 服务器」 → the Tripo row shows
-   「需要授权」 → click **打开授权**. The system browser opens the Tripo
+| MCP server | Region | Console |
+| --- | --- | --- |
+| `tripo` (`https://developers.tripo3d.com/mcp`) | China site — mainland China | developers.tripo3d.com, +86 SMS sign-in, Alipay top-up |
+| `tripo-global` (`https://openapi-mcp.tripo3d.ai/mcp`) | International site | developers.tripo3d.ai, email sign-in, Stripe top-up |
+
+Ask once whether the user's account is on the China site or the international
+site, unless they already said. The session context may carry a time-zone region
+hint; use it only to phrase the question, never to choose for the user. No
+account yet? Users in mainland China pick the China site, everyone else the
+international site; they can sign up during authorization and new accounts get
+free credits. Only the chosen server needs authorizing; the other row keeps
+showing "Authorization required", which is expected. ZCode shows these labels
+in its UI language.
+
+1. **Settings → MCP Servers** → group "Plugin MCP servers" → the chosen
+   server's row (`tripo` or `tripo-global`) shows "Authorization required" →
+   click **Open authorization**. The system browser opens that region's
    authorization page.
 2. The page shows a one-time verification code and opens the Tripo console:
    sign in (or sign up — new accounts get free credits), type the code into
@@ -61,6 +75,11 @@ authorization (an account with no key gets `cli-default` created automatically;
 with exactly one key it is used as is). To revoke access, delete that key on
 the console's API Keys page — any other client sharing that key loses access
 too.
+
+If tools from both servers are available, ask which account to spend credits
+from before the first billed step, and keep the whole task chain on that
+server: task IDs, file tokens and balances belong to one region and do not
+carry over to the other server. Never switch servers silently.
 
 ## Workflow
 
@@ -198,7 +217,7 @@ model overrides the usage-based default. GLB is the native output — a
 - **PBR is opt-in.** Send `pbr: false` on every `tripo_text_to_3d`,
   `tripo_image_to_3d`, `tripo_multiview_to_3d` and `tripo_texture` call unless
   the user explicitly asks for PBR materials (for example "with
-  PBR" or 「PBR 材质」); only then send `pbr: true`, which also forces
+  PBR" or "PBR materials", in any language); only then send `pbr: true`, which also forces
   `texture: true`. The API turns PBR on when `pbr` is left out, so never omit
   it. Detailed or high-quality textures do not mean PBR. PBR can still be added
   later: when the user asks for it after a model is already generated, do not

@@ -1097,10 +1097,10 @@
         "en": "Tripo 3D",
         "zh-CN": "Tripo 3D"
       },
-      "description": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
+      "description": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Works with mainland China and international Tripo accounts.",
       "description_i18n": {
-        "en": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
-        "zh-CN": "用文字或图片生成带贴图的 3D 模型，添加骨骼与动画、精简模型面数，导出用于游戏或 3D 打印的素材。需使用 Tripo 国内站账号。"
+        "en": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Works with mainland China and international Tripo accounts.",
+        "zh-CN": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Works with mainland China and international Tripo accounts."
       },
       "version": "0.1.5",
       "author": {
@@ -1125,14 +1125,7 @@
         "Generate a low-poly treasure chest and export it as FBX for Unity",
         "Turn this concept image into a textured 3D model and export it as GLB",
         "Make a 3D-printable knight figurine and export STL"
-      ],
-      "examplePrompts_i18n": {
-        "zh-CN": [
-          "生成一个低多边形的宝箱 3D 模型，导出 FBX 给 Unity 用",
-          "把这张概念图变成带贴图的 3D 模型，导出 GLB",
-          "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
-        ]
-      }
+      ]
     },
     {
       "name": "kicad",
