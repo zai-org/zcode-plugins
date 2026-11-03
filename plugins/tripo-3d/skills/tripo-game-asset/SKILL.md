@@ -1,6 +1,6 @@
 ---
 name: tripo-game-asset
-description: Recipes for producing game-ready 3D assets with Tripo and wiring them into a game project - low-poly props on a face budget, detailed hero assets, LOD chains, and rigged characters with locomotion clips for Unity, Unreal, Godot or Three.js. Use when the user is building a game or real-time 3D scene and needs props, characters, placeholder art, LODs, or an animated rig, rather than a single one-off model. 中文触发词：游戏资产、游戏素材、游戏模型、低模道具、面数预算、LOD、角色绑骨、走跑跳动画、Unity/Unreal/Godot 模型导入。
+description: Recipes for producing game-ready 3D assets with Tripo and wiring them into a game project - low-poly props on a face budget, detailed hero assets, LOD chains, and rigged characters with locomotion clips for Unity, Unreal, Godot or Three.js. Use when the user is building a game or real-time 3D scene and needs props, characters, placeholder art, LODs, or an animated rig, rather than a single one-off model. Also covers walk/run/jump clips and importing models into Unity, Unreal or Godot, whatever language the request is in.
 ---
 
 # Game asset pipeline
