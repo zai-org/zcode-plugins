@@ -1,0 +1,27 @@
+{
+  "name": "figma-mcp",
+  "version": "0.1.0",
+  "description": "Figma MCP integration: screenshots, design context, variables, code connect and FigJam via the official mcp.figma.com server, with guided first-time OAuth setup.",
+  "author": {
+    "name": "Jommmain",
+    "url": "https://github.com/Jommmain"
+  },
+  "keywords": [
+    "figma",
+    "mcp",
+    "design",
+    "ui",
+    "oauth"
+  ],
+  "mcpServers": {
+    "figma": {
+      "type": "http",
+      "url": "https://mcp.figma.com/mcp"
+    }
+  },
+  "skills": "./skills",
+  "description_i18n": {
+    "en": "Figma MCP integration: screenshots, design context, variables, code connect and FigJam via the official mcp.figma.com server, with guided first-time OAuth setup.",
+    "zh-CN": "Figma MCP 集成：通过官方 mcp.figma.com 服务器获取截图、设计上下文、变量、code connect 与 FigJam，并提供首次 OAuth 授权指引。"
+  }
+}
