@@ -95,9 +95,9 @@ class Zone(Item):
 class Editor:
     """What one KiCad editor process looks like through the stub: a board path, its items, and a log of every call."""
 
-    def __init__(self, board, fps, tracks=(), vias=(), pads=(), zones=0, nets=(), selection=(), version="10.0.6"):
+    def __init__(self, board, fps, tracks=(), vias=(), pads=(), zones=0, nets=(), selection=(), version="10.0.6", api_version="10.0.6-0-gtest"):
         self.board, self.fps, self.tracks, self.vias, self.pads, self.zones, self.nets, self.selection = board, fps, list(tracks), list(vias), list(pads), zones, nets, list(selection)
-        self.version, self.calls, self.commits, self.drops, self.pending, self.fail_update = version, [], [], 0, None, False
+        self.version, self.api_version, self.calls, self.commits, self.drops, self.pending, self.fail_update = version, api_version, [], [], 0, None, False
         self.swap_board_after = None  # simulate the user opening another board between two requests
         self.boom = None  # reading the footprints raises this
 
@@ -128,7 +128,7 @@ class KiCadStub:
         return self._ed().version
 
     def get_api_version(self):
-        return "10.0.6-0-gtest"
+        return self._ed().api_version
 
     def get_open_documents(self, doc_type):
         e = self._ed()
@@ -346,13 +346,14 @@ class LiveTest(unittest.TestCase):
         self.assertIn("no KiCad edit session", st["reason"])
 
     def test_two_editors_the_one_with_the_session_board_wins(self):
-        other = self.editor(board="/tmp/other/board.kicad_pcb")
-        mine = self.editor()
+        other = self.editor(board="/tmp/other/board.kicad_pcb", version="10.0.6", api_version="10.0.6-0-gstandard")
+        mine = self.editor(version="10.0.7-huaqiu", api_version="10.0.7-11-ghuaqiu")
         self.socket("api.sock", other)
         self.socket("api-77.sock", mine)
         st = kl.status(self.pcb)
         self.assertTrue(st["available"])
         self.assertEqual(st["editors"], 2)
+        self.assertEqual((st["kicad_version"], st["api_version"]), ("10.0.7-huaqiu", "10.0.7-11-ghuaqiu"))
         self.assertEqual(sorted(st["boards_open"]), ["board.kicad_pcb", "demo.kicad_pcb"])
         kl.snapshot(self.pcb, (50, 50))
         self.assertIn("get_footprints", mine.calls)

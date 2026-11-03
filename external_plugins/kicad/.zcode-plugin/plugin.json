@@ -1,6 +1,6 @@
 {
   "name": "kicad",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Automatically connects to installed official or Huaqiu KiCad 10. Both design, check, render, and export boards; Huaqiu also adds safe public-part search and model comparison without starting DSH.",
   "author": {
     "name": "冯小平",

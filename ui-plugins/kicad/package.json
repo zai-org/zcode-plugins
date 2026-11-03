@@ -1,6 +1,6 @@
 {
   "name": "@zcode/plugin-kicad",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "private": true,
   "description": "ZCode KiCad plugin: automatically connects to installed official or Huaqiu KiCad 10 for 2-layer PCB design, DRC, rendering, fabrication export and real-editor handoff.",
   "license": "MIT",

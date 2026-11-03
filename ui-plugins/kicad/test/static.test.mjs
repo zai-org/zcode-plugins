@@ -76,7 +76,7 @@ test("the vendored worker never reads .env files and the repo has no machine-spe
   }
 });
 
-test("a failed GUI launch is reported as one: pcbnew must stay up, the quarantine fix is named but never run", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+test("the exact GUI child and its API socket are checked; the quarantine fix is named but never run", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
   const server = await read(DIST, "py/kicad_server.py");
   const launch = server.slice(server.indexOf("def _launch("), server.indexOf("def _sync_locked("));
   assert.match(launch, /if NO_LAUNCH:\s+return False, "launch disabled \(KICAD_PLUGIN_NO_LAUNCH=1\)"/, "KICAD_PLUGIN_NO_LAUNCH must still short-circuit before anything is started");
@@ -84,19 +84,24 @@ test("a failed GUI launch is reported as one: pcbnew must stay up, the quarantin
   assert.match(launch, /return launch_editor\(/, "_launch must delegate to the checked launch");
   assert.ok(!/subprocess|xattr/.test(launch), "_launch itself starts and changes nothing");
   const helper = await read(DIST, "py/kicad_launch.py");
+  assert.match(helper, /subprocess\.Popen\(/, "launch the selected distribution's exact child");
+  assert.match(helper, /api-\{child\.pid\}\.sock/, "the live socket must belong to that exact child");
+  assert.ok(!/\[\s*["']open["']|pgrep/.test(helper), "Launch Services/process-name checks can reuse or mistake another standalone editor");
   const xattrCalls = helper.match(/\["xattr"[^\]]*\]/g) ?? [];
   assert.ok(xattrCalls.length > 0 && xattrCalls.every((c) => c.startsWith('["xattr", "-p",')), `the plugin may only read the quarantine attribute (xattr -p), found ${xattrCalls}`);
   const r = spawnSync("python3", [join(ROOT, "test/test_launch.py")], { encoding: "utf8", env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" } });
   assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
 });
 
-test("KiCad runs on a private config: the plugin never lets any KiCad program rewrite the user's ~/Library/Preferences/kicad", async () => {
+test("headless KiCad runs on a private config while the GUI keeps the captured user environment", async () => {
   const server = await read(DIST, "py/kicad_server.py");
   const set = server.indexOf('"KICAD_CONFIG_HOME"');
   assert.ok(set > 0 && set < server.indexOf("from fastmcp import"), "KICAD_CONFIG_HOME must be set before anything can start a KiCad program");
   assert.ok(server.includes('"KICAD_DOCUMENTS_HOME"'));
   assert.ok(!/KICAD_CONFIG_HOME["']\]\s*=\s*["']?[^\n]*Preferences/.test(server), "no path into the user's preferences");
   assert.ok(/os\.environ\[_var\] = /.test(server) && !/os\.environ\.setdefault\(_var/.test(server), "assigned unconditionally: a KICAD_CONFIG_HOME exported by the user must not win");
+  assert.ok(server.indexOf("GUI_ENV = os.environ.copy()") < set, "capture the user's GUI settings before installing the headless overrides");
+  assert.match(server, /launch_editor\([^\n]+env=GUI_ENV\)/, "the real GUI must use the captured user environment so Enable KiCad API is honored");
   const launcher = await read(DIST, "server.mjs");
   assert.ok(launcher.includes('UV_NO_CONFIG: "1"'), "uv must not read a uv.toml / pyproject.toml from the workspace");
 });

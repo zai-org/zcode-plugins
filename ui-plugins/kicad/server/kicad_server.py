@@ -32,6 +32,7 @@ from typing import Any
 WORKSPACE = Path(os.environ.get("ZCODE_WORKSPACE_ROOT") or os.getcwd()).resolve()
 PLUGIN_DATA = Path(os.environ.get("ZCODE_PLUGIN_DATA") or (WORKSPACE / ".kicad-plugin")).resolve()
 ROOT = PLUGIN_DATA / f"ws-{hashlib.sha1(str(WORKSPACE).encode()).hexdigest()[:10]}"
+GUI_ENV = os.environ.copy()  # captured before the worker's private KiCad config overrides below; the real GUI must use the user's settings (including Enable KiCad API)
 os.environ.setdefault("ZCODE_KICAD_DATA_DIR", str(PLUGIN_DATA / "kicad-env"))
 # Every KiCad program rewrites the settings it loads, even `kicad-cli version` (it stores the current directory as the working directory in kicad_common.json). So all
 # KiCad subprocesses of this server run on a private config and documents folder (the worker's own default, set early so no call can bypass it) and never touch the
@@ -429,11 +430,14 @@ def _launch(pcb: Path) -> tuple[bool, str]:
         return False, "launch disabled (KICAD_PLUGIN_NO_LAUNCH=1)"
     if sys.platform != "darwin":
         return False, "automatic launch is implemented for macOS only: open the file in KiCad yourself"
+    current = live.status(str(pcb), WORKSPACE)
+    if current.get("available"):
+        return True, "already open in PCB Editor; live KiCad API ready"
     editor = _editor_app()
     if editor is None:
         return False, f"KiCad PCB Editor not found next to {paths.app_dir()}"
-    # `open` exits 0 even when pcbnew dies right away (quarantined KiCad -> App Translocation -> dyld error): launch_editor checks that it stays up and explains why not
-    return launch_editor(editor, pcb, paths.app_dir())
+    # Execute this distribution's exact pcbnew instead of `open -a`: Launch Services may reuse a standalone editor that has no live API. The helper watches this child and its socket.
+    return launch_editor(editor, pcb, paths.app_dir(), env=GUI_ENV, api_expected=live.preferences_enable_api())
 
 
 def _sync_locked() -> dict:
