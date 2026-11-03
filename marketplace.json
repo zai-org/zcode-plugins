@@ -14,6 +14,31 @@
   ],
   "plugins": [
     {
+      "name": "magnific",
+      "description": "Turn ideas, product photos, scripts, and reference images into complete visual campaigns with Magnific.",
+      "description_i18n": {
+        "en": "Turn ideas, product photos, scripts, and reference images into complete visual campaigns with Magnific.",
+        "zh-CN": "使用 Magnific，将创意、产品照片、脚本和参考图片转化为完整的视觉营销素材。"
+      },
+      "version": "1.3.0",
+      "author": {
+        "name": "Magnific AI, S.L.U.",
+        "url": "https://www.magnific.com/app"
+      },
+      "keywords": [
+        "magnific",
+        "ai-video",
+        "ai-image",
+        "ai-ads",
+        "ugc",
+        "marketing",
+        "campaigns",
+        "mcp"
+      ],
+      "source": "./external_plugins/magnific",
+      "category": "productivity"
+    },
+    {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
       "description": "CloudBase development skills and MCP integration for building, deploying, and troubleshooting Web, WeChat Mini Program, database, cloud function, CloudRun, storage, and AI projects.",
