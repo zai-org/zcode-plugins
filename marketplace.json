@@ -1443,6 +1443,47 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "nimbus-bci",
+      "source": "./external_plugins/nimbus-bci",
+      "displayName": "Nimbus BCI",
+      "displayName_i18n": {
+        "en": "Nimbus BCI",
+        "zh-CN": "Nimbus BCI"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/nimbus-bci/icon.png",
+      "description": "Nimbus BCI remote MCP server for brain-computer interface (BCI) and EEG decoding research on public datasets: 63 tools and 5 prompts for MOABB/BNCI datasets, pipeline build and validation, hosted training, plots, BIDS export, and a public leaderboard. Sign-in uses OAuth handled by the server.",
+      "description_i18n": {
+        "en": "Nimbus BCI remote MCP server for brain-computer interface (BCI) and EEG decoding research on public datasets: 63 tools and 5 prompts for MOABB/BNCI datasets, pipeline build and validation, hosted training, plots, BIDS export, and a public leaderboard. Sign-in uses OAuth handled by the server.",
+        "zh-CN": "Nimbus BCI 远程 MCP 服务，面向基于公开数据集的脑机接口（BCI）与 EEG 解码研究：提供 63 个工具和 5 个提示词，覆盖 MOABB/BNCI 数据集、流水线构建与校验、托管训练、绘图、BIDS 导出以及公开排行榜。登录通过服务端处理的 OAuth 完成。"
+      },
+      "version": "0.14.20",
+      "author": {
+        "name": "Nimbus BCI",
+        "email": "hello@nimbusbci.com",
+        "url": "https://github.com/nimbusbci"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "bci",
+        "eeg",
+        "neuroscience",
+        "moabb",
+        "bids",
+        "machine-learning",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "List the public motor-imagery EEG datasets I can use",
+        "Build and validate a CSP + LDA pipeline on BNCI2014-001, then train it and plot the accuracy"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出我可以使用的运动想象 EEG 公开数据集",
+          "在 BNCI2014-001 上构建并校验一个 CSP + LDA 流水线，然后训练并绘制准确率"
+        ]
+      }
     }
   ]
 }
