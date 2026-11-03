@@ -18641,7 +18641,7 @@ function logErr(scope, msg, extra) {
 }
 
 // src/coord/lock.ts
-import crypto from "node:crypto";
+import crypto2 from "node:crypto";
 import fs4 from "node:fs";
 import path4 from "node:path";
 import { spawnSync } from "node:child_process";
@@ -18657,12 +18657,18 @@ function writerId() {
   return `${bootId()}:${process.pid}`;
 }
 function parseWriterId(writer) {
-  const sep = writer.lastIndexOf(":");
-  if (sep <= 0) return void 0;
-  const pid = Number(writer.slice(sep + 1));
-  const id = writer.slice(0, sep);
-  if (!Number.isInteger(pid) || id.length === 0) return void 0;
-  return { bootId: id, pid };
+  const parts = writer.split(":");
+  if (parts.length === 3) {
+    const [boot2, rawPid2, token] = parts;
+    const pid2 = Number(rawPid2);
+    if (boot2.length > 0 && token.length > 0 && Number.isInteger(pid2)) return { bootId: boot2, pid: pid2, token };
+    return void 0;
+  }
+  if (parts.length !== 2) return void 0;
+  const [boot, rawPid] = parts;
+  const pid = Number(rawPid);
+  if (boot.length === 0 || !Number.isInteger(pid)) return void 0;
+  return { bootId: boot, pid };
 }
 
 // src/provider/procgroup.ts
@@ -19134,7 +19140,7 @@ var CoordinatorLock = class {
   }
   async tryClaim() {
     const now2 = Date.now();
-    const token = crypto.randomBytes(12).toString("hex");
+    const token = crypto2.randomBytes(12).toString("hex");
     const info = {
       pid: process.pid,
       bootId: this.ownerBootId,
@@ -19200,7 +19206,7 @@ var CoordinatorLock = class {
   }
   writeHeartbeat(token, at) {
     const file = heartbeatFileFor(this.lockFile, token);
-    const tmp = `${file}.tmp-${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
+    const tmp = `${file}.tmp-${process.pid}-${crypto2.randomBytes(4).toString("hex")}`;
     try {
       fs4.writeFileSync(tmp, JSON.stringify({ token, heartbeatAt: at }), { mode: 384 });
       fs4.renameSync(tmp, file);
@@ -19235,16 +19241,12 @@ var CoordinatorLock = class {
     }
   }
   /**
-   * 过期抢占（〔D32〕双信号）：guard 单飞 → 重读复核 →
-   *   holderAlive=false（真崩溃）→ 立即 quarantine（kill -9 接任 ≤5s SLA 不变）；
-   *   holderAlive=true（stalled-but-alive）→ audit `steal-deferred` + 宽限 graceMs 复核：
-   *     宽限内心跳恢复/换代 → 放弃；仍过期且（已死 或 超过 hardExpiryMs 硬上限）→ quarantine；
-   *   holderAlive=null（锁不可解析）→ 维持旧行为（过期即抢）。
-   * 宽限路径做 PID 复用防护（锁内 startedAt 与 ps etimes 推算的启动时刻比对）。
+   * 过期接任（保守唯一写者）：只有确认持有者退出或 PID 已复用才隔离旧锁。
+   * 活进程/不可解析持有者的写能力无法由文件锁撤销，超龄也绝不抢占；等待其正常释放。
    * 若 rename 到的不是观察到的 inode（竞争者刚换了新锁）→ 尝试归还并回滚。
    */
   async steal(observed) {
-    const guard = `${this.lockFile}.guard-${process.pid}-${crypto.randomBytes(4).toString("hex")}`;
+    const guard = `${this.lockFile}.guard-${process.pid}-${crypto2.randomBytes(4).toString("hex")}`;
     let guardFd;
     try {
       guardFd = fs4.openSync(guard, "wx", 384);
@@ -19258,21 +19260,16 @@ var CoordinatorLock = class {
       if (observed.ino === void 0 || current.ino !== observed.ino || current.info?.token !== observed.info?.token) {
         return "skipped";
       }
-      if (current.holderAlive === true && current.ageMs <= this.tuning.hardExpiryMs && !this.pidReused(current)) {
+      if (current.holderAlive !== false && !this.pidReused(current)) {
         this.audit("steal-deferred", {
-          reason: "holder-alive",
+          reason: current.holderAlive === true ? "holder-alive" : "holder-liveness-unknown",
           ageMs: Math.round(current.ageMs),
-          graceMs: this.tuning.graceMs,
           hbSource: current.hbSource,
           previous: current.info
         });
-        await sleep2(this.tuning.graceMs);
-        const re = this.observe();
-        if (!re.exists || re.ageMs <= this.tuning.expiryMs) return "deferred";
-        if (re.ino !== current.ino || re.info?.token !== current.info?.token) return "deferred";
-        if (re.holderAlive === true && re.ageMs <= this.tuning.hardExpiryMs) return "deferred";
+        return "deferred";
       }
-      const quarantine = `${this.lockFile}.stale-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+      const quarantine = `${this.lockFile}.stale-${Date.now()}-${crypto2.randomBytes(4).toString("hex")}`;
       try {
         fs4.renameSync(this.lockFile, quarantine);
       } catch (err) {
@@ -19884,7 +19881,7 @@ function observeLockFileFor(lockFile, writer) {
   } catch {
     return { ok: false, reason: "lock file is not valid JSON" };
   }
-  if (parsed.pid !== identity.pid || parsed.bootId !== identity.bootId) {
+  if (parsed.pid !== identity.pid || parsed.bootId !== identity.bootId || identity.token !== void 0 && parsed.token !== identity.token) {
     return {
       ok: false,
       reason: `lock held by pid=${String(parsed.pid)} bootId=${String(parsed.bootId)}`
@@ -20187,12 +20184,12 @@ var TeamJournal = class _TeamJournal {
       byteOffset: this.bytesCommitted
     });
   }
-  async close() {
+  async close(opts = {}) {
     if (this.appendFd !== null) {
       fs7.closeSync(this.appendFd);
       this.appendFd = null;
     }
-    await this.writeCheckpointNow();
+    if (opts.checkpoint !== false) await this.writeCheckpointNow();
     _TeamJournal.instances.delete(`${this.teamDir}\0${this.teamId}`);
   }
   async maybeCheckpoint(seq) {
@@ -20342,7 +20339,10 @@ var JournalTeamStore = class _JournalTeamStore {
       owned = true;
     }
     const journal = TeamJournal.open(paths.teamDir, teamId, opts.journal);
-    const loaded = await journal.openWriter(writerId());
+    const identity = writerId();
+    const loaded = await journal.openWriter(
+      lock.info?.token === void 0 ? identity : `${identity}:${lock.info.token}`
+    );
     const store = new _JournalTeamStore(journal, owned ? lock : void 0);
     store.lastLoad = { seq: loaded.seq, fromCheckpoint: loaded.fromCheckpoint };
     return store;
@@ -20381,11 +20381,11 @@ var JournalTeamStore = class _JournalTeamStore {
     this.unsubs.push(off);
     return off;
   }
-  /** 释放（自有锁则释放；journal close 落 checkpoint）。 */
-  async close() {
+  /** 释放（自有锁则释放）；失锁路径不得再发布需要当前所有权的 checkpoint。 */
+  async close(opts = {}) {
     for (const off of this.unsubs) off();
     this.unsubs.length = 0;
-    await this.journal.close();
+    await this.journal.close(opts);
     await this.ownedLock?.release();
   }
 };
@@ -20394,7 +20394,7 @@ var JournalTeamStore = class _JournalTeamStore {
 import net from "node:net";
 import fs9 from "node:fs";
 import path8 from "node:path";
-import crypto2 from "node:crypto";
+import crypto3 from "node:crypto";
 var COORDINATOR_UNAVAILABLE_MESSAGE = "Agent Teams coordinator is unavailable (between coordinators); retry the request shortly";
 var SUN_PATH_LIMIT = 104;
 var MAX_RPC_BUFFER_BYTES = 1 << 20;
@@ -20521,7 +20521,7 @@ var RpcServer = class {
     if (ino !== null) {
       try {
         if (fs9.statSync(this.socketPath).ino !== ino) {
-          const quarantine = `${this.socketPath}.preserve-${process.pid}-${crypto2.randomBytes(4).toString("hex")}`;
+          const quarantine = `${this.socketPath}.preserve-${process.pid}-${crypto3.randomBytes(4).toString("hex")}`;
           fs9.renameSync(this.socketPath, quarantine);
           preserve = { quarantine };
         }
@@ -20551,7 +20551,7 @@ var RpcServer = class {
     const provided = typeof req?.token === "string" ? req.token : "";
     const a = Buffer.from(provided);
     const b = Buffer.from(this.token);
-    return a.length === b.length && crypto2.timingSafeEqual(a, b);
+    return a.length === b.length && crypto3.timingSafeEqual(a, b);
   }
   async dispatch(req, socket, callTimeoutMs, inflight) {
     const respond = (res) => {
@@ -20755,7 +20755,7 @@ function writeRpcToken(teamDir, token) {
   fs9.writeFileSync(rpcTokenPath(teamDir), token + "\n", { mode: 384 });
 }
 function newRpcToken() {
-  return crypto2.randomBytes(24).toString("hex");
+  return crypto3.randomBytes(24).toString("hex");
 }
 function coordinatorUnavailableError(detail) {
   return new TeamError("TEAM_DISPOSED", COORDINATOR_UNAVAILABLE_MESSAGE, { cause: detail });
@@ -20847,7 +20847,7 @@ function buildTeamMethodTable(deps) {
     const membership = requireMembership(membershipStateLoader(store), sessionId);
     return { role: membership.role };
   });
-  const memberSpawn = async (raw) => {
+  const memberSpawn = async (raw, ctx) => {
     const p = asParams(raw, "member.spawn");
     assertTeamTarget(p, "member.spawn", deps);
     const sessionId = requireSessionId(p, "member.spawn");
@@ -20857,6 +20857,8 @@ function buildTeamMethodTable(deps) {
       name: requireString(p, "name", "member.spawn", { allowEmpty: true }),
       description: requireString(p, "description", "member.spawn", { allowEmpty: true }),
       prompt: requireString(p, "prompt", "member.spawn", { allowEmpty: true }),
+      ...typeof p.requestId === "string" && p.requestId.length > 0 ? { requestId: p.requestId } : {},
+      ...ctx?.signal !== void 0 ? { signal: ctx.signal, ownershipSignal: ctx.signal } : {},
       ...context !== void 0 ? { context } : {}
     });
   };
@@ -21088,6 +21090,10 @@ var TeamLifecycle = class {
       this.inflight.delete(p);
     }).catch(() => void 0);
     return p;
+  }
+  /** 代次撤销只取消当前等待，不进入需要所有权的 drain/turn 清理。 */
+  revokeGeneration(reason) {
+    this.abort.abort(reason ?? new TeamError("TEAM_DISPOSED", "coordinator generation revoked"));
   }
   /** dispose(reason)：D9 抽象触发；幂等（重复调用等首次结果）。 */
   dispose(reason) {
@@ -21344,15 +21350,25 @@ var PROVISIONING_RECHECK_MS = 1e4;
 var TeamRoster = class {
   constructor(deps) {
     this.deps = deps;
-    this.recoveryDone = this.reconcileProvisioning().then(
-      () => void 0,
-      () => void 0
-    );
   }
   statusListeners = /* @__PURE__ */ new Set();
   /** 〔D33〕defer 复核定时器（成员 id → timer；一次性、unref）。 */
   recheckTimers = /* @__PURE__ */ new Map();
+  recoveryStopped = /* @__PURE__ */ new Set();
   recoveryDone;
+  /** 仅由宿主在完整意图/轮次恢复后启动；构造对象不得提前判 provisioning 失败。 */
+  startRecovery() {
+    this.recoveryDone ??= this.reconcileProvisioning().then(
+      () => void 0,
+      () => void 0
+    );
+    return this.recoveryDone;
+  }
+  cancelPendingRecovery() {
+    for (const timer of this.recheckTimers.values()) clearTimeout(timer);
+    this.recheckTimers.clear();
+    this.recoveryStopped.clear();
+  }
   /** 成员状态变化边（Activity 唤醒源之二；settle/interrupt 后触发）。 */
   onMemberStatus(listener) {
     this.statusListeners.add(listener);
@@ -21398,6 +21414,16 @@ var TeamRoster = class {
     const context = args.context ?? "fresh";
     const providerName = requiredText("provider", context === "fork" ? providers.fork : providers.fresh, 200);
     const childId = (this.deps.newId ?? defaultNewId)();
+    const requestId = args.requestId ?? defaultNewId();
+    this.deps.provider.prepareContinuable?.({
+      teamId: this.deps.teamId,
+      memberId: childId,
+      name,
+      description,
+      firstPrompt: args.prompt,
+      context,
+      requestId
+    });
     await this.deps.store.transact(async () => {
       const fresh = this.loadState();
       if (fresh.members.some((m) => m.name === name)) {
@@ -21418,6 +21444,8 @@ var TeamRoster = class {
     });
     const run = (async () => {
       const signal = combineSignals(args.signal, this.deps.lifecycle.runtimeSignal());
+      const ownershipSignal = args.ownershipSignal;
+      const runSignal = ownershipSignal === void 0 ? signal : AbortSignal.any([signal, ownershipSignal]);
       try {
         return await this.deps.provider.startContinuable({
           teamId: this.deps.teamId,
@@ -21427,45 +21455,27 @@ var TeamRoster = class {
           firstPrompt: args.prompt,
           // 对齐轮：0.2.1 初始任务不含身份前缀
           context,
-          signal
+          requestId,
+          signal: runSignal
         });
       } catch (err) {
+        if (ownershipSignal?.aborted) throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF0C\u521B\u5EFA\u7ED3\u679C\u5F85\u786E\u8BA4");
         throw this.mapAbortToDisposed(err);
       }
     })();
+    let started;
     try {
-      const started = await run;
-      if (started.memberId !== childId) {
-        throw new Error(`provider returned memberId ${started.memberId} != provisioned ${childId}`);
-      }
-      if (!started.accepted) {
-        throw new TeamError(
-          "TEAM_PROVISIONING_CONFLICT",
-          `teammate "${childId}" initial prompt was not durably accepted`
-        );
-      }
-      const settled = await this.settleProvisioning(childId, "active");
-      if (settled === "failed") {
-        const conflict = new TeamError(
-          "TEAM_PROVISIONING_CONFLICT",
-          `teammate "${name}" was reconciled as failed while creation was in progress`
-        );
-        try {
-          await this.deps.provider.interrupt({ memberId: childId });
-        } catch (cleanupError) {
-          throw new AggregateError([conflict, cleanupError], "provisioning conflict cleanup failed");
-        }
-        throw conflict;
-      }
-      this.notifyStatus();
-      return { member: this.rowOf(childId) };
+      started = await run;
     } catch (originalError) {
+      if (originalError instanceof ProvisioningPending) {
+        return { member: this.rowOf(childId), creation: "pending", message: originalError.message };
+      }
       let becameActiveConflict;
       let recordError;
       let recordErrorSet = false;
       try {
-        const settled = await this.settleProvisioning(childId, "failed", errorMessage(originalError));
-        if (settled === "active") {
+        const settled2 = await this.settleProvisioning(childId, "failed", errorMessage(originalError));
+        if (settled2 === "active") {
           becameActiveConflict = new TeamError(
             "TEAM_PROVISIONING_CONFLICT",
             `teammate "${name}" became active while its creator reported failure`
@@ -21496,6 +21506,34 @@ var TeamRoster = class {
       this.notifyStatus();
       throw originalError;
     }
+    if (started.memberId !== childId) {
+      throw new Error(`provider returned memberId ${started.memberId} != provisioned ${childId}`);
+    }
+    if (started.creation === "pending") {
+      return { member: this.rowOf(childId), creation: "pending", message: "\u7ED3\u679C\u5F85\u786E\u8BA4" };
+    }
+    if (!started.accepted) {
+      const rejection = new TeamError("TEAM_PROVISIONING_CONFLICT", `teammate "${childId}" initial prompt was not durably accepted`);
+      await this.settleProvisioning(childId, "failed", rejection.message);
+      await this.deps.provider.interrupt({ memberId: childId });
+      this.notifyStatus();
+      throw rejection;
+    }
+    const settled = await this.settleProvisioning(childId, "active");
+    if (settled === "failed") {
+      const conflict = new TeamError(
+        "TEAM_PROVISIONING_CONFLICT",
+        `teammate "${name}" was reconciled as failed while creation was in progress`
+      );
+      try {
+        await this.deps.provider.interrupt({ memberId: childId });
+      } catch (cleanupError) {
+        throw new AggregateError([conflict, cleanupError], "provisioning conflict cleanup failed");
+      }
+      throw conflict;
+    }
+    this.notifyStatus();
+    return { member: this.rowOf(childId) };
   }
   /** settleProvisioning（幂等）：已非 provisioning → 返回现有相位不追加；成员消失 → C1 冲突。 */
   settleProvisioning(memberId, phase, error2) {
@@ -21541,14 +21579,17 @@ var TeamRoster = class {
     for (const member of pending) {
       try {
         let failure;
+        let missingRecord = false;
         let active = false;
         let recoveryThrew = false;
         try {
           const record2 = this.deps.recon.readProvisioningRecord(member.id);
           if (record2 === void 0) {
-            failure = "provisioning did not leave a resumable child Session";
+            missingRecord = true;
           } else if (record2.rootSessionId === this.deps.teamId && record2.descriptor !== void 0 && record2.descriptor.mode === "continuable" && record2.descriptor.provider === member.provider && record2.initialUserMessageAccepted) {
             active = true;
+          } else if (record2.rootSessionId === this.deps.teamId && record2.descriptor !== void 0 && record2.descriptor.mode === "continuable" && record2.descriptor.provider === member.provider && !record2.initialUserMessageAccepted) {
+            missingRecord = true;
           } else {
             failure = "persisted child Session does not match the provisioned continuation";
           }
@@ -21556,11 +21597,47 @@ var TeamRoster = class {
           recoveryThrew = true;
           failure = `child Session recovery failed: ${errorMessage(err)}`;
         }
-        const ageMs = ages?.get(member.id);
-        if (!active && !recoveryThrew && ageMs !== void 0 && ageMs < PROVISIONING_GRACE_MS) {
-          deferred.push(member.id);
-          this.scheduleProvisioningRecheck(member.id);
+        if (!active && !recoveryThrew && !missingRecord && failure !== void 0) {
+          await this.settleProvisioning(member.id, "failed", failure);
+          settled.push(member.id);
+          this.notifyStatus();
           continue;
+        }
+        if (!active) {
+          if (this.deps.provider.noteProvisioningRecovery?.(member.id) === true) {
+            this.recoveryStopped.add(member.id);
+            deferred.push(member.id);
+            this.notifyStatus();
+            continue;
+          }
+          if (this.deps.provider.resumeContinuable !== void 0) {
+            try {
+              const resumed = await this.deps.provider.resumeContinuable(
+                member.id,
+                this.deps.lifecycle.runtimeSignal()
+              );
+              if (resumed.creation === "pending" || !resumed.accepted) {
+                deferred.push(member.id);
+                this.scheduleProvisioningRecheck(member.id);
+                continue;
+              }
+              active = true;
+            } catch (err) {
+              if (err instanceof ProvisioningPending) {
+                deferred.push(member.id);
+                this.scheduleProvisioningRecheck(member.id);
+                continue;
+              }
+              throw err;
+            }
+          } else {
+            const ageMs = ages?.get(member.id);
+            if (!recoveryThrew && ageMs !== void 0 && ageMs < PROVISIONING_GRACE_MS) {
+              deferred.push(member.id);
+              this.scheduleProvisioningRecheck(member.id);
+              continue;
+            }
+          }
         }
         await this.settleProvisioning(member.id, active ? "active" : "failed", failure);
         settled.push(member.id);
@@ -21612,6 +21689,12 @@ var TeamRoster = class {
     }, PROVISIONING_RECHECK_MS);
     timer.unref?.();
     this.recheckTimers.set(memberId, timer);
+  }
+  hasPendingAutomaticProgress(callerId) {
+    const { state } = this.requireMember(callerId);
+    return state.members.some(
+      (member) => member.phase === "active" && this.deps.inspector.isAlive(member.id) || member.phase === "provisioning" && !this.recoveryStopped.has(member.id)
+    );
   }
   // ---------------------------------------------------------------- listMembers（§5.5）
   listMembers(callerId) {
@@ -21695,6 +21778,12 @@ var TeamRoster = class {
 function memberSnapshotOf(id, name, description, provider, context, phase, error2) {
   return { id, name, description, provider, context, phase, ...error2 !== void 0 ? { error: error2 } : {} };
 }
+var ProvisioningPending = class extends Error {
+  constructor(message = "\u7ED3\u679C\u5F85\u786E\u8BA4") {
+    super(message);
+    this.name = "ProvisioningPending";
+  }
+};
 function defaultNewId() {
   return globalThis.crypto.randomUUID();
 }
@@ -22218,6 +22307,11 @@ var TeamRuntime = class {
   unsubscribeCommit;
   unsubscribeStatus;
   constructor(deps) {
+    const generationAbort = new AbortController();
+    deps.signal?.addEventListener("abort", () => {
+      this.lifecycle.revokeGeneration(deps.signal?.reason);
+      this.roster.cancelPendingRecovery();
+    }, { once: true });
     this.lifecycle = new TeamLifecycle({
       teamId: deps.teamId,
       store: deps.store,
@@ -22263,7 +22357,7 @@ var TeamRuntime = class {
   }
   /** 冷启动恢复对账：roster 对账完成 + 全量邮箱续投。 */
   async recoverAll() {
-    await this.roster.recoveryDone;
+    await this.roster.startRecovery();
     await this.mailbox.recoverFor("all");
   }
   /** D9 抽象处置入口。 */
@@ -22273,6 +22367,8 @@ var TeamRuntime = class {
   close() {
     this.unsubscribeCommit();
     this.unsubscribeStatus();
+    this.roster.cancelPendingRecovery();
+    this.activity.closeAll();
   }
 };
 
@@ -22286,13 +22382,37 @@ var MockProvider = class {
   drainedTeamIds = [];
   drainCalls = 0;
   startCalls = 0;
+  prepared = [];
   deliverCalls = 0;
+  interruptCalls = 0;
+  /** 默认无自动恢复能力（保留纯域 mock 旧语义）；专项测试可注入持久预算行为。 */
+  noteProvisioningRecovery;
+  resumeContinuable;
+  generationAbort = new AbortController();
+  activateGeneration() {
+    this.generationAbort = new AbortController();
+    return this.generationAbort.signal;
+  }
+  get generationSignal() {
+    return this.generationAbort.signal;
+  }
+  detach() {
+    this.generationAbort.abort(new Error("coordinator generation revoked"));
+  }
   program = {};
   deliverScript = [];
   programWith(program) {
     this.program = program;
     this.deliverScript = program.deliverResults ? [...program.deliverResults] : [];
     return this;
+  }
+  prepareContinuable(args) {
+    this.prepared.push({ name: args.name, prompt: args.firstPrompt, requestId: args.requestId, context: args.context });
+  }
+  requestStatus(requestId) {
+    const intent = this.prepared.find((entry) => entry.requestId === requestId);
+    const member = intent === void 0 ? void 0 : [...this.teamChildren.values()].find((child) => child.name === intent.name);
+    return intent === void 0 ? void 0 : { memberId: member?.memberId ?? `mock-${intent.name}`, accepted: member?.received.has("") ?? false };
   }
   async startContinuable(args) {
     this.startCalls += 1;
@@ -22308,6 +22428,7 @@ var MockProvider = class {
       });
     }
     if (outcome.kind === "throw") throw outcome.error;
+    if (outcome.kind === "pending") return { memberId: args.memberId, accepted: false, creation: "pending" };
     const child = {
       memberId: args.memberId,
       name: args.name,
@@ -22379,6 +22500,7 @@ var MockProvider = class {
   }
   async interrupt(args) {
     if (this.program.interruptError !== void 0) throw this.program.interruptError;
+    this.interruptCalls += 1;
     const child = this.teamChildren.get(args.memberId);
     if (child === void 0 || !child.alive) return { previousStatus: "inactive" };
     const previousStatus = child.status;
@@ -22507,6 +22629,7 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
     const lock = new CoordinatorLock(paths.lockFile, paths.auditFile, {
       // 失锁 = 立即降级；不能继续以 coordinator 身份写 journal/占用 socket。
       onLost: () => {
+        if (providerHasGeneration(host.provider)) host.provider.detach?.();
         void host.demoteToProxy("coordinator lock lost");
       }
     });
@@ -22536,6 +22659,10 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
   }
   get coordinatorBootId() {
     return this.lock.info?.bootId ?? bootId();
+  }
+  /** 外层断连后只读原请求登记，不通过此入口执行写操作。 */
+  get providerForRead() {
+    return this.provider;
   }
   /** 代理模式下的方法表（§2 一致性断言用；协调者模式为 null）。 */
   get methodTable() {
@@ -22639,9 +22766,9 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
     } catch (err) {
       errors.push(err);
     }
-    if (providerHasBoundary(this.provider)) {
+    if (providerHasGeneration(this.provider)) {
       try {
-        this.provider.detach();
+        this.provider.detach?.();
       } catch (err) {
         errors.push(err);
       }
@@ -22654,8 +22781,9 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
    * 与 close() 的区别：不置 closed，仍可再次晋升。
    */
   async demoteToProxy(reason) {
-    if (this.closed || this.mode !== "coordinator") return;
+    if (this.closed) return;
     this.mode = "proxy";
+    if (providerHasGeneration(this.provider)) this.provider.detach?.();
     this.lock.stopHeartbeat();
     this.stopDeliverySweep();
     this.opts.warn?.(`agent-team coordinator demoted for team "${this.teamId}": ${reason}`);
@@ -22672,17 +22800,13 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
     const runtime = this.runtime;
     this.runtime = null;
     if (runtime !== null) {
-      try {
-        await runtime.dispose();
-      } catch {
-      }
       runtime.close();
     }
     const store = this.store;
     this.store = null;
     if (store !== null) {
       try {
-        await store.close();
+        await store.close({ checkpoint: false });
       } catch {
       }
     }
@@ -22713,6 +22837,7 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
   async serve() {
     if (this.closed) throw new Error("host is closed");
     const paths = this.paths();
+    const generationSignal = providerHasGeneration(this.provider) ? this.provider.activateGeneration() : void 0;
     this.lock.startHeartbeat();
     let store;
     try {
@@ -22758,7 +22883,8 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
           return false;
         }
       } : {},
-      warn: this.opts.warn
+      warn: this.opts.warn,
+      ...generationSignal !== void 0 ? { signal: generationSignal } : {}
     });
     if (providerHasBoundary(this.provider)) {
       this.provider.bind({
@@ -22789,6 +22915,7 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
       );
     } else {
       await runtime.recoverAll();
+      if (providerHasBoundary(this.provider)) this.provider.startBackground?.();
     }
     const socket = resolveSocketPath(paths.teamDir);
     const token = newRpcToken();
@@ -22886,6 +23013,9 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
 };
 function providerIsPresentation(provider) {
   return typeof provider.statusOf === "function" && typeof provider.modelOf === "function";
+}
+function providerHasGeneration(provider) {
+  return typeof provider.activateGeneration === "function";
 }
 function providerHasBoundary(provider) {
   return typeof provider.bind === "function" && typeof provider.adoptOrphans === "function";
@@ -23063,16 +23193,33 @@ var TeamToolBackend = class {
    *  0.4.0：model/thoughtLevel 参数注销——成员模型唯一路线 = provider 每轮跟随 Lead 最新
    *  已确认选择；Lead 模型不可继承（官方套餐/目录外/解析不出）时 provider 抛错 → 本调用报错。 */
   async spawnTeammate(identity, args) {
-    return this.withHost(
-      identity.teamId,
-      async (host) => await host.dispatch("member.spawn", {
-        session_id: identity.agentId,
-        name: args.name,
-        description: args.description,
-        prompt: args.prompt,
-        ...args.context !== void 0 ? { context: args.context } : {}
-      })
-    );
+    const requestId = crypto.randomUUID();
+    try {
+      return await this.withHost(
+        identity.teamId,
+        async (host) => await host.dispatch("member.spawn", {
+          session_id: identity.agentId,
+          name: args.name,
+          description: args.description,
+          prompt: args.prompt,
+          requestId,
+          ...args.context !== void 0 ? { context: args.context } : {}
+        })
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/rpc connection closed|rpc (?:method|call) member\.spawn timed out|coordinator is unavailable/.test(message)) throw err;
+      const host = await this.backendFor(identity.teamId);
+      const provider = host.providerForRead;
+      const registered = provider?.requestStatus?.(requestId);
+      if (registered === void 0) {
+        throw new Error("\u6210\u5458\u521B\u5EFA\u8BF7\u6C42\u7ED3\u679C\u672A\u786E\u8BA4\uFF0C\u65E0\u6CD5\u5173\u8054\u539F\u767B\u8BB0\uFF1B\u4E0D\u4F1A\u81EA\u52A8\u91CD\u653E");
+      }
+      const rows = await this.memberRows(host, identity);
+      const member = rows.find((row) => row.target === args.name);
+      if (member === void 0) throw new Error("\u539F\u521B\u5EFA\u8BF7\u6C42\u5DF2\u767B\u8BB0\uFF0C\u4F46\u6210\u5458\u72B6\u6001\u6682\u4E0D\u53EF\u8BFB");
+      return member.status === "provisioning" ? { member, creation: "pending", message: "\u7ED3\u679C\u5F85\u786E\u8BA4" } : { member };
+    }
   }
   // 0.4.0 注销 setMemberModel / resolveModelArgs / leadProviderId / catalog / wireModelSelection /
   // validateThoughtLevel（成员模型没有独立配置通道；stage-8 原文见 traceability §18 与 git 历史）。
@@ -23146,6 +23293,10 @@ var TeamToolBackend = class {
       let wait;
       if (runtime !== null) {
         const rows = runtime.roster.listMembers(identity.agentId).members;
+        if (!runtime.roster.hasPendingAutomaticProgress(identity.agentId)) {
+          const stopped = rows.find((row) => row.status === "provisioning");
+          return stopped !== void 0 ? { ...noProgressResult(), content: [{ type: "text", text: `\u6210\u5458 ${stopped.target} \u5DF2\u505C\u6B62\u81EA\u52A8\u786E\u8BA4\uFF0C\u9700\u8981 Lead \u63A5\u7BA1\uFF1B\u65E7 turn \u4ECD\u53EF\u80FD\u6267\u884C\uFF0C\u4E0D\u5F97\u91CD\u590D\u542F\u52A8\u3002` }] } : noProgressResult();
+        }
         const selfTarget = identity.role === "lead" ? "lead" : identity.name;
         const hasActivePeer = rows.some(
           (row) => row.target !== selfTarget && (row.status === "running" || row.status === "provisioning")
@@ -23279,7 +23430,7 @@ var TEAM_TOOL_DEFINITIONS = [
   {
     // 02 §9.3（〔issue #9 D28〕去档位措辞；〔issue #5 / D29〕补不可继承失败口径）
     name: "spawn_teammate",
-    description: "Create one named, durable teammate. Only the Team Lead may call this tool. Create teammates when the goal clearly benefits from delegation \u2014 multiple roles in parallel, disjoint write scopes, or long tasks needing their own context \u2014 within the member limit. If the Lead's model cannot be inherited (official plan model), the call fails \u2014 handle the work directly instead. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
+    description: "Create one named, durable teammate. Only the Team Lead may call this tool. Create teammates when the goal clearly benefits from delegation \u2014 multiple roles in parallel, disjoint write scopes, or long tasks needing their own context \u2014 within the member limit. A creation=pending response means the request is registered but its result is not confirmed; the member remains provisioning and is not ready for work. Observe that same member with list_agents/wait_agent instead of spawning another. If the Lead's model cannot be inherited (official plan model), the call fails \u2014 handle the work directly instead. The teammate automatically follows the Lead's latest confirmed model and reasoning level on every turn; there is no per-member model option.",
     inputSchema: {
       type: "object",
       properties: {
@@ -24491,16 +24642,36 @@ var AppServerClient = class _AppServerClient {
     }
     return false;
   }
-  rpc(method, params, timeoutMs = 3e4) {
+  rpc(method, params, timeoutMs = 3e4, opts = {}) {
     if (this.#closed) return Promise.reject(new Error("app-server client is closed"));
+    if (opts.signal?.aborted) return Promise.reject(opts.signal.reason ?? new Error("aborted"));
     const id = this.#nextId++;
     return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        this.#pending.delete(id);
+        clearTimeout(timer);
+        reject(opts.signal.reason ?? new Error("aborted"));
+      };
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
       const timer = setTimeout(() => {
         this.#pending.delete(id);
-        reject(new Error(`app-server rpc timeout: ${method}`));
+        opts.signal?.removeEventListener("abort", onAbort);
+        const error2 = new Error(`app-server rpc timeout: ${method}`);
+        error2.outcome = "unknown";
+        reject(error2);
       }, timeoutMs);
       timer.unref?.();
-      this.#pending.set(id, { resolve, reject, timer });
+      this.#pending.set(id, {
+        resolve: (result) => {
+          opts.signal?.removeEventListener("abort", onAbort);
+          resolve(result);
+        },
+        reject: (error2) => {
+          opts.signal?.removeEventListener("abort", onAbort);
+          reject(error2);
+        },
+        timer
+      });
       this.#write({ id, method, params });
     });
   }
@@ -24718,29 +24889,91 @@ var AppServerSessionBreeder = class {
     const startedAt = this.now();
     const workspacePath = this.resolveWorkspace(input.teamId, input.workspacePath);
     const client = this.#spawnClient(workspacePath);
-    let anchorSessionId = null;
+    const anchorCommandId = input.anchorCommandId ?? `team-anchor-${startedAt}-${Math.random().toString(36).slice(2, 8)}`;
+    const childCommandId = input.childCommandId ?? `team-child-${this.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const commandTimeoutMs = input.timeoutMs ?? 3e4;
+    const queryTimeoutMs = Math.min(input.timeoutMs ?? 5e3, 5e3);
+    let anchorSessionId = input.anchorSessionId ?? null;
     let childSessionId = null;
+    let anchorEvidence = false;
     try {
-      const ready = await client.waitReady(input.timeoutMs ?? this.readyTimeoutMs);
+      const readyTimeoutMs = this.readyTimeoutMs;
+      const ready = await client.waitReady(readyTimeoutMs);
       if (!ready) {
         throw new BreedError(
           "startup-timeout",
-          `app-server did not become ready within ${input.timeoutMs ?? this.readyTimeoutMs}ms`
+          `app-server did not become ready within ${readyTimeoutMs}ms`
         );
       }
-      const anchorAck = await client.rpc("v4/command", {
-        commandId: `team-anchor-${startedAt}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: "agent-team",
-        sessionId: null,
-        issuedAt: startedAt,
-        type: "createSession",
-        payload: { workspaceId: workspacePath, permissionScope: "session" }
-      });
-      const createdAnchorId = anchorAck?.result?.sessionId;
-      if (typeof createdAnchorId !== "string" || createdAnchorId.length === 0) {
-        throw new BreedError("create-rejected", describeAck("createSession", anchorAck));
+      if (input.signal?.aborted) {
+        throw new BreedError("outcome-unknown", abortDescription(input.signal, "session breeding aborted"));
       }
-      anchorSessionId = createdAnchorId;
+      let priorChild;
+      const hasRecoveryIdentity = input.anchorCommandId !== void 0 && input.childCommandId !== void 0 && input.anchorSessionId !== void 0 && input.recoveryEvidence === true;
+      if (hasRecoveryIdentity) {
+        const priorAnchor = await this.#queryCommand(client, {
+          commandId: anchorCommandId,
+          sessionId: null,
+          type: "createSession",
+          signal: input.signal,
+          timeoutMs: queryTimeoutMs
+        });
+        if (priorAnchor !== "unknown") {
+          anchorSessionId = createdSessionId(priorAnchor, {
+            type: "createSession",
+            expectedSessionId: input.anchorSessionId,
+            failure: "create-rejected",
+            mismatchFailure: "outcome-unknown"
+          });
+          anchorEvidence = true;
+        } else {
+          anchorSessionId = await this.#findPreallocatedAnchor(client, {
+            anchorSessionId: input.anchorSessionId,
+            workspacePath,
+            signal: input.signal,
+            timeoutMs: queryTimeoutMs
+          });
+          anchorEvidence = anchorSessionId !== null;
+        }
+        if (anchorEvidence && anchorSessionId !== null) {
+          this.reportProgress(input, { anchorSessionId, stage: "anchor-recovered" });
+          priorChild = await this.#queryCommand(client, {
+            commandId: childCommandId,
+            sessionId: anchorSessionId,
+            type: "createSelectionSideSession",
+            signal: input.signal,
+            timeoutMs: queryTimeoutMs
+          });
+        }
+      }
+      if (!anchorEvidence) {
+        const anchorCall = await this.#runCommand(client, {
+          commandId: anchorCommandId,
+          sessionId: null,
+          issuedAt: startedAt,
+          type: "createSession",
+          payload: {
+            ...input.anchorSessionId !== void 0 ? { sessionId: input.anchorSessionId } : {},
+            workspaceId: workspacePath,
+            permissionScope: "session"
+          },
+          signal: input.signal,
+          commandTimeoutMs,
+          queryTimeoutMs
+        });
+        const createdAnchorId = createdSessionId(anchorCall.ack, {
+          type: "createSession",
+          expectedSessionId: input.anchorSessionId,
+          failure: "create-rejected",
+          mismatchFailure: anchorCall.recovered ? "outcome-unknown" : "create-rejected"
+        });
+        anchorSessionId = createdAnchorId;
+        anchorEvidence = true;
+        this.reportProgress(input, { anchorSessionId: createdAnchorId, stage: "anchor-created" });
+      }
+      if (anchorSessionId === null) {
+        throw new BreedError("outcome-unknown", "anchor has no confirmed session id; not creating a replacement");
+      }
       const tombstone = tombstoneAnchor({
         taskId: anchorSessionId,
         workspacePath,
@@ -24753,23 +24986,47 @@ var AppServerSessionBreeder = class {
           `anchor "${anchorSessionId}" task row is not owned by agent-team; refusing to continue`
         );
       }
-      const sideAck = await client.rpc("v4/command", {
-        commandId: `team-child-${this.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: "agent-team",
+      const commandArgs = {
+        commandId: childCommandId,
         sessionId: anchorSessionId,
         issuedAt: this.now(),
         type: "createSelectionSideSession",
-        payload: {}
-      });
-      const createdChildId = sideAck?.result?.sessionId;
-      if (typeof createdChildId !== "string" || createdChildId.length === 0) {
-        throw new BreedError("command-rejected", describeAck("createSelectionSideSession", sideAck));
+        payload: {},
+        signal: input.signal,
+        commandTimeoutMs,
+        queryTimeoutMs
+      };
+      let sideCall;
+      let recoveredChildNeedsResume = false;
+      if (priorChild !== void 0 && priorChild !== "unknown") {
+        recoveredChildNeedsResume = input.modelSelection !== void 0;
+        sideCall = { ack: priorChild, recovered: true };
+      } else {
+        sideCall = await this.#runCommand(client, commandArgs);
       }
+      const createdChildId = createdSessionId(sideCall.ack, {
+        type: "createSelectionSideSession",
+        failure: "command-rejected",
+        mismatchFailure: sideCall.recovered ? "outcome-unknown" : "command-rejected"
+      });
       childSessionId = createdChildId;
+      this.reportProgress(input, {
+        anchorSessionId,
+        childSessionId: createdChildId,
+        stage: "child-created"
+      });
+      if (recoveredChildNeedsResume) {
+        await client.rpc(
+          "session/resume",
+          { sessionId: createdChildId },
+          queryTimeoutMs,
+          { signal: input.signal }
+        );
+      }
       let appliedModel;
       if (input.modelSelection !== void 0) {
         try {
-          await this.#setModel(client, childSessionId, input.modelSelection);
+          await this.#setModel(client, childSessionId, input.modelSelection, input.signal);
           appliedModel = input.modelSelection;
           this.log({
             event: "model-set",
@@ -24778,6 +25035,11 @@ var AppServerSessionBreeder = class {
             providerId: input.modelSelection.providerId,
             modelId: input.modelSelection.modelId,
             reasoningLevel: input.modelSelection.reasoningLevel ?? null
+          });
+          this.reportProgress(input, {
+            anchorSessionId,
+            childSessionId,
+            stage: "model-applied"
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -24789,6 +25051,9 @@ var AppServerSessionBreeder = class {
             modelId: input.modelSelection.modelId,
             message
           });
+          if (input.signal?.aborted) {
+            throw new BreedError("outcome-unknown", abortDescription(input.signal, message));
+          }
           throw new BreedError(
             "model-rejected",
             `member could not use the inherited model ${input.modelSelection.providerId}/${input.modelSelection.modelId}: ${message}`
@@ -24816,6 +25081,7 @@ var AppServerSessionBreeder = class {
       };
     } catch (err) {
       const stderr = client.getStderr().slice(-800);
+      const mayDispose = anchorEvidence && !(err instanceof BreedError && err.code === "outcome-unknown") && !input.signal?.aborted;
       if (err instanceof BreedError) {
         this.log({
           event: "session-breed-failed",
@@ -24826,13 +25092,13 @@ var AppServerSessionBreeder = class {
           anchorSessionId,
           childSessionId
         });
-        if (anchorSessionId !== null) {
+        if (mayDispose && anchorSessionId !== null) {
           this.disposeBredSessions({ anchorSessionId, workspacePath });
         }
         throw err;
       }
       const message = err instanceof Error ? err.message : String(err);
-      const code = /timeout/i.test(message) ? "startup-timeout" : /exited|ENOENT|EACCES|spawn/i.test(message) ? "spawn-failed" : "unsupported";
+      const code = input.signal?.aborted ? "outcome-unknown" : /timeout/i.test(message) ? "startup-timeout" : /exited|ENOENT|EACCES|spawn/i.test(message) ? "spawn-failed" : "unsupported";
       this.log({
         event: "session-breed-failed",
         teamId: input.teamId,
@@ -24842,7 +25108,7 @@ var AppServerSessionBreeder = class {
         anchorSessionId,
         childSessionId
       });
-      if (anchorSessionId !== null) {
+      if (mayDispose && anchorSessionId !== null) {
         this.disposeBredSessions({ anchorSessionId, workspacePath });
       }
       throw new BreedError(code, `${message}${stderr.length > 0 ? ` | stderr: ${stderr}` : ""}`);
@@ -24891,7 +25157,7 @@ var AppServerSessionBreeder = class {
    * result 是巨型消息快照（PoC 事实 1）：只记目标三元组与错误文本，绝不整包落日志。
    */
   /** setModel 请求体（createChild / applyModelSelection 共用；persistAsWorkspaceLastUsed 恒 false）。 */
-  async #setModel(client, sessionId, selection) {
+  async #setModel(client, sessionId, selection, signal) {
     await client.rpc(
       "session/setModel",
       {
@@ -24903,8 +25169,108 @@ var AppServerSessionBreeder = class {
         },
         persistAsWorkspaceLastUsed: false
       },
-      2e4
+      2e4,
+      { signal }
     );
+  }
+  reportProgress(input, progress) {
+    if (input.onProgress?.(progress) === false) {
+      throw new BreedError("outcome-unknown", "coordinator generation revoked; host evidence is retained for recovery");
+    }
+  }
+  async #runCommand(client, input) {
+    try {
+      const ack = await client.rpc("v4/command", commandEnvelope(input), input.commandTimeoutMs, {
+        signal: input.signal
+      });
+      return { ack, recovered: false };
+    } catch (err) {
+      if (input.signal?.aborted) {
+        throw new BreedError("outcome-unknown", abortDescription(input.signal, errorDescription(err)));
+      }
+      const message = errorDescription(err);
+      if (/invalid params|method not found|invalid request/i.test(message)) throw err;
+      const ack = await this.#queryCommand(client, {
+        commandId: input.commandId,
+        sessionId: input.sessionId,
+        type: input.type,
+        signal: input.signal,
+        timeoutMs: input.queryTimeoutMs
+      });
+      if (ack === "unknown") {
+        throw new BreedError("outcome-unknown", `${input.type} outcome is unknown; original command was not replayed`);
+      }
+      return { ack, recovered: true };
+    }
+  }
+  async #queryCommand(client, input) {
+    let queried;
+    try {
+      queried = await client.rpc(
+        "v4/commands/query",
+        { commands: [{ sessionId: input.sessionId, commandId: input.commandId }] },
+        input.timeoutMs,
+        { signal: input.signal }
+      );
+    } catch (err) {
+      const message = errorDescription(err);
+      throw new BreedError(
+        "outcome-unknown",
+        `${input.type} outcome is unknown; command query could not establish a final result: ${message}`
+      );
+    }
+    const matches = (queried?.results ?? []).filter(
+      (entry) => entry?.key?.commandId === input.commandId && entry.key.sessionId === input.sessionId
+    );
+    const result = matches.length === 1 ? matches[0].result : "unknown";
+    if (result === "unknown") return "unknown";
+    if (typeof result !== "object" || result === null) {
+      throw new BreedError(
+        "outcome-unknown",
+        `${input.type} outcome is unknown; malformed command result for "${input.commandId}"`
+      );
+    }
+    if (result.status === "accepted" || result.status === "duplicate") {
+      return result;
+    }
+    if (isExplicitRejection(result)) {
+      throw new BreedError(
+        input.type === "createSession" ? "create-rejected" : "command-rejected",
+        describeAck(input.type, result)
+      );
+    }
+    throw new BreedError(
+      "outcome-unknown",
+      `${input.type} outcome is unknown; command "${input.commandId}" has non-final status "${result.status ?? "missing"}"`
+    );
+  }
+  /** 仅对预分配 anchor 使用：必须同时证明 id、workspace 和非子会话类型，绝不认领近似对象。 */
+  async #findPreallocatedAnchor(client, input) {
+    let listed;
+    try {
+      listed = await client.rpc(
+        "session/list",
+        { sessionIds: [input.anchorSessionId] },
+        input.timeoutMs,
+        { signal: input.signal }
+      );
+    } catch (err) {
+      throw new BreedError(
+        "outcome-unknown",
+        `createSession outcome is unknown; anchor lookup failed: ${errorDescription(err)}`
+      );
+    }
+    const matches = (listed?.sessions ?? []).filter((session2) => session2?.sessionId === input.anchorSessionId);
+    if (matches.length === 0) return null;
+    const session = matches[0];
+    const sessionWorkspace = session.workspace?.workspacePath;
+    if (matches.length !== 1 || typeof sessionWorkspace !== "string" || path15.resolve(sessionWorkspace) !== path15.resolve(input.workspacePath) || session.sessionKind !== "interactive") {
+      throw new BreedError(
+        "outcome-unknown",
+        `createSession outcome is unknown; preallocated anchor "${input.anchorSessionId}" failed workspace/type verification`
+      );
+    }
+    return input.anchorSessionId;
   }
   #spawnClient(workspacePath) {
     try {
@@ -24922,6 +25288,40 @@ var AppServerSessionBreeder = class {
     }
   }
 };
+function commandEnvelope(input) {
+  return {
+    commandId: input.commandId,
+    clientId: "agent-team",
+    sessionId: input.sessionId,
+    issuedAt: input.issuedAt,
+    type: input.type,
+    payload: input.payload
+  };
+}
+function createdSessionId(ack, input) {
+  if (ack.status === "accepted" || ack.status === "duplicate") {
+    const id = ack.result?.sessionId;
+    if (ack.result?.type === input.type && typeof id === "string" && id.length > 0 && (input.expectedSessionId === void 0 || id === input.expectedSessionId)) {
+      return id;
+    }
+    throw new BreedError(
+      input.mismatchFailure,
+      `${input.type} returned mismatched result: ${describeAck(input.type, ack)}`
+    );
+  }
+  if (isExplicitRejection(ack)) throw new BreedError(input.failure, describeAck(input.type, ack));
+  throw new BreedError("outcome-unknown", describeAck(input.type, ack));
+}
+function isExplicitRejection(ack) {
+  return ack.status === "rejected" || ack.status === "failed" || ack.status === void 0;
+}
+function abortDescription(signal, fallback) {
+  const reason = signal.reason;
+  return reason instanceof Error ? reason.message : typeof reason === "string" ? reason : fallback;
+}
+function errorDescription(err) {
+  return err instanceof Error ? err.message : String(err);
+}
 function describeAck(type, ack) {
   const status = ack?.reasonCode ?? ack?.status ?? "no session id";
   return `${type} rejected: ${status}${ack?.message !== void 0 ? ` (${ack.message})` : ""}`;
@@ -25224,6 +25624,9 @@ var ResumePerTurnProvider = class {
   lastLaunchFailureAt = 0;
   pendingLookup = null;
   closed = false;
+  generation = 0;
+  generationAbort = new AbortController();
+  backgroundDeferred = false;
   /** 失败记录变化监听（0.4.1：host 接线 → roster.notifyStatusChanged 刷新成员展示）。 */
   modelFailureListeners = /* @__PURE__ */ new Set();
   // ---------------------------------------------------------------- 边界与接线
@@ -25255,6 +25658,12 @@ var ResumePerTurnProvider = class {
     if (this.sessionIsolation !== "child") return;
     this.resolveLeadInheritance();
   }
+  /** 仅在当前代次内写 origin；旧进度回调/后台恢复只读，不覆盖新代次。 */
+  writeCurrentOrigin(paths, origin) {
+    if (this.closed || this.generationAbort.signal.aborted) return false;
+    writeOrigin(paths, origin);
+    return true;
+  }
   /** 协调者启动纳管：孤儿轮次定案/再收养 + drain 标记处置 + lead 回执折叠（T4.4/触发点②）。 */
   adoptOrphans() {
     const finalized = [];
@@ -25264,6 +25673,15 @@ var ResumePerTurnProvider = class {
       this.handleDrainMarker(paths);
       for (const turn of listTurns(paths.runDir)) {
         if (turn.status !== "running" && turn.status !== "starting") continue;
+        if (turn.pid === null) {
+          const receipt = readSpawnReceipt(path17.join(paths.runDir, `${turn.turnId}.spawn.json`));
+          if (receipt?.pid !== void 0) {
+            writeTurn(paths.runDir, { ...turn, pid: receipt.pid, pgid: receipt.pid, status: "running" });
+            this.adoptedPids.add(receipt.pid);
+            adopted.push(turn.turnId);
+          }
+          continue;
+        }
         if (this.finalizeIfDead(memberId, turn)) {
           finalized.push(turn.turnId);
         } else if (turn.pid !== null) {
@@ -25276,9 +25694,21 @@ var ResumePerTurnProvider = class {
     this.startWatcher();
     return { finalized, adopted };
   }
-  /** 协调者关闭：停 watcher（轮次进程不杀——独立进程组纪律）。 */
+  /** 协调者每次获锁都启用新代次；旧 watcher/恢复回调不能借用下一次获锁的权限。 */
+  activateGeneration() {
+    this.generation += 1;
+    this.generationAbort = new AbortController();
+    this.closed = false;
+    this.backgroundDeferred = true;
+    return this.generationAbort.signal;
+  }
+  generationIsCurrent(generation) {
+    return generation === this.generation && !this.closed;
+  }
+  /** 协调者关闭：先撤销本代次，再停 watcher；轮次进程不杀。 */
   detach() {
     this.closed = true;
+    this.generationAbort.abort(new Error("coordinator generation revoked"));
     if (this.watcherTimer !== null) {
       clearInterval(this.watcherTimer);
       this.watcherTimer = null;
@@ -25295,20 +25725,23 @@ var ResumePerTurnProvider = class {
     }
   }
   startWatcher() {
-    if (this.watcherTimer !== null || this.closed) return;
+    if (this.watcherTimer !== null || this.closed || this.backgroundDeferred) return;
+    const generation = this.generation;
     const timer = setInterval(() => {
-      void this.watchTick().catch((err) => {
+      if (!this.generationIsCurrent(generation)) return;
+      void this.watchTick(generation).catch((err) => {
         this.log({ ts: iso(this.now()), kind: "watcher-error", error: errText2(err) });
       });
     }, this.watcherIntervalMs);
     timer.unref?.();
     this.watcherTimer = timer;
   }
-  async watchTick() {
-    if (this.watcherBusy || this.closed) return;
+  async watchTick(generation = this.generation) {
+    if (this.watcherBusy || !this.generationIsCurrent(generation)) return;
     this.watcherBusy = true;
     try {
       for (const memberId of listMembers(this.teamDir)) {
+        if (!this.generationIsCurrent(generation)) return;
         const paths = memberPaths(this.teamDir, memberId);
         const turnId = readCurrentTurnId(paths);
         if (turnId === void 0) continue;
@@ -25317,6 +25750,7 @@ var ResumePerTurnProvider = class {
         if (turn.status === "running" || turn.status === "starting") {
           if (turn.interruptRequestedAt !== void 0) {
             const dead = await killProcessGroup(turn.pgid, this.termGraceMs);
+            if (!this.generationIsCurrent(generation)) return;
             if (dead) {
               const landed = turn.sessionId !== null && this.reader.hasUserText(turn.sessionId, turn.promptText);
               writeTurn(paths.runDir, {
@@ -25334,17 +25768,18 @@ var ResumePerTurnProvider = class {
             }
             continue;
           }
-          this.finalizeIfDead(memberId, turn);
+          if (this.generationIsCurrent(generation)) this.finalizeIfDead(memberId, turn);
         }
       }
-      this.foldLeadReceipts(false);
+      if (this.generationIsCurrent(generation)) this.foldLeadReceipts(false);
     } finally {
       this.watcherBusy = false;
     }
   }
   /** 轮次进程已死 → 定案（landed 实查）+ 边界事件；返回是否已定案。 */
   finalizeIfDead(memberId, turn) {
-    if (turn.pid !== null && pidAlive(turn.pid)) {
+    if (turn.pid === null) return false;
+    if (pidAlive(turn.pid)) {
       this.adoptedPids.add(turn.pid);
       return false;
     }
@@ -25395,12 +25830,127 @@ var ResumePerTurnProvider = class {
     this.emitBoundary({ memberId: this.opts.teamId, landedMessageIds: ids, carriedMessageIds: ids });
   }
   // ---------------------------------------------------------------- TeammateProvider
+  prepareContinuable(args) {
+    const paths = memberPaths(this.teamDir, args.memberId);
+    const existing = readOrigin(paths);
+    if (existing !== void 0) {
+      if (existing.requestId === args.requestId) return;
+      throw new Error(`member ${args.memberId} already has a creation intent`);
+    }
+    const prompt = args.context === "fork" ? buildForkFirstPrompt(this.reader, this.opts.teamId, args.firstPrompt).prompt : args.firstPrompt;
+    const request = args.requestId;
+    const anchorSessionId = `sess_team_${request.replace(/[^A-Za-z0-9_-]/g, "")}`;
+    writeOrigin(paths, {
+      teamId: args.teamId,
+      memberId: args.memberId,
+      name: args.name,
+      provider: args.context === "fork" ? "fork" : "spawn",
+      mode: "continuable",
+      context: args.context,
+      createdAt: iso(this.now()),
+      cwd: this.cwd,
+      firstPromptText: prompt,
+      firstPromptSha256: sha256(prompt),
+      sessionId: null,
+      initialUserMessageAccepted: false,
+      sessionIsolation: this.sessionIsolation,
+      ...this.sessionIsolation === "child" ? {
+        anchorSessionId,
+        logicalParentSessionId: args.teamId,
+        sessionKind: "selection_side_chat",
+        hostAnchorConfirmed: false
+      } : { sessionKind: "interactive" },
+      requestId: args.requestId,
+      ...this.sessionIsolation === "child" ? { anchorCommandId: `team-anchor-${request}`, childCommandId: `team-child-${request}` } : {},
+      creationPending: true,
+      creationDiagnostic: "creation intent persisted; awaiting host confirmation",
+      confirmationAttempts: 0,
+      confirmationDeadlineAt: iso(this.now() + this.firstTurnTimeoutMs)
+    });
+  }
+  async resumeContinuable(memberId, signal) {
+    const paths = memberPaths(this.teamDir, memberId);
+    const origin = readOrigin(paths);
+    if (origin === void 0 || origin.requestId === void 0) {
+      throw new ProvisioningPending("\u521B\u5EFA\u610F\u56FE\u7F3A\u5931\uFF0C\u65E0\u6CD5\u81EA\u52A8\u6062\u590D\uFF1B\u4E0D\u4F1A\u91CD\u65B0\u751F\u6210\u521B\u5EFA\u8BF7\u6C42");
+    }
+    if (origin.confirmationStopped === true) {
+      throw new ProvisioningPending("\u521B\u5EFA\u7ED3\u679C\u5F85\u786E\u8BA4\uFF0C\u81EA\u52A8\u6062\u590D\u9884\u7B97\u5DF2\u8017\u5C3D\uFF1B\u8BF7\u7531 Lead \u63A5\u7BA1");
+    }
+    return this.startContinuable({
+      teamId: origin.teamId,
+      memberId,
+      name: origin.name,
+      description: "",
+      firstPrompt: origin.firstPromptText,
+      context: origin.context,
+      requestId: origin.requestId,
+      ...signal !== void 0 ? { signal } : {}
+    });
+  }
+  noteProvisioningRecovery(memberId) {
+    const paths = memberPaths(this.teamDir, memberId);
+    let origin;
+    try {
+      origin = readOrigin(paths);
+    } catch {
+      return true;
+    }
+    if (origin === void 0 || origin.confirmationStopped === true) return true;
+    const attempts = (origin.confirmationAttempts ?? 0) + 1;
+    const stopped = attempts >= 3 || origin.confirmationDeadlineAt !== void 0 && Date.parse(origin.confirmationDeadlineAt) <= this.now();
+    this.writeCurrentOrigin(paths, {
+      ...origin,
+      confirmationAttempts: attempts,
+      ...stopped ? { confirmationStopped: true, creationDiagnostic: "\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u81EA\u52A8\u6062\u590D\u5DF2\u505C\u6B62\uFF0C\u8BF7\u7531 Lead \u63A5\u7BA1" } : {}
+    });
+    return stopped;
+  }
+  startBackground() {
+    this.backgroundDeferred = false;
+    this.startWatcher();
+  }
   async startContinuable(args) {
     if (args.teamId !== this.opts.teamId) {
       throw new Error(`provider serves team ${this.opts.teamId} but spawn targets ${args.teamId}`);
     }
     const paths = memberPaths(this.teamDir, args.memberId);
-    const prompt = args.context === "fork" ? buildForkFirstPrompt(this.reader, this.opts.teamId, args.firstPrompt).prompt : args.firstPrompt;
+    const persistedOrigin = readOrigin(paths);
+    if (persistedOrigin === void 0 || persistedOrigin.requestId !== args.requestId) {
+      throw new ProvisioningPending("\u521B\u5EFA\u610F\u56FE\u7F3A\u5931\u6216\u4E0D\u5339\u914D\uFF1B\u4E0D\u4F1A\u91CD\u65B0\u751F\u6210\u521B\u5EFA\u8BF7\u6C42");
+    }
+    const persisted = persistedOrigin;
+    if (persisted.confirmationStopped === true) {
+      throw new ProvisioningPending("\u7ED3\u679C\u5F85\u786E\u8BA4\uFF0C\u81EA\u52A8\u6062\u590D\u9884\u7B97\u5DF2\u8017\u5C3D\uFF1B\u8BF7\u7531 Lead \u63A5\u7BA1");
+    }
+    const prompt = persisted.firstPromptText;
+    const existingTurnId = readCurrentTurnId(paths);
+    const existingTurn = existingTurnId === void 0 ? listTurns(paths.runDir).findLast((turn2) => turn2.kind === "first") : readTurn(paths.runDir, existingTurnId);
+    if (existingTurn !== void 0 && existingTurn.memberId !== args.memberId) {
+      throw new ProvisioningPending("\u73B0\u6709 turn \u4E0E\u6210\u5458\u610F\u56FE\u4E0D\u5339\u914D\uFF1B\u505C\u6B62\u81EA\u52A8\u6062\u590D");
+    }
+    if (existingTurn?.kind === "first") {
+      if (existingTurn.promptText !== prompt) {
+        throw new ProvisioningPending("\u73B0\u6709\u9996\u8F6E\u8F93\u5165\u4E0E origin \u4E0D\u4E00\u81F4\uFF1B\u505C\u6B62\u81EA\u52A8\u6062\u590D");
+      }
+      if (existingTurn.status === "exited" || existingTurn.status === "failed" || existingTurn.status === "spawn-error" || existingTurn.status === "interrupted") {
+        throw new ProvisioningPending("\u5DF2\u6709\u9996\u8F6E\u7EC8\u6001\u8BB0\u5F55\uFF1B\u4E0D\u4F1A\u81EA\u52A8\u91CD\u590D\u542F\u52A8");
+      }
+      const persistedWithSession = persisted.sessionId === null && existingTurn.sessionId !== null ? { ...persisted, sessionId: existingTurn.sessionId } : persisted;
+      try {
+        const accepted = await this.awaitFirstAccept({
+          paths,
+          origin: persistedWithSession,
+          turn: existingTurn,
+          spawnT0: Date.parse(existingTurn.startedAt),
+          ...args.signal !== void 0 ? { signal: args.signal } : {}
+        });
+        return { memberId: args.memberId, accepted: accepted !== null };
+      } catch (err) {
+        if (err instanceof ProvisioningPending) throw err;
+        throw new ProvisioningPending("\u5DF2\u6709\u9996\u8F6E\u542F\u52A8\u610F\u56FE\uFF0C\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u4E0D\u4F1A\u91CD\u590D\u542F\u52A8");
+      }
+    }
     const inheritedSelection = this.sessionIsolation === "child" ? this.resolveLeadInheritance() : void 0;
     let bred = null;
     if (this.sessionIsolation === "child") {
@@ -25408,10 +25958,30 @@ var ResumePerTurnProvider = class {
         bred = await this.breeder.createChild({
           teamId: this.opts.teamId,
           workspacePath: this.cwd,
-          ...inheritedSelection !== void 0 ? { modelSelection: inheritedSelection } : {}
+          ...inheritedSelection !== void 0 ? { modelSelection: inheritedSelection } : {},
+          ...persisted.anchorCommandId !== void 0 ? { anchorCommandId: persisted.anchorCommandId } : {},
+          ...persisted.childCommandId !== void 0 ? { childCommandId: persisted.childCommandId } : {},
+          ...persisted.anchorSessionId !== void 0 ? { anchorSessionId: persisted.anchorSessionId } : {},
+          ...persisted.hostAnchorConfirmed === true || persisted.sessionId !== null ? { recoveryEvidence: true } : {},
+          ...args.signal !== void 0 ? { signal: args.signal } : {},
+          onProgress: (progress) => {
+            if (this.generationAbort.signal.aborted) return;
+            const latest = readOrigin(paths) ?? persisted;
+            if (latest.requestId !== args.requestId) return;
+            return this.writeCurrentOrigin(paths, {
+              ...latest,
+              ...progress.anchorSessionId !== void 0 ? { anchorSessionId: progress.anchorSessionId, hostAnchorConfirmed: true } : {},
+              ...progress.childSessionId !== void 0 ? { sessionId: progress.childSessionId } : {},
+              creationDiagnostic: progress.stage
+            });
+          }
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        if (err.code === "outcome-unknown") {
+          if (args.signal?.aborted && !this.generationAbort.signal.aborted) throw err;
+          throw new ProvisioningPending("\u5BBF\u4E3B\u521B\u5EFA\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u4E0D\u4F1A\u91CD\u65B0\u751F\u6210\u521B\u5EFA\u8BF7\u6C42");
+        }
         if (inheritedSelection !== void 0 && /inherited model/.test(message)) {
           this.recordModelFailure(
             paths,
@@ -25424,30 +25994,18 @@ var ResumePerTurnProvider = class {
         throw err;
       }
     }
-    const spawnCwd = bred?.workspacePath ?? this.cwd;
+    const spawnCwd = bred?.workspacePath ?? persisted.cwd;
     const origin = {
-      teamId: this.opts.teamId,
-      memberId: args.memberId,
-      name: args.name,
-      provider: args.context === "fork" ? "fork" : "spawn",
-      mode: "continuable",
-      context: args.context,
-      createdAt: iso(this.now()),
+      ...persisted,
       cwd: spawnCwd,
-      firstPromptText: prompt,
-      firstPromptSha256: sha256(prompt),
-      sessionId: bred?.childSessionId ?? null,
-      initialUserMessageAccepted: false,
-      // 只记实际生效者（createChild 失败即抛，走到这里 appliedModel 与继承选择一致或 legacy 无）。
+      sessionId: bred?.childSessionId ?? persisted.sessionId,
+      initialUserMessageAccepted: persisted.initialUserMessageAccepted,
       ...bred?.appliedModel !== void 0 ? { modelSelection: bred.appliedModel, modelSource: "inherited" } : {},
-      sessionIsolation: bred !== null ? "child" : "legacy",
-      ...bred !== null ? {
-        anchorSessionId: bred.anchorSessionId,
-        logicalParentSessionId: this.opts.teamId,
-        sessionKind: "selection_side_chat"
-      } : { sessionKind: "interactive" }
+      ...bred !== null ? { anchorSessionId: bred.anchorSessionId } : {}
     };
-    writeOrigin(paths, origin);
+    if (!this.writeCurrentOrigin(paths, origin)) {
+      throw new ProvisioningPending("\u521B\u5EFA\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u5BBF\u4E3B\u8BC1\u636E\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4\uFF0C\u4E0D\u542F\u52A8\u9996\u8F6E");
+    }
     const spawnT0 = this.now();
     const turn = await this.launchTurn({
       paths,
@@ -25460,7 +26018,8 @@ var ResumePerTurnProvider = class {
       resume: bred !== null,
       cwd: spawnCwd,
       // createChild 刚把继承选择应用进子会话（0.4.1 验收：首轮不重复应用同一选择）。
-      modelJustApplied: bred?.appliedModel
+      modelJustApplied: bred?.appliedModel,
+      ...args.signal !== void 0 ? { signal: args.signal } : {}
     });
     this.startWatcher();
     try {
@@ -25473,18 +26032,19 @@ var ResumePerTurnProvider = class {
       });
       return { memberId: args.memberId, accepted: sessionId !== null };
     } catch (err) {
-      if (args.signal?.aborted) throw err;
+      if (args.signal?.aborted && !this.generationAbort.signal.aborted) throw args.signal.reason ?? err;
+      if (err instanceof ProvisioningPending) throw err;
       this.log({ ts: iso(this.now()), kind: "first-probe-error", memberId: args.memberId, error: errText2(err) });
-      return { memberId: args.memberId, accepted: false };
+      throw new ProvisioningPending("\u9996\u8F6E\u6301\u4E45\u63A5\u6536\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u4E0D\u4F1A\u91CD\u590D\u542F\u52A8");
     }
   }
   /** 首轮持久接收探针：session id 认领（hook 领地优先，db 目录+首条用户文本兜底）+ 落库确认。 */
   async awaitFirstAccept(args) {
     const { paths, origin, turn, spawnT0 } = args;
     const deadline = spawnT0 + this.firstTurnTimeoutMs;
-    let sessionId = origin.sessionId;
+    let sessionId = origin.sessionId ?? this.claimedSessionId(origin.memberId);
     for (; ; ) {
-      if (args.signal?.aborted) throw args.signal.reason ?? new Error("aborted");
+      if (args.signal?.aborted && !this.generationAbort.signal.aborted) throw args.signal.reason ?? new Error("aborted");
       sessionId ??= this.claimedSessionId(origin.memberId);
       if (sessionId === null) {
         const exclude = this.claimedSessionsExcluding(origin.memberId);
@@ -25497,14 +26057,23 @@ var ResumePerTurnProvider = class {
         if (found !== void 0) sessionId = found;
       }
       if (sessionId !== null) {
-        const landed = this.reader.hasUserText(sessionId, origin.firstPromptText);
+        let landed;
+        try {
+          landed = this.reader.hasUserText(sessionId, origin.firstPromptText);
+        } catch (err) {
+          throw new ProvisioningPending(`\u9996\u8F6E\u63A5\u6536\u6682\u4E0D\u53EF\u786E\u8BA4\uFF1A${errText2(err)}`);
+        }
         if (landed) {
           const nextOrigin = {
             ...readOrigin(paths) ?? origin,
             sessionId,
-            initialUserMessageAccepted: true
+            initialUserMessageAccepted: true,
+            creationPending: false,
+            creationDiagnostic: void 0
           };
-          writeOrigin(paths, nextOrigin);
+          if (!this.writeCurrentOrigin(paths, nextOrigin)) {
+            throw new ProvisioningPending("\u9996\u8F6E\u5DF2\u88AB\u5BBF\u4E3B\u786E\u8BA4\uFF0C\u4F46\u65E7\u4EE3\u6B21\u4E0D\u5F97\u8986\u76D6\u6062\u590D\u72B6\u6001");
+          }
           const current = readTurn(paths.runDir, turn.turnId) ?? turn;
           writeTurn(paths.runDir, { ...current, sessionId, landed: true });
           this.writeTeammateMapping(sessionId, nextOrigin);
@@ -25522,7 +26091,10 @@ var ResumePerTurnProvider = class {
       }
       const turnNow = readTurn(paths.runDir, turn.turnId);
       const pid = turnNow?.pid ?? turn.pid;
-      if (pid === null || !pidAlive(pid)) {
+      if (pid === null) {
+        throw new ProvisioningPending("\u5DF2\u6709\u542F\u52A8\u610F\u56FE\u4F46\u5C1A\u65E0 PID/\u56DE\u6267\u786E\u8BA4\uFF1B\u4FDD\u6301\u5F85\u6062\u590D\uFF0C\u4E0D\u91CD\u590D\u542F\u52A8");
+      }
+      if (!pidAlive(pid)) {
         this.log({
           ts: iso(this.now()),
           kind: "first-not-accepted",
@@ -25534,7 +26106,6 @@ var ResumePerTurnProvider = class {
         return null;
       }
       if (this.now() >= deadline) {
-        await killProcessGroup(turnNow?.pgid ?? turn.pgid, this.termGraceMs).catch(() => void 0);
         this.log({
           ts: iso(this.now()),
           kind: "first-probe-timeout",
@@ -25542,7 +26113,7 @@ var ResumePerTurnProvider = class {
           memberId: origin.memberId,
           turnId: turn.turnId
         });
-        return null;
+        throw new ProvisioningPending("\u9996\u8F6E\u63A5\u6536\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u65E7 turn \u53EF\u80FD\u4ECD\u5728\u6267\u884C\uFF0C\u4E0D\u4F1A\u91CD\u590D\u542F\u52A8");
       }
       await this.sleep(150);
     }
@@ -25661,6 +26232,9 @@ var ResumePerTurnProvider = class {
     return { previousStatus };
   }
   async drain(args) {
+    if (this.closed || this.generationAbort.signal.aborted) {
+      throw new Error("coordinator generation revoked; drain requires current ownership");
+    }
     const memberIds = listMembers(this.teamDir);
     if (this.drainPolicy === "keep") {
       for (const memberId of memberIds) {
@@ -25700,7 +26274,7 @@ var ResumePerTurnProvider = class {
     let sessionId = origin.sessionId;
     if (sessionId === null) {
       sessionId = this.resolveSessionId(origin);
-      if (sessionId !== null) {
+      if (sessionId !== null && !this.closed) {
         writeOrigin(paths, { ...origin, sessionId });
       }
     }
@@ -25816,6 +26390,9 @@ var ResumePerTurnProvider = class {
     const turnId = nextTurnId(args.paths.runDir);
     const stdoutFile = path17.join(args.paths.runDir, `${turnId}.out`);
     const turnCwd = args.cwd ?? this.cwd;
+    if (this.generationAbort.signal.aborted || args.signal?.aborted) {
+      throw new ProvisioningPending("\u521B\u5EFA\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4E0D\u4F1A\u542F\u52A8\u65B0 turn");
+    }
     await this.syncMemberModel(
       args.paths,
       args.memberId,
@@ -25856,6 +26433,9 @@ var ResumePerTurnProvider = class {
     };
     writeTurn(args.paths.runDir, turn);
     setCurrentTurn(args.paths, turnId);
+    if (this.generationAbort.signal.aborted || args.signal?.aborted) {
+      throw new ProvisioningPending("\u542F\u52A8\u610F\u56FE\u5DF2\u4FDD\u5B58\u4F46\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u6301\u5F85\u6062\u590D\uFF0C\u4E0D\u542F\u52A8");
+    }
     const env = {
       ...process.env,
       TEAM_SPAWN_IDENTITY: JSON.stringify({
@@ -25866,6 +26446,7 @@ var ResumePerTurnProvider = class {
     };
     if (this.opts.dbPath !== void 0) env.TEAM_DB_PATH = this.opts.dbPath;
     let spawned;
+    const receiptFile = path17.join(args.paths.runDir, `${turnId}.spawn.json`);
     try {
       spawned = await spawnDetached({
         command: this.zcode.command,
@@ -25873,13 +26454,20 @@ var ResumePerTurnProvider = class {
         // 真实 env 必须完整传给子进程（API key 等）；spec 只短暂存在（helper 读后立即删除，0600）。
         env,
         cwd: turnCwd,
-        stdoutFile
+        stdoutFile,
+        resultFile: receiptFile
       });
     } catch (err) {
-      writeTurn(args.paths.runDir, { ...turn, status: "spawn-error", exitedAt: iso(this.now()), exitCode: null });
-      this.lastLaunchFailureAt = this.now();
-      this.log({ ts: iso(this.now()), kind: "spawn-error", teamId: this.opts.teamId, memberId: args.memberId, turnId, error: errText2(err) });
-      throw err;
+      const receipt = readSpawnReceipt(receiptFile);
+      if (receipt?.error !== void 0) {
+        writeTurn(args.paths.runDir, { ...turn, status: "spawn-error", exitedAt: iso(this.now()), exitCode: null });
+        throw new Error(`turn process launch failed: ${receipt.error}`);
+      }
+      if (receipt !== void 0 && receipt.pid !== void 0) {
+        spawned = { pid: receipt.pid, pgid: receipt.pid, stdoutFile, specFile: "", resultFile: receiptFile };
+      } else {
+        throw new ProvisioningPending("\u542F\u52A8\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u4E0D\u4F1A\u91CD\u590D\u542F\u52A8\u9996\u8F6E");
+      }
     }
     const running = { ...turn, pid: spawned.pid, pgid: spawned.pgid, status: "running" };
     writeTurn(args.paths.runDir, running);
@@ -25906,7 +26494,13 @@ var ResumePerTurnProvider = class {
     const turn = readTurn(paths.runDir, turnId);
     if (turn === void 0) return null;
     if (turn.status !== "running" && turn.status !== "starting") return null;
-    if (turn.pid === null || !pidAlive(turn.pid)) return null;
+    if (turn.pid === null) {
+      const receipt = readSpawnReceipt(path17.join(paths.runDir, `${turn.turnId}.spawn.json`));
+      if (receipt?.pid === void 0) return null;
+      writeTurn(paths.runDir, { ...turn, pid: receipt.pid, pgid: receipt.pid, status: "running" });
+      return { ...turn, pid: receipt.pid, pgid: receipt.pid, status: "running" };
+    }
+    if (!pidAlive(turn.pid)) return null;
     return turn;
   }
   /** 会话 id 认领：session-map（teammate SessionStart hook 经 TEAM_SPAWN_IDENTITY 落的映射）。 */
@@ -26026,7 +26620,7 @@ var ResumePerTurnProvider = class {
       this.clearFailureIfVerified(paths);
       const originNow = readOrigin(paths);
       if (originNow !== void 0 && (originNow.modelSelection === void 0 || !sameModelSelection(originNow.modelSelection, lead))) {
-        writeOrigin(paths, { ...originNow, modelSelection: lead, modelSource: "inherited" });
+        this.writeCurrentOrigin(paths, { ...originNow, modelSelection: lead, modelSource: "inherited" });
       }
       return;
     }
@@ -26049,7 +26643,7 @@ var ResumePerTurnProvider = class {
       throw err;
     }
     if (origin !== void 0) {
-      writeOrigin(paths, { ...readOrigin(paths) ?? origin, modelSelection: lead, modelSource: "inherited" });
+      this.writeCurrentOrigin(paths, { ...readOrigin(paths) ?? origin, modelSelection: lead, modelSource: "inherited" });
     }
     this.clearFailureIfVerified(paths);
     this.log({
@@ -26202,20 +26796,32 @@ var ResumePerTurnProvider = class {
    */
   diagnosticsOf(memberId) {
     const paths = memberPaths(this.teamDir, memberId);
+    const origin = readOrigin(paths);
+    const pending = origin?.creationPending === true && origin.creationDiagnostic !== void 0 ? [origin.creationDiagnostic] : [];
     let record2;
     try {
       record2 = readModelFailed(paths);
     } catch {
-      return [];
+      return pending;
     }
-    if (record2 === void 0) return [];
+    if (record2 === void 0) return pending;
     const reason = typeof record2.reason === "string" ? record2.reason : "";
     const selection = parseModelSelection(record2.modelSelection);
     const head = selection !== void 0 ? `\u6210\u5458\u6A21\u578B\u7EE7\u627F\u5931\u8D25\uFF1A${selection.providerId}/${selection.modelId}${reason.length > 0 ? `\uFF08${reason}\uFF09` : ""}` : `\u6210\u5458\u6A21\u578B\u7EE7\u627F\u5931\u8D25\uFF1A${reason}`;
     if ((record2.kind ?? "deterministic") === "transient" && (record2.attempts ?? 1) > 1) {
-      return [`${head}\uFF08\u4E34\u65F6\u6545\u969C\uFF0C\u5DF2\u81EA\u52A8\u91CD\u8BD5 ${record2.attempts - 1} \u6B21\uFF09`];
+      return [`${head}\uFF08\u4E34\u65F6\u6545\u969C\uFF0C\u5DF2\u81EA\u52A8\u91CD\u8BD5 ${record2.attempts - 1} \u6B21\uFF09`, ...pending];
     }
-    return [head];
+    return [head, ...pending];
+  }
+  /** 外层断连只读原请求登记；没有 requestId 关联不能声称已受理。 */
+  requestStatus(requestId) {
+    for (const memberId of listMembers(this.teamDir)) {
+      const origin = readOrigin(memberPaths(this.teamDir, memberId));
+      if (origin?.requestId === requestId) {
+        return { memberId, accepted: origin.initialUserMessageAccepted };
+      }
+    }
+    return void 0;
   }
   /** daemon 侧补写 teammate 映射（hook 未及写时的兜底；不覆盖已有 teammate 映射）。 */
   writeTeammateMapping(sessionId, origin) {
@@ -26262,6 +26868,17 @@ function safeDir(teamId) {
 }
 function sha256(text) {
   return createHash2("sha256").update(text).digest("hex");
+}
+function readSpawnReceipt(file) {
+  try {
+    const parsed = JSON.parse(fs18.readFileSync(file, "utf8"));
+    return {
+      ...typeof parsed.pid === "number" && Number.isInteger(parsed.pid) && parsed.pid > 0 ? { pid: parsed.pid } : {},
+      ...typeof parsed.error === "string" ? { error: parsed.error } : {}
+    };
+  } catch {
+    return void 0;
+  }
 }
 function iso(ms) {
   return new Date(ms).toISOString();
@@ -26721,7 +27338,7 @@ function now(deps) {
 }
 
 // src/panel/companion-server.ts
-import crypto3 from "node:crypto";
+import crypto4 from "node:crypto";
 import fs20 from "node:fs";
 import http from "node:http";
 import path19 from "node:path";
@@ -26736,7 +27353,7 @@ function companionRegistryFile(dataRoot) {
   return file;
 }
 async function startCompanionServer(deps) {
-  const token = crypto3.randomBytes(16).toString("hex");
+  const token = crypto4.randomBytes(16).toString("hex");
   const registryFile = companionRegistryFile(deps.dataRoot);
   const sseClients = /* @__PURE__ */ new Set();
   const backpressured = /* @__PURE__ */ new Set();
@@ -26947,7 +27564,7 @@ function timingSafeEqualStr(a, b) {
   const ba = Buffer.from(a);
   const bb = Buffer.from(b);
   if (ba.length !== bb.length) return false;
-  return crypto3.timingSafeEqual(ba, bb);
+  return crypto4.timingSafeEqual(ba, bb);
 }
 
 // src/daemon.ts
