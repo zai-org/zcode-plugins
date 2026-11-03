@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "nimbus-bci": {
+      "type": "http",
+      "url": "https://nimbus-mcp.fly.dev/mcp",
+      "timeoutMs": 120000
+    }
+  }
+}
