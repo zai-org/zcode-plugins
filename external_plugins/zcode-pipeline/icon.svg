@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <!-- Conveyor: three stages connected by arrows -->
+  <!-- Background: rounded square -->
+  <rect width="128" height="128" rx="28" fill="#1a1a2e"/>
+
+  <!-- Stage 1: Brief (circle) -->
+  <circle cx="32" cy="64" r="16" stroke="#4ade80" stroke-width="4" fill="none"/>
+
+  <!-- Arrow 1 -->
+  <path d="M52 64 L60 64 M56 58 L62 64 L56 70" stroke="#64748b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stage 2: Build (rect) -->
+  <rect x="70" y="50" width="28" height="28" rx="6" stroke="#38bdf8" stroke-width="4" fill="none"/>
+
+  <!-- Arrow 2 -->
+  <path d="M104 64 L112 64 M108 58 L114 64 L108 70" stroke="#64748b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stage 3: Ship (checkmark circle) -->
+  <circle cx="96" cy="28" r="14" stroke="#f472b6" stroke-width="4" fill="none"/>
+  <path d="M90 28 L94 32 L102 24" stroke="#f472b6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Conveyor belt line -->
+  <line x1="16" y1="96" x2="112" y2="96" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="24" cy="96" r="4" fill="#334155"/>
+  <circle cx="48" cy="96" r="4" fill="#334155"/>
+  <circle cx="72" cy="96" r="4" fill="#334155"/>
+  <circle cx="96" cy="96" r="4" fill="#334155"/>
+
+  <!-- Flow dots on belt -->
+  <circle cx="36" cy="96" r="2" fill="#4ade80"/>
+  <circle cx="60" cy="96" r="2" fill="#38bdf8"/>
+  <circle cx="84" cy="96" r="2" fill="#f472b6"/>
+</svg>

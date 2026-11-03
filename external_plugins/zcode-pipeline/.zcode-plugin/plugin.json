@@ -1,0 +1,31 @@
+{
+  "name": "zcode-pipeline",
+  "version": "2.3.2",
+  "description": "Multi-agent development conveyor for ZCode: initializer -> briefer -> architect -> tech lead -> tech writer -> developer -> reviews (security/goal/code) -> QA -> manager -> summarizer; analysis track (analyst + /analyze), fast-track profile (/fast), coordinator skill, /init-project, /self-test and /pipeline-status.",
+  "agents": "agents",
+  "commands": "commands",
+  "skills": "skills",
+  "author": {
+    "name": "Mikhail Ilinsky"
+  },
+  "description_i18n": {
+    "en": "Multi-agent development conveyor for ZCode: initializer -> briefer -> architect -> tech lead -> tech writer -> developer -> reviews (security/goal/code) -> QA -> manager -> summarizer; analysis track (analyst + /analyze), fast-track profile (/fast), coordinator skill, /init-project, /self-test and /pipeline-status.",
+    "zh-CN": "面向 ZCode 的多智能体开发流水线：初始化器 → 需求访谈 → 架构师 → 技术负责人 → 技术撰稿人 → 执行者 → 三重评审（安全/目标/代码）→ QA → 经理 → 总结者。分析轨道、快速通道、协调者技能、知识库。"
+  },
+  "homepage": "https://github.com/milinsky/zcode-pipeline",
+  "repository": "https://github.com/milinsky/zcode-pipeline",
+  "license": "GPL-3.0-or-later",
+  "keywords": [
+    "pipeline",
+    "conveyor",
+    "multi-agent",
+    "development",
+    "review",
+    "qa",
+    "brief",
+    "architecture",
+    "knowledge-base",
+    "fast-track",
+    "analysis"
+  ]
+}
