@@ -37,7 +37,8 @@
 
   css = document.createElement("style");
   css.textContent =
-    ".__sspills-row{position:fixed;display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
+    ".__sspills-row{position:absolute;left:50%;transform:translateX(-50%);bottom:0;" +
+    "max-width:calc(100% - 24px);overflow:hidden;display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
     ".__sspills-pill{display:inline-flex;align-items:center;gap:6px;height:20px;padding:1px 8px;" +
     "border-radius:6px;background:transparent;border:0;color:rgba(232,235,241,.55);" +
     "font:500 12px/20px 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;font-variant-numeric:tabular-nums;" +
@@ -287,7 +288,7 @@
     var hit = reqHitPct(lr);
     // 最近请求 token 段：入 X / 出 Y（无数据时退回会话累计）
     var reqTokHtml = lr
-      ? "入 " + fmtTok(lr["in"]) + " · 出 " + fmtTok(lr.out)
+      ? "输入 " + fmtTok(lr["in"]) + " · 输出 " + fmtTok(lr.out)
       : "累计 " + fmtTok((data.tokens || {}).total) + " tok";
     if (mode === "micro") {
       // 最窄档：只剩实时速度（参照同款统计条的 compact 形态），保证窄输入框也放得下
@@ -399,7 +400,6 @@
      - 尾随防抖 180ms：滚轮滑动/侧栏动画等过渡帧全部跳过，只在静止后布局一次
      - 统计行挂在输入条下方（fixed），宽度只取决于输入条宽度：按「宽→窄」挑第一个放得下的档位 */
   var dead = false;      // teardown 后置 true：一切异步回调早退，死实例不碰 DOM
-  var lastLeft = -9999, lastTop = -9999;
   var layoutTimer = 0;
   var lastScrollAt = 0; // 滚动豁免：滚动后 700ms 内不布局（滚动中会话顶栏/输入条有过渡动画）
 
@@ -436,24 +436,49 @@
     }
   }
 
+  /* 输入条卡片底部原本只剩 ~7px，放不下一整行；给它补 24px 内边距，
+     统计行就落在卡片内新增的这条底带里（宿主重渲染清掉内联样式时自动补回）。
+     同时把 dock 设为定位上下文，统计行用 left:50% 居中——拖拽侧栏时位置由浏览器
+     随卡片一起重算，不再依赖 JS 逐帧改坐标（那会慢一帧，看起来就是「闪一下」）。 */
+  var dockHost = null, dockOrigPad = "", dockOrigPos = "";
+  function ensureDockHost(dock) {
+    if (dockHost && dockHost !== dock) restoreDockHost();
+    if (!dockHost) {
+      dockOrigPad = dock.style.paddingBottom || "";
+      dockOrigPos = dock.style.position || "";
+      dockHost = dock;
+    }
+    if (dock.style.paddingBottom !== "24px") dock.style.paddingBottom = "24px";
+    if (dock.style.position !== "relative") dock.style.position = "relative";
+  }
+  function restoreDockHost() {
+    if (!dockHost) return;
+    try {
+      if (dockHost.style.paddingBottom === "24px") dockHost.style.paddingBottom = dockOrigPad;
+      if (dockHost.style.position === "relative") dockHost.style.position = dockOrigPos;
+    } catch (e) {}
+    dockHost = null;
+  }
+
   function layout() {
     if (dead) return;
     purgeForeign();
     var dock = visibleDock();
     if (!dock) {
+      restoreDockHost();
       if (rowEl) { rowEl.remove(); }
       return;
     }
+    ensureDockHost(dock);
     var dockRect = dock.getBoundingClientRect();
     if (!(dockRect.width > 0 && dockRect.height > 0)) {
       if (rowEl) rowEl.style.display = "none";
       return;
     }
-    /* 统计行挂在输入条下方（fixed 挂 body），不再和 chip/模型选择器抢同一行空间 */
     if (!rowEl || !rowEl.isConnected) {
       if (!rowEl) rowEl = makeRow();
-      document.body.appendChild(rowEl);
     }
+    if (rowEl.parentElement !== dock) dock.appendChild(rowEl); // 挂回 dock：位置/居中全交给 CSS
     ensureModeSpans();
     var avail = Math.round(dockRect.width - 24); // 左右各留 12px，与输入条左缘对齐
     var all = ["full", "mid", "mini", "micro"];
@@ -472,16 +497,6 @@
     }
     pillMode = chosen;
     setModeSpans(chosen);
-    var pillH = rowEl.offsetHeight || 20;
-    var top = Math.round(dockRect.bottom + 4);
-    /* 输入条下方没有一行空间（小窗/贴底布局）→ 不显示，绝不上移压住输入条 */
-    if (top + pillH > window.innerHeight - 2) {
-      rowEl.style.display = "none";
-      return;
-    }
-    var left = Math.round(dockRect.left + 12);
-    if (Math.abs(left - lastLeft) > 1) { rowEl.style.left = left + "px"; lastLeft = left; }
-    if (Math.abs(top - lastTop) > 1) { rowEl.style.top = top + "px"; lastTop = top; }
     rowEl.style.display = "";
   }
 
@@ -524,17 +539,23 @@
     if (dead || !rowEl) return;
     var dock = visibleDock();
     if (!dock) return;
+    ensureDockHost(dock);
+    if (rowEl.parentElement !== dock) dock.appendChild(rowEl);
     var dockRect = dock.getBoundingClientRect();
     if (!(dockRect.width > 0)) return;
-    var pillH = rowEl.offsetHeight || 20;
-    var top = Math.round(dockRect.bottom + 4);
-    if (rowEl.style.display !== "none" && (top + pillH > window.innerHeight - 2 || dockRect.width - 24 < rowEl.offsetWidth)) {
-      rowEl.style.display = "none"; // 空间不够先隐，等布局选档
-      return;
+    var avail = Math.round(dockRect.width - 24);
+    if (rowEl.style.display === "none" || rowEl.offsetWidth <= avail) return;
+    /* 拖拽变窄：就地降档而不是先隐藏再显示（那会闪一下） */
+    var all = ["full", "mid", "mini", "micro"];
+    var found = null;
+    for (var i = 0; i < all.length; i++) {
+      setModeSpans(all[i]);
+      rowEl.style.display = "";
+      if (rowEl.offsetWidth <= avail) { found = all[i]; break; }
     }
-    var left = Math.round(dockRect.left + 12);
-    if (Math.abs(left - lastLeft) > 1) { rowEl.style.left = left + "px"; lastLeft = left; }
-    if (Math.abs(top - lastTop) > 1) { rowEl.style.top = top + "px"; lastTop = top; }
+    if (!found) { rowEl.style.display = "none"; return; }
+    pillMode = found;
+    setModeSpans(found);
   }
 
   /* 输入框容器尺寸变化（侧栏开合/拖分隔条不触发 window resize）：
@@ -564,6 +585,7 @@
     try { clearTimeout(layoutTimer); } catch (e) {}
     try { ro && ro.disconnect(); } catch (e) {}
     try { css.remove(); } catch (e) {}
+    try { restoreDockHost(); } catch (e) {}
     try { rowEl && rowEl.remove(); } catch (e) {}
     try { popEl && popEl.remove(); } catch (e) {}
     rowEl = null; popEl = null; data = null;
