@@ -73,7 +73,10 @@ async function loadImage() {
 // ---- real KiCad GUI: open the board in the PCB Editor, then poll for saves (the server imports each save as a new artifact and runs DRC on it)
 let pollTimer = null;
 function syncPolling() {
-  const active = !!state.info?.edit?.active;
+  // A model may call kicad_board_view and kicad_open_in_kicad in parallel.
+  // Poll whenever a board is visible so a newly created/replaced edit session is
+  // reflected even when the first board-view result still contained the old one.
+  const active = !!state.info?.ok;
   if (active && !pollTimer) pollTimer = setInterval(pollEdits, 2500);
   if (!active && pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
@@ -82,7 +85,9 @@ async function pollEdits() {
   try {
     const r = await app.callServerTool({ name: "kicad_edit_status", arguments: {} });
     const st = json(r);
-    if (st?.session && st.changed) { state.note = null; await refresh(); }
+    const shownPcb = state.info?.edit?.pcb;
+    const sessionChanged = st?.session ? st.pcb !== shownPcb : !!shownPcb;
+    if (st?.changed || sessionChanged) { state.note = null; await refresh(); }
   } catch { /* the next tick retries */ }
 }
 async function openInKicad() {

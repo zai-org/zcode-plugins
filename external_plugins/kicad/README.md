@@ -25,6 +25,8 @@ Open the panel manually from the session panel list at any time.
 
 On first use, or after switching KiCad distributions, call `kicad_capabilities`. Continue only when `edition_ready=true`. It read-only reports automatic/explicit selection, every detected candidate, `requested_edition`, `resolved_edition`, the official/Huaqiu distribution, mismatch status, version, CLI, libraries, pcbnew Python, live IPC, bundled Huaqiu DSH components, currently available tools, and structured missing dependencies. Bundled DSH is detected for diagnostics only; the plugin never starts a second agent harness.
 
+The MCP server is eagerly loaded, so all 25 KiCad tools are present on the first model request of a fresh chat, including with models that do not provide deferred tool search. `kicad_capabilities` also reports the installed `plugin_version`, which lets an acceptance run prove which package actually served the call.
+
 ### Huaqiu edition: native part lookup
 
 When `resolved_edition` is `huaqiu` and it is ready, these read-only ZCode tools use the normalized `@huaqiu/part-search` library already inside Huaqiu KiCad:

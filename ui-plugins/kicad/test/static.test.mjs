@@ -22,6 +22,25 @@ test("build output exists and matches what the manifest points at", async () => 
   assert.ok((await stat(join(DIST, "panel.html"))).size < 4 * 1024 * 1024, "HTML resource limit of the host is 4 MiB");
 });
 
+test("the KiCad MCP tools are available on the first model request", () => {
+  const server = manifest.mcpServers.kicad;
+  assert.ok(server, "manifest must declare the KiCad MCP server");
+  assert.equal(
+    server.alwaysLoad,
+    true,
+    "KiCad skills require kicad_capabilities on the first turn, including for models without ToolSearch",
+  );
+});
+
+test("capabilities report the installed plugin version", async () => {
+  const server = await read(DIST, "py/kicad_server.py");
+  assert.match(
+    server,
+    /"plugin_version": PLUGIN_VERSION/,
+    "the first-turn diagnosis must distinguish plugin and KiCad application versions",
+  );
+});
+
 test("manifest, server source and page agree on the surface", async () => {
   const [surface] = manifest.ui.surfaces;
   assert.ok(manifest.mcpServers[surface.server], "surface.server must be a declared MCP server");
@@ -36,6 +55,12 @@ test("manifest, server source and page agree on the surface", async () => {
   }
   assert.match(page, /ui\/set-widget-state/);
   for (const tool of ["pcb_search_parts", "pcb_part_info"]) assert.ok(page.includes(tool) && (await read(DIST, "py/kicad/mcp_server.py")).includes(`def ${tool}(`), `the Library tab calls the worker tool ${tool}`);
+});
+
+test("the panel refreshes when another tool replaces the KiCad edit session", async () => {
+  const source = await read(ROOT, "ui/src/main.js");
+  assert.match(source, /const active = !!state\.info\?\.ok;/, "poll even before the first edit session exists");
+  assert.match(source, /st\?\.session \? st\.pcb !== shownPcb : !!shownPcb;/, "refresh when the edit-session board changes or closes");
 });
 
 test("page tools exist in the server and are visible to the app", async () => {

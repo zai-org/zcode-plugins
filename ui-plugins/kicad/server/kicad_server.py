@@ -179,7 +179,10 @@ def kicad_info() -> dict:
 def kicad_capabilities() -> dict:
     """Diagnose KiCad without changing it: automatic/explicit app selection, requested and resolved edition (standard/Huaqiu), detected distribution, edition readiness, CLI, libraries, bundled
     pcbnew Python, live IPC, bundled DSH runtime, tools that can run, and structured missing dependencies. Bundled DSH is reported but never started: ZCode remains the only agent harness."""
-    return capabilities.detect(paths, live.status(_session_pcb(), WORKSPACE))
+    return {
+        **capabilities.detect(paths, live.status(_session_pcb(), WORKSPACE)),
+        "plugin_version": PLUGIN_VERSION,
+    }
 
 
 def _run_huaqiu_part_search(operation: str, arguments: dict[str, Any]) -> dict:

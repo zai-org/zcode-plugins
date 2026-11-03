@@ -24,6 +24,8 @@
 
 首次使用或切换 KiCad 发行版时先调用 `kicad_capabilities`，只有 `edition_ready=true` 才继续。它会只读报告自动/显式选择方式、全部检测候选、`requested_edition`、`resolved_edition`、标准/华秋发行版、匹配状态、KiCad 版本、CLI、库、pcbnew Python、实时 IPC、华秋内置 DSH 组件、当前可用工具和结构化缺失依赖；检测到的 DSH 只做诊断，插件不会启动第二套 Agent Harness。
 
+MCP 服务会被主动加载，因此新聊天的首个模型请求就能看到全部 25 个 KiCad 工具，即使模型不支持延迟工具搜索也不受影响。`kicad_capabilities` 还会返回当前安装包的 `plugin_version`，长程验收可以据此确认实际提供调用的插件版本。
+
 ### 华秋版：原生器件查询
 
 `resolved_edition` 为 `huaqiu` 且已就绪时，以下只读 ZCode 工具会复用华秋 KiCad 内置、已做标准化的 `@huaqiu/part-search` 库：
