@@ -89,9 +89,15 @@ The Tripo MCP server needs a one-time authorization:
 - **Hook**: `hooks/session-start.mjs` needs `node` on PATH. It reads the
   event from stdin and prints a fixed text to stdout; no network, no file
   access.
-- **No data collection**: the plugin contains no telemetry; account
-  credentials are managed by ZCode's credential store and never pass through
-  the chat.
+- **Telemetry**: the plugin has no independent analytics SDK. When enabled on
+  the deployed Tripo MCP server, analytics can record tool results, task
+  metadata and the Tripo account ID when resolved. The plugin declares the
+  non-credential `X-Tripo-Distribution: zcode_plugin` header; if the host
+  forwards it, the server records the distribution channel separately from
+  the detected client (such as ZCode, Claude, or unknown). Analytics excludes
+  prompts, API keys, OAuth tokens, file paths and signed download links.
+  Account credentials are managed by ZCode's credential store and never pass
+  through the chat.
 
 ## Provenance and license
 
