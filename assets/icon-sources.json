@@ -2559,5 +2559,14 @@
     "homepage": "https://www.liblib.tv",
     "mimeType": "image/png",
     "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
+  },
+  {
+    "name": "nimbus-bci",
+    "icon": "nimbus-bci/icon.png",
+    "source": "https://github.com/nimbusbci.png",
+    "matchedBy": "official-github-organization-avatar",
+    "homepage": "https://docs.nimbusbci.com",
+    "mimeType": "image/png",
+    "sha256": "56c89966f424e292b01018adac66c72f65892d0ad97849345bef2ca9ce1aa565"
   }
 ]
