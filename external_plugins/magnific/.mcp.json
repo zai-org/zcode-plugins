@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "magnific": {
+      "type": "http",
+      "url": "https://mcp.magnific.com/mcp"
+    }
+  }
+}
