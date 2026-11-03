@@ -15,11 +15,11 @@ const state = { info: null, side: "top", tab: "board", img: null, err: null, bus
 const T = {
   en: { none: "no board yet", hint: "Ask the agent to run pcb_build, or press Refresh", top: "top", bottom: "bottom", refresh: "Refresh", parts: "Parts", artifacts: "Artifacts",
     rendering: "rendering…", ask: "Ask agent to review", open: "Open in KiCad", opening: "Opening…", sync: "Sync now", edited: "edited in KiCad",
-    session: (rel) => `Editing in KiCad — press ⌘S there and this panel updates by itself · ${rel}`, synced: (t) => `last sync ${t}`, nolaunch: (n) => `KiCad was not started: ${n}`,
+    session: (rel) => `Editing in KiCad — press ⌘S there and this panel updates by itself · ${rel}`, synced: (t) => `last sync ${t}`, nolaunch: (n) => `KiCad was not started: ${n}`, nolive: (n) => `KiCad started, but the requested board is not live: ${n}`,
     askText: (i) => `Review the KiCad board "${i.name}" (${i.width_mm}×${i.height_mm} mm): DRC ${i.drc_passed ? "passed" : "failed"}. What would you improve for rev B?` },
   zh: { none: "还没有电路板", hint: "让 Agent 运行 pcb_build，或点「刷新」", top: "顶层", bottom: "底层", refresh: "刷新", parts: "元件", artifacts: "产物",
     rendering: "渲染中…", ask: "让 Agent 评审", open: "在 KiCad 中编辑", opening: "正在打开…", sync: "立即同步", edited: "已在 KiCad 中编辑",
-    session: (rel) => `正在 KiCad 中编辑 —— 在 KiCad 里按 ⌘S 保存，这里会自动同步 · ${rel}`, synced: (t) => `上次同步 ${t}`, nolaunch: (n) => `没有启动 KiCad：${n}`,
+    session: (rel) => `正在 KiCad 中编辑 —— 在 KiCad 里按 ⌘S 保存，这里会自动同步 · ${rel}`, synced: (t) => `上次同步 ${t}`, nolaunch: (n) => `没有启动 KiCad：${n}`, nolive: (n) => `KiCad 已启动，但目标板尚未接入实时连接：${n}`,
     askText: (i) => `评审 KiCad 电路板「${i.name}」（${i.width_mm}×${i.height_mm} mm），DRC ${i.drc_passed ? "通过" : "未通过"}。rev B 你会改进什么？` },
 };
 const isZh = () => (app.getHostContext?.()?.locale || "en").toLowerCase().startsWith("zh");
@@ -92,6 +92,7 @@ async function openInKicad() {
     const d = json(r);
     if (!d?.ok) state.err = d?.error || "could not open KiCad";
     else if (!d.launched) state.note = t().nolaunch(d.launch_note);
+    else if (!d.live_ready) state.note = t().nolive(d.launch_note);
     await refresh();
   } catch (e) { state.err = String(e?.message || e); }
   state.opening = false; render();

@@ -21,11 +21,13 @@ import stat
 import subprocess
 import time
 from pathlib import Path
+from typing import Any, Callable
 
 STABLE_S = 2.0  # how long it must then stay alive
 REPORT_S = 4.0  # how long to wait for the crash reporter once pcbnew is gone
 POLL_S = 0.25
 SOCKET_S = 8.0  # the window may be visible shortly before the API server is listening
+BOARD_S = 8.0  # the socket can exist before pcbnew has opened the requested board (or while a lock dialog is showing)
 SOCKET_DIR = Path("/tmp/kicad")
 QUARANTINE = "com.apple.quarantine"
 _children: list[subprocess.Popen] = []  # keep detached GUI Popen objects alive; otherwise Python warns while the intentional child is still running
@@ -127,6 +129,32 @@ def _socket_ready(path: Path) -> bool:
         return False
 
 
+def wait_for_live_board(pcb: Path, status: Callable[[str, Path | None], dict[str, Any]], workspace: Path | None = None, *,
+                        board_s: float = BOARD_S, poll_s: float = POLL_S) -> tuple[bool, dict[str, Any]]:
+    """Wait until the live API reports that *pcb* is the open session board.
+
+    A KiCad API socket only proves that an editor process is alive.  The board can
+    still be unopened because pcbnew is starting or is displaying a project-lock
+    dialog.  Keep this distinction explicit so callers never report a false live
+    connection.  ``status`` is injected to keep this helper hermetic in tests.
+    """
+    deadline = time.monotonic() + max(0.0, board_s)
+    last: dict[str, Any] = {}
+    while True:
+        try:
+            last = status(str(pcb), workspace)
+        except Exception as error:  # noqa: BLE001 - a diagnostic callback must not turn a successful GUI launch into an exception
+            last = {"available": False, "reason": f"live board verification failed: {error}"}
+        if last.get("available"):
+            return True, last
+        # These states cannot become ready merely by waiting for this process.
+        if last.get("kipy") is False or last.get("api_enabled_in_preferences") is False:
+            return False, last
+        if time.monotonic() >= deadline:
+            return False, last
+        time.sleep(max(0.001, poll_s))
+
+
 def launch_editor(editor: Path, pcb: Path, app_dir: Path, *, report_dir: Path | None = None, socket_dir: Path = SOCKET_DIR, stable_s: float = STABLE_S,
                   socket_s: float = SOCKET_S, report_s: float = REPORT_S, poll_s: float = POLL_S, env: dict[str, str] | None = None,
                   api_expected: bool | None = None) -> tuple[bool, str]:
@@ -175,7 +203,7 @@ def launch_editor(editor: Path, pcb: Path, app_dir: Path, *, report_dir: Path | 
         deadline = time.monotonic() + socket_s
         while time.monotonic() < deadline and child.poll() is None:
             if _socket_ready(pid_socket) or (not default_existed and _socket_ready(default_socket)):
-                return True, f"opened in {editor.name}; live KiCad API ready"
+                return True, f"opened in {editor.name}; live KiCad API socket ready"
             time.sleep(poll_s)
         if child.poll() is None:
             if api_expected is True:

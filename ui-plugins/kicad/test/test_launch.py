@@ -117,9 +117,21 @@ class LaunchTest(unittest.TestCase):
         f = self.tmp / name
         return f.read_text().splitlines() if f.exists() else []
 
+    def make_editor_exit_immediately(self, code=9):
+        """Avoid Python startup latency in tests whose only subject is an exited child.
+
+        The full workspace test suite runs packages concurrently.  Under that load a
+        newly spawned Python process can remain alive past the intentionally tiny
+        FAST stability window without having executed its first line, which makes a
+        deliberate exit look like a healthy GUI launch.  A shell exit keeps these
+        tests about launch_editor's exit/report handling rather than scheduler speed.
+        """
+        self.exe.write_text(f"#!/bin/sh\nexit {code}\n")
+        self.exe.chmod(self.exe.stat().st_mode | stat.S_IXUSR)
+
     def test_exact_child_stays_up_and_creates_live_socket(self):
         t = time.monotonic()
-        self.assertEqual(self.launch(), (True, "opened in PCB Editor.app; live KiCad API ready"))
+        self.assertEqual(self.launch(), (True, "opened in PCB Editor.app; live KiCad API socket ready"))
         self.assertGreaterEqual(time.monotonic() - t, FAST["stable_s"], "must watch the exact process for the whole stability window")
         self.assertEqual(self.log("argv"), [str(self.pcb)])
         self.assertEqual(self.log("xattr.log"), [], "nothing to diagnose when it runs")
@@ -148,6 +160,38 @@ class LaunchTest(unittest.TestCase):
         ok, _ = kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.reports, socket_dir=self.sockets, env=child_env, **FAST)
         self.assertTrue(ok)
         self.assertEqual(self.log("child-env"), ["KICAD_CONFIG_HOME=<unset>", "KICAD_DOCUMENTS_HOME=<unset>"])
+
+    def test_live_board_waits_past_socket_until_requested_board_is_reported(self):
+        seen = []
+
+        def status(path, workspace):
+            seen.append((path, workspace))
+            return ({"available": False, "reason": "no board open"} if len(seen) == 1
+                    else {"available": True, "board": {"path": path, "matches_session": True}})
+
+        ready, result = kl.wait_for_live_board(self.pcb, status, self.tmp, board_s=0.2, poll_s=0.01)
+        self.assertTrue(ready)
+        self.assertTrue(result["available"])
+        self.assertEqual(seen[-1], (str(self.pcb), self.tmp))
+
+    def test_live_board_does_not_confuse_socket_with_locked_board(self):
+        def status(_path, _workspace):
+            return {"available": False, "reachable": True, "reason": "KiCad answers, but no PCB Editor has a board open"}
+
+        ready, result = kl.wait_for_live_board(self.pcb, status, self.tmp, board_s=0.025, poll_s=0.01)
+        self.assertFalse(ready)
+        self.assertIn("no PCB Editor has a board open", result["reason"])
+
+    def test_live_board_stops_immediately_when_client_is_unavailable(self):
+        calls = 0
+
+        def status(_path, _workspace):
+            nonlocal calls
+            calls += 1
+            return {"available": False, "kipy": False, "reason": "client missing"}
+
+        self.assertFalse(kl.wait_for_live_board(self.pcb, status, self.tmp, board_s=1, poll_s=0.01)[0])
+        self.assertEqual(calls, 1)
 
     def test_missing_executable_fails_before_launch(self):
         self.exe.unlink()
@@ -186,7 +230,8 @@ class LaunchTest(unittest.TestCase):
         self.assertIn(f"xattr -dr com.apple.quarantine {self.app_dir.parent}", note)
 
     def test_died_without_report_and_without_quarantine(self):
-        os.environ.update(FAKE_MODE="die", FAKE_QUARANTINED="")
+        self.make_editor_exit_immediately()
+        os.environ.update(FAKE_QUARANTINED="")
         ok, note = self.launch()
         self.assertFalse(ok)
         self.assertIn("exit 9", note)
@@ -197,7 +242,7 @@ class LaunchTest(unittest.TestCase):
         old = self.reports / "pcbnew-2026-10-18-101010.ips"
         shutil.copy(FIXTURE, old)
         os.utime(old, (time.time() - 3600, time.time() - 3600))
-        os.environ["FAKE_MODE"] = "die"
+        self.make_editor_exit_immediately()
         ok, note = self.launch()
         self.assertFalse(ok)
         self.assertIn("exit 9", note)
@@ -217,7 +262,7 @@ class LaunchTest(unittest.TestCase):
                 self.assertIn("pcbnew-2026-10-19-190037.ips", note)
 
     def test_missing_report_directory(self):
-        os.environ["FAKE_MODE"] = "die"
+        self.make_editor_exit_immediately()
         ok, note = kl.launch_editor(self.editor, self.pcb, self.app_dir, report_dir=self.tmp / "no-such-dir", socket_dir=self.sockets, env=dict(os.environ), **FAST)
         self.assertFalse(ok)
         self.assertIn("exit 9", note)

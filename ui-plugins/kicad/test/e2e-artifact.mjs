@@ -80,7 +80,8 @@ try {
   const byName = Object.fromEntries(tools.map((t) => [t.name, t]));
   for (const n of ["pcb_search_parts", "pcb_part_info", "pcb_spec_example", "pcb_check_spec", "pcb_build", "pcb_render", "pcb_export_fab",
     "kicad_check_spec_file", "kicad_export_files", "kicad_info", "kicad_board_view", "kicad_board_image", "kicad_open_in_kicad", "kicad_sync_edits", "kicad_edit_status",
-    "pcb_export_glb", "kicad_checks", "kicad_layers", "kicad_layer_svg", "kicad_3d_image", "kicad_schematic", "kicad_library_preview"]) assert.ok(byName[n], `missing tool ${n}`);
+    "pcb_export_glb", "kicad_checks", "kicad_layers", "kicad_layer_svg", "kicad_3d_image", "kicad_schematic", "kicad_library_preview",
+    "kicad_live_status", "kicad_live_snapshot", "kicad_live_move_footprint"]) assert.ok(byName[n], `missing tool ${n}`);
   assert.ok(!("project_id" in (byName.pcb_build.inputSchema.properties || {})), "project_id must be hidden from the model");
   const surface = manifest.ui.surfaces[0];
   const view = byName.kicad_board_view._meta.ui;
@@ -89,6 +90,8 @@ try {
   assert.deepEqual(view.visibility.sort(), ["app", "model"]);
   assert.deepEqual(byName.kicad_board_image._meta.ui.visibility, ["app"]);
   assert.deepEqual(byName.kicad_edit_status._meta.ui.visibility, ["app"]);
+  assert.deepEqual(byName.kicad_live_snapshot._meta.ui.visibility, ["app", "model"]);
+  assert.equal(byName.kicad_live_snapshot.annotations.readOnlyHint, true);
   for (const n of ["kicad_layers", "kicad_layer_svg", "kicad_3d_image", "kicad_schematic", "kicad_library_preview"]) assert.deepEqual(byName[n]._meta.ui.visibility, ["app"], `${n} is for the panel only`);
   for (const n of ["pcb_export_glb", "kicad_checks"]) assert.ok(!byName[n]._meta?.ui, `${n} is a model tool`);
   const resources = (await client.listResources()).resources;

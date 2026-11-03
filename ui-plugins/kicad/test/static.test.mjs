@@ -43,7 +43,7 @@ test("page tools exist in the server and are visible to the app", async () => {
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_board_image/);
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_edit_status/);
   for (const tool of ["kicad_layers", "kicad_layer_svg", "kicad_3d_image", "kicad_schematic", "kicad_library_preview"]) assert.match(server, new RegExp(`@mcp\\.tool\\(app=\\{"visibility": \\["app"\\]\\}\\)\\s+def ${tool}\\(`), `${tool} must be app-only`);
-  assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_live_snapshot\(/, "the live snapshot is for the panel");
+  assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app", "model"\]\}, annotations=\{"title": "Read the live KiCad board", "readOnlyHint": True,[^)]*\)\s+def kicad_live_snapshot\(/, "the read-only live snapshot is available to both panel and model");
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["model"\]\}[^)]*\)\s+def kicad_live_move_footprint\(/, "the only write tool is for the model, never for the page");
   assert.ok(!/kicad_live_move_footprint/.test(await read(DIST, "panel.html")), "the panel page must never call the write tool");
   for (const tool of ["pcb_export_glb", "kicad_checks"]) assert.match(server, new RegExp(`@mcp\\.tool\\s+def ${tool}\\(`), `${tool} must be visible to the model`);
@@ -79,9 +79,10 @@ test("the vendored worker never reads .env files and the repo has no machine-spe
 test("the exact GUI child and its API socket are checked; the quarantine fix is named but never run", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
   const server = await read(DIST, "py/kicad_server.py");
   const launch = server.slice(server.indexOf("def _launch("), server.indexOf("def _sync_locked("));
-  assert.match(launch, /if NO_LAUNCH:\s+return False, "launch disabled \(KICAD_PLUGIN_NO_LAUNCH=1\)"/, "KICAD_PLUGIN_NO_LAUNCH must still short-circuit before anything is started");
+  assert.match(launch, /if NO_LAUNCH:\s+return False, False, "launch disabled \(KICAD_PLUGIN_NO_LAUNCH=1\)"/, "KICAD_PLUGIN_NO_LAUNCH must still short-circuit before anything is started");
   assert.match(launch, /sys\.platform != "darwin"/);
-  assert.match(launch, /return launch_editor\(/, "_launch must delegate to the checked launch");
+  assert.match(launch, /launch_editor\(/, "_launch must delegate to the checked launch");
+  assert.match(launch, /wait_for_live_board\(/, "a socket is not enough: the requested board must also be verified");
   assert.ok(!/subprocess|xattr/.test(launch), "_launch itself starts and changes nothing");
   const helper = await read(DIST, "py/kicad_launch.py");
   assert.match(helper, /subprocess\.Popen\(/, "launch the selected distribution's exact child");
@@ -101,7 +102,7 @@ test("headless KiCad runs on a private config while the GUI keeps the captured u
   assert.ok(!/KICAD_CONFIG_HOME["']\]\s*=\s*["']?[^\n]*Preferences/.test(server), "no path into the user's preferences");
   assert.ok(/os\.environ\[_var\] = /.test(server) && !/os\.environ\.setdefault\(_var/.test(server), "assigned unconditionally: a KICAD_CONFIG_HOME exported by the user must not win");
   assert.ok(server.indexOf("GUI_ENV = os.environ.copy()") < set, "capture the user's GUI settings before installing the headless overrides");
-  assert.match(server, /launch_editor\([^\n]+env=GUI_ENV\)/, "the real GUI must use the captured user environment so Enable KiCad API is honored");
+  assert.match(server, /launch_editor\([^\n]+env=GUI_ENV/, "the real GUI must use the captured user environment so Enable KiCad API is honored");
   const launcher = await read(DIST, "server.mjs");
   assert.ok(launcher.includes('UV_NO_CONFIG: "1"'), "uv must not read a uv.toml / pyproject.toml from the workspace");
 });

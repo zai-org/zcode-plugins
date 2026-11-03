@@ -52,7 +52,7 @@ import kicad_capabilities as capabilities  # noqa: E402
 import huaqiu_part_search as hq_parts  # noqa: E402
 import huaqiu_kicad_resolver as hq_resolver  # noqa: E402
 import huaqiu_model_inspector as hq_models  # noqa: E402
-from kicad_launch import launch_editor  # noqa: E402
+from kicad_launch import launch_editor, wait_for_live_board  # noqa: E402
 from kicad.store import ArtifactStore  # noqa: E402
 from kicad import examples, library as kicad_library, paths, verify  # noqa: E402
 from kicad import mcp_server as worker  # noqa: E402
@@ -425,19 +425,27 @@ def _editor_app() -> Path | None:
     return None
 
 
-def _launch(pcb: Path) -> tuple[bool, str]:
+def _launch(pcb: Path) -> tuple[bool, bool, str]:
     if NO_LAUNCH:
-        return False, "launch disabled (KICAD_PLUGIN_NO_LAUNCH=1)"
+        return False, False, "launch disabled (KICAD_PLUGIN_NO_LAUNCH=1)"
     if sys.platform != "darwin":
-        return False, "automatic launch is implemented for macOS only: open the file in KiCad yourself"
+        return False, False, "automatic launch is implemented for macOS only: open the file in KiCad yourself"
     current = live.status(str(pcb), WORKSPACE)
     if current.get("available"):
-        return True, "already open in PCB Editor; live KiCad API ready"
+        return True, True, "already open in PCB Editor; live KiCad API ready"
     editor = _editor_app()
     if editor is None:
-        return False, f"KiCad PCB Editor not found next to {paths.app_dir()}"
+        return False, False, f"KiCad PCB Editor not found next to {paths.app_dir()}"
     # Execute this distribution's exact pcbnew instead of `open -a`: Launch Services may reuse a standalone editor that has no live API. The helper watches this child and its socket.
-    return launch_editor(editor, pcb, paths.app_dir(), env=GUI_ENV, api_expected=live.preferences_enable_api())
+    launched, note = launch_editor(editor, pcb, paths.app_dir(), env=GUI_ENV, api_expected=live.preferences_enable_api())
+    if not launched or "live KiCad API socket ready" not in note:
+        return launched, False, note
+    ready, status = wait_for_live_board(pcb, live.status, WORKSPACE)
+    if ready:
+        return True, True, note.replace("live KiCad API socket ready", "live KiCad API ready")
+    reason = status.get("reason") or "the requested board was not reported by the live API"
+    return True, False, (f"{note}, but the requested board did not open: {reason} "
+                         "Check KiCad for a project-lock or recovery dialog; the file save/sync round trip still works after the board is open.")
 
 
 def _sync_locked() -> dict:
@@ -505,8 +513,8 @@ def kicad_open_in_kicad(artifact_id: str = "") -> dict:
             verify.write_project_file(pcb, Rules.model_validate(art.meta.get("rules") or {}), art.meta.get("power_nets") or [])
             sess = {"pcb": str(pcb), "head_artifact_id": art.artifact_id, "imported_sha": _sha(pcb), "imports": [], "opened_at": _now()}
             _save_session(sess)
-    launched, note = _launch(pcb)  # outside the lock: it can take ~10 s while the panel keeps polling
-    return _ok(pcb=str(pcb), project=str(pcb.with_suffix(".kicad_pro")), launched=launched, launch_note=note, board_artifact_id=art.artifact_id,
+    launched, live_ready, note = _launch(pcb)  # outside the lock: it can take ~10 s while the panel keeps polling
+    return _ok(pcb=str(pcb), project=str(pcb.with_suffix(".kicad_pro")), launched=launched, live_ready=live_ready, launch_note=note, board_artifact_id=art.artifact_id,
                imported_pending_edits=bool(pending and pending.get("changed")),
                how_to="Edit in KiCad and press Cmd+S. The KiCad board panel syncs automatically; or call kicad_sync_edits.")
 
@@ -817,10 +825,11 @@ def kicad_live_status() -> dict:
     return live.status(_session_pcb(), WORKSPACE)
 
 
-@mcp.tool(app={"visibility": ["app"]})
+@mcp.tool(app={"visibility": ["app", "model"]}, annotations={"title": "Read the live KiCad board", "readOnlyHint": True, "openWorldHint": False})
 def kicad_live_snapshot(since: str = "") -> dict:
-    """(panel only) The live board in the running PCB Editor, read through KiCad's API while the user edits (no ⌘S needed): parts, nets, selection, counts, a signature. Only when
-    the live editor has exactly this session's board open; otherwise live=false with the reason. since = the last signature: an unchanged board answers with just that."""
+    """Read-only snapshot of the live board in the running PCB Editor (no ⌘S needed): parts, nets, selection, counts, and a signature. Use it before and after a requested live
+    move instead of making a no-op move just to read a position. Only works when the live editor has exactly this session's board open; otherwise live=false with the reason.
+    since = the last signature: an unchanged board answers with just that."""
     return live.snapshot(_session_pcb(), ORIGIN_MM, WORKSPACE, since)
 
 
