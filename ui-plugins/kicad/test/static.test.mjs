@@ -15,7 +15,7 @@ const read = (...p) => readFile(join(...p), "utf8");
 const walk = async (d) => (await Promise.all((await readdir(d, { withFileTypes: true })).map((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)])))).flat();
 
 test("build output exists and matches what the manifest points at", async () => {
-  for (const f of ["panel.html", "server.mjs", "py/kicad_server.py", "py/kicad_launch.py", "py/kicad_views.py", "py/kicad_live.py", "py/kicad/config.py", "py/kicad/service.py", "THIRD_PARTY_NOTICES.txt"])
+  for (const f of ["panel.html", "server.mjs", "py/kicad_server.py", "py/kicad_capabilities.py", "py/kicad_installation.py", "py/huaqiu_part_search.py", "py/huaqiu_part_search_bridge.mjs", "py/huaqiu_kicad_resolver.py", "py/huaqiu_model_inspector.py", "py/kicad_launch.py", "py/kicad_views.py", "py/kicad_live.py", "py/kicad/config.py", "py/kicad/service.py", "THIRD_PARTY_NOTICES.txt"])
     assert.ok((await stat(join(DIST, f))).isFile(), `dist/${f} missing: run pnpm build`);
   for (const server of Object.values(manifest.mcpServers)) for (const arg of server.args) if (arg.includes("${ZCODE_PLUGIN_ROOT}/dist/"))
     assert.ok((await stat(join(DIST, arg.split("${ZCODE_PLUGIN_ROOT}/dist/")[1]))).isFile(), arg);
@@ -109,6 +109,35 @@ test("the GLB tool and the panel tabs are documented the same way in both README
 test("the views module: GLB part table, board text helpers, id validation", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
   const r = spawnSync("python3", [join(ROOT, "test/test_views.py")], { encoding: "utf8", env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" } });
   assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("capabilities distinguish official, Huaqiu and missing KiCad installations", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const selection = spawnSync("python3", [join(ROOT, "test/test_installation.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(selection.status, 0, `${selection.stdout}\n${selection.stderr}`);
+  const r = spawnSync("python3", [join(ROOT, "test/test_capabilities.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("the Huaqiu part adapter validates arguments, gates the edition and uses only fixed local paths", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_part_search.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  const bridge = await read(DIST, "py/huaqiu_part_search_bridge.mjs");
+  assert.ok(!/(eval|exec|spawn|child_process)/.test(bridge), "the bridge cannot execute caller-supplied code or commands");
+  for (const operation of ["search", "detail", "models", "supply"]) assert.ok(bridge.includes(`"${operation}"`));
+});
+
+test("the Huaqiu-to-KiCad resolver ranks only locally checked symbol/footprint pairs", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_kicad_resolver.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("Huaqiu KiCad text models are allowlisted, bounded, parsed in memory and compared geometrically", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_model_inspector.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  const source = await read(DIST, "py/huaqiu_model_inspector.py");
+  assert.match(source, /ALLOWED_MODEL_HOSTS = frozenset\(\{"file\.eda\.cn", "file1\.eda\.cn"\}\)/);
+  assert.match(source, /MAX_MODEL_BYTES = 2 \* 1024 \* 1024/);
+  assert.ok(!/write_text|write_bytes|NamedTemporaryFile|mkstemp/.test(source), "public model files must remain in memory");
 });
 
 test("the live link: stub-kipy tests, and the module can only read the board plus open/push/drop one commit", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {

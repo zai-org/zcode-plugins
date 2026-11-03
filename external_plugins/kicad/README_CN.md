@@ -3,14 +3,39 @@
 把 KiCad 10 嵌入对话。Agent 用 JSON 电路 spec 设计双层板——真实 KiCad 符号/封装库、自动布线、DRC、Gerber/BOM/贴片坐标——
 侧栏 **KiCad 电路板** 面板显示 3D 渲染、DRC 结论、元件表和全部产物。
 
+插件使用同一套 PCB 核心提供两个发行版本，并提供自动选择模式：
+
+| 插件版本 | 对应发行版 | 额外就绪检查 |
+| --- | --- | --- |
+| `auto`（默认） | 自动发现的最新标准或华秋 KiCad 10 | 先根据安装内容解析发行版，再开放对应工具 |
+| `standard` | 标准 KiCad 10 | CLI、pcbnew Python、符号库和封装库 |
+| `huaqiu` | 华秋 KiCad 10 | 核心检查、内置华秋组件，以及公共器件库原生适配层 |
+
+「KiCad.app 路径」留空时，`auto` 会搜索系统与用户 Applications 目录，不启动应用即可识别发行版，并选择最新安装。改选 `standard` 或 `huaqiu` 后，自动发现只会选择对应发行版。显式填写 app 路径后该路径始终优先，即使路径不存在也不会静默换用其他安装，而是明确报告配置错误。
+
 ## 前提
 
-* macOS 且已安装 **KiCad 10**（`/Applications/KiCad/KiCad.app`；或在插件设置里填「KiCad.app 路径」）。
+* macOS 且在系统/用户 Applications 目录安装了**标准 KiCad 10**或**华秋 KiCad 10**；也可在插件设置中填写精确的「KiCad.app 路径」。
 * 推荐安装 **uv**（首次启动自动拉取依赖），或提供装有 `fastmcp>=4,<5`、`pydantic`、`numpy` 的 Python（设置项「带 fastmcp 的 Python」）。
 
 ## 使用
 
 对 Agent 说：「用 KiCad 设计一块 555 LED 闪烁器的板子，检查 DRC、渲染并打开电路板面板。」示例是 NE555 无稳态闪烁电路（约 1 Hz、9 个元件、34 × 22 mm）；Agent 从 `pcb_spec_example` 开始，依次调用 `kicad_check_spec_file`、`pcb_build`、`pcb_render`、`pcb_export_fab`、`kicad_export_files`、`kicad_board_view`（见 `skills/kicad-board/SKILL.md`）。也可以随时在会话面板列表中手动打开该面板。
+
+首次使用或切换 KiCad 发行版时先调用 `kicad_capabilities`，只有 `edition_ready=true` 才继续。它会只读报告自动/显式选择方式、全部检测候选、`requested_edition`、`resolved_edition`、标准/华秋发行版、匹配状态、KiCad 版本、CLI、库、pcbnew Python、实时 IPC、华秋内置 DSH 组件、当前可用工具和结构化缺失依赖；检测到的 DSH 只做诊断，插件不会启动第二套 Agent Harness。
+
+### 华秋版：原生器件查询
+
+`resolved_edition` 为 `huaqiu` 且已就绪时，以下只读 ZCode 工具会复用华秋 KiCad 内置、已做标准化的 `@huaqiu/part-search` 库：
+
+* `search_hqsch_parts`：按 MPN、制造商、分类或关键词搜索，可要求结果具备符号、封装、3D、仿真或供应链数据。
+* `get_hqsch_part`：读取器件详情、属性、文档、图片、生命周期和模型元数据。
+* `get_hqsch_part_models`：读取符号、封装、3D、仿真模型的元数据和 URL（只返回元数据，不安装任何内容）。
+* `get_hqsch_supply_chain`：批量读取最多 50 个器件的库存、MOQ、交期、分销链接、币种和阶梯价。
+* `resolve_hqsch_part_for_kicad`：读取所选器件的标准化详情，搜索本机 KiCad 库，校验符号的封装过滤规则和同编号引脚/焊盘映射，再返回排序后的候选和 `spec_part_fields`。
+* `compare_hqsch_models_with_kicad`：显式把所选器件的公共 `.kicad_sym` 和 `.kicad_mod` 下载到内存，与一个解析候选比较引脚名称/编号、带编号焊盘的几何及尺寸，以及 Courtyard 外形尺寸。
+
+这些调用直接访问华秋无需登录的公共接口 `https://kiapi.eda.cn`。它们不会启动 DSH、加载 DSH skill、下单、安装模型或写入工程。只有显式比较工具会下载模型文本：仅接受 `file.eda.cn` / `file1.eda.cn` 的 HTTPS，拒绝重定向，单文件上限 2 MiB，在内存中按不可信数据解析，只返回哈希而不返回模型正文。模型一致是更强的结构证据，但解析和比较工具仍把电气引脚定义与精确物理封装确认标为必须对照 datasheet 复核。标准版会明确拒绝这些调用。
 
 ## 面板：与真实 KiCad 窗口并排的标签页
 
@@ -63,8 +88,8 @@
 
 ## 依赖、网络与副作用
 
-* 需要已安装 **KiCad 10**（`/Applications/KiCad/KiCad.app`，或设置「KiCad.app 路径」）。插件调用其中的 `kicad-cli`、自带 Python（pcbnew 脚本）并读取其符号/封装库；不打包、不修改 KiCad。
-* **Python**：推荐 `uv`，或装有 `fastmcp`、`pydantic`、`numpy` 的 Python ≥ 3.11（实时连接另需可选的 `kicad-python`）。**如果既没有 uv、也没有这样的 Python，或 uv 取不到依赖（首次启动时离线），插件仍会启动：面板能打开并说明缺什么，模型会得到一个工具 `kicad_setup_help`。** uv 以 `UV_NO_CONFIG=1` 运行，所以工作区里的 `uv.toml` 或 `pyproject.toml` 无法改变依赖来源。**网络**：首次启动时 `uv` 会下载这些依赖（加上 kicad-python 及 pynng、protobuf、jsonschema）（本机没有 ≥ 3.11 的 Python 时还会下载 Python）。除此之外不使用网络，没有遥测。
+* 需要已安装 **KiCad 10**。默认会在系统/用户 Applications 目录发现标准与华秋版本，并选择符合请求发行版的最新应用；显式填写「KiCad.app 路径」后不会回退。插件调用所选应用的 `kicad-cli`、自带 Python（pcbnew 脚本）并读取其符号/封装库；不打包、不修改 KiCad。
+* **Python**：推荐 `uv`，或装有 `fastmcp`、`pydantic`、`numpy` 的 Python ≥ 3.11（实时连接另需可选的 `kicad-python`）。**如果既没有 uv、也没有这样的 Python，或 uv 取不到依赖（首次启动时离线），插件仍会启动：面板能打开并说明缺什么，模型会得到一个工具 `kicad_setup_help`。** uv 以 `UV_NO_CONFIG=1` 运行，所以工作区里的 `uv.toml` 或 `pyproject.toml` 无法改变依赖来源。**网络**：首次启动时 `uv` 会下载这些依赖（加上 kicad-python 及 pynng、protobuf、jsonschema）（本机没有 ≥ 3.11 的 Python 时还会下载 Python）。华秋版中，上述华秋器件数据、解析和模型比较工具会访问 `https://kiapi.eda.cn`，搜索词及请求的制造商/MPN 标识会发送到该接口；比较工具还会从白名单内的华秋文件域名读取所选的两个公共文本模型；没有遥测。
 CI 会先准备 Python 运行环境，再开始 60 秒的 MCP 握手。依赖准备日志写入 stderr；运行环境不可用时，产物检查会失败，不会把缺依赖的帮助面板当作正常服务。也可以在已安装插件目录运行 `node dist/server.mjs --prepare-runtime`，成功时 stdout 返回 `ready`。产物检查使用同一个隔离 HOME 和缓存的 Python 环境，以离线模式完成握手。
 
 * **执行的命令**：`kicad-cli`（DRC、渲染、SVG/GLB/STEP/Gerber 导出、`sch erc`、符号/封装 SVG）、KiCad 自带 Python、`uv`；只有当你点「在 KiCad 中编辑」或 Agent 调用 `kicad_open_in_kicad` 时，才会执行 `open -a "PCB Editor.app"`（macOS），随后只读地检查它是否保持运行：`pgrep -x pcbnew`，启动失败后再执行 `xattr -p com.apple.quarantine` 并查看 `~/Library/Logs/DiagnosticReports/pcbnew-*.ips`。插件本身不会修改隔离标记。
@@ -73,5 +98,5 @@ CI 会先准备 Python 运行环境，再开始 60 秒的 MCP 握手。依赖准
 
 ## 第三方
 
-KiCad（GPL-3.0-or-later；其库为 CC-BY-SA-4.0 并带例外条款）使用你本机的安装，不随包分发。`uv` 在运行时拉取：fastmcp（Apache-2.0）、pydantic（MIT）、numpy（BSD-3-Clause 等）、kicad-python（MIT）及 pynng（MIT）、protobuf（BSD-3-Clause）、jsonschema（MIT）。面板打包了 MCP Apps SDK 相关包，其许可证随构建产物放在 `dist/THIRD_PARTY_NOTICES.txt`。
+KiCad（GPL-3.0-or-later；其库为 CC-BY-SA-4.0 并带例外条款）使用你本机的安装，不随包分发。华秋版会就地使用华秋 KiCad 安装内的 `@huaqiu/part-search`（Apache-2.0），本插件不再分发该库。`uv` 在运行时拉取：fastmcp（Apache-2.0）、pydantic（MIT）、numpy（BSD-3-Clause 等）、kicad-python（MIT）及 pynng（MIT）、protobuf（BSD-3-Clause）、jsonschema（MIT）。面板打包了 MCP Apps SDK 相关包，其许可证随构建产物放在 `dist/THIRD_PARTY_NOTICES.txt`。
 本插件独立于 KiCad 项目，与其无隶属或背书关系；「KiCad」仅用于说明兼容性。

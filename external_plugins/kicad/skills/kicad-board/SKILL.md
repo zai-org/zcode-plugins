@@ -10,6 +10,7 @@ libraries, place and route it, run DRC, render it and export fabrication files. 
 
 ## Workflow
 
+0. **Diagnose the selected edition.** Call `kicad_capabilities` before the first board or after the user switches KiCad installations. Continue only when `edition_ready=true`; otherwise report the structured `missing_dependencies`. The default `requested_edition=auto` discovers installed apps; route by `resolved_edition`: `standard` uses the `kicad-standard` rules and `huaqiu` uses `kicad-huaqiu`. In the Huaqiu edition, only the explicit Huaqiu tools listed in `available_tools` are native adapters; the bundled DSH harness itself is never started.
 1. **Start from an example.** `pcb_spec_example` writes a small, complete, DRC-clean spec to `./kicad/<name>_spec.json`: `ne555_blinker` (default: an NE555 LED flasher, about 1 Hz, 9 parts, 34 × 22 mm),
    `led_indicator` (3 parts), `ldo_3v3_breakout`, `shift_register_leds`; it also documents every spec field. For your own circuit, copy its format and use `pcb_search_parts` / `pcb_part_info` to get
    library ids and **pin numbers/names/pads — never guess them**.
