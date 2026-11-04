@@ -1443,6 +1443,47 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "colab",
+      "displayName": "Google Colab Tools",
+      "displayName_i18n": {
+        "en": "Google Colab Tools",
+        "zh-CN": "Google Colab 工具"
+      },
+      "source": "./external_plugins/colab",
+      "description": "Google Colab integration for ZCode: the official colab-mcp browser-bridge MCP server plus a google-colab-cli command reference for provisioning Colab runtimes (CPU/GPU/TPU), executing code, and transferring files.",
+      "description_i18n": {
+        "en": "Google Colab integration for ZCode: the official colab-mcp browser-bridge MCP server plus a google-colab-cli command reference for provisioning Colab runtimes (CPU/GPU/TPU), executing code, and transferring files.",
+        "zh-CN": "面向 ZCode 的 Google Colab 集成：官方 colab-mcp 浏览器桥接 MCP 服务器，以及 google-colab-cli 命令参考——用于创建 Colab 运行时（CPU/GPU/TPU）、执行代码和传输文件。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "movtigroup",
+        "url": "https://github.com/movtigroup"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "colab",
+        "google-colab",
+        "colab-mcp",
+        "google-colab-cli",
+        "gpu",
+        "tpu",
+        "mcp",
+        "notebook",
+        "machine-learning"
+      ],
+      "examplePrompts": [
+        "Connect me to Google Colab and run a quick PyTorch GPU sanity check",
+        "Provision an A100 Colab runtime, run training.py on it, and download the checkpoints"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把我连接到 Google Colab，并跑一个快速的 PyTorch GPU 冒烟测试",
+          "创建一个 A100 Colab 运行时，在上面运行 training.py，然后下载 checkpoint"
+        ]
+      }
     }
   ]
 }
