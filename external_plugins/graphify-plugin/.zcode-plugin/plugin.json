@@ -1,0 +1,24 @@
+{
+  "name": "graphify-plugin",
+  "version": "0.1.0",
+  "description": "Turns a codebase into a queryable knowledge graph: scans code, docs and config files, extracts files, symbols, imports and doc references, and produces graph.json (9 query commands), an interactive graph.html and a markdown report under <target>/.graphify/.",
+  "description_i18n": {
+    "en": "Turns a codebase into a queryable knowledge graph: scans code, docs and config files, extracts files, symbols, imports and doc references, and produces graph.json (9 query commands), an interactive graph.html and a markdown report under <target>/.graphify/.",
+    "zh-CN": "将代码库转换为可查询的知识图谱：扫描代码、文档与配置文件，提取文件、符号、import 与文档引用，在 <target>/.graphify/ 下生成可查询的 graph.json（9 个查询命令）、自包含的交互式 graph.html 与 Markdown 报告。"
+  },
+  "author": {
+    "name": "Movti Group",
+    "url": "https://github.com/movtigroup"
+  },
+  "keywords": [
+    "knowledge-graph",
+    "code-analysis",
+    "dependency-graph",
+    "static-analysis",
+    "architecture",
+    "codebase"
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/movtigroup/Graphify-plugin",
+  "skills": "./skills"
+}
