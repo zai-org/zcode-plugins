@@ -94,7 +94,7 @@ zcode plugins enable agent-team@zcode-plugins-official
 
 会话里随时输入 `/team`：首行输出「成员 N · 共享任务 T」，随后逐行列出成员与任务（与面板词典同源同文案），并按运行环境附上面板/命令入口。刷新语义：桌面 MCP Apps 面板自动实时（订阅推送，无需手动刷新）；CLI 每次重跑 `/team` 即最新。
 
-**带参数 = 用团队干活**：输入 `/team <任务描述>`（如 `/team 把这段扩写成三个角色`）时，除状态摘要外，Lead 会**真的建队执行**——按角色 spawn 成员、必要时建共享任务并划写域、等齐结果后汇总。不带参数时仍严格只读。
+**带参数 = 用团队干活**：输入 `/team <任务描述>`（如 `/team 把这段扩写成三个角色`）时，Lead 会**真的建队执行**——先建共享任务，再按职责创建或复用成员；成员认领、执行并交付，Lead 验收后汇总。不带参数时仍严格只读。
 
 ### 4. `/team-coordination` 重载策略
 
@@ -120,7 +120,7 @@ zcode plugins enable agent-team@zcode-plugins-official
 | `send_message` | 全体 | 给另一个成员发消息：运行中在最近回合边界送达；空闲则拉起/恢复一轮 |
 | `list_agents` | 全体 | 列出 Lead 与全部队友的 target 与可用状态（`inactive` = 当前无回合，不代表任务失败） |
 | `interrupt_agent` | Lead | 中断一个队友当前回合，保留其待处理收件箱（**配置关闭时此工具不注册 → 8 个**） |
-| `wait_agent` | Lead | 等待下一次成员/消息/任务变化（不会唤醒空闲成员；超时返回 noProgress） |
+| `wait_agent` | 全体 | Lead 优先收取待收消息；否则等待成员/消息/任务变化（不唤醒成员；无可推进成员时返回 noProgress，超时返回 timedOut） |
 | `team_task_create` | 全体 | 在共享任务板创建一条未分配任务（可带 `blocked_by` / `write_scopes`） |
 | `team_task_list` | 全体 | 列出任务：状态、owner、revision、阻塞、写作用域告警（可分页/过滤） |
 | `team_task_get` | 全体 | 读取单条任务的最新完整内容（改动前必读） |
@@ -269,7 +269,7 @@ zcode plugins list --json        # 看 version / rootPath / dataPath / diagnosti
 | D13 | 工具条目不声明 `outputSchema`（宿主限制）；输出契约由测试锚定 |
 | D14 | 身份缺失时错误消息里用 `<unknown>` 占位 |
 | D15 | 参数类型错误返回 `TEAM_INVALID_ARGUMENT`，消息为 `param "<key>" must be …`；这些是工具面消息，错误码仍属既有 27 码 |
-| D16 | 同一团队由两个 daemon 服务时（代理模式）：`list_agents` 的 active 成员可能保守显示 `inactive`；`wait_agent` 保守等待、绝不误报 noProgress |
+| D16 | 同一团队由两个 daemon 服务时（代理模式）：`list_agents` 的 active 成员可能保守显示 `inactive`；`wait_agent` 由协调者统一收件并判断 noProgress |
 | D17 | daemon 空闲回收默认**不终止**队友轮次（keep 休眠态）；如需要彻底回收可设 `TEAM_DRAIN_ON_DISPOSE=kill` |
 | D18 | 给 Lead 的“已送达”以 hook 注入回执为准（宿主无直达注入原语，注入不落 transcript）；对外仍是 `{sent:true}` |
 | D19 | hook 读取 daemon 落盘的配置；首次 daemon 启动前 hook 使用默认值（如 `interrupt=true`） |

@@ -120,7 +120,7 @@ Using "create reviewer to check README typos" as the example:
 | `send_message` | Everyone | Message another member: delivered at the nearest turn boundary while running; wakes/resumes an idle member |
 | `list_agents` | Everyone | List Lead + all teammates with targets and availability (`inactive` = no turn running, not a failure) |
 | `interrupt_agent` | Lead | Interrupt a teammate's current turn, preserving its pending inbox (**not registered when disabled → 8 tools**) |
-| `wait_agent` | Lead | Wait for the next member/message/task change (never wakes idle members; returns noProgress on timeout) |
+| `wait_agent` | Everyone | Return pending Lead inbox messages first; otherwise wait for Team changes. No peer progress returns noProgress; timeout returns timedOut. Never wakes members. |
 | `team_task_create` | Everyone | Create an unassigned task on the shared board (optional `blocked_by` / `write_scopes`) |
 | `team_task_list` | Everyone | List tasks: status, owner, revision, blocking, write-scope warnings (paginated/filterable) |
 | `team_task_get` | Everyone | Read one task's latest full content (must-read before editing) |
@@ -269,7 +269,7 @@ This plugin is a re-implementation of DSH Agent Teams on ZCode. The deviations b
 | D13 | Tool entries declare no `outputSchema` (host limitation); output contracts are pinned by tests |
 | D14 | With missing identity, error messages use an `<unknown>` placeholder |
 | D15 | Argument type errors return `TEAM_INVALID_ARGUMENT` with `param "<key>" must be …`; these are tool-face messages within the existing 27-code set |
-| D16 | When two daemons serve one team (proxy mode): `list_agents` may conservatively show active members as `inactive`; `wait_agent` waits conservatively and never falsely reports noProgress |
+| D16 | When two daemons serve one team (proxy mode): `list_agents` may conservatively show active members as `inactive`; `wait_agent` uses the coordinator to receive messages and assess noProgress |
 | D17 | Idle reclaim does **not** terminate teammate turns by default (keep-asleep); set `TEAM_DRAIN_ON_DISPOSE=kill` to drain fully |
 | D18 | "Delivered" to the Lead means the hook injection receipt (the host has no direct injection primitive; injection is not in the transcript); externally it is still `{sent:true}` |
 | D19 | Hooks read the config persisted by the daemon; before the first daemon start they use defaults (e.g. `interrupt=true`) |

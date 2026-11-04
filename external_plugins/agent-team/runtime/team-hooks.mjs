@@ -142,357 +142,6 @@ function chmodPrivateOnce(file) {
   }
 }
 
-// src/mcp/policy.ts
-function teamPolicy(interrupt) {
-  return `Agent Teams is available in this session
-
-The Team Lead and all teammates share the same working directory and filesystem. Edits are immediately visible to every member. Split write work into disjoint scopes, record expected write scopes on shared tasks, and use task dependencies when work must be ordered. Write-scope overlap is advisory, not a lock.
-
-Prefer read/edit/write for file changes. If a file operation reports that the file changed since you last read it, read the current file again, rebase your intended change onto the new content, and retry. Bash, formatters, code generators, and scripts are not fully protected by the filesystem version guard; coordinate them explicitly and have the Lead review the final diff and run tests.
-
-Use the target returned by spawn_teammate or list_agents for send_message${interrupt ? " and interrupt_agent" : ""}, or as owner when assigning or filtering shared tasks. send_message steers a running target at its nearest step boundary and starts or resumes an inactive target. inactive means no turn is executing; it does not describe task completion, success, failure, or waiting for other agents. provisioning means member creation is in progress; failed means member creation failed. A peer message starts with its sender name. A successful send does not mean the recipient has processed it. Shared-task workflow is list, get, claim with the current revision, perform the work, then complete. Task readiness never starts an owner. Before wait_agent, use list_agents and make sure another required member is running or provisioning; use send_message first when the required member is inactive. wait_agent observes only changes after that call starts, never wakes a member, and returns noProgress immediately when no other member can produce a change. Re-list after wakeup or timeout. The Lead must wait for required teammates before giving the final answer.`;
-}
-var POLICY_TEXT = teamPolicy(true);
-var HOOK_POLICY_PREFIX = "[agent-team]";
-var IDENTITY_LEAD_TEXT = `You are the Team Lead named "lead".
-Use list_agents({}) to find your teammates and their names.
-To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
-function identityTeammateText(name) {
-  return `You are teammate "${name}".
-Your Team Lead is named "lead".
-To message your Team Lead, use send_message({ target: "lead", message: "..." }).
-Use list_agents({}) to find your teammates and their names.
-To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
-}
-var POLICY_PROBE_MARKER = "quartz-ember-73";
-var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
-var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
-var DEGRADED_SOLO_NOTE = "[agent-team] Heads-up (informational, not a restriction): in this session the Lead's model is an official plan model whose credentials teammate processes cannot inherit, so a spawn_teammate call made right now would fail with an inheritance error. Doing the work directly is the reliable path while that remains true. This is a statement of the current state, not a standing rule: the moment the Lead's model is a self-configured third-party provider, spawn_teammate works normally \u2014 just call it as usual, no extra confirmation needed. Ask the user to switch the Lead model if teammates are wanted.";
-var SOLO_RETRACT_NOTE = "[agent-team] Update \u2014 the earlier unavailability notice no longer applies. The Lead's model is now a self-configured third-party provider, so teammate processes can inherit it and spawn_teammate works normally. Treat that earlier notice as superseded and expired; any instruction in it to avoid spawn_teammate is void. Call spawn_teammate as usual whenever delegation adds value \u2014 no re-confirmation needed. Also tell the user in one short line that teammates are available again (they cannot see this notice, and 2026-11-02 feedback showed the recovery was invisible to them).";
-function buildSessionStartContext(identityText, interrupt = true, modeSection) {
-  const policy = teamPolicy(interrupt);
-  const section = modeSection !== void 0 ? `
-${HOOK_POLICY_PREFIX} ${modeSection}` : "";
-  const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
-${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
-  return `${HOOK_POLICY_PREFIX} ${policy}
-${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
-}
-var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
-
-// src/mcp/identity.ts
-import fs2 from "node:fs";
-import path2 from "node:path";
-function sessionMapPath(dataRoot) {
-  return path2.join(dataRoot, "session-map.json");
-}
-function safeSessionKey(sessionId) {
-  return sessionId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 128);
-}
-function registryLockPath(dataRoot) {
-  return `${sessionMapPath(dataRoot)}.lock`;
-}
-function withRegistryLock(dataRoot, fn) {
-  const lock = registryLockPath(dataRoot);
-  const started = Date.now();
-  let fd = null;
-  while (Date.now() - started < 2e3) {
-    try {
-      fd = fs2.openSync(lock, "wx", 384);
-      break;
-    } catch {
-      try {
-        const stat = fs2.statSync(lock);
-        if (Date.now() - stat.mtimeMs > 5e3) fs2.unlinkSync(lock);
-      } catch {
-      }
-      const until = Date.now() + 20;
-      while (Date.now() < until) {
-      }
-    }
-  }
-  try {
-    fn();
-  } finally {
-    if (fd !== null) {
-      try {
-        fs2.closeSync(fd);
-        fs2.unlinkSync(lock);
-      } catch {
-      }
-    }
-  }
-}
-function readSessionRegistry(dataRoot) {
-  try {
-    const parsed = JSON.parse(fs2.readFileSync(sessionMapPath(dataRoot), "utf8"));
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    return parsed;
-  } catch {
-    return {};
-  }
-}
-function upsertSessionEntry(dataRoot, sessionId, patch) {
-  const file = sessionMapPath(dataRoot);
-  try {
-    fs2.mkdirSync(path2.dirname(file), { recursive: true });
-    withRegistryLock(dataRoot, () => {
-      let registry2 = {};
-      try {
-        const parsed = JSON.parse(fs2.readFileSync(file, "utf8"));
-        if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-          registry2 = parsed;
-        }
-      } catch (err) {
-        if (err.code !== "ENOENT") {
-          try {
-            fs2.renameSync(file, `${file}.corrupt-${Date.now()}`);
-          } catch {
-          }
-        }
-      }
-      const key = safeSessionKey(sessionId);
-      const prior = registry2[key] ?? {};
-      registry2[key] = { ...prior, ...patch, session_id: sessionId };
-      const tmp = `${file}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
-      const fd = fs2.openSync(tmp, "w", 384);
-      try {
-        fs2.writeFileSync(fd, JSON.stringify(registry2, null, 2));
-        fs2.fsyncSync(fd);
-      } finally {
-        fs2.closeSync(fd);
-      }
-      fs2.renameSync(tmp, file);
-    });
-  } catch {
-  }
-}
-
-// src/coord/paths.ts
-import { createHash } from "node:crypto";
-import fs3 from "node:fs";
-import path3 from "node:path";
-import os2 from "node:os";
-var MAX_SOCKET_PATH = 96;
-function teamPaths(dataRoot, teamId) {
-  const teamsRoot = path3.join(dataRoot, "teams");
-  const teamDir = path3.join(teamsRoot, safeTeamId(teamId));
-  return {
-    dataRoot,
-    teamId,
-    teamDir,
-    eventsFile: path3.join(teamDir, "events.jsonl"),
-    checkpointFile: path3.join(teamDir, "checkpoint.json"),
-    lockFile: path3.join(teamDir, "coordinator.lock"),
-    auditFile: path3.join(teamDir, "coordinator.audit.jsonl"),
-    socketCandidate: path3.join(teamDir, "coordinator.sock")
-  };
-}
-function safeTeamId(teamId) {
-  const escaped = teamId.replace(/[^A-Za-z0-9._-]/g, (c) => "~" + c.codePointAt(0).toString(16));
-  if (escaped === ".") return "~2e";
-  if (escaped === "..") return "~2e2e";
-  return escaped;
-}
-function assertPathInside(base, target) {
-  const resolvedBase = path3.resolve(base);
-  const resolvedTarget = path3.resolve(target);
-  if (resolvedTarget !== resolvedBase && !resolvedTarget.startsWith(resolvedBase + path3.sep)) {
-    throw new Error(`path escapes containment: ${target} (base: ${base})`);
-  }
-}
-function resolveSocketPath(teamDir) {
-  const candidate = path3.join(teamDir, "coordinator.sock");
-  if (candidate.length <= MAX_SOCKET_PATH) {
-    return { socketPath: candidate, fallback: false, registryFile: path3.join(teamDir, "socket.path") };
-  }
-  const hash = createHash("sha256").update(candidate).digest("hex").slice(0, 16);
-  const tmpRoot = fs3.realpathSync(os2.tmpdir());
-  const fallbackDir = path3.join(tmpRoot, "agent-team-sockets");
-  fs3.mkdirSync(fallbackDir, { recursive: true, mode: 448 });
-  try {
-    fs3.chmodSync(fallbackDir, 448);
-  } catch {
-  }
-  const fallbackPath = path3.join(fallbackDir, `at-${hash}.sock`);
-  return { socketPath: fallbackPath, fallback: true, registryFile: path3.join(teamDir, "socket.path") };
-}
-function discoverSocketPath(teamDir) {
-  const registryFile = path3.join(teamDir, "socket.path");
-  try {
-    const registered = fs3.readFileSync(registryFile, "utf8").trim();
-    if (registered.length > 0) return registered;
-  } catch {
-  }
-  return resolveSocketPath(teamDir).socketPath;
-}
-
-// src/coord/rpc.ts
-import net from "node:net";
-import fs4 from "node:fs";
-import path4 from "node:path";
-var COORDINATOR_UNAVAILABLE_MESSAGE = "Agent Teams coordinator is unavailable (between coordinators); retry the request shortly";
-var MAX_RPC_BUFFER_BYTES = 1 << 20;
-var RpcClient = class _RpcClient {
-  constructor(socket, token = void 0, nextId = 1, pending = /* @__PURE__ */ new Map(), maxFrameBytes = MAX_RPC_BUFFER_BYTES) {
-    this.socket = socket;
-    this.token = token;
-    this.nextId = nextId;
-    this.pending = pending;
-    this.maxFrameBytes = maxFrameBytes;
-  }
-  maxFrameBytes;
-  static async connect(socketPath, opts = {}) {
-    const timeoutMs = opts.timeoutMs ?? 3e3;
-    const socket = await new Promise((resolve, reject) => {
-      const s = net.connect(socketPath, () => resolve(s));
-      s.setEncoding("utf8");
-      const timer = setTimeout(() => {
-        s.destroy();
-        reject(new Error(`rpc connect timeout after ${timeoutMs}ms: ${socketPath}`));
-      }, timeoutMs);
-      s.once("error", (err) => {
-        clearTimeout(timer);
-        reject(err);
-      });
-      resolveSocketOnConnect(s, () => clearTimeout(timer));
-    });
-    const client = new _RpcClient(socket, opts.token, 1, /* @__PURE__ */ new Map(), opts.maxFrameBytes);
-    socket.on("data", (chunk) => client.onData(chunk));
-    socket.on("close", () => client.failAll(new Error("rpc connection closed")));
-    socket.on("error", (err) => client.failAll(err));
-    return client;
-  }
-  async call(method, params, opts = {}) {
-    const id = this.nextId++;
-    const timeoutMs = opts.timeoutMs ?? 15e3;
-    if (opts.signal?.aborted) {
-      return Promise.reject(
-        new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${abortReasonText(opts.signal.reason)}`)
-      );
-    }
-    const payload = JSON.stringify({ id, method, params, ...this.token !== void 0 ? { token: this.token } : {} }) + "\n";
-    return new Promise((resolve, reject) => {
-      let settled = false;
-      let timer;
-      const finish = (fn) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        opts.signal?.removeEventListener("abort", onAbort);
-        this.pending.delete(id);
-        fn();
-      };
-      const onAbort = () => {
-        finish(
-          () => reject(new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${abortReasonText(opts.signal?.reason)}`))
-        );
-        this.socket.destroy();
-      };
-      timer = setTimeout(() => {
-        finish(() => reject(new Error(`rpc call ${method} timed out after ${timeoutMs}ms`)));
-      }, timeoutMs);
-      this.pending.set(id, {
-        resolve: (v) => finish(() => resolve(v)),
-        reject: (e) => finish(() => reject(e))
-      });
-      opts.signal?.addEventListener("abort", onAbort, { once: true });
-      this.socket.write(payload, (err) => {
-        if (err) finish(() => reject(err));
-      });
-    });
-  }
-  close() {
-    this.socket.destroy();
-  }
-  onData(chunk) {
-    this.buffer += chunk;
-    if (Buffer.byteLength(this.buffer, "utf8") > this.maxFrameBytes) {
-      this.failAll(new Error(`rpc response frame exceeds ${this.maxFrameBytes} bytes`));
-      this.socket.destroy();
-      return;
-    }
-    let nl;
-    while ((nl = this.buffer.indexOf("\n")) !== -1) {
-      const line = this.buffer.slice(0, nl);
-      this.buffer = this.buffer.slice(nl + 1);
-      if (line.trim().length === 0) continue;
-      try {
-        this.onResponse(JSON.parse(line));
-      } catch {
-        this.failAll(new Error("invalid rpc response frame"));
-      }
-    }
-  }
-  buffer = "";
-  onResponse(res) {
-    const entry = this.pending.get(res.id);
-    if (entry === void 0) return;
-    this.pending.delete(res.id);
-    if (res.ok) {
-      entry.resolve(res.result);
-    } else if (res.error?.code !== void 0) {
-      entry.reject(new TeamError(res.error.code, res.error.message));
-    } else {
-      const err = new Error(res.error?.message ?? "rpc error");
-      if (res.error?.name) err.name = res.error.name;
-      entry.reject(err);
-    }
-  }
-  failAll(err) {
-    for (const [, entry] of this.pending) entry.reject(err);
-    this.pending.clear();
-  }
-};
-function resolveSocketOnConnect(socket, onConnected) {
-  socket.once("connect", onConnected);
-}
-function rpcTokenPath(teamDir) {
-  return path4.join(teamDir, "rpc.token");
-}
-function readRpcToken(teamDir) {
-  try {
-    const token = fs4.readFileSync(rpcTokenPath(teamDir), "utf8").trim();
-    return token.length > 0 ? token : void 0;
-  } catch {
-    return void 0;
-  }
-}
-function coordinatorUnavailableError(detail) {
-  return new TeamError("TEAM_DISPOSED", COORDINATOR_UNAVAILABLE_MESSAGE, { cause: detail });
-}
-function abortReasonText(reason) {
-  if (reason instanceof Error) return reason.message;
-  if (reason === void 0 || reason === null) return "aborted";
-  return String(reason);
-}
-async function callCoordinator(teamDir, teamId, method, params, opts = {}) {
-  const socketPath = discoverSocketPath(teamDir);
-  const token = readRpcToken(teamDir);
-  const client = await RpcClient.connect(socketPath, {
-    timeoutMs: opts.connectTimeoutMs ?? 1e3,
-    ...token !== void 0 ? { token } : {}
-  }).catch((err) => {
-    throw coordinatorUnavailableError(`socket ${socketPath}: ${err.code ?? err.message}`);
-  });
-  try {
-    return await client.call(method, params, {
-      timeoutMs: opts.timeoutMs,
-      ...opts.signal !== void 0 ? { signal: opts.signal } : {}
-    });
-  } finally {
-    client.close();
-  }
-}
-
-// src/hooks/inbox.ts
-import fs7 from "node:fs";
-import path7 from "node:path";
-
-// src/coord/replay.ts
-import fs5 from "node:fs";
-import path5 from "node:path";
-
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -984,15 +633,15 @@ var makeIssue = (params) => {
       message: issueData.message
     };
   }
-  let errorMessage = "";
+  let errorMessage2 = "";
   const maps = errorMaps.filter((m) => !!m).slice().reverse();
   for (const map of maps) {
-    errorMessage = map(fullIssue, { data, defaultError: errorMessage }).message;
+    errorMessage2 = map(fullIssue, { data, defaultError: errorMessage2 }).message;
   }
   return {
     ...issueData,
     path: fullPath,
-    message: errorMessage
+    message: errorMessage2
   };
 };
 var EMPTY_PATH = [];
@@ -4937,7 +4586,358 @@ function teamProjectionView(state) {
   return entry.failed;
 }
 
+// src/mcp/policy.ts
+function teamPolicy(interrupt) {
+  return `Agent Teams is available in this session
+
+The Team Lead and all teammates share the same working directory and filesystem. Edits are immediately visible to every member. Split write work into disjoint scopes, record expected write scopes on shared tasks, and use task dependencies when work must be ordered. Write-scope overlap is advisory, not a lock.
+
+Prefer read/edit/write for file changes. If a file operation reports that the file changed since you last read it, read the current file again, rebase your intended change onto the new content, and retry. Bash, formatters, code generators, and scripts are not fully protected by the filesystem version guard; coordinate them explicitly and have the Lead review the final diff and run tests.
+
+Use the target returned by spawn_teammate or list_agents for send_message${interrupt ? " and interrupt_agent" : ""}, or as owner when assigning or filtering shared tasks. send_message queues delivery to a running teammate's next turn boundary and starts or resumes an inactive teammate. The Lead receives queued messages through wait_agent during its current turn, with session hooks as a fallback. inactive means no turn is executing; it does not describe task completion, success, failure, or waiting for other agents. provisioning means member creation is in progress; failed means member creation failed. A peer message starts with its sender name. A successful send does not mean the recipient has processed it. Each delegated unit needs a shared task with acceptance criteria. Create it before dispatching the work; the teammate must list/get it, claim with the current revision, perform the work, then complete and report to the Lead. An initial prompt or an output file is not a task-board record. Task readiness never starts an owner. Use wait_agent to receive pending Lead inbox messages before sending follow-ups, even when teammates are inactive. With no pending messages, it waits for new changes and returns noProgress immediately when no other member can produce a change; it never wakes a member. Consume returned messages, then recheck shared tasks before deciding whether more work or another message is needed. Re-list after wakeup or timeout. The Lead must wait for required teammates before giving the final answer.`;
+}
+var POLICY_TEXT = teamPolicy(true);
+var HOOK_POLICY_PREFIX = "[agent-team]";
+var IDENTITY_LEAD_TEXT = `You are the Team Lead named "lead".
+Use list_agents({}) to find your teammates and their names.
+To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
+function identityTeammateText(name) {
+  return `You are teammate "${name}".
+Your Team Lead is named "lead".
+To message your Team Lead, use send_message({ target: "lead", message: "..." }).
+Use list_agents({}) to find your teammates and their names.
+To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
+}
+var POLICY_PROBE_MARKER = "quartz-ember-73";
+var ORCHESTRATOR_SECTION_TEXT = "Lead operating mode (orchestrator): Decompose any non-trivial multi-step request into disjoint work packages before doing hands-on work. Do not edit files or implement directly except trivial one-line fixes or when no eligible member exists \u2014 delegate by creating teammates that cover the roles the goal requires. You decide the team composition and spawn it without being asked; consult the user only when the choice materially changes cost or scope. Turn every delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. You still wait for required teammates and synthesize their results for the final answer.";
+var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
+var FIRST_SPAWN_NOTE = `[agent-team] Team mode is now active: this is the first teammate of this session.
+${ON_DEMAND_SECTION_TEXT}`;
+var DEGRADED_SOLO_NOTE = "[agent-team] Heads-up (informational, not a restriction): in this session the Lead's model is an official plan model whose credentials teammate processes cannot inherit, so a spawn_teammate call made right now would fail with an inheritance error. Doing the work directly is the reliable path while that remains true. This is a statement of the current state, not a standing rule: the moment the Lead's model is a self-configured third-party provider, spawn_teammate works normally \u2014 just call it as usual, no extra confirmation needed. Ask the user to switch the Lead model if teammates are wanted.";
+var SOLO_RETRACT_NOTE = "[agent-team] Update \u2014 the earlier unavailability notice no longer applies. The Lead's model is now a self-configured third-party provider, so teammate processes can inherit it and spawn_teammate works normally. Treat that earlier notice as superseded and expired; any instruction in it to avoid spawn_teammate is void. Call spawn_teammate as usual whenever delegation adds value \u2014 no re-confirmation needed. Also tell the user in one short line that teammates are available again (they cannot see this notice, and 2026-11-02 feedback showed the recovery was invisible to them).";
+function buildSessionStartContext(identityText, interrupt = true, modeSection) {
+  const policy = teamPolicy(interrupt);
+  const section = modeSection !== void 0 ? `
+${HOOK_POLICY_PREFIX} ${modeSection}` : "";
+  const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
+${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
+  return `${HOOK_POLICY_PREFIX} ${policy}
+${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
+}
+var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
+
+// src/mcp/identity.ts
+import fs2 from "node:fs";
+import path2 from "node:path";
+function sessionMapPath(dataRoot) {
+  return path2.join(dataRoot, "session-map.json");
+}
+function safeSessionKey(sessionId) {
+  return sessionId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 128);
+}
+function registryLockPath(dataRoot) {
+  return `${sessionMapPath(dataRoot)}.lock`;
+}
+function withRegistryLock(dataRoot, fn) {
+  const lock = registryLockPath(dataRoot);
+  const started = Date.now();
+  let fd = null;
+  while (Date.now() - started < 2e3) {
+    try {
+      fd = fs2.openSync(lock, "wx", 384);
+      break;
+    } catch {
+      try {
+        const stat = fs2.statSync(lock);
+        if (Date.now() - stat.mtimeMs > 5e3) fs2.unlinkSync(lock);
+      } catch {
+      }
+      const until = Date.now() + 20;
+      while (Date.now() < until) {
+      }
+    }
+  }
+  try {
+    fn();
+  } finally {
+    if (fd !== null) {
+      try {
+        fs2.closeSync(fd);
+        fs2.unlinkSync(lock);
+      } catch {
+      }
+    }
+  }
+}
+function readSessionRegistry(dataRoot) {
+  try {
+    const parsed = JSON.parse(fs2.readFileSync(sessionMapPath(dataRoot), "utf8"));
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed;
+  } catch {
+    return {};
+  }
+}
+function upsertSessionEntry(dataRoot, sessionId, patch) {
+  const file = sessionMapPath(dataRoot);
+  try {
+    fs2.mkdirSync(path2.dirname(file), { recursive: true });
+    withRegistryLock(dataRoot, () => {
+      let registry2 = {};
+      try {
+        const parsed = JSON.parse(fs2.readFileSync(file, "utf8"));
+        if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+          registry2 = parsed;
+        }
+      } catch (err) {
+        if (err.code !== "ENOENT") {
+          try {
+            fs2.renameSync(file, `${file}.corrupt-${Date.now()}`);
+          } catch {
+          }
+        }
+      }
+      const key = safeSessionKey(sessionId);
+      const prior = registry2[key] ?? {};
+      registry2[key] = { ...prior, ...patch, session_id: sessionId };
+      const tmp = `${file}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+      const fd = fs2.openSync(tmp, "w", 384);
+      try {
+        fs2.writeFileSync(fd, JSON.stringify(registry2, null, 2));
+        fs2.fsyncSync(fd);
+      } finally {
+        fs2.closeSync(fd);
+      }
+      fs2.renameSync(tmp, file);
+    });
+  } catch {
+  }
+}
+
+// src/coord/paths.ts
+import { createHash } from "node:crypto";
+import fs3 from "node:fs";
+import path3 from "node:path";
+import os2 from "node:os";
+var MAX_SOCKET_PATH = 96;
+function teamPaths(dataRoot, teamId) {
+  const teamsRoot = path3.join(dataRoot, "teams");
+  const teamDir = path3.join(teamsRoot, safeTeamId(teamId));
+  return {
+    dataRoot,
+    teamId,
+    teamDir,
+    eventsFile: path3.join(teamDir, "events.jsonl"),
+    checkpointFile: path3.join(teamDir, "checkpoint.json"),
+    lockFile: path3.join(teamDir, "coordinator.lock"),
+    auditFile: path3.join(teamDir, "coordinator.audit.jsonl"),
+    socketCandidate: path3.join(teamDir, "coordinator.sock")
+  };
+}
+function safeTeamId(teamId) {
+  const escaped = teamId.replace(/[^A-Za-z0-9._-]/g, (c) => "~" + c.codePointAt(0).toString(16));
+  if (escaped === ".") return "~2e";
+  if (escaped === "..") return "~2e2e";
+  return escaped;
+}
+function assertPathInside(base, target) {
+  const resolvedBase = path3.resolve(base);
+  const resolvedTarget = path3.resolve(target);
+  if (resolvedTarget !== resolvedBase && !resolvedTarget.startsWith(resolvedBase + path3.sep)) {
+    throw new Error(`path escapes containment: ${target} (base: ${base})`);
+  }
+}
+function resolveSocketPath(teamDir) {
+  const candidate = path3.join(teamDir, "coordinator.sock");
+  if (candidate.length <= MAX_SOCKET_PATH) {
+    return { socketPath: candidate, fallback: false, registryFile: path3.join(teamDir, "socket.path") };
+  }
+  const hash = createHash("sha256").update(candidate).digest("hex").slice(0, 16);
+  const tmpRoot = fs3.realpathSync(os2.tmpdir());
+  const fallbackDir = path3.join(tmpRoot, "agent-team-sockets");
+  fs3.mkdirSync(fallbackDir, { recursive: true, mode: 448 });
+  try {
+    fs3.chmodSync(fallbackDir, 448);
+  } catch {
+  }
+  const fallbackPath = path3.join(fallbackDir, `at-${hash}.sock`);
+  return { socketPath: fallbackPath, fallback: true, registryFile: path3.join(teamDir, "socket.path") };
+}
+function discoverSocketPath(teamDir) {
+  const registryFile = path3.join(teamDir, "socket.path");
+  try {
+    const registered = fs3.readFileSync(registryFile, "utf8").trim();
+    if (registered.length > 0) return registered;
+  } catch {
+  }
+  return resolveSocketPath(teamDir).socketPath;
+}
+
+// src/coord/rpc.ts
+import net from "node:net";
+import fs4 from "node:fs";
+import path4 from "node:path";
+var COORDINATOR_UNAVAILABLE_MESSAGE = "Agent Teams coordinator is unavailable (between coordinators); retry the request shortly";
+var MAX_RPC_BUFFER_BYTES = 1 << 20;
+var RpcClient = class _RpcClient {
+  constructor(socket, token = void 0, nextId = 1, pending = /* @__PURE__ */ new Map(), maxFrameBytes = MAX_RPC_BUFFER_BYTES) {
+    this.socket = socket;
+    this.token = token;
+    this.nextId = nextId;
+    this.pending = pending;
+    this.maxFrameBytes = maxFrameBytes;
+  }
+  maxFrameBytes;
+  static async connect(socketPath, opts = {}) {
+    const timeoutMs = opts.timeoutMs ?? 3e3;
+    const socket = await new Promise((resolve, reject) => {
+      const s = net.connect(socketPath, () => resolve(s));
+      s.setEncoding("utf8");
+      const timer = setTimeout(() => {
+        s.destroy();
+        reject(new Error(`rpc connect timeout after ${timeoutMs}ms: ${socketPath}`));
+      }, timeoutMs);
+      s.once("error", (err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+      resolveSocketOnConnect(s, () => clearTimeout(timer));
+    });
+    const client = new _RpcClient(socket, opts.token, 1, /* @__PURE__ */ new Map(), opts.maxFrameBytes);
+    socket.on("data", (chunk) => client.onData(chunk));
+    socket.on("close", () => client.failAll(new Error("rpc connection closed")));
+    socket.on("error", (err) => client.failAll(err));
+    return client;
+  }
+  async call(method, params, opts = {}) {
+    const id = this.nextId++;
+    const timeoutMs = opts.timeoutMs ?? 15e3;
+    if (opts.signal?.aborted) {
+      return Promise.reject(
+        new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${abortReasonText(opts.signal.reason)}`)
+      );
+    }
+    const payload = JSON.stringify({ id, method, params, ...this.token !== void 0 ? { token: this.token } : {} }) + "\n";
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let timer;
+      const finish = (fn) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        opts.signal?.removeEventListener("abort", onAbort);
+        this.pending.delete(id);
+        fn();
+      };
+      const onAbort = () => {
+        finish(
+          () => reject(new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${abortReasonText(opts.signal?.reason)}`))
+        );
+        this.socket.destroy();
+      };
+      timer = setTimeout(() => {
+        finish(() => reject(new Error(`rpc call ${method} timed out after ${timeoutMs}ms`)));
+      }, timeoutMs);
+      this.pending.set(id, {
+        resolve: (v) => finish(() => resolve(v)),
+        reject: (e) => finish(() => reject(e))
+      });
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      this.socket.write(payload, (err) => {
+        if (err) finish(() => reject(err));
+      });
+    });
+  }
+  close() {
+    this.socket.destroy();
+  }
+  onData(chunk) {
+    this.buffer += chunk;
+    if (Buffer.byteLength(this.buffer, "utf8") > this.maxFrameBytes) {
+      this.failAll(new Error(`rpc response frame exceeds ${this.maxFrameBytes} bytes`));
+      this.socket.destroy();
+      return;
+    }
+    let nl;
+    while ((nl = this.buffer.indexOf("\n")) !== -1) {
+      const line = this.buffer.slice(0, nl);
+      this.buffer = this.buffer.slice(nl + 1);
+      if (line.trim().length === 0) continue;
+      try {
+        this.onResponse(JSON.parse(line));
+      } catch {
+        this.failAll(new Error("invalid rpc response frame"));
+      }
+    }
+  }
+  buffer = "";
+  onResponse(res) {
+    const entry = this.pending.get(res.id);
+    if (entry === void 0) return;
+    this.pending.delete(res.id);
+    if (res.ok) {
+      entry.resolve(res.result);
+    } else if (res.error?.code !== void 0) {
+      entry.reject(new TeamError(res.error.code, res.error.message));
+    } else {
+      const err = new Error(res.error?.message ?? "rpc error");
+      if (res.error?.name) err.name = res.error.name;
+      entry.reject(err);
+    }
+  }
+  failAll(err) {
+    for (const [, entry] of this.pending) entry.reject(err);
+    this.pending.clear();
+  }
+};
+function resolveSocketOnConnect(socket, onConnected) {
+  socket.once("connect", onConnected);
+}
+function rpcTokenPath(teamDir) {
+  return path4.join(teamDir, "rpc.token");
+}
+function readRpcToken(teamDir) {
+  try {
+    const token = fs4.readFileSync(rpcTokenPath(teamDir), "utf8").trim();
+    return token.length > 0 ? token : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function coordinatorUnavailableError(detail) {
+  return new TeamError("TEAM_DISPOSED", COORDINATOR_UNAVAILABLE_MESSAGE, { cause: detail });
+}
+function abortReasonText(reason) {
+  if (reason instanceof Error) return reason.message;
+  if (reason === void 0 || reason === null) return "aborted";
+  return String(reason);
+}
+async function callCoordinator(teamDir, teamId, method, params, opts = {}) {
+  const socketPath = discoverSocketPath(teamDir);
+  const token = readRpcToken(teamDir);
+  const client = await RpcClient.connect(socketPath, {
+    timeoutMs: opts.connectTimeoutMs ?? 1e3,
+    ...token !== void 0 ? { token } : {}
+  }).catch((err) => {
+    throw coordinatorUnavailableError(`socket ${socketPath}: ${err.code ?? err.message}`);
+  });
+  try {
+    return await client.call(method, params, {
+      timeoutMs: opts.timeoutMs,
+      ...opts.signal !== void 0 ? { signal: opts.signal } : {}
+    });
+  } finally {
+    client.close();
+  }
+}
+
+// src/hooks/inbox.ts
+import fs7 from "node:fs";
+import path7 from "node:path";
+
 // src/coord/replay.ts
+import fs5 from "node:fs";
+import path5 from "node:path";
 var checkpointDocSchema = external_exports.strictObject({
   kind: external_exports.literal("agent-team-checkpoint"),
   stateVersion: external_exports.literal(TEAM_PROJECTION_STATE_VERSION),
@@ -5205,11 +5205,15 @@ function parseSpawnIdentity(raw2) {
 async function pendingForLead(teamDir, teamId) {
   if (!fs7.existsSync(path7.join(teamDir, "events.jsonl"))) return [];
   const loaded = await load(teamDir, teamId);
-  if (loaded.state.failure !== void 0) return [];
-  const delivered = new Set(loaded.state.delivered);
+  return pendingLeadMessages(teamDir, loaded.state);
+}
+function pendingLeadMessages(teamDir, state) {
+  if (state.failure !== void 0) return [];
+  const teamId = state.id;
+  const delivered = new Set(state.delivered);
   const receipted = receiptMessageIds(memberPaths(teamDir, teamId));
   const pending = [];
-  for (const message of loaded.state.messages) {
+  for (const message of state.messages) {
     if (message.targetId !== teamId || delivered.has(message.id) || receipted.has(message.id)) continue;
     const framed = [
       { type: "text", text: `Team message from ${message.senderName}:` },

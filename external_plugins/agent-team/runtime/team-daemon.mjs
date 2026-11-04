@@ -18875,17 +18875,21 @@ function pgidAlive(pgid) {
     return err.code === "EPERM";
   }
 }
-async function killProcessGroup(pgid, graceMs) {
+async function killProcessGroup(pgid, graceMs, signal) {
+  signal?.throwIfAborted();
   if (pgid === null || pgid <= 0) return true;
   signalGroup(pgid, "SIGTERM");
   for (let waited = 0; waited < graceMs; waited += 50) {
     await sleep(50);
+    signal?.throwIfAborted();
     if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
   }
+  signal?.throwIfAborted();
   if (pgidAlive(pgid) || pidAlive(pgid)) {
     signalGroup(pgid, "SIGKILL");
     for (let waited = 0; waited < 2e3; waited += 50) {
       await sleep(50);
+      signal?.throwIfAborted();
       if (!pgidAlive(pgid) && !pidAlive(pgid)) return true;
     }
   }
@@ -20810,6 +20814,178 @@ function nonEmptyString(value) {
   return trimmed.length > 0 ? trimmed : void 0;
 }
 
+// src/domain/ports.ts
+var realClock = {
+  now: () => Date.now(),
+  sleep: (ms, signal) => new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  })
+};
+function errorMessage(err) {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.split("\n")[0] ?? message;
+}
+
+// src/domain/activity.ts
+function isValidTimeout(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 1e4 && value <= 36e5;
+}
+var NO_PROGRESS_REASON = "no-active-peer";
+var NO_PROGRESS_MESSAGE = "No other Team member is running or provisioning. wait_agent cannot make progress or wake inactive teammates. Re-list with list_agents and team_task_list, then use send_message to wake each required inactive teammate before waiting again.";
+function noProgressResult() {
+  return { timedOut: false, noProgress: { reason: NO_PROGRESS_REASON, message: NO_PROGRESS_MESSAGE } };
+}
+var TeamActivity = class {
+  constructor(deps) {
+    this.deps = deps;
+    this.clock = deps.clock ?? realClock;
+  }
+  waiters = /* @__PURE__ */ new Set();
+  closed = false;
+  clock;
+  unsubscribeCommit;
+  /** 接线：Team 日志提交边（由 runtime/装配调用；每提交唤醒全部已注册等待者一次）。 */
+  bindCommitEdge() {
+    this.unsubscribeCommit?.();
+    this.unsubscribeCommit = this.deps.store.onCommit(() => this.wakeAll());
+    return () => this.unsubscribeCommit?.();
+  }
+  /** 接线：成员状态变化边（roster.onMemberStatus → 此处）。 */
+  notifyMemberStatus() {
+    this.wakeAll();
+  }
+  /** 处置：唤醒全部等待者并关闭准入（新等待立即返回 { timedOut:false }）。 */
+  closeAll() {
+    this.closed = true;
+    this.wakeAll();
+  }
+  /** §8 waitForChange。 */
+  async waitForChange(callerId, timeoutMs = 3e4, signal) {
+    if (!isValidTimeout(timeoutMs)) {
+      throw new TeamError(
+        "TEAM_INVALID_TIMEOUT",
+        "timeoutMs must be an integer from 10000 through 3600000"
+      );
+    }
+    signal?.throwIfAborted();
+    if (this.closed) return { timedOut: false };
+    requireMembership(() => this.loadState(), callerId);
+    return new Promise((resolve, reject) => {
+      const sleepAbort = new AbortController();
+      const waiter = {
+        wake: () => {
+          cleanup();
+          resolve({ timedOut: false });
+        }
+      };
+      const onAbort = () => {
+        cleanup();
+        const reason = signal?.reason;
+        if (reason instanceof Error) reject(reason);
+        else
+          reject(
+            new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${errorMessage(reason)}`)
+          );
+      };
+      const cleanup = () => {
+        if (settled) return;
+        this.waiters.delete(waiter);
+        settled = true;
+        signal?.removeEventListener("abort", onAbort);
+        sleepAbort.abort();
+      };
+      let settled = false;
+      this.waiters.add(waiter);
+      signal?.addEventListener("abort", onAbort, { once: true });
+      void this.clock.sleep(timeoutMs, sleepAbort.signal).then(() => {
+        if (settled) return;
+        cleanup();
+        resolve({ timedOut: true });
+      });
+    });
+  }
+  wakeAll() {
+    const current = [...this.waiters];
+    this.waiters.clear();
+    for (const waiter of current) waiter.wake();
+  }
+  loadState() {
+    const state = this.deps.store.state();
+    if (state.failure !== void 0) throw new Error(state.failure);
+    return state;
+  }
+};
+
+// src/provider/framing.ts
+function renderFramed(framedJson) {
+  const blocks = JSON.parse(framedJson);
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    throw new Error("framed message must be a non-empty JSON array of content blocks");
+  }
+  const header = blocks[0];
+  if (header.type !== "text" || typeof header.text !== "string") {
+    throw new Error("framed message first block must be the text header");
+  }
+  const m = header.text.match(/^Team message from (.+):$/);
+  if (m === null) {
+    throw new Error(`framed message header mismatch: ${JSON.stringify(header.text)}`);
+  }
+  const lines = [header.text];
+  for (const block of blocks.slice(1)) {
+    if (block.type === "text" && typeof block.text === "string") {
+      lines.push(block.text);
+    } else {
+      lines.push(JSON.stringify(block));
+    }
+  }
+  return { messageId: "", senderName: m[1], text: lines.join("\n") };
+}
+function renderFramedBatch(items) {
+  const rendered = items.map((item) => ({ ...renderFramed(item.framedJson), messageId: item.messageId }));
+  return { promptText: rendered.map((r) => r.text).join("\n\n"), rendered };
+}
+
+// src/hooks/inbox.ts
+function pendingLeadMessages(teamDir, state) {
+  if (state.failure !== void 0) return [];
+  const teamId = state.id;
+  const delivered = new Set(state.delivered);
+  const receipted = receiptMessageIds(memberPaths(teamDir, teamId));
+  const pending = [];
+  for (const message of state.messages) {
+    if (message.targetId !== teamId || delivered.has(message.id) || receipted.has(message.id)) continue;
+    const framed = [
+      { type: "text", text: `Team message from ${message.senderName}:` },
+      ...message.content
+    ];
+    pending.push({
+      messageId: message.id,
+      senderName: message.senderName,
+      text: renderFramed(JSON.stringify(framed)).text
+    });
+  }
+  return pending;
+}
+function writeReceipts(dataRoot, teamId, messageIds, channel) {
+  const paths = memberPaths(teamPaths(dataRoot, teamId).teamDir, teamId);
+  for (const messageId of messageIds) {
+    appendReceipt(paths, { messageId, channel, ts: (/* @__PURE__ */ new Date()).toISOString() });
+  }
+}
+
 // src/coord/methods.ts
 var TASK_ACTIONS = [
   "claim",
@@ -20831,6 +21007,7 @@ function methodTimeoutMs(method) {
 }
 function buildTeamMethodTable(deps) {
   const { runtime, store } = deps;
+  const { teamDir } = teamPaths(deps.dataRoot, deps.teamId);
   const table = /* @__PURE__ */ new Map();
   table.set("coordinator.hello", (raw) => {
     const p = asParams(raw, "coordinator.hello");
@@ -20975,7 +21152,65 @@ function buildTeamMethodTable(deps) {
     assertTeamTarget(p, "wait.agent", deps);
     const sessionId = requireSessionId(p, "wait.agent");
     const timeoutMs = typeof p.timeoutMs === "number" ? p.timeoutMs : 3e4;
-    return runtime.activity.waitForChange(sessionId, timeoutMs, ctx?.signal);
+    if (!isValidTimeout(timeoutMs) || runtime.lifecycle.status !== "open") {
+      return runtime.activity.waitForChange(sessionId, timeoutMs, ctx?.signal);
+    }
+    ctx?.signal?.throwIfAborted();
+    runtime.lifecycle.runtimeSignal().throwIfAborted();
+    const membership = requireMembership(membershipStateLoader(store), sessionId);
+    const receiveMessages = () => {
+      ctx?.signal?.throwIfAborted();
+      runtime.lifecycle.runtimeSignal().throwIfAborted();
+      if (sessionId !== deps.teamId) return { messages: [] };
+      const pending = pendingLeadMessages(teamDir, store.state());
+      const messages = [];
+      const messageIds = [];
+      const receiptWarning = "\u6536\u4EF6\u56DE\u6267\u6301\u4E45\u5316\u5931\u8D25\uFF1B\u672C\u6279\u6B63\u6587\u5DF2\u8FD4\u56DE\uFF0C\u672A\u786E\u8BA4\u6D88\u606F\u53EF\u80FD\u91CD\u590D\u3002";
+      let bytes = Buffer.byteLength(JSON.stringify({
+        id: Number.MAX_SAFE_INTEGER,
+        ok: true,
+        result: { timedOut: false, messages: [], receiptWarning }
+      })) + 1;
+      for (const message of pending) {
+        const size = Buffer.byteLength(JSON.stringify(message.text)) + (messages.length > 0 ? 1 : 0);
+        if (bytes + size > MAX_RPC_BUFFER_BYTES) {
+          if (messages.length === 0) throw new Error("\u5355\u6761\u6210\u5458\u6D88\u606F\u8D85\u8FC7\u6536\u4EF6\u7BB1\u54CD\u5E94\u4E0A\u9650\uFF0C\u6D88\u606F\u4FDD\u6301\u5F85\u6536\uFF1B\u8BF7\u67E5\u770B\u6210\u5458\u4F1A\u8BDD\u83B7\u53D6\u5B8C\u6574\u7ED3\u679C\u3002");
+          break;
+        }
+        bytes += size;
+        messages.push(message.text);
+        messageIds.push(message.messageId);
+      }
+      try {
+        writeReceipts(deps.dataRoot, deps.teamId, messageIds, "wait_agent");
+      } catch (err) {
+        try {
+          deps.warn?.(`agent-team inbox receipt failed: ${err instanceof Error ? err.message : String(err)}`);
+        } catch {
+        }
+        return { messages, receiptWarning };
+      }
+      return { messages };
+    };
+    const inbox = receiveMessages();
+    if (inbox.messages.length > 0) return { timedOut: false, ...inbox };
+    const rows = runtime.roster.listMembers(sessionId).members;
+    if (!runtime.roster.hasPendingAutomaticProgress(sessionId)) {
+      const stopped = rows.find((row) => row.status === "provisioning");
+      if (stopped !== void 0) {
+        const message = `\u6210\u5458 ${stopped.target} \u5DF2\u505C\u6B62\u81EA\u52A8\u786E\u8BA4\uFF0C\u9700\u8981 Lead \u63A5\u7BA1\uFF1B\u65E7 turn \u4ECD\u53EF\u80FD\u6267\u884C\uFF0C\u4E0D\u5F97\u91CD\u590D\u542F\u52A8\u3002`;
+        return { ...noProgressResult(), noProgress: { reason: "no-active-peer", message }, content: [{ type: "text", text: message }] };
+      }
+      return noProgressResult();
+    }
+    const self = membership.role === "lead" ? "lead" : membership.name;
+    if (!rows.some((row) => row.target !== self && (row.status === "running" || row.status === "provisioning"))) {
+      return noProgressResult();
+    }
+    const result = await runtime.activity.waitForChange(sessionId, timeoutMs, ctx?.signal);
+    if (runtime.lifecycle.status !== "open") return result;
+    const received = receiveMessages();
+    return received.messages.length > 0 ? { timedOut: false, ...received } : result;
   };
   waitAgent.timeoutMs = 36e5 + WAIT_AGENT_GRACE_MS;
   table.set("wait.agent", waitAgent);
@@ -21153,113 +21388,6 @@ function isCancellation(err) {
   return false;
 }
 
-// src/domain/ports.ts
-var realClock = {
-  now: () => Date.now(),
-  sleep: (ms, signal) => new Promise((resolve) => {
-    if (signal?.aborted) {
-      resolve();
-      return;
-    }
-    const onAbort = () => {
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    };
-    const timer = setTimeout(() => {
-      signal?.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    signal?.addEventListener("abort", onAbort, { once: true });
-  })
-};
-function errorMessage(err) {
-  const message = err instanceof Error ? err.message : String(err);
-  return message.split("\n")[0] ?? message;
-}
-
-// src/domain/activity.ts
-var TeamActivity = class {
-  constructor(deps) {
-    this.deps = deps;
-    this.clock = deps.clock ?? realClock;
-  }
-  waiters = /* @__PURE__ */ new Set();
-  closed = false;
-  clock;
-  unsubscribeCommit;
-  /** 接线：Team 日志提交边（由 runtime/装配调用；每提交唤醒全部已注册等待者一次）。 */
-  bindCommitEdge() {
-    this.unsubscribeCommit?.();
-    this.unsubscribeCommit = this.deps.store.onCommit(() => this.wakeAll());
-    return () => this.unsubscribeCommit?.();
-  }
-  /** 接线：成员状态变化边（roster.onMemberStatus → 此处）。 */
-  notifyMemberStatus() {
-    this.wakeAll();
-  }
-  /** 处置：唤醒全部等待者并关闭准入（新等待立即返回 { timedOut:false }）。 */
-  closeAll() {
-    this.closed = true;
-    this.wakeAll();
-  }
-  /** §8 waitForChange。 */
-  async waitForChange(callerId, timeoutMs = 3e4, signal) {
-    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1e4 || timeoutMs > 36e5) {
-      throw new TeamError(
-        "TEAM_INVALID_TIMEOUT",
-        "timeoutMs must be an integer from 10000 through 3600000"
-      );
-    }
-    signal?.throwIfAborted();
-    if (this.closed) return { timedOut: false };
-    requireMembership(() => this.loadState(), callerId);
-    return new Promise((resolve, reject) => {
-      const sleepAbort = new AbortController();
-      const waiter = {
-        wake: () => {
-          cleanup();
-          resolve({ timedOut: false });
-        }
-      };
-      const onAbort = () => {
-        cleanup();
-        const reason = signal?.reason;
-        if (reason instanceof Error) reject(reason);
-        else
-          reject(
-            new TeamError("TEAM_WAIT_ABORTED", `wait_agent aborted: ${errorMessage(reason)}`)
-          );
-      };
-      const cleanup = () => {
-        if (settled) return;
-        this.waiters.delete(waiter);
-        settled = true;
-        signal?.removeEventListener("abort", onAbort);
-        sleepAbort.abort();
-      };
-      let settled = false;
-      this.waiters.add(waiter);
-      signal?.addEventListener("abort", onAbort, { once: true });
-      void this.clock.sleep(timeoutMs, sleepAbort.signal).then(() => {
-        if (settled) return;
-        cleanup();
-        resolve({ timedOut: true });
-      });
-    });
-  }
-  wakeAll() {
-    const current = [...this.waiters];
-    this.waiters.clear();
-    for (const waiter of current) waiter.wake();
-  }
-  loadState() {
-    const state = this.deps.store.state();
-    if (state.failure !== void 0) throw new Error(state.failure);
-    return state;
-  }
-};
-
 // src/domain/validation.ts
 function requiredText(field, value, maxLen) {
   if (typeof value !== "string") {
@@ -21359,7 +21487,14 @@ var TeamRoster = class {
   /** 仅由宿主在完整意图/轮次恢复后启动；构造对象不得提前判 provisioning 失败。 */
   startRecovery() {
     this.recoveryDone ??= this.reconcileProvisioning().then(
-      () => void 0,
+      () => {
+        if (this.deps.lifecycle.runtimeSignal().aborted) return;
+        for (const member of this.loadState().members) {
+          if (member.phase === "provisioning" && !this.recoveryStopped.has(member.id)) {
+            this.scheduleProvisioningRecheck(member.id);
+          }
+        }
+      },
       () => void 0
     );
     return this.recoveryDone;
@@ -21415,15 +21550,6 @@ var TeamRoster = class {
     const providerName = requiredText("provider", context === "fork" ? providers.fork : providers.fresh, 200);
     const childId = (this.deps.newId ?? defaultNewId)();
     const requestId = args.requestId ?? defaultNewId();
-    this.deps.provider.prepareContinuable?.({
-      teamId: this.deps.teamId,
-      memberId: childId,
-      name,
-      description,
-      firstPrompt: args.prompt,
-      context,
-      requestId
-    });
     await this.deps.store.transact(async () => {
       const fresh = this.loadState();
       if (fresh.members.some((m) => m.name === name)) {
@@ -21435,6 +21561,15 @@ var TeamRoster = class {
       if (providerHasModelPreflight(this.deps.provider)) {
         this.deps.provider.preflightMemberModel();
       }
+      this.deps.provider.prepareContinuable?.({
+        teamId: this.deps.teamId,
+        memberId: childId,
+        name,
+        description,
+        firstPrompt: args.prompt,
+        context,
+        requestId
+      });
       await this.deps.store.append({
         type: "team/member",
         version: 2,
@@ -21468,6 +21603,9 @@ var TeamRoster = class {
       started = await run;
     } catch (originalError) {
       if (originalError instanceof ProvisioningPending) {
+        if (!this.deps.lifecycle.runtimeSignal().aborted && !args.ownershipSignal?.aborted) {
+          this.scheduleProvisioningRecheck(childId);
+        }
         return { member: this.rowOf(childId), creation: "pending", message: originalError.message };
       }
       let becameActiveConflict;
@@ -21510,6 +21648,9 @@ var TeamRoster = class {
       throw new Error(`provider returned memberId ${started.memberId} != provisioned ${childId}`);
     }
     if (started.creation === "pending") {
+      if (!this.deps.lifecycle.runtimeSignal().aborted && !args.ownershipSignal?.aborted) {
+        this.scheduleProvisioningRecheck(childId);
+      }
       return { member: this.rowOf(childId), creation: "pending", message: "\u7ED3\u679C\u5F85\u786E\u8BA4" };
     }
     if (!started.accepted) {
@@ -21567,10 +21708,10 @@ var TeamRoster = class {
    *  team/member(provisioning) 事件的 ts 计龄：尚未确认首轮受理（记录缺失或 accepted 未置位）
    *  且年龄 < graceMs → 跳过本轮并排一次性 recheck（10s）；年龄 ≥ graceMs 或恢复抛错 → 照旧
    *  定案（真故障不被掩盖）。store 未实现 readEventLines（内存桩）→ 无宽限（旧语义）。 */
-  async reconcileProvisioning() {
+  async reconcileProvisioning(recheckMemberId) {
     const state = this.loadState();
     const pending = state.members.filter(
-      (m) => m.phase === "provisioning" && !this.deps.inspector.isAlive(m.id)
+      (m) => m.phase === "provisioning" && (m.id === recheckMemberId || !this.deps.inspector.isAlive(m.id))
     );
     const orphans = pending.map((m) => m.id);
     const settled = [];
@@ -21681,7 +21822,7 @@ var TeamRoster = class {
     if (this.recheckTimers.has(memberId)) return;
     const timer = setTimeout(() => {
       this.recheckTimers.delete(memberId);
-      void this.reconcileProvisioning().then(
+      void this.reconcileProvisioning(memberId).then(
         () => void 0,
         () => void 0
         // C3：对账自身抛错仅警告语义由调用方承担
@@ -21693,7 +21834,7 @@ var TeamRoster = class {
   hasPendingAutomaticProgress(callerId) {
     const { state } = this.requireMember(callerId);
     return state.members.some(
-      (member) => member.phase === "active" && this.deps.inspector.isAlive(member.id) || member.phase === "provisioning" && !this.recoveryStopped.has(member.id)
+      (member) => member.phase === "active" && (this.deps.inspector.isAlive(member.id) || this.deps.presentation?.statusOf(member.id) === "running") || member.phase === "provisioning" && !this.recoveryStopped.has(member.id)
     );
   }
   // ---------------------------------------------------------------- listMembers（§5.5）
@@ -21748,7 +21889,7 @@ var TeamRoster = class {
     if (target === void 0) {
       throw new TeamError("TEAM_MEMBER_NOT_FOUND", `active teammate "${name}" not found`);
     }
-    if (!this.deps.inspector.isAlive(target.id)) {
+    if (!this.deps.inspector.isAlive(target.id) && this.deps.presentation?.statusOf(target.id) !== "running") {
       return { previousStatus: "inactive" };
     }
     const result = await this.deps.provider.interrupt({ memberId: target.id });
@@ -22645,7 +22786,13 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
       }
       throw err;
     }
-    await host.serve();
+    const startup = host.serve().then(() => host.currentMode === "coordinator");
+    host.promoting = startup;
+    try {
+      await startup;
+    } finally {
+      if (host.promoting === startup) host.promoting = null;
+    }
     return host;
   }
   get currentMode() {
@@ -22838,6 +22985,8 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
     if (this.closed) throw new Error("host is closed");
     const paths = this.paths();
     const generationSignal = providerHasGeneration(this.provider) ? this.provider.activateGeneration() : void 0;
+    const ownerToken = this.lock.info?.token;
+    const ownsGeneration = () => !this.closed && ownerToken !== void 0 && this.lock.info?.token === ownerToken && !generationSignal?.aborted;
     this.lock.startHeartbeat();
     let store;
     try {
@@ -22853,9 +23002,14 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
         journal
       });
     } catch (err) {
+      if (!ownsGeneration()) return;
       this.lock.stopHeartbeat();
       await this.lock.release();
       throw err;
+    }
+    if (!ownsGeneration()) {
+      await store.close({ checkpoint: false });
+      return;
     }
     const runtime = new TeamRuntime({
       teamId: this.teamId,
@@ -22914,8 +23068,25 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
         `Agent Teams coordinator for team "${this.teamId}" started in degraded mode (projection failure): ${initialState.failure}`
       );
     } else {
-      await runtime.recoverAll();
+      try {
+        await runtime.recoverAll();
+      } catch (err) {
+        if (ownsGeneration()) throw err;
+        runtime.close();
+        await store.close({ checkpoint: false });
+        return;
+      }
+      if (!ownsGeneration()) {
+        runtime.close();
+        await store.close({ checkpoint: false });
+        return;
+      }
       if (providerHasBoundary(this.provider)) this.provider.startBackground?.();
+    }
+    if (!ownsGeneration()) {
+      runtime.close();
+      await store.close({ checkpoint: false });
+      return;
     }
     const socket = resolveSocketPath(paths.teamDir);
     const token = newRpcToken();
@@ -22924,13 +23095,28 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
       maxFrameBytes: frameBudgetFor(this.limits.maxMessageBytes)
     });
     const table = buildTeamMethodTable({
+      dataRoot: this.opts.dataRoot,
+      warn: this.opts.warn,
       teamId: this.teamId,
       runtime,
       store,
       coordinatorBootId: this.lock.info?.bootId ?? bootId()
     });
     registerTeamMethods(server2, table);
-    await server2.listen({ callTimeoutMs: this.opts.callTimeoutMs });
+    try {
+      await server2.listen({ callTimeoutMs: this.opts.callTimeoutMs });
+    } catch (err) {
+      if (ownsGeneration()) throw err;
+      runtime.close();
+      await store.close({ checkpoint: false });
+      return;
+    }
+    if (!ownsGeneration()) {
+      await server2.close();
+      runtime.close();
+      await store.close({ checkpoint: false });
+      return;
+    }
     writeRpcToken(paths.teamDir, token);
     writeSocketRegistry(paths.teamDir, socket.socketPath);
     this.store = store;
@@ -22960,7 +23146,7 @@ var TeamCoordinatorHost = class _TeamCoordinatorHost {
       return false;
     }
     await this.serve();
-    return true;
+    return this.currentMode === "coordinator";
   }
   startTakeoverWatcher() {
     if (this.opts.autoTakeover === false || this.watcher !== null) return;
@@ -23027,45 +23213,9 @@ function providerWakesLead(provider) {
   return typeof provider.wakeLead === "function";
 }
 
-// src/mcp/policy.ts
-function teamPolicy(interrupt) {
-  return `Agent Teams is available in this session
-
-The Team Lead and all teammates share the same working directory and filesystem. Edits are immediately visible to every member. Split write work into disjoint scopes, record expected write scopes on shared tasks, and use task dependencies when work must be ordered. Write-scope overlap is advisory, not a lock.
-
-Prefer read/edit/write for file changes. If a file operation reports that the file changed since you last read it, read the current file again, rebase your intended change onto the new content, and retry. Bash, formatters, code generators, and scripts are not fully protected by the filesystem version guard; coordinate them explicitly and have the Lead review the final diff and run tests.
-
-Use the target returned by spawn_teammate or list_agents for send_message${interrupt ? " and interrupt_agent" : ""}, or as owner when assigning or filtering shared tasks. send_message steers a running target at its nearest step boundary and starts or resumes an inactive target. inactive means no turn is executing; it does not describe task completion, success, failure, or waiting for other agents. provisioning means member creation is in progress; failed means member creation failed. A peer message starts with its sender name. A successful send does not mean the recipient has processed it. Shared-task workflow is list, get, claim with the current revision, perform the work, then complete. Task readiness never starts an owner. Before wait_agent, use list_agents and make sure another required member is running or provisioning; use send_message first when the required member is inactive. wait_agent observes only changes after that call starts, never wakes a member, and returns noProgress immediately when no other member can produce a change. Re-list after wakeup or timeout. The Lead must wait for required teammates before giving the final answer.`;
-}
-var POLICY_TEXT = teamPolicy(true);
-var HOOK_POLICY_PREFIX = "[agent-team]";
-var IDENTITY_LEAD_TEXT = `You are the Team Lead named "lead".
-Use list_agents({}) to find your teammates and their names.
-To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
-var POLICY_PROBE_MARKER = "quartz-ember-73";
-var FIRST_SPAWN_NOTE = "[agent-team] Team mode is now active: this is the first teammate of this session. From now on, judge each request by delegation value \u2014 handle simple work directly with a one-line reason, and use the team for work that benefits from multiple roles, parallel execution, or disjoint write scopes.";
-function buildSessionStartContext(identityText, interrupt = true, modeSection) {
-  const policy = teamPolicy(interrupt);
-  const section = modeSection !== void 0 ? `
-${HOOK_POLICY_PREFIX} ${modeSection}` : "";
-  const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
-${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
-  return `${HOOK_POLICY_PREFIX} ${policy}
-${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
-}
-var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
-var FAIL_LOUD_WARNING = "[agent-team] \u8B66\u544A\uFF1A\u672A\u68C0\u6D4B\u5230\u672C\u4F1A\u8BDD\u7684\u7B56\u7565\u6CE8\u5165\uFF08SessionStart hook \u53EF\u80FD\u672A\u751F\u6548\uFF09\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u4E14 hooks \u58F0\u660E\u5B58\u5728\uFF1B\u56E2\u961F\u5DE5\u5177\u4ECD\u53EF\u8C03\u7528\uFF0C\u4F46\u6A21\u578B\u53EF\u80FD\u672A\u52A0\u8F7D\u5B8C\u6574\u534F\u4F5C\u7B56\u7565\u3002";
-var NO_PROGRESS_REASON = "no-active-peer";
-var NO_PROGRESS_MESSAGE = "No other Team member is running or provisioning. wait_agent cannot make progress or wake inactive teammates. Re-list with list_agents and team_task_list, then use send_message to wake each required inactive teammate before waiting again.";
-function noProgressResult() {
-  return { timedOut: false, noProgress: { reason: NO_PROGRESS_REASON, message: NO_PROGRESS_MESSAGE } };
-}
-
 // src/mcp/backend.ts
 var WAIT_PROGRESS_INTERVAL_MS = 9e3;
 var WAIT_DEFAULT_TIMEOUT_MS = 3e4;
-var WAIT_MIN_TIMEOUT_MS = 1e4;
-var WAIT_MAX_TIMEOUT_MS = 36e5;
 var DEFAULT_IDLE_RECLAIM_MS = 10 * 6e4;
 var IDLE_SWEEP_MS = 6e4;
 var TeamToolBackend = class {
@@ -23292,16 +23442,6 @@ var TeamToolBackend = class {
       const runtime = host.teamRuntime;
       let wait;
       if (runtime !== null) {
-        const rows = runtime.roster.listMembers(identity.agentId).members;
-        if (!runtime.roster.hasPendingAutomaticProgress(identity.agentId)) {
-          const stopped = rows.find((row) => row.status === "provisioning");
-          return stopped !== void 0 ? { ...noProgressResult(), content: [{ type: "text", text: `\u6210\u5458 ${stopped.target} \u5DF2\u505C\u6B62\u81EA\u52A8\u786E\u8BA4\uFF0C\u9700\u8981 Lead \u63A5\u7BA1\uFF1B\u65E7 turn \u4ECD\u53EF\u80FD\u6267\u884C\uFF0C\u4E0D\u5F97\u91CD\u590D\u542F\u52A8\u3002` }] } : noProgressResult();
-        }
-        const selfTarget = identity.role === "lead" ? "lead" : identity.name;
-        const hasActivePeer = rows.some(
-          (row) => row.target !== selfTarget && (row.status === "running" || row.status === "provisioning")
-        );
-        if (!hasActivePeer) return noProgressResult();
         wait = host.dispatch(
           "wait.agent",
           { session_id: identity.agentId, timeoutMs },
@@ -23385,9 +23525,6 @@ var TeamToolBackend = class {
     return ["Task"];
   }
 };
-function isValidTimeout(value) {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= WAIT_MIN_TIMEOUT_MS && value <= WAIT_MAX_TIMEOUT_MS;
-}
 var MEMBER_STATUS_BY_PHASE = {
   active: "inactive",
   provisioning: "provisioning",
@@ -23436,7 +23573,7 @@ var TEAM_TOOL_DEFINITIONS = [
       properties: {
         name: { type: "string", description: "Unique lower-kebab-case teammate name." },
         description: { type: "string", description: "Short description of the delegated responsibility." },
-        prompt: { type: "string", description: "Complete initial task for the teammate." },
+        prompt: { type: "string", description: "Bootstrap instructions with a shared task id; get and claim that task before working. Report blockers when not ready." },
         context: {
           type: "string",
           enum: ["fresh", "fork"],
@@ -23453,7 +23590,7 @@ var TEAM_TOOL_DEFINITIONS = [
   {
     // 02 §9.5（〔对齐轮〕0.2.1 描述：删 "durable"、"durable message"→"message"）
     name: "send_message",
-    description: "Send one message to another Team member. A running target receives it at the nearest step boundary; an inactive target starts or resumes a turn.",
+    description: "Send one message to another Team member. Running teammates receive it at a turn boundary; inactive teammates resume. The Lead reads messages through wait_agent.",
     inputSchema: {
       type: "object",
       properties: {
@@ -23498,7 +23635,7 @@ var TEAM_TOOL_DEFINITIONS = [
   {
     // 02 §9.7（〔对齐轮〕0.2.1 描述："mailbox"→"message"）
     name: "wait_agent",
-    description: "Wait for the next teammate status, message, or shared-task change after this call starts. This never wakes inactive members and returns noProgress immediately when no other member is running or provisioning. Re-list after wakeup or timeout instead of polling.",
+    description: "Receive pending Lead inbox messages immediately, even if teammates are inactive; otherwise wait for the next Team change. This never wakes inactive members and returns noProgress immediately when no peer can progress and no messages await. Read returned messages before follow-ups. Re-list after wakeup or timeout.",
     inputSchema: {
       type: "object",
       properties: {
@@ -23614,6 +23751,37 @@ function teamToolDefinitions(options = {}) {
   const interrupt = options.interrupt ?? true;
   return interrupt ? TEAM_TOOL_DEFINITIONS : TEAM_TOOL_DEFINITIONS.filter((t) => t.name !== "interrupt_agent");
 }
+
+// src/mcp/policy.ts
+function teamPolicy(interrupt) {
+  return `Agent Teams is available in this session
+
+The Team Lead and all teammates share the same working directory and filesystem. Edits are immediately visible to every member. Split write work into disjoint scopes, record expected write scopes on shared tasks, and use task dependencies when work must be ordered. Write-scope overlap is advisory, not a lock.
+
+Prefer read/edit/write for file changes. If a file operation reports that the file changed since you last read it, read the current file again, rebase your intended change onto the new content, and retry. Bash, formatters, code generators, and scripts are not fully protected by the filesystem version guard; coordinate them explicitly and have the Lead review the final diff and run tests.
+
+Use the target returned by spawn_teammate or list_agents for send_message${interrupt ? " and interrupt_agent" : ""}, or as owner when assigning or filtering shared tasks. send_message queues delivery to a running teammate's next turn boundary and starts or resumes an inactive teammate. The Lead receives queued messages through wait_agent during its current turn, with session hooks as a fallback. inactive means no turn is executing; it does not describe task completion, success, failure, or waiting for other agents. provisioning means member creation is in progress; failed means member creation failed. A peer message starts with its sender name. A successful send does not mean the recipient has processed it. Each delegated unit needs a shared task with acceptance criteria. Create it before dispatching the work; the teammate must list/get it, claim with the current revision, perform the work, then complete and report to the Lead. An initial prompt or an output file is not a task-board record. Task readiness never starts an owner. Use wait_agent to receive pending Lead inbox messages before sending follow-ups, even when teammates are inactive. With no pending messages, it waits for new changes and returns noProgress immediately when no other member can produce a change; it never wakes a member. Consume returned messages, then recheck shared tasks before deciding whether more work or another message is needed. Re-list after wakeup or timeout. The Lead must wait for required teammates before giving the final answer.`;
+}
+var POLICY_TEXT = teamPolicy(true);
+var HOOK_POLICY_PREFIX = "[agent-team]";
+var IDENTITY_LEAD_TEXT = `You are the Team Lead named "lead".
+Use list_agents({}) to find your teammates and their names.
+To message another teammate, use send_message({ target: "<teammate name>", message: "..." }).`;
+var POLICY_PROBE_MARKER = "quartz-ember-73";
+var ON_DEMAND_SECTION_TEXT = "Lead operating mode (on-demand): Judge each request by delegation value before using the team. Handle work directly yourself \u2014 with a one-line reason, no forced tasks \u2014 for questions and explanations, small changes confined to a single file, read-only research summaries, or when every teammate is busy and the request is unrelated to existing work. Use the team workflow when work clearly benefits from multiple roles in parallel, when write scopes must be split across members, when a long task deserves its own context, or when the user explicitly names members. When you delegate, turn each delegated unit into a shared task whose description states concrete acceptance criteria, assign an owner, record expected write scopes, and set dependencies when ordering matters. Require each owner to self-check and report changed files and test results before completing. When a task reaches completed, verify it independently: review the final diff and run the relevant tests yourself; if it fails, reopen the task with concrete findings; if it passes, append your acceptance verdict to the task description \u2014 a task is done when completed plus your recorded acceptance. Reuse idle teammates before spawning new ones and keep one member per role, within the member limit. Wait for required teammates and synthesize their results for the final answer.";
+var FIRST_SPAWN_NOTE = `[agent-team] Team mode is now active: this is the first teammate of this session.
+${ON_DEMAND_SECTION_TEXT}`;
+function buildSessionStartContext(identityText, interrupt = true, modeSection) {
+  const policy = teamPolicy(interrupt);
+  const section = modeSection !== void 0 ? `
+${HOOK_POLICY_PREFIX} ${modeSection}` : "";
+  const probe = process.env.TEAM_POLICY_PROBE === "1" ? `
+${HOOK_POLICY_PREFIX} \u7B56\u7565\u6CE8\u5165\u9A8C\u8BC1\u6807\u8BB0\uFF1A${POLICY_PROBE_MARKER}` : "";
+  return `${HOOK_POLICY_PREFIX} ${policy}
+${HOOK_POLICY_PREFIX} ${identityText}${section}${probe}`;
+}
+var SESSION_START_CONTEXT = buildSessionStartContext(IDENTITY_LEAD_TEXT, true);
+var FAIL_LOUD_WARNING = "[agent-team] \u8B66\u544A\uFF1A\u672A\u68C0\u6D4B\u5230\u672C\u4F1A\u8BDD\u7684\u7B56\u7565\u6CE8\u5165\uFF08SessionStart hook \u53EF\u80FD\u672A\u751F\u6548\uFF09\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u4E14 hooks \u58F0\u660E\u5B58\u5728\uFF1B\u56E2\u961F\u5DE5\u5177\u4ECD\u53EF\u8C03\u7528\uFF0C\u4F46\u6A21\u578B\u53EF\u80FD\u672A\u52A0\u8F7D\u5B8C\u6574\u534F\u4F5C\u7B56\u7565\u3002";
 
 // src/mcp/results.ts
 function compactJson(value) {
@@ -24409,35 +24577,6 @@ function extractText(partData) {
   } catch {
     return null;
   }
-}
-
-// src/provider/framing.ts
-function renderFramed(framedJson) {
-  const blocks = JSON.parse(framedJson);
-  if (!Array.isArray(blocks) || blocks.length === 0) {
-    throw new Error("framed message must be a non-empty JSON array of content blocks");
-  }
-  const header = blocks[0];
-  if (header.type !== "text" || typeof header.text !== "string") {
-    throw new Error("framed message first block must be the text header");
-  }
-  const m = header.text.match(/^Team message from (.+):$/);
-  if (m === null) {
-    throw new Error(`framed message header mismatch: ${JSON.stringify(header.text)}`);
-  }
-  const lines = [header.text];
-  for (const block of blocks.slice(1)) {
-    if (block.type === "text" && typeof block.text === "string") {
-      lines.push(block.text);
-    } else {
-      lines.push(JSON.stringify(block));
-    }
-  }
-  return { messageId: "", senderName: m[1], text: lines.join("\n") };
-}
-function renderFramedBatch(items) {
-  const rendered = items.map((item) => ({ ...renderFramed(item.framedJson), messageId: item.messageId }));
-  return { promptText: rendered.map((r) => r.text).join("\n\n"), rendered };
 }
 
 // src/provider/fork-context.ts
@@ -25738,6 +25877,7 @@ var ResumePerTurnProvider = class {
   }
   async watchTick(generation = this.generation) {
     if (this.watcherBusy || !this.generationIsCurrent(generation)) return;
+    const signal = this.generationAbort.signal;
     this.watcherBusy = true;
     try {
       for (const memberId of listMembers(this.teamDir)) {
@@ -25749,7 +25889,7 @@ var ResumePerTurnProvider = class {
         if (turn === void 0) continue;
         if (turn.status === "running" || turn.status === "starting") {
           if (turn.interruptRequestedAt !== void 0) {
-            const dead = await killProcessGroup(turn.pgid, this.termGraceMs);
+            const dead = await killProcessGroup(turn.pgid, this.termGraceMs, signal);
             if (!this.generationIsCurrent(generation)) return;
             if (dead) {
               const landed = turn.sessionId !== null && this.reader.hasUserText(turn.sessionId, turn.promptText);
@@ -25911,6 +26051,10 @@ var ResumePerTurnProvider = class {
     this.startWatcher();
   }
   async startContinuable(args) {
+    const generation = this.generation;
+    if (!this.generationIsCurrent(generation)) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u521B\u5EFA\u610F\u56FE\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4");
+    }
     if (args.teamId !== this.opts.teamId) {
       throw new Error(`provider serves team ${this.opts.teamId} but spawn targets ${args.teamId}`);
     }
@@ -25943,6 +26087,7 @@ var ResumePerTurnProvider = class {
           origin: persistedWithSession,
           turn: existingTurn,
           spawnT0: Date.parse(existingTurn.startedAt),
+          generation,
           ...args.signal !== void 0 ? { signal: args.signal } : {}
         });
         return { memberId: args.memberId, accepted: accepted !== null };
@@ -25965,7 +26110,7 @@ var ResumePerTurnProvider = class {
           ...persisted.hostAnchorConfirmed === true || persisted.sessionId !== null ? { recoveryEvidence: true } : {},
           ...args.signal !== void 0 ? { signal: args.signal } : {},
           onProgress: (progress) => {
-            if (this.generationAbort.signal.aborted) return;
+            if (!this.generationIsCurrent(generation)) return;
             const latest = readOrigin(paths) ?? persisted;
             if (latest.requestId !== args.requestId) return;
             return this.writeCurrentOrigin(paths, {
@@ -25977,6 +26122,9 @@ var ResumePerTurnProvider = class {
           }
         });
       } catch (err) {
+        if (!this.generationIsCurrent(generation)) {
+          throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u5BBF\u4E3B\u8BC1\u636E\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4");
+        }
         const message = err instanceof Error ? err.message : String(err);
         if (err.code === "outcome-unknown") {
           if (args.signal?.aborted && !this.generationAbort.signal.aborted) throw err;
@@ -25993,6 +26141,9 @@ var ResumePerTurnProvider = class {
         }
         throw err;
       }
+    }
+    if (!this.generationIsCurrent(generation)) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u5BBF\u4E3B\u8BC1\u636E\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4");
     }
     const spawnCwd = bred?.workspacePath ?? persisted.cwd;
     const origin = {
@@ -26028,6 +26179,7 @@ var ResumePerTurnProvider = class {
         origin,
         turn,
         spawnT0,
+        generation,
         signal: args.signal
       });
       return { memberId: args.memberId, accepted: sessionId !== null };
@@ -26044,6 +26196,9 @@ var ResumePerTurnProvider = class {
     const deadline = spawnT0 + this.firstTurnTimeoutMs;
     let sessionId = origin.sessionId ?? this.claimedSessionId(origin.memberId);
     for (; ; ) {
+      if (!this.generationIsCurrent(args.generation)) {
+        throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u9996\u8F6E\u7ED3\u679C\u5F85\u63A5\u4EFB\u8005\u786E\u8BA4");
+      }
       if (args.signal?.aborted && !this.generationAbort.signal.aborted) throw args.signal.reason ?? new Error("aborted");
       sessionId ??= this.claimedSessionId(origin.memberId);
       if (sessionId === null) {
@@ -26120,6 +26275,7 @@ var ResumePerTurnProvider = class {
   }
   async deliver(args) {
     const debug = process.env.TEAM_DEBUG_DELIVERY === "1";
+    const generation = this.generation;
     const paths = memberPaths(this.teamDir, args.memberId);
     const origin = readOrigin(paths);
     if (origin === void 0) {
@@ -26127,7 +26283,7 @@ var ResumePerTurnProvider = class {
       return "queued";
     }
     if (this.containsMessage(args.memberId, args.messageId)) return "accepted";
-    const current = this.currentRunningTurn(paths);
+    const current = this.currentRunningTurn(paths, true);
     if (current !== null) {
       if (debug) this.log({ ts: iso(this.now()), kind: "deliver-deferred", memberId: args.memberId, reason: "running", turnId: current.turnId });
       return "queued";
@@ -26156,7 +26312,7 @@ var ResumePerTurnProvider = class {
       resume: true,
       cwd: origin.cwd
     }).catch((err) => {
-      if (err instanceof ModelSyncSuppressedError) {
+      if (err instanceof ModelSyncSuppressedError || err instanceof ProvisioningPending) {
         if (debug) {
           this.log({ ts: iso(this.now()), kind: "deliver-deferred", memberId: args.memberId, reason: "model-sync-suppressed" });
         }
@@ -26168,6 +26324,7 @@ var ResumePerTurnProvider = class {
     this.startWatcher();
     const deadline = this.now() + this.deliverConfirmMs;
     for (; ; ) {
+      if (!this.generationIsCurrent(generation)) return "queued";
       if (this.reader.hasUserText(sessionId, promptText)) {
         const current2 = readTurn(paths.runDir, turn.turnId) ?? turn;
         writeTurn(paths.runDir, { ...current2, landed: true });
@@ -26194,17 +26351,28 @@ var ResumePerTurnProvider = class {
     }
   }
   async interrupt(args) {
+    const generation = this.generation;
+    const signal = this.generationAbort.signal;
+    if (!this.generationIsCurrent(generation) || signal.aborted) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4E2D\u65AD\u7ED3\u679C\u5F85\u786E\u8BA4");
+    }
     const paths = memberPaths(this.teamDir, args.memberId);
-    const current = this.currentRunningTurn(paths);
+    const current = this.currentRunningTurn(paths, true);
     const previousStatus = current !== null ? "running" : "inactive";
     if (current === null) return { previousStatus };
+    if (current.pid === null) {
+      throw new ProvisioningPending("\u6210\u5458\u542F\u52A8\u7ED3\u679C\u5F85\u786E\u8BA4\uFF0C\u6682\u4E0D\u80FD\u5B89\u5168\u4E2D\u65AD\uFF1B\u65E7\u8FDB\u7A0B\u53EF\u80FD\u4ECD\u5728\u8FD0\u884C\uFF0C\u8BF7\u52FF\u91CD\u590D\u53D1\u9001\u3002");
+    }
     writeTurn(paths.runDir, { ...current, interruptRequestedAt: iso(this.now()) });
     let dead;
     try {
-      dead = await killProcessGroup(current.pgid, this.termGraceMs);
+      dead = await killProcessGroup(current.pgid, this.termGraceMs, signal);
     } catch (err) {
-      writeTurn(paths.runDir, { ...current });
+      if (this.generationIsCurrent(generation) && !signal.aborted) writeTurn(paths.runDir, { ...current });
       throw err;
+    }
+    if (!this.generationIsCurrent(generation) || signal.aborted) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4E2D\u65AD\u7ED3\u679C\u5F85\u786E\u8BA4");
     }
     if (!dead) {
       writeTurn(paths.runDir, { ...current });
@@ -26235,6 +26403,8 @@ var ResumePerTurnProvider = class {
     if (this.closed || this.generationAbort.signal.aborted) {
       throw new Error("coordinator generation revoked; drain requires current ownership");
     }
+    const generation = this.generation;
+    const signal = this.generationAbort.signal;
     const memberIds = listMembers(this.teamDir);
     if (this.drainPolicy === "keep") {
       for (const memberId of memberIds) {
@@ -26249,12 +26419,18 @@ var ResumePerTurnProvider = class {
     const grace = Math.max(200, Math.min(this.termGraceMs, Math.floor(args.timeoutMs * 0.6)));
     const failures = [];
     for (const memberId of memberIds) {
+      if (!this.generationIsCurrent(generation) || signal.aborted) {
+        throw new Error("coordinator generation revoked; drain requires current ownership");
+      }
       const paths = memberPaths(this.teamDir, memberId);
       const turnId = readCurrentTurnId(paths);
       if (turnId === void 0) continue;
       const turn = readTurn(paths.runDir, turnId);
       if (turn === void 0 || turn.status !== "running" && turn.status !== "starting") continue;
-      const dead = await killProcessGroup(turn.pgid, grace);
+      const dead = await killProcessGroup(turn.pgid, grace, signal);
+      if (!this.generationIsCurrent(generation) || signal.aborted) {
+        throw new Error("coordinator generation revoked; drain requires current ownership");
+      }
       if (!dead) failures.push(`${memberId}/${turn.turnId}`);
       else {
         const landed = turn.sessionId !== null && this.reader.hasUserText(turn.sessionId, turn.promptText);
@@ -26327,17 +26503,29 @@ var ResumePerTurnProvider = class {
     return { recorded: this.containsMessage(memberId, messageId) };
   }
   statusOf(memberId) {
-    return this.isAlive(memberId) ? "running" : "inactive";
+    return this.currentRunningTurn(memberPaths(this.teamDir, memberId), true) !== null ? "running" : "inactive";
   }
   modelOf(memberId) {
     const origin = readOrigin(memberPaths(this.teamDir, memberId));
     if (origin === void 0) return void 0;
-    const observed = origin.sessionId !== null ? this.reader.latestModel(origin.sessionId) : void 0;
+    let observed;
+    try {
+      observed = origin.sessionId !== null ? this.reader.latestModel(origin.sessionId) : void 0;
+    } catch (err) {
+      if (!/database (?:table )?is locked|SQLITE_BUSY|SQLITE_LOCKED/i.test(errText2(err))) throw err;
+      this.log({ ts: iso(this.now()), kind: "model-display-unavailable", memberId, error: errText2(err) });
+    }
     return observed ?? origin.modelSelection?.modelId ?? origin.model;
   }
   /** Lead 行模型（roster Lead 伪行）：Lead 会话最近消息实查 → model_usage 兜底。 */
   leadModelOf() {
-    return this.reader.latestModel(this.opts.teamId) ?? this.reader.latestModelUsage(this.opts.teamId)?.modelId;
+    try {
+      return this.reader.latestModel(this.opts.teamId) ?? this.reader.latestModelUsage(this.opts.teamId)?.modelId;
+    } catch (err) {
+      if (!/database (?:table )?is locked|SQLITE_BUSY|SQLITE_LOCKED/i.test(errText2(err))) throw err;
+      this.log({ ts: iso(this.now()), kind: "model-display-unavailable", memberId: this.opts.teamId, error: errText2(err) });
+      return void 0;
+    }
   }
   /** Lead 当前结构化选择（成员卡/roster 展示用；0.4.0 = 三源判定的可继承选择，可能 undefined）。 */
   leadModelSelectionOf() {
@@ -26387,6 +26575,7 @@ var ResumePerTurnProvider = class {
   // ---------------------------------------------------------------- 内部
   /** 孵化一轮（turn 记录先落盘 → spawn → 回填 pid/running）。 */
   async launchTurn(args) {
+    const generation = this.generation;
     const turnId = nextTurnId(args.paths.runDir);
     const stdoutFile = path17.join(args.paths.runDir, `${turnId}.out`);
     const turnCwd = args.cwd ?? this.cwd;
@@ -26401,6 +26590,9 @@ var ResumePerTurnProvider = class {
       args.messageIds,
       args.modelJustApplied
     );
+    if (!this.generationIsCurrent(generation) || args.signal?.aborted) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4E0D\u4F1A\u5199\u5165\u6216\u542F\u52A8\u65B0 turn");
+    }
     const scriptArgs = [
       ...this.zcode.argvPrefix,
       "-p",
@@ -26458,6 +26650,9 @@ var ResumePerTurnProvider = class {
         resultFile: receiptFile
       });
     } catch (err) {
+      if (!this.generationIsCurrent(generation)) {
+        throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u542F\u52A8\u56DE\u6267\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4");
+      }
       const receipt = readSpawnReceipt(receiptFile);
       if (receipt?.error !== void 0) {
         writeTurn(args.paths.runDir, { ...turn, status: "spawn-error", exitedAt: iso(this.now()), exitCode: null });
@@ -26468,6 +26663,9 @@ var ResumePerTurnProvider = class {
       } else {
         throw new ProvisioningPending("\u542F\u52A8\u7ED3\u679C\u5F85\u786E\u8BA4\uFF1B\u4E0D\u4F1A\u91CD\u590D\u542F\u52A8\u9996\u8F6E");
       }
+    }
+    if (!this.generationIsCurrent(generation)) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4FDD\u7559\u542F\u52A8\u56DE\u6267\u4F9B\u63A5\u4EFB\u8005\u786E\u8BA4");
     }
     const running = { ...turn, pid: spawned.pid, pgid: spawned.pgid, status: "running" };
     writeTurn(args.paths.runDir, running);
@@ -26487,8 +26685,8 @@ var ResumePerTurnProvider = class {
     });
     return running;
   }
-  /** 当前「running 且进程存活」的轮次；无 → null。 */
-  currentRunningTurn(paths) {
+  /** 投递必须将无回执的启动视为占用；存活状态与中断仍只认已确认的进程。 */
+  currentRunningTurn(paths, includeUnknown = false) {
     const turnId = readCurrentTurnId(paths);
     if (turnId === void 0) return null;
     const turn = readTurn(paths.runDir, turnId);
@@ -26496,7 +26694,7 @@ var ResumePerTurnProvider = class {
     if (turn.status !== "running" && turn.status !== "starting") return null;
     if (turn.pid === null) {
       const receipt = readSpawnReceipt(path17.join(paths.runDir, `${turn.turnId}.spawn.json`));
-      if (receipt?.pid === void 0) return null;
+      if (receipt?.pid === void 0) return includeUnknown ? turn : null;
       writeTurn(paths.runDir, { ...turn, pid: receipt.pid, pgid: receipt.pid, status: "running" });
       return { ...turn, pid: receipt.pid, pgid: receipt.pid, status: "running" };
     }
@@ -26599,6 +26797,7 @@ var ResumePerTurnProvider = class {
    * `trigger`：本轮携带的待投递消息 id（失败记录里做「新消息解锁重试」判定；首轮 = []）。
    */
   async syncMemberModel(paths, memberId, sessionId, workspacePath, triggerMessageIds = [], justApplied) {
+    const generation = this.generation;
     if (this.sessionIsolation !== "child" || sessionId === null) return;
     let lead;
     try {
@@ -26633,6 +26832,9 @@ var ResumePerTurnProvider = class {
       );
     }
     const result = await this.applySelectionNow(sessionId, workspacePath, lead, memberId);
+    if (!this.generationIsCurrent(generation)) {
+      throw new ProvisioningPending("\u534F\u8C03\u8005\u4EE3\u6B21\u5DF2\u64A4\u9500\uFF1B\u4E0D\u4F1A\u5199\u5165\u6A21\u578B\u540C\u6B65\u7ED3\u679C");
+    }
     if (!result.applied) {
       const reason = result.reason ?? "model was rejected by the host";
       const err = new ModelInheritanceError(
@@ -26798,6 +27000,10 @@ var ResumePerTurnProvider = class {
     const paths = memberPaths(this.teamDir, memberId);
     const origin = readOrigin(paths);
     const pending = origin?.creationPending === true && origin.creationDiagnostic !== void 0 ? [origin.creationDiagnostic] : [];
+    const current = this.currentRunningTurn(paths, true);
+    if (current !== null && current.pid === null) {
+      pending.push("\u6210\u5458\u542F\u52A8\u7ED3\u679C\u5F85\u786E\u8BA4\uFF0C\u8FDB\u7A0B\u53EF\u80FD\u4ECD\u5728\u8FD0\u884C\uFF1B\u8BF7\u52FF\u91CD\u590D\u53D1\u9001\u6216\u542F\u52A8\u3002");
+    }
     let record2;
     try {
       record2 = readModelFailed(paths);

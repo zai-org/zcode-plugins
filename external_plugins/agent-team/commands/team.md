@@ -57,15 +57,20 @@ allowed-tools: Bash
       不要再以「任务简单」为由自行代劳；只有确实单角色即可完成（如一句话问答）时，
       才用一行说明「这个任务不需要分工」并直接给出结果。
       **不要输出「成员 N · 共享任务 T」等状态摘要**——用户要的是团队干活，不是看状态。
-   2. 建队：`spawn_teammate` 2–3 个成员（名字体现角色，`description` 写清职责，
-      `prompt` 必须是自洽完整的初始任务——成员是独立进程，看不到本会话历史）。
-   3. 需要协作流水线时用 `team_task_create` 建任务（写 `write_scopes` 划清写域、
-      用 `blocked_by` 表达顺序），再 `send_message` 告知成员认领；**不要**只建任务不通知
-      （任务就绪不会自动唤醒成员）。
-   4. 用 `list_agents` 确认成员在 running/provisioning 后再 `wait_agent`；
-      收到进展后重新 `list_agents` 再决定是否继续等。
-   5. 收齐成员产出后由 Lead 汇总成最终答复；成员自由文本不会自动推给 Lead，
-      需要时用 `send_message` 追问或读成员会话。
+   2. 先用 `team_task_create` 为每个委派单元建共享任务，写清验收标准；
+      文件改动填 `write_scopes`，先后依赖填 `blocked_by`。初始 prompt、角色说明或产出文件
+      都不能替代任务板记录。
+   3. 建队：`spawn_teammate` 创建所需成员（名字体现角色，`description` 写职责）；
+      `prompt` 提供完整背景、任务 ID，要求先 get 最新 revision、确认 ready 再 claim，
+      然后执行、自检、complete，并通过 `send_message` 向 lead 交付结果。
+      复用已有成员时发送相同的任务指引；被依赖阻塞的成员汇报阻塞后结束本轮，
+      依赖完成后 Lead 再发消息唤醒（任务就绪不会自动唤醒成员）。
+   4. 用 `wait_agent` 收取成员消息，包括成员已 inactive 时的待收结果；先处理返回的
+      `messages`，再通过 `list_agents` / `team_task_list` 核对状态。没有消息且无可推进的
+      成员时会立即返回 noProgress；仅在确实还需执行或补充结果时才发后续消息。
+   5. 收齐产出后由 Lead 独立核验；通过则在任务 description 记录验收结论，失败则
+      reopen 并附具体问题，再通知成员返工。最后汇总答复；用消息和任务板交付纯文本结果，
+      不为绕过收件箱而额外创建中转文件。
    6. **`spawn_teammate` 失败时（套餐模型不可继承）**：不要静默改自干——
       用一行说明「当前 Lead 模型为官方套餐，队友无法继承，本次由我直接完成」，
       然后自己完成，并提示用户可切换到自配第三方模型后再用团队。
