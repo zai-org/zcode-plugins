@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agent Team · Companion</title>
+</head>
+<body>
+<script>
+"use strict";
+(() => {
+  // src/ui-core/tokens.ts
+  var TOKEN_CSS = `
+:root, [data-theme="light"] {
+  color-scheme: light;
+  /* \u6587\u5B57\u56DB\u6863\uFF08dsw label-primary/secondary/tertiary/caption\uFF1B
+     caption \u65E0\u72EC\u7ACB\u5BBF\u4E3B\u53D8\u91CF \u2192 tertiary \u540C\u6863 + \u5B57\u9762\u515C\u5E95\u533A\u5206\uFF09 */
+  --at-label-primary: var(--color-text-primary, var(--foreground, #1a2233));
+  --at-label-secondary: var(--color-text-secondary, var(--muted-foreground, #3d4a5c));
+  --at-label-tertiary: var(--color-text-tertiary, var(--muted-foreground, #8a94a6));
+  --at-label-caption: var(--color-text-tertiary, #9aa3b2);
+  /* \u80CC\u666F\u4E24\u6863\uFF08dsw specific-menu / bg-layer-2\uFF09 */
+  --at-bg-menu: var(--color-background-secondary, var(--muted, #f7f8fa));
+  --at-bg-layer-2: var(--color-background-primary, var(--card, #ffffff));
+  /* \u63CF\u8FB9\u4E09\u6863\uFF08dsw border-l1/l2/l3\uFF1B\u5BBF\u4E3B\u5355\u6863 --border \u2192 \u4E09\u6863\u900F\u660E\u5EA6\u6D3E\u751F\uFF09 */
+  --at-border-l1: var(--color-border-primary, var(--border, rgba(16, 24, 40, 0.08)));
+  --at-border-l2: var(--color-border-tertiary, var(--border, #e3e6eb));
+  --at-border-l3: var(--color-border-secondary, var(--border, #c9cfd8));
+  /* \u72B6\u6001\u70B9\u4E94\u7C7B\u8272\uFF08ongoing/idle/done/warning \u2192 --green/\u7070/--blue/--yellow \u6216\u81EA\u7ED8\uFF09 */
+  --at-state-ongoing: var(--color-text-success, var(--green, #12a675));
+  --at-state-error: var(--color-text-danger, var(--red, #e5484d));
+  --at-state-idle: var(--color-text-disabled, #98a2b3);
+  --at-state-warning: var(--color-text-warning, var(--yellow, #f59e0b));
+  --at-state-done: var(--color-text-info, var(--blue, #3e7bfa));
+  /* \u4E1A\u52A1\u4E3B\u8272\uFF08dsw state-business-primary\uFF1A\u5F53\u524D\u4F1A\u8BDD\u9AD8\u4EAE/info Tag\uFF09 */
+  --at-business: var(--color-text-info, var(--primary, #3e7bfa));
+  /* \u9519\u8BEF\u6587\u672C\uFF08dsw state-error-primary\uFF09 */
+  --at-error-text: var(--color-text-danger, var(--red, var(--destructive, #d93036)));
+  /* advisory \u8B66\u544A\u6587\u672C\u8272\uFF08\u6DF1\u7425\u73C0\u4FDD\u8BC1 11px \u5C0F\u5B57\u5BF9\u6BD4\u5EA6\uFF09 */
+  --at-warning-text: var(--color-text-warning, var(--yellow, #b45309));
+  /* \u9634\u5F71\u4E24\u6863\uFF08dsw elevation-prominent / elevation-panel\uFF09 */
+  --at-shadow-prominent: var(--shadow-lg, 0 8px 28px rgba(16, 24, 40, 0.16));
+  --at-shadow-panel: var(--shadow-md, 0 4px 16px rgba(16, 24, 40, 0.12));
+  /* \u6EDA\u52A8\u6761\uFF08dsh scrollbar \u4EE4\u724C\u81EA\u7ED8\uFF09 */
+  --at-scrollbar-thumb: color-mix(in srgb, var(--at-label-tertiary) 40%, transparent);
+  --at-scrollbar-thumb-hover: color-mix(in srgb, var(--at-label-tertiary) 60%, transparent);
+  /* \u5B57\u4F53\uFF08\u4E0D\u5F15\u5916\u90E8\u5B57\u4F53\uFF0C\u8DDF\u968F\u5BBF\u4E3B UI \u5B57\u4F53\u6808\uFF09 */
+  --at-font: var(--font-sans, -apple-system, "PingFang SC", "Segoe UI", sans-serif);
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --at-label-primary: var(--color-text-primary, var(--foreground, #e8eaf0));
+  --at-label-secondary: var(--color-text-secondary, var(--muted-foreground, #c0c6d2));
+  --at-label-tertiary: var(--color-text-tertiary, var(--muted-foreground, #8d95a3));
+  --at-label-caption: var(--color-text-tertiary, #7d8593);
+  --at-bg-menu: var(--color-background-secondary, var(--muted, #1b1e24));
+  --at-bg-layer-2: var(--color-background-primary, var(--card, #23262d));
+  --at-border-l1: var(--color-border-primary, var(--border, rgba(255, 255, 255, 0.08)));
+  --at-border-l2: var(--color-border-tertiary, var(--border, #333842));
+  --at-border-l3: var(--color-border-secondary, var(--border, #434a56));
+  --at-state-ongoing: var(--color-text-success, var(--green, #2fbf8f));
+  --at-state-error: var(--color-text-danger, var(--red, #ff6b6e));
+  --at-state-idle: var(--color-text-disabled, #7d8593);
+  --at-state-warning: var(--color-text-warning, var(--yellow, #ffb454));
+  --at-state-done: var(--color-text-info, var(--blue, #6c9cff));
+  --at-business: var(--color-text-info, var(--primary, #6c9cff));
+  --at-error-text: var(--color-text-danger, var(--red, var(--destructive, #ff8a8d)));
+  /* advisory \u8B66\u544A\u6587\u672C\u8272 */
+  --at-warning-text: var(--color-text-warning, var(--yellow, #ffb454));
+  --at-shadow-prominent: var(--shadow-lg, 0 8px 28px rgba(0, 0, 0, 0.5));
+  --at-shadow-panel: var(--shadow-md, 0 4px 16px rgba(0, 0, 0, 0.4));
+}
+`;
+
+  // src/ui-core/css.ts
+  var COMPONENT_CSS = `
+${TOKEN_CSS}
+* { box-sizing: border-box; }
+.at-root {
+  font-family: var(--at-font);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--at-label-primary);
+  width: 100%;
+}
+/* \xA710.3 \u9762\u677F\uFF1A\u5BBD min(500px, \u5BB9\u5668\u221232px)\uFF1B\u7D27\u51D1 min(320px,\u2026)\uFF1B\u6700\u5927\u9AD8 min(680px, \u89C6\u53E3\u221232px)\uFF1B
+   \u5706\u89D2 12\uFF1Bpadding 8px 2px 0\uFF1Bflex column\uFF1Boverflow hidden\uFF1Belevation-prominent \u9634\u5F71\uFF1B
+   border-l1 \u63CF\u8FB9\uFF08stroke \u7B49\u4EF7\uFF0C\u65E0 border\uFF09 */
+.team-panel {
+  width: min(500px, 100% - 32px);
+  max-height: min(680px, 100vh - 32px);
+  border-radius: 12px;
+  box-shadow: var(--at-shadow-prominent);
+  outline: 0.5px solid var(--at-border-l1);
+  background: var(--at-bg-menu);
+  padding: 8px 2px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.team-panel.compact { width: min(320px, 100% - 32px); }
+/* \xA710.3 body\uFF1Aoverflow-y auto\uFF1Bscrollbar-gutter stable\uFF1Bpadding 0 9px 16px 14px */
+.panel-body {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 0 9px 16px 14px;
+  flex: auto;
+  min-height: 0;
+  scrollbar-color: var(--at-scrollbar-thumb) transparent;
+}
+.panel-body::-webkit-scrollbar { width: 8px; }
+.panel-body::-webkit-scrollbar-thumb {
+  background: var(--at-scrollbar-thumb);
+  border-radius: 4px;
+}
+.panel-body::-webkit-scrollbar-thumb:hover { background: var(--at-scrollbar-thumb-hover); }
+/* \xA710.5 \u8282\u6807\u9898\uFF1A13px/500\uFF0Cmargin 16px 0 8px 4px\uFF08\u9996\u8282 top 8px\uFF09\uFF0Cgap 8\uFF1B
+   count 12px/16px tabular-nums caption \u8272 */
+.panel-body h3 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--at-label-primary);
+  margin: 16px 0 8px 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-body section:first-of-type h3 { margin-top: 8px; }
+h3 .count {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--at-label-caption);
+  font-variant-numeric: tabular-nums;
+}
+/* \xA710.5 \u82B1\u540D\u518C\u7F51\u683C\uFF1A\u53CC\u5217 minmax(0,1fr) gap 8\uFF1B\u7D27\u51D1\u5355\u5217 */
+.roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.compact .roster { grid-template-columns: minmax(0, 1fr); }
+/* \xA710.5 \u6210\u5458\u5361\uFF1A\u5706\u89D2 8\uFF1Bpadding 10px 12px\uFF1Bgap 8\uFF1Bbg-layer-2\uFF1B\u63CF\u8FB9 border-l2\uFF08stroke \u7B49\u4EF7\uFF09\uFF1B
+   \u6587\u5B57\u5DE6\u5BF9\u9F50\uFF1Bflex \u9876\u5BF9\u9F50\uFF1Bhover\uFF08\u975E\u7981\u7528\uFF09border-l3 + elevation-panel\uFF1Bdisabled cursor default */
+.member {
+  border-radius: 8px;
+  padding: 10px 12px;
+  gap: 8px;
+  background: var(--at-bg-layer-2);
+  box-shadow: 0 0 0 0.5px var(--at-border-l2);
+  border: none;
+  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  font: inherit;
+  color: inherit;
+  min-width: 0;
+  cursor: pointer;
+}
+.member:disabled { cursor: default; }
+.member:not(:disabled):hover,
+.member:not(:disabled):focus-visible {
+  box-shadow: 0 0 0 0.5px var(--at-border-l3), var(--at-shadow-panel);
+}
+/* \u5F53\u524D\u4F1A\u8BDD\u9AD8\u4EAE\uFF08\u4EC5 members>1\uFF09\uFF1Abusiness 40% \u6DF7\u8272\u63CF\u8FB9 + inset 1px \u5185\u73AF */
+.member.current {
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--at-business) 40%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--at-business) 40%, transparent);
+}
+/* \u540D\u5B57/\u6B21\u884C\u6587\u672C\u5217\uFF08\xA710.5 memberText\uFF1Acolumn\uFF0Cmin-width 0 \u4F9B ellipsis\uFF09 */
+.member .member-text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.member .row1 { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; }
+/* \u72B6\u6001\u70B9\u5BB9\u5668\uFF1A1lh \u9AD8\u5782\u76F4\u5BF9\u9F50\uFF08\xA710.5 memberDot\uFF09 */
+.member-dot { flex: none; align-items: center; height: 1lh; display: inline-flex; }
+.member .name {
+  font-weight: 500;
+  color: var(--at-label-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.member .sub {
+  font-size: 11px;
+  color: var(--at-label-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* hover/focus \u624D\u663E\u793A\u300C \xB7 \u6A21\u578B: model\u300D\uFF08\xA710.5/V06\uFF09 */
+.member .model { display: none; }
+.member:hover .model,
+.member:focus-visible .model { display: inline; }
+.member .diagnostic {
+  font-size: 11px;
+  color: var(--at-error-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+/* \u5F53\u524D\u4F1A\u8BDD Tag\uFF0810px/15px\uFF0Cpadding 0 4px\uFF0Cinfo tone\uFF09 */
+.current-tag {
+  font-size: 10px;
+  line-height: 15px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--at-business) 16%, transparent);
+  color: var(--at-business);
+  flex: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 0.4.0 \u6CE8\u9500\u6210\u5458\u5361/\u9F7F\u8F6E\u4E0E\u8BBE\u7F6E\u5F39\u7A97\u6837\u5F0F\uFF08member-card\u3001member-gear\u3001settings \u7CFB\u5217\u3001
+   source-badge\u3001modal-select\uFF09\uFF1A\u6210\u5458\u6A21\u578B\u552F\u4E00\u8DEF\u7EBF = \u6BCF\u8F6E\u8DDF\u968F Lead\uFF0C\u9762\u677F\u6062\u590D\u96F6\u53D8\u66F4\u901A\u9053\u3002 */
+/* \u72B6\u6001\u70B9\uFF1A\u76F4\u5F84\u4E00\u81F4 8px\uFF08V06\uFF09 */
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.ongoing { background: var(--at-state-ongoing); }
+.dot.error { background: var(--at-state-error); }
+.dot.idle { background: var(--at-state-idle); }
+.dot.warning { background: var(--at-state-warning); }
+.dot.done { background: var(--at-state-done); }
+/* inactive \u4EBA\u5F62\u56FE\u6807\uFF1A14px tertiary\uFF08\xA710.5/V06\uFF09 */
+.icon-user { width: 14px; height: 14px; flex: none; color: var(--at-label-tertiary); display: inline-flex; }
+/* \xA710.4 \u901A\u77E5\u6761\uFF1Aflex gap 6 padding 9 \u5B57\u53F7 12\uFF1Berror = \u9519\u8BEF\u8272\uFF1B\u6309\u5E8F\u6E32\u67D3 */
+.notice, .error-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px;
+  font-size: 12px;
+}
+.error-bar { color: var(--at-error-text); }
+.notice { color: var(--at-label-secondary); }
+/* \xA710.6 \u4EFB\u52A1\u677F\uFF1A\u7A7A\u677F\u6BB5\u843D 12px tertiary margin 16px 0 0 4px\uFF1B\u5217\u8868 flex column gap 7 */
+.empty-notice { font-size: 12px; color: var(--at-label-tertiary); margin: 16px 0 0 4px; }
+.tasks { display: flex; flex-direction: column; gap: 7px; }
+/* \u4EFB\u52A1\u5361\uFF1Aborder 0.5px border-l2\uFF1B\u5706\u89D2 9\uFF1Bpadding 11px 13px\uFF1Bbg-layer-2 */
+article.task {
+  border: 0.5px solid var(--at-border-l2);
+  border-radius: 9px;
+  padding: 11px 13px;
+  background: var(--at-bg-layer-2);
+}
+.task .title-row { display: flex; align-items: center; gap: 8px; }
+.task strong { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--at-label-primary); }
+/* \u72B6\u6001\u5FBD\u6807\u53F3\u5BF9\u9F50 11px gap 6 */
+.task .task-state {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--at-label-tertiary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+/* \u63CF\u8FF0 12px/18px pre-wrap margin 5px 0\uFF1B\u4E24\u884C\u622A\u65AD */
+.task p {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--at-label-secondary);
+  white-space: pre-wrap;
+  margin: 5px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.task p.expanded { -webkit-line-clamp: unset; display: block; }
+/* \u5C55\u5F00\u5F00\u5173\uFF1Afloat right\uFF1B11px/20px\uFF1Bchevron 12px \u65CB\u8F6C 180\xB0 transition .12s */
+.expand-toggle {
+  float: right;
+  font-size: 11px;
+  line-height: 20px;
+  color: var(--at-label-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.expand-toggle:hover, .expand-toggle:focus-visible { color: var(--at-label-primary); }
+.expand-toggle svg { transition: transform 0.12s; }
+.expand-toggle.open svg { transform: rotate(180deg); }
+.expand-toggle[hidden] { display: none; }
+/* meta \u884C\uFF1A11px/20px\uFF1B\u5B50\u9879\u95F4\u8DDD 10px\uFF1Bwarning \u63D0\u9192\u8272\uFF08advisory \u975E\u9519\u8BEF\uFF09 */
+.task .meta { font-size: 11px; line-height: 20px; color: var(--at-label-tertiary); }
+.task .meta > span { margin-right: 10px; }
+.task .meta .warning { color: var(--at-warning-text); }
+/* T5.7 \u6210\u5458\u4F1A\u8BDD\u67E5\u770B\u89C6\u56FE\uFF08V16\uFF1A\u65E0 DSH \u53C2\u7167\uFF0C\u5BBF\u4E3B\u98CE\u683C\uFF1B\u5224\u636E=\u4E0D\u7834\u7248+\u51E0\u4F55\u4E00\u81F4\uFF09 */
+.detail-view { display: flex; flex-direction: column; min-height: 0; flex: auto; }
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 9px 8px 6px;
+  border-bottom: 0.5px solid var(--at-border-l2);
+  flex: none;
+}
+.detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--at-label-tertiary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.detail-back:hover, .detail-back:focus-visible { color: var(--at-label-primary); background: color-mix(in srgb, var(--at-label-tertiary) 10%, transparent); }
+.detail-title { font-size: 13px; font-weight: 500; color: var(--at-label-primary); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-actions { margin-left: auto; display: inline-flex; gap: 6px; flex: none; }
+.detail-action {
+  background: none;
+  border: 0.5px solid var(--at-border-l2);
+  border-radius: 6px;
+  color: var(--at-label-secondary);
+  font: inherit;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 1px 8px;
+  cursor: pointer;
+}
+.detail-action:hover, .detail-action:focus-visible { color: var(--at-label-primary); border-color: var(--at-border-l3); }
+.detail-list { overflow-y: auto; scrollbar-gutter: stable; padding: 8px 9px 16px 14px; flex: auto; min-height: 0; scrollbar-color: var(--at-scrollbar-thumb) transparent; }
+.detail-state { font-size: 12px; color: var(--at-label-tertiary); padding: 16px 4px; display: flex; align-items: center; gap: 6px; }
+.detail-state.error { color: var(--at-error-text); }
+.msg { margin: 0 0 10px; min-width: 0; }
+.msg-head { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--at-label-tertiary); margin-bottom: 2px; }
+.msg-role { font-weight: 500; color: var(--at-label-secondary); }
+.msg-time { font-variant-numeric: tabular-nums; }
+.msg-text {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--at-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.msg.user .msg-text { color: var(--at-label-secondary); }
+.msg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 15px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--at-business) 16%, transparent);
+  color: var(--at-business);
+}
+.msg-badge.hook { background: color-mix(in srgb, var(--at-label-tertiary) 14%, transparent); color: var(--at-label-tertiary); }
+.tool-row { display: block; width: 100%; text-align: left; background: none; border: none; border-top: 0.5px solid var(--at-border-l2); padding: 4px 0; margin-top: 4px; font: inherit; cursor: pointer; color: var(--at-label-tertiary); }
+.tool-row:hover, .tool-row:focus-visible { color: var(--at-label-primary); }
+.tool-static { display: block; border-top: 0.5px solid var(--at-border-l2); padding: 4px 0; margin-top: 4px; color: var(--at-label-tertiary); }
+.tool-row .tool-summary, .tool-static .tool-summary { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; line-height: 20px; }
+.tool-row .tool-name, .tool-static .tool-name { font-weight: 500; color: var(--at-label-secondary); }
+.tool-row svg { transition: transform 0.12s; }
+.tool-row.open svg { transform: rotate(180deg); }
+.tool-detail {
+  display: none;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--at-label-tertiary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 2px 0 0 18px;
+}
+.tool-row.open + .tool-detail { display: block; }
+/* toolGroup\uFF1A\u6309\u8F6E\u52A8\u4F5C\u7EC4\uFF08\u5934\u90E8\u4E00\u884C\u6C47\u603B\uFF1B\u5C55\u5F00\u9010\u6761\u5DE5\u5177\u884C\uFF0C\u7F29\u8FDB\u5BF9\u9F50 tool-detail\uFF09 */
+.tool-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 0.5px solid var(--at-border-l2);
+  padding: 4px 0;
+  margin-top: 4px;
+  font: inherit;
+  color: var(--at-label-tertiary);
+  cursor: pointer;
+}
+.tool-group-head:hover, .tool-group-head:focus-visible { color: var(--at-label-primary); }
+.tool-group-head .tool-group-label { font-size: 11px; line-height: 20px; color: var(--at-label-secondary); }
+.tool-group-head:hover .tool-group-label,
+.tool-group-head:focus-visible .tool-group-label { color: var(--at-label-primary); }
+.tool-group-head svg { flex: none; transition: transform 0.12s; }
+.tool-group.open .tool-group-head svg { transform: rotate(180deg); }
+.tool-group-items { display: none; margin-left: 18px; }
+.tool-group.open .tool-group-items { display: block; }
+.tool-group-items > :first-child { border-top: none; }
+.detail-pager { display: flex; align-items: center; gap: 8px; padding: 4px 0 8px; }
+.detail-pager .detail-action[disabled] { opacity: 0.45; cursor: default; }
+`;
+
+  // src/ui-core/dict.ts
+  var DICT = {
+    zh: {
+      trigger: "\u667A\u80FD\u4F53\u56E2\u961F",
+      loading: "\u6B63\u5728\u52A0\u8F7D\u56E2\u961F\u2026",
+      unavailable: "Team \u6682\u4E0D\u53EF\u7528",
+      failure: "\u56E2\u961F\u6301\u4E45\u8BB0\u5F55\u65E0\u6548\uFF1A{message}",
+      empty: "\u6682\u65E0\u5171\u4EAB\u4EFB\u52A1\uFF0C\u53EF\u4EE5\u901A\u8FC7\u5BF9\u8BDD\u521B\u5EFA",
+      roster: "\u6210\u5458",
+      tasks: "\u5171\u4EAB\u4EFB\u52A1",
+      model: "\u6A21\u578B",
+      open: "\u6253\u5F00\u6210\u5458\u4F1A\u8BDD",
+      current: "\u5F53\u524D\u4F1A\u8BDD",
+      owner: "Owner",
+      unowned: "\u672A\u5206\u914D",
+      blockedBy: "\u4F9D\u8D56",
+      writeScopes: "\u5199\u5165\u8303\u56F4",
+      ready: "\u53EF\u5F00\u59CB",
+      blocked: "\u88AB\u4F9D\u8D56\u963B\u585E",
+      "task.expand": "\u5C55\u5F00",
+      "task.collapse": "\u6536\u8D77",
+      "memberStatus.running": "\u8FD0\u884C\u4E2D",
+      "memberStatus.inactive": "\u672A\u8FD0\u884C",
+      "memberStatus.provisioning": "\u51C6\u5907\u4E2D",
+      "memberStatus.failed": "\u5931\u8D25",
+      "status.pending": "\u5F85\u5904\u7406",
+      "status.in_progress": "\u8FDB\u884C\u4E2D",
+      "status.completed": "\u5DF2\u5B8C\u6210"
+    },
+    en: {
+      trigger: "Agent Team",
+      loading: "Loading Team\u2026",
+      unavailable: "Team is unavailable",
+      failure: "Invalid persisted Team record: {message}",
+      empty: "No shared tasks yet. Create them through the conversation.",
+      roster: "Members",
+      tasks: "Shared tasks",
+      model: "Model",
+      open: "Open member conversation",
+      current: "Current chat",
+      owner: "Owner",
+      unowned: "Unowned",
+      blockedBy: "Blocked by",
+      writeScopes: "Write scopes",
+      ready: "Ready",
+      blocked: "Blocked by dependencies",
+      "task.expand": "Show more",
+      "task.collapse": "Show less",
+      "memberStatus.running": "Running",
+      "memberStatus.inactive": "Inactive",
+      "memberStatus.provisioning": "Provisioning",
+      "memberStatus.failed": "Failed",
+      "status.pending": "Pending",
+      "status.in_progress": "In progress",
+      "status.completed": "Completed"
+    }
+  };
+  var DETAIL_DICT = {
+    zh: {
+      "detail.back": "\u8FD4\u56DE",
+      "detail.title": "\u6210\u5458\u4F1A\u8BDD",
+      "detail.loading": "\u6B63\u5728\u52A0\u8F7D\u4F1A\u8BDD\u2026",
+      "detail.empty": "\u8BE5\u6210\u5458\u6682\u65E0\u4F1A\u8BDD\u6D88\u606F",
+      "detail.failed": "\u4F1A\u8BDD\u8BFB\u53D6\u5931\u8D25\uFF1A{message}",
+      "detail.refresh": "\u5237\u65B0",
+      "detail.copySessionId": "\u590D\u5236\u4F1A\u8BDD id",
+      "detail.copied": "\u5DF2\u590D\u5236",
+      "detail.earlier": "\u66F4\u65E9\u6D88\u606F",
+      "detail.wake": "\u8BF7\u6C42 Lead \u5524\u9192\u8BE5\u6210\u5458",
+      "detail.wakeInjected": "\u5DF2\u6CE8\u5165\u4E0B\u4E00\u8F6E\uFF1A\u8BF7\u6C42\u5524\u9192 {name}",
+      "detail.framedFrom": "Team \u6D88\u606F \xB7 \u6765\u81EA {name}",
+      "detail.hookBadge": "hook \u6CE8\u5165",
+      "detail.toolCall": "\u5DE5\u5177\u8C03\u7528",
+      "detail.noSession": "\u4F1A\u8BDD id \u672A\u843D\u5B9A\uFF08\u6210\u5458\u53EF\u80FD\u5C1A\u5728\u51C6\u5907\u4E2D\uFF09",
+      "detail.you": "\u6211",
+      "detail.count": "{n} \u6761",
+      "detail.toolGroup": "{n} \u4E2A\u52A8\u4F5C \xB7 {list}",
+      "detail.countSummary": "{n} \u6761 \xB7 \u5171 {sourceTotal} \u6761\u8F6C\u5F55"
+    },
+    en: {
+      "detail.back": "Back",
+      "detail.title": "Member conversation",
+      "detail.loading": "Loading conversation\u2026",
+      "detail.empty": "No conversation messages for this member yet",
+      "detail.failed": "Conversation read failed: {message}",
+      "detail.refresh": "Refresh",
+      "detail.copySessionId": "Copy session id",
+      "detail.copied": "Copied",
+      "detail.earlier": "Earlier messages",
+      "detail.wake": "Ask Lead to wake this member",
+      "detail.wakeInjected": "Injected for next turn: wake request for {name}",
+      "detail.framedFrom": "Team message \xB7 from {name}",
+      "detail.hookBadge": "hook injected",
+      "detail.toolCall": "Tool call",
+      "detail.noSession": "Session id not settled yet (member may still be provisioning)",
+      "detail.you": "me",
+      "detail.count": "{n} items",
+      "detail.toolGroup": "{n} actions \xB7 {list}",
+      "detail.countSummary": "{n} items \xB7 of {sourceTotal} transcript items"
+    }
+  };
+  function t(lang2, key, vars) {
+    return interpolate(DICT[lang2][key], vars);
+  }
+  function td(lang2, key, vars) {
+    return interpolate(DETAIL_DICT[lang2][key], vars);
+  }
+  function interpolate(template, vars) {
+    if (vars === void 0) return template;
+    return template.replace(
+      /\{(\w+)\}/g,
+      (m, k) => k in vars ? String(vars[k]) : m
+    );
+  }
+  function langOfLocale(locale) {
+    return typeof locale === "string" && locale.toLowerCase().startsWith("zh") ? "zh" : "en";
+  }
+  function statusKey(status) {
+    return status === "deleted" ? "status.completed" : `status.${status}`;
+  }
+  function memberStatusKey(status) {
+    return `memberStatus.${status}`;
+  }
+
+  // src/ui-core/icons.ts
+  var svg = (inner, size) => `<svg viewBox="0 0 16 16" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+  function iconUser(size = 14) {
+    return svg('<circle cx="8" cy="5.5" r="3"/><path d="M2.6 14c.7-2.9 2.9-4.2 5.4-4.2s4.7 1.3 5.4 4.2"/>', size);
+  }
+  function iconUsers(size = 14) {
+    return svg(
+      '<circle cx="6.2" cy="5.6" r="2.6"/><path d="M1.8 13.4c.6-2.5 2.4-3.6 4.4-3.6s3.8 1.1 4.4 3.6"/><path d="M10.6 3.4a2.5 2.5 0 0 1 0 4.9"/><path d="M11.6 9.9c1.7.3 2.7 1.4 3.1 3.5"/>',
+      size
+    );
+  }
+  function iconChevron(size = 12) {
+    return svg('<path d="M4 6.2 8 10.2 12 6.2"/>', size);
+  }
+  function iconArrowLeft(size = 14) {
+    return svg('<path d="M9.5 3.5 5 8l4.5 4.5"/><path d="M5 8h8"/>', size);
+  }
+
+  // src/ui-core/escape.ts
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // src/ui-core/render.ts
+  function isCompact(frame2) {
+    return frame2.members.length === 1 && frame2.tasks.length === 0;
+  }
+  function currentMemberId(frame2) {
+    const sid = frame2.meta.sessionId;
+    if (sid === void 0) return void 0;
+    return frame2.members.find((m) => m.sessionId === sid)?.id;
+  }
+  function isMemberDisabled(m, currentId) {
+    return m.id === currentId || m.status === "failed" || m.status === "provisioning";
+  }
+  function memberDot(status) {
+    switch (status) {
+      case "running":
+      case "provisioning":
+        return "ongoing";
+      case "failed":
+        return "error";
+      case "inactive":
+      default:
+        return "icon";
+    }
+  }
+  function taskDot(task) {
+    switch (task.status) {
+      case "in_progress":
+        return "ongoing";
+      case "completed":
+        return "done";
+      case "deleted":
+        return "idle";
+      // 上游 deleted→idle（视图通常不含墓碑，防御口径）
+      case "pending":
+      default:
+        return task.ready ? "idle" : "warning";
+    }
+  }
+  function dot(state) {
+    return `<span class="dot ${state}"></span>`;
+  }
+  function memberIndicator(m) {
+    const d = memberDot(m.status);
+    const inner = d === "icon" ? `<span class="icon-user">${iconUser(14)}</span>` : dot(d);
+    return `<span class="member-dot">${inner}</span>`;
+  }
+  function renderMember(m, opts) {
+    const { lang: lang2, isCurrent, disabled } = opts;
+    const highlight = opts.highlightCurrent ?? isCurrent;
+    const cls = ["member", highlight ? "current" : ""].filter(Boolean).join(" ");
+    const nameRow = `<span class="row1"><span class="name">${esc(m.target)}</span>` + (isCurrent ? `<span class="current-tag">${esc(t(lang2, "current"))}</span>` : "") + `</span>`;
+    const modelSuffix = m.model !== void 0 ? `<span class="model"> \xB7 ${esc(t(lang2, "model"))}: ${esc(m.model)}</span>` : "";
+    const sub = `<span class="sub">${esc(t(lang2, memberStatusKey(m.status)))}${modelSuffix}</span>`;
+    const diag = m.diagnostics.length > 0 ? `<span class="diagnostic">${esc(m.diagnostics[0])}</span>` : "";
+    const openAttr = disabled ? "" : ` title="${esc(t(lang2, "open"))}"`;
+    return `<button class="${cls}" data-member-id="${esc(m.id)}"${disabled ? " disabled" : ""}${openAttr}>` + memberIndicator(m) + `<span class="member-text">${nameRow}${sub}${diag}</span></button>`;
+  }
+  function renderRoster(frame2, lang2) {
+    const members = frame2.members;
+    const currentId = currentMemberId(frame2);
+    const countHtml = members.length > 1 ? `<span class="count">${members.length}</span>` : "";
+    const cards = members.map(
+      (m) => renderMember(m, {
+        lang: lang2,
+        // Tag 恒随当前会话；高亮/描边才受 members>1 限制（上游 TeamAction 同口径）。
+        isCurrent: m.id === currentId,
+        highlightCurrent: m.id === currentId && members.length > 1,
+        disabled: isMemberDisabled(m, currentId)
+      })
+    ).join("");
+    return `<section class="roster-section"><h3>${esc(t(lang2, "roster"))}${countHtml}</h3><div class="roster">${cards}</div></section>`;
+  }
+  function renderTaskMeta(task, lang2, leadingHtml = "") {
+    const spans = [];
+    spans.push(`<span>${esc(task.id)}</span>`);
+    const owner = task.ownerName !== void 0 ? esc(task.ownerName) : esc(t(lang2, "unowned"));
+    spans.push(`<span>${esc(t(lang2, "owner"))}: ${owner}</span>`);
+    if (task.status === "pending") {
+      spans.push(`<span>${esc(t(lang2, task.ready ? "ready" : "blocked"))}</span>`);
+    }
+    if (task.blockedBy.length > 0) {
+      spans.push(`<span>${esc(t(lang2, "blockedBy"))}: ${task.blockedBy.map(esc).join(", ")}</span>`);
+    }
+    if (task.writeScopes.length > 0) {
+      spans.push(`<span>${esc(t(lang2, "writeScopes"))}: ${task.writeScopes.map(esc).join(", ")}</span>`);
+    }
+    for (const w of task.writeScopeWarnings) {
+      spans.push(`<span class="warning">${esc(w)}</span>`);
+    }
+    return `<div class="meta">${leadingHtml}${spans.join("")}</div>`;
+  }
+  function renderTask(task, lang2) {
+    const state = `<span class="task-state">${dot(taskDot(task))}<span>${esc(t(lang2, statusKey(task.status)))}</span></span>`;
+    const titleRow = `<div class="title-row"><strong>${esc(task.subject)}</strong>${state}</div>`;
+    const toggle = `<button class="expand-toggle" hidden aria-expanded="false" data-task-toggle><span class="expand-label">${esc(t(lang2, "task.expand"))}</span>${iconChevron(12)}</button>`;
+    const desc = `<p data-task-desc>${esc(task.description)}</p>`;
+    return `<article class="task" data-task-id="${esc(task.id)}">` + titleRow + desc + renderTaskMeta(task, lang2, toggle) + `</article>`;
+  }
+  function renderTasks(frame2, lang2) {
+    if (frame2.tasks.length === 0) {
+      return `<section class="tasks-section"><p class="empty-notice">${esc(t(lang2, "empty"))}</p></section>`;
+    }
+    const cards = frame2.tasks.map((task) => renderTask(task, lang2)).join("");
+    return `<section class="tasks-section"><h3>${esc(t(lang2, "tasks"))}<span class="count">${frame2.tasks.length}</span></h3><div class="tasks">${cards}</div></section>`;
+  }
+  function renderNotices(opts) {
+    const { lang: lang2 } = opts;
+    const out = [];
+    if (opts.navError !== void 0) {
+      out.push(`<div class="error-bar" role="alert">${dot("error")}<span>${esc(opts.navError)}</span></div>`);
+    }
+    if (opts.loading === true) {
+      out.push(`<div class="notice" role="status">${dot("ongoing")}<span>${esc(t(lang2, "loading"))}</span></div>`);
+    } else if (opts.noTeam === true) {
+      out.push(`<div class="notice" role="status">${dot("warning")}<span>${esc(t(lang2, "unavailable"))}</span></div>`);
+    }
+    if (opts.failure !== void 0) {
+      out.push(`<div class="error-bar" role="alert">${dot("error")}<span>${esc(t(lang2, "failure", { message: opts.failure }))}</span></div>`);
+    }
+    return out.join("");
+  }
+  function renderPanelBody(frame2, lang2, runtime) {
+    const noTeam = frame2.team === null;
+    const notices = renderNotices({
+      lang: lang2,
+      ...runtime?.navError !== void 0 ? { navError: runtime.navError } : {},
+      ...runtime?.loading !== void 0 ? { loading: runtime.loading } : {},
+      noTeam,
+      ...frame2.team?.failure !== void 0 ? { failure: frame2.team.failure } : {}
+    });
+    if (noTeam && runtime?.loading !== true) {
+      return notices;
+    }
+    return notices + renderRoster(frame2, lang2) + renderTasks(frame2, lang2);
+  }
+
+  // src/ui-core/detail-render.ts
+  function aggregateToolNames(tools) {
+    const counts = /* @__PURE__ */ new Map();
+    for (const tool of tools) counts.set(tool.name, (counts.get(tool.name) ?? 0) + 1);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([name, n]) => `${name}\xD7${n}`).join(" \xB7 ");
+  }
+  function renderToolEntry(tool) {
+    const hasPayload = tool.text !== void 0 && tool.text.length > 0;
+    const summary = `<span class="tool-summary">${hasPayload ? iconChevron(12) : ""}<span class="tool-name">${esc(tool.name)}</span><span>${esc(tool.status)}</span></span>`;
+    return hasPayload ? `<button class="tool-row" aria-expanded="false">${summary}</button><pre class="tool-detail">${esc(tool.text)}</pre>` : `<span class="tool-static">${summary}</span>`;
+  }
+  function renderDetailItem(item, lang2) {
+    const time = item.ts.slice(11, 19);
+    const badge = item.framed !== void 0 ? `<span class="msg-badge">${esc(td(lang2, "detail.framedFrom", { name: item.framed.from }))}</span>` : "";
+    if (item.kind === "toolCall") {
+      const tool = item.tool ?? { name: "?", status: "?" };
+      const entry = {
+        ts: item.ts,
+        name: tool.name,
+        status: tool.status,
+        ...item.text !== void 0 ? { text: item.text } : {}
+      };
+      return `<div class="msg assistant"><div class="msg-head"><span class="msg-role">assistant</span><span class="msg-time">${time}</span></div>` + renderToolEntry(entry) + `</div>`;
+    }
+    if (item.kind === "toolGroup") {
+      const tools = item.tools ?? [];
+      const count = item.count ?? tools.length;
+      const label = td(lang2, "detail.toolGroup", { n: count, list: aggregateToolNames(tools) });
+      return `<div class="msg assistant tool-group"><div class="msg-head"><span class="msg-role">assistant</span><span class="msg-time">${time}</span></div><button class="tool-group-head" aria-expanded="false">${iconChevron(12)}<span class="tool-group-label">${esc(label)}</span></button><div class="tool-group-items">${tools.map((tool) => renderToolEntry(tool)).join("")}</div></div>`;
+    }
+    const roleLabel = item.role === "user" ? esc(td(lang2, "detail.you")) : item.role;
+    return `<div class="msg ${item.role}"><div class="msg-head"><span class="msg-role">${roleLabel}</span><span class="msg-time">${time}</span>${badge}</div><div class="msg-text">${esc(item.text ?? "")}</div></div>`;
+  }
+  function renderDetailBody(st, lang2) {
+    if (st.kind === "loading") {
+      return `<div class="detail-state"><span class="dot ongoing"></span>${esc(td(lang2, "detail.loading"))}</div>`;
+    }
+    if (st.kind === "error") {
+      const text = st.reason === "session-not-settled" ? td(lang2, "detail.noSession") : td(lang2, "detail.failed", { message: st.message });
+      return `<div class="detail-state error"><span class="dot error"></span><span>${esc(text)}</span></div><div class="detail-pager"><button class="detail-action" data-detail-retry>${esc(td(lang2, "detail.refresh"))}</button></div>`;
+    }
+    const d = st.detail;
+    const count = `<span class="msg-time">${esc(td(lang2, "detail.countSummary", { n: d.total, sourceTotal: d.sourceTotal }))}</span>`;
+    if (d.page.items.length === 0) {
+      return `<div class="detail-state">${esc(td(lang2, "detail.empty"))}</div>`;
+    }
+    const pager = d.page.nextCursor !== void 0 ? `<div class="detail-pager"><button class="detail-action" data-detail-earlier data-cursor="${d.page.nextCursor}">${esc(td(lang2, "detail.earlier"))}</button>${count}</div>` : `<div class="detail-pager">${count}</div>`;
+    return pager + d.page.items.map((item) => renderDetailItem(item, lang2)).join("");
+  }
+  function renderDetailView(st, lang2, opts = {}) {
+    if (st.kind === "closed") return "";
+    const actions = [];
+    if (st.kind === "ready") {
+      actions.push(`<button class="detail-action" data-detail-refresh>${esc(td(lang2, "detail.refresh"))}</button>`);
+      actions.push(
+        `<button class="detail-action" data-detail-copy title="${esc(st.detail.sessionId)}">${esc(td(lang2, "detail.copySessionId"))}</button>`
+      );
+      if (opts.wake === true) {
+        actions.push(`<button class="detail-action" data-detail-wake>${esc(td(lang2, "detail.wake"))}</button>`);
+      }
+    }
+    return `<div class="detail-head"><button class="detail-back" data-detail-back>${iconArrowLeft(14)}${esc(td(lang2, "detail.back"))}</button><span class="detail-title">${esc(st.name)}</span><span class="detail-actions">${actions.join("")}</span></div><div class="detail-list" data-detail-list>${renderDetailBody(st, lang2)}</div>`;
+  }
+
+  // src/ui-core/expand.ts
+  function memoryExpandStore(initial) {
+    const set = new Set(initial ?? []);
+    return {
+      isExpanded: (id) => set.has(id),
+      setExpanded: (id, v) => {
+        if (v) set.add(id);
+        else set.delete(id);
+      }
+    };
+  }
+  function attachExpandBehavior(root2, store, labels) {
+    const observers = [];
+    const measure = (task) => {
+      const desc = task.querySelector("[data-task-desc]");
+      const toggle = task.querySelector("[data-task-toggle]");
+      if (desc === null || toggle === null) return;
+      const id = task.dataset.taskId ?? "";
+      const expanded = store.isExpanded(id);
+      const overflow = desc.scrollHeight > desc.clientHeight + 1;
+      toggle.hidden = !(overflow || expanded);
+      const label = toggle.querySelector(".expand-label");
+      if (label !== null) label.textContent = expanded ? labels.collapse : labels.expand;
+      toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      toggle.classList.toggle("open", expanded);
+      desc.classList.toggle("expanded", expanded);
+    };
+    const tasks = () => Array.from(root2.querySelectorAll("article.task"));
+    for (const task of tasks()) {
+      const desc = task.querySelector("[data-task-desc]");
+      if (desc !== null && typeof ResizeObserver !== "undefined") {
+        const ro = new ResizeObserver(() => measure(task));
+        ro.observe(desc);
+        observers.push(ro);
+      }
+      measure(task);
+    }
+    const onClick = (ev) => {
+      const target = ev.target;
+      const toggle = target?.closest("[data-task-toggle]");
+      if (toggle === null || toggle === void 0) return;
+      const task = toggle.closest("article.task");
+      if (task === null) return;
+      const id = task.dataset.taskId ?? "";
+      store.setExpanded(id, !store.isExpanded(id));
+      measure(task);
+    };
+    root2.addEventListener("click", onClick);
+    return () => {
+      root2.removeEventListener("click", onClick);
+      for (const ro of observers) ro.disconnect();
+    };
+  }
+
+  // src/ui-core/request-sequencer.ts
+  var RequestSequencer = class {
+    #seq = 0;
+    begin() {
+      this.#seq += 1;
+      return this.#seq;
+    }
+    isCurrent(seq) {
+      return seq === this.#seq;
+    }
+    invalidate() {
+      this.#seq += 1;
+    }
+  };
+
+  // src/panel/companion-main.ts
+  var HOVER_OPEN_MS = 150;
+  var LEAVE_CLOSE_MS = 120;
+  var ANCHOR_GAP = 5;
+  var ANCHOR_MARGIN = 16;
+  var EVENTS_ENDPOINT = "/events";
+  var API_ENDPOINT = "/api/call";
+  var token = new URLSearchParams(location.search).get("token") ?? "";
+  var lang = langOfLocale(navigator.language);
+  var frame = null;
+  var detailState = { kind: "closed" };
+  var expandStore = memoryExpandStore();
+  var detachExpand = null;
+  var pinned = false;
+  var open = false;
+  var hoverTimer = null;
+  var leaveTimer = null;
+  var detailSequencer = new RequestSequencer();
+  var style = document.createElement("style");
+  style.textContent = COMPONENT_CSS + `
+html, body { margin: 0; min-height: 100%; background: var(--at-bg-menu); font-family: var(--at-font); }
+.at-root { padding: 12px; container-type: inline-size; }
+.at-trigger {
+  min-height: 28px; color: var(--at-label-tertiary); cursor: pointer; background: none; border: 0;
+  border-radius: 6px; align-items: center; gap: 5px; padding: 3px 7px; font-size: 12px;
+  display: inline-flex; font-family: inherit;
+}
+.at-trigger:hover, .at-trigger:focus-visible { color: var(--at-label-primary); }
+.at-trigger .at-trigger-label { display: inline; }
+@container (max-width: 480px) { .at-trigger .at-trigger-label { display: none; } }
+.at-panel-wrap { position: fixed; visibility: hidden; left: 0; top: 0; z-index: 100; }
+.at-panel-wrap.open { visibility: visible; }
+.team-panel { position: relative; }
+.at-conn { font-size: 11px; color: var(--at-label-tertiary); margin-left: 8px; }
+`;
+  document.head.appendChild(style);
+  var root = document.createElement("div");
+  root.className = "at-root";
+  root.innerHTML = `<span style="display:inline-flex;align-items:center"><button class="at-trigger" aria-haspopup="dialog" aria-expanded="false" aria-label="${DICT[lang].trigger}" data-trigger><span data-trigger-icon></span><span class="at-trigger-label">${DICT[lang].trigger}</span></button><span class="at-conn" data-conn>connecting\u2026</span></span><div class="at-panel-wrap" data-wrap><div class="team-panel" role="dialog" tabindex="-1" data-team-panel aria-label="${DICT[lang].trigger}"><div class="panel-body" data-list-view></div><div class="detail-view" data-detail-view tabindex="-1" hidden></div></div></div>`;
+  document.body.appendChild(root);
+  var trigger = root.querySelector("[data-trigger]");
+  trigger.querySelector("[data-trigger-icon]").innerHTML = iconUsers(14);
+  var wrap = root.querySelector("[data-wrap]");
+  var panelEl = root.querySelector(".team-panel");
+  var listView = root.querySelector("[data-list-view]");
+  var detailView = root.querySelector("[data-detail-view]");
+  var conn = root.querySelector("[data-conn]");
+  document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  function render() {
+    const inDetail = detailState.kind !== "closed";
+    listView.hidden = inDetail;
+    detailView.hidden = !inDetail;
+    panelEl.classList.toggle("compact", frame !== null && isCompact(frame) && !inDetail);
+    if (inDetail) {
+      detailView.innerHTML = renderDetailView(detailState, lang);
+      bindDetail();
+      return;
+    }
+    if (detachExpand !== null) {
+      detachExpand();
+      detachExpand = null;
+    }
+    if (frame === null) {
+      listView.innerHTML = renderPanelBody(
+        { type: "view", stateVersion: 4, team: null, members: [], tasks: [], meta: { generatedAt: "", revision: 0 } },
+        lang,
+        { loading: true }
+      );
+      return;
+    }
+    listView.innerHTML = renderPanelBody(frame, lang, { loading: false });
+    detachExpand = attachExpandBehavior(listView, expandStore, {
+      expand: DICT[lang]["task.expand"],
+      collapse: DICT[lang]["task.collapse"]
+    });
+  }
+  function positionPanel() {
+    const tr = trigger.getBoundingClientRect();
+    const pw = panelEl.offsetWidth;
+    const ph = panelEl.offsetHeight;
+    let left = tr.left;
+    let top = tr.bottom + ANCHOR_GAP;
+    const maxLeft = window.innerWidth - pw - ANCHOR_MARGIN;
+    if (left > maxLeft) left = Math.max(ANCHOR_MARGIN, maxLeft);
+    if (top + ph > window.innerHeight - ANCHOR_MARGIN) {
+      const above = tr.top - ANCHOR_GAP - ph;
+      if (above >= ANCHOR_MARGIN) top = above;
+    }
+    wrap.style.left = `${Math.round(left)}px`;
+    wrap.style.top = `${Math.round(top)}px`;
+  }
+  function openPanel(focus) {
+    if (open) return;
+    open = true;
+    wrap.classList.add("open");
+    trigger.setAttribute("aria-expanded", "true");
+    positionPanel();
+    if (focus) panelEl.focus();
+  }
+  function closePanel(returnFocus) {
+    if (!open) return;
+    open = false;
+    pinned = false;
+    wrap.classList.remove("open");
+    trigger.setAttribute("aria-expanded", "false");
+    if (returnFocus) trigger.focus();
+  }
+  var triggerLabel = root.querySelector(".at-trigger-label");
+  trigger.addEventListener("mouseenter", () => {
+    if (pinned) return;
+    if (triggerLabel !== null && getComputedStyle(triggerLabel).display === "none") return;
+    clearTimers();
+    hoverTimer = setTimeout(() => openPanel(false), HOVER_OPEN_MS);
+  });
+  trigger.addEventListener("mouseleave", () => {
+    if (pinned) return;
+    clearTimers();
+    leaveTimer = setTimeout(() => closePanel(false), LEAVE_CLOSE_MS);
+  });
+  panelEl.addEventListener("mouseenter", () => {
+    if (leaveTimer !== null) {
+      clearTimeout(leaveTimer);
+      leaveTimer = null;
+    }
+  });
+  panelEl.addEventListener("mouseleave", () => {
+    if (pinned || !open) return;
+    clearTimers();
+    leaveTimer = setTimeout(() => closePanel(false), LEAVE_CLOSE_MS);
+  });
+  trigger.addEventListener("click", () => {
+    clearTimers();
+    pinned = true;
+    if (open) panelEl.focus();
+    else openPanel(true);
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    const inPanel = panelEl.contains(document.activeElement) || document.activeElement === panelEl;
+    if (open) {
+      ev.preventDefault();
+      closePanel(inPanel);
+    }
+  });
+  document.addEventListener("pointerdown", (ev) => {
+    if (!open) return;
+    const t2 = ev.target;
+    if (trigger.contains(t2) || panelEl.contains(t2)) return;
+    closePanel(false);
+  });
+  window.addEventListener("resize", () => {
+    if (open) positionPanel();
+  });
+  window.addEventListener("scroll", () => {
+    if (open) positionPanel();
+  }, true);
+  function clearTimers() {
+    if (hoverTimer !== null) {
+      clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+    if (leaveTimer !== null) {
+      clearTimeout(leaveTimer);
+      leaveTimer = null;
+    }
+  }
+  function connect() {
+    const es = new EventSource(`${EVENTS_ENDPOINT}?token=${encodeURIComponent(token)}`);
+    es.addEventListener("hello", () => {
+      conn.textContent = "live";
+    });
+    es.addEventListener("view", (ev) => {
+      try {
+        frame = JSON.parse(ev.data);
+        conn.textContent = "live";
+        render();
+      } catch {
+      }
+    });
+    es.onerror = () => {
+      conn.textContent = "reconnecting\u2026";
+    };
+  }
+  async function apiCall(args) {
+    const res = await fetch(API_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-team-token": token },
+      body: JSON.stringify(args)
+    });
+    return res.json();
+  }
+  listView.addEventListener("click", (ev) => {
+    const target = ev.target;
+    if (target?.closest("[data-task-toggle]") !== null && target !== void 0) return;
+    const member = target?.closest("button.member");
+    if (member === null || member === void 0 || member.disabled) return;
+    const id = member.dataset.memberId;
+    if (id === void 0) return;
+    void openDetail(id, member.querySelector(".name")?.textContent ?? id);
+  });
+  async function openDetail(memberId, name, cursor) {
+    const seq = detailSequencer.begin();
+    const fromList = detailState.kind === "closed";
+    detailState = { kind: "loading", memberId, name };
+    render();
+    if (fromList) detailView.focus();
+    try {
+      const body = await apiCall({
+        action: "detail",
+        target: memberId,
+        ...cursor !== void 0 ? { cursor } : {}
+      });
+      if (!detailSequencer.isCurrent(seq)) return;
+      if (body.kind === "detail" && body.detail !== void 0) {
+        detailState = { kind: "ready", memberId, name, detail: body.detail };
+      } else {
+        detailState = {
+          kind: "error",
+          memberId,
+          name,
+          message: body.message ?? "detail failed",
+          ...body.reason !== void 0 ? { reason: body.reason } : {}
+        };
+      }
+    } catch (err) {
+      if (!detailSequencer.isCurrent(seq)) return;
+      detailState = { kind: "error", memberId, name, message: err instanceof Error ? err.message : String(err) };
+    }
+    render();
+  }
+  function closeDetail() {
+    detailSequencer.invalidate();
+    detailState = { kind: "closed" };
+    render();
+  }
+  function bindDetail() {
+    detailView.querySelector("[data-detail-back]")?.addEventListener("click", closeDetail);
+    const reload = () => {
+      if (detailState.kind === "ready" || detailState.kind === "error") {
+        void openDetail(detailState.memberId, detailState.name);
+      }
+    };
+    detailView.querySelector("[data-detail-refresh]")?.addEventListener("click", reload);
+    detailView.querySelector("[data-detail-retry]")?.addEventListener("click", reload);
+    detailView.querySelector("[data-detail-copy]")?.addEventListener("click", () => {
+      if (detailState.kind !== "ready") return;
+      void navigator.clipboard?.writeText(detailState.detail.sessionId).catch(() => void 0);
+      const btn = detailView.querySelector("[data-detail-copy]");
+      if (btn !== null) {
+        btn.textContent = td(lang, "detail.copied");
+        setTimeout(() => {
+          if (btn.isConnected) btn.textContent = td(lang, "detail.copySessionId");
+        }, 1500);
+      }
+    });
+    detailView.querySelector("[data-detail-earlier]")?.addEventListener("click", (ev) => {
+      const cursor = Number(ev.currentTarget.dataset.cursor);
+      if (detailState.kind === "ready" && Number.isFinite(cursor)) {
+        void openDetail(detailState.memberId, detailState.name, cursor);
+      }
+    });
+    for (const head of detailView.querySelectorAll("button.tool-group-head")) {
+      head.addEventListener("click", () => {
+        const group = head.closest(".tool-group");
+        const open2 = group?.classList.toggle("open") ?? false;
+        head.setAttribute("aria-expanded", open2 ? "true" : "false");
+      });
+    }
+    for (const row of detailView.querySelectorAll("button.tool-row")) {
+      row.addEventListener("click", () => {
+        const o = row.classList.toggle("open");
+        row.setAttribute("aria-expanded", o ? "true" : "false");
+      });
+    }
+  }
+  render();
+  connect();
+})();
+
+</script>
+</body>
+</html>

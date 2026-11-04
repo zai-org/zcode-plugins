@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "team-daemon": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/runtime/team-daemon.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "TEAM_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "TEAM_PROJECT_DIR": "${ZCODE_PROJECT_DIR}",
+        "TEAM_PLUGIN_ROOT": "${ZCODE_PLUGIN_ROOT}",
+        "TEAM_MAX_MEMBERS": "${user_config.maxMembers}",
+        "TEAM_MAX_TASKS": "${user_config.maxTasks}",
+        "TEAM_MAX_MESSAGE_BYTES": "${user_config.maxMessageBytes}",
+        "TEAM_DISPOSAL_TIMEOUT_MS": "${user_config.disposalTimeoutMs}",
+        "TEAM_INTERRUPT": "${user_config.interrupt}",
+        "TEAM_LEAD_MODE": "${user_config.leadMode}"
+      },
+      "timeoutMs": 3600000
+    }
+  }
+}
