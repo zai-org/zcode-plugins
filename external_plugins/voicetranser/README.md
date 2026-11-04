@@ -4,7 +4,7 @@ Local push-to-talk voice input for macOS: hold a global hotkey, speak, release â
 
 This plugin ships an **agent skill** â€” it does not bundle the tool itself. Once installed, you can say *"install VoiceTranser for me"* and the agent walks the whole chain: prerequisites, clone, deps, model download, launchd service, Karabiner hotkey wiring, accessibility permission, then verifies with the built-in 8-point diagnose script. It also handles ongoing troubleshooting and engine switching.
 
-The runtime is pulled from the upstream repository, so installation needs network access and the tools listed below. The launchd step generates a plist from the current checkout path with `install_launchd.py`; the repository's own plist is an author-local example and is not copied to users' machines.
+The runtime is pulled from the upstream repository, so installation needs network access and the tools listed below. The launchd step generates a plist from the current checkout path with `install_launchd.py`; the repository ships no plist snapshot to copy, so the generated one is the only source.
 
 ## What you get
 
