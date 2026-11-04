@@ -1,0 +1,41 @@
+{
+  "name": "archify-panel",
+  "version": "0.1.0",
+  "description": "在 ZCode 侧栏生成并查看 Archify 架构图、流程图、ERD 等图形，可在面板里导出 PNG、SVG 与分享卡片。",
+  "description_i18n": {
+    "en": "Generate and view Archify architecture, workflow, ERD and other diagrams in the ZCode side panel, with PNG, SVG and share-card export.",
+    "zh-CN": "在 ZCode 侧栏生成并查看 Archify 架构图、流程图、ERD 等图形，可在面板里导出 PNG、SVG 与分享卡片。"
+  },
+  "author": {
+    "name": "ZouKD",
+    "url": "https://github.com/ZouKD"
+  },
+  "license": "Apache-2.0",
+  "skills": "skills",
+  "mcpServers": {
+    "archify": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "archify",
+        "title": {
+          "zh-CN": "Archify 画板",
+          "en-US": "Archify"
+        },
+        "icon": "git-branch",
+        "server": "archify",
+        "resourceUri": "ui://archify/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
