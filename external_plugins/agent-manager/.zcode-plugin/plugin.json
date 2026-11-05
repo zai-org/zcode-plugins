@@ -1,0 +1,12 @@
+{
+  "name": "agent-manager",
+  "version": "0.1.2",
+  "description": "Manage ZCode subagents: inventory, create, edit and validate agent definition files, and dispatch one task to multiple agents in parallel",
+  "author": {
+    "name": "Sword"
+  },
+  "skills": "./skills",
+  "commands": "./commands",
+  "agents": "./agents",
+  "hooks": "hooks/hooks.json"
+}

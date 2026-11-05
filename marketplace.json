@@ -14,6 +14,27 @@
   ],
   "plugins": [
     {
+      "name": "agent-manager",
+      "source": "./external_plugins/agent-manager",
+      "description": "Manage ZCode subagents: inventory, create, edit and validate agent definition files, and dispatch one task to multiple agents in parallel.",
+      "description_i18n": {
+        "en": "Manage ZCode subagents: inventory, create, edit and validate agent definition files, and dispatch one task to multiple agents in parallel.",
+        "zh-CN": "管理 ZCode 智能体：盘点、创建、修改、校验智能体定义文件，并把一个任务并行派发给多个智能体协作完成。"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "Sword"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "subagent",
+        "agent",
+        "orchestration",
+        "code-review",
+        "registry"
+      ]
+    },
+    {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
       "description": "CloudBase development skills and MCP integration for building, deploying, and troubleshooting Web, WeChat Mini Program, database, cloud function, CloudRun, storage, and AI projects.",
