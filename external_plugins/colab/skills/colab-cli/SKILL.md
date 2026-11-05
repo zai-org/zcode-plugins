@@ -12,13 +12,18 @@ Colab runtimes via Jupyter/WebSocket protocols; session metadata lives in
 ## Requirements and platform
 
 - Install with `uv tool install google-colab-cli` (preferred) or `pip install google-colab-cli`.
-- **Windows is NOT supported** — Linux/macOS only. On Windows, run it inside **WSL**
-  (`wsl -d <distro>` then use `colab` there; files stay in the WSL filesystem for speed).
+- **Windows is NOT officially supported** — upstream targets Linux/macOS and the supported
+  path on Windows is **WSL** (`wsl -d <distro>` then use `colab` there; files stay in the
+  WSL filesystem for speed). Verified in practice (2026-11-05): the CLI installs via pip and
+  loads on Windows, and the OAuth flow initiates correctly — but full runtime behavior
+  (SSH tunnels, TTY console) is untested there, so prefer WSL for real work.
 - Accelerators: T4, L4, G4, H100, A100 GPUs; TPU v5e1/v6e1. High-RAM shapes require
   Colab Pro/Pro+. L4/TPU shapes ignore `--high-mem`.
-- Auth strategies via global option `--auth {oauth2,adc}` (default `adc`): OAuth opens a
-  browser flow on first run (OAuth client config defaults to `~/.colab-cli-oauth-config.json`);
-  ADC uses Application Default Credentials (e.g. `gcloud auth application-default login`).
+- Auth strategies via global option `--auth {oauth2,adc}` (default `oauth2`): on first use
+  the CLI prints a Google OAuth URL and waits for the authorization code — every command
+  requires completing this flow once in an interactive terminal. ADC
+  (`--auth adc`) uses Application Default Credentials (e.g. `gcloud auth
+  application-default login`).
 
 ## Command reference
 

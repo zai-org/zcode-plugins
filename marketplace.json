@@ -1457,7 +1457,7 @@
         "en": "Google Colab integration for ZCode: the official colab-mcp browser-bridge MCP server plus a google-colab-cli command reference for provisioning Colab runtimes (CPU/GPU/TPU), executing code, and transferring files.",
         "zh-CN": "面向 ZCode 的 Google Colab 集成：官方 colab-mcp 浏览器桥接 MCP 服务器，以及 google-colab-cli 命令参考——用于创建 Colab 运行时（CPU/GPU/TPU）、执行代码和传输文件。"
       },
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "movtigroup",
         "url": "https://github.com/movtigroup"
