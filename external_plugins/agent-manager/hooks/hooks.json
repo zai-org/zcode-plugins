@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/inventory.sh\""
+            "command": "bash \"${ZCODE_PLUGIN_ROOT}/scripts/inventory.sh\""
           }
         ]
       }

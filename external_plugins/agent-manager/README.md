@@ -16,14 +16,13 @@ A ZCode plugin for **managing subagents**: inventory, create, edit and validate 
 
 ## Install
 
-1. In ZCode open **Plugin Marketplace → Add → Add Plugin Marketplace**.
-2. Enter this repository: `sworddemon85-create/agent-manager-market` (or the official marketplace, if installed from there).
-3. Find **Agent Manager** → **Install**, then restart ZCode.
+1. In ZCode open **Plugin Marketplace** and search for **Agent Manager** (official marketplace), or **Add → Add Plugin Marketplace** with `sworddemon85-create/agent-manager-market` to install from the author's mirror.
+2. Find **Agent Manager** → **Install**, then restart ZCode.
 
 ## Try it
 
 - `/agent-list` — list all your agents, flagging name conflicts across scopes
-- "新建一个叫 doc-writer 的智能体,负责整理项目文档" — walks the creation flow and writes a spec-compliant definition
+- "Create an agent named `doc-writer` that maintains project documentation" — walks the creation flow and writes a spec-compliant definition
 - `/agent-team 审查 src 目录的代码并总结问题` — dispatches reviewers in parallel and returns a merged report
 
 ## Behavior and side effects (disclosure)
@@ -32,6 +31,7 @@ A ZCode plugin for **managing subagents**: inventory, create, edit and validate 
 - **Command execution**: the SessionStart hook runs a bundled read-only bash script (`scripts/inventory.sh`) that scans the two definition directories; dispatch flows invoke subagents via ZCode's Agent tool.
 - **Hook**: `SessionStart` only. Its output is injected as session context and it always exits 0, so it never blocks startup.
 - **Network**: the plugin itself makes no network requests. The bundled `issue-triage` agent may use WebFetch when you ask it to verify external references.
+- **Bundled agents act with their own tools**: `doc-writer` writes project documentation files and `test-runner` runs project test commands when dispatched — send them only tasks whose effects you accept.
 - **No MCP server, no credentials, no telemetry.**
 - **Windows note**: the hook requires `bash` on PATH (Git Bash works).
 

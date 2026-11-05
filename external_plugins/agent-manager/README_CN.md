@@ -16,9 +16,8 @@
 
 ## 安装
 
-1. 打开 ZCode 的 **Plugin Marketplace → Add → Add Plugin Marketplace**。
-2. 输入本仓库:`sworddemon85-create/agent-manager-market`(若从官方市场安装则直接搜索)。
-3. 找到「智能体管家 Agent Manager」→ **Install**,然后重启 ZCode。
+1. 打开 ZCode 的 **Plugin Marketplace** 搜索「Agent Manager」(官方市场),或经 **Add → Add Plugin Marketplace** 输入作者镜像 `sworddemon85-create/agent-manager-market` 安装。
+2. 找到「智能体管家 Agent Manager」→ **Install**,然后重启 ZCode。
 
 ## 试一试
 
@@ -32,6 +31,7 @@
 - **命令执行**:SessionStart 钩子运行内置只读脚本(`scripts/inventory.sh`)扫描两级定义目录;派发流程通过 ZCode 的 Agent 工具调用子智能体。
 - **钩子**:仅 `SessionStart`;输出作为会话上下文注入,且始终以 0 退出,不会阻塞启动。
 - **网络**:插件本身不发起网络请求;内置 `issue-triage` 智能体在你要求核实外部资料时可能使用 WebFetch。
+- **内置智能体使用各自工具干活**:`doc-writer` 被派发后会写项目文档文件,`test-runner` 会通过 bash 执行项目测试命令——只派发你能接受其影响的任务。
 - **无 MCP server、无凭据、无遥测。**
 - **Windows 提示**:钩子依赖 PATH 中的 `bash`(Git Bash 即可)。
 

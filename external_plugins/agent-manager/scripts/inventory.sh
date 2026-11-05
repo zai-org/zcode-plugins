@@ -22,6 +22,6 @@ print_dir() {
 echo "本地智能体定义(agent-manager 盘点):"
 n=$(print_dir "$HOME/.zcode/agents" "用户级" | wc -l)
 print_dir "$HOME/.zcode/agents" "用户级"
-print_dir "$PWD/.zcode/agents" "工作区级" 
+print_dir "$PWD/.zcode/agents" "工作区级"
 [ "$n" = "0" ] && [ ! -d "$PWD/.zcode/agents" ] && echo "- (无本地定义文件,仅运行时内置智能体可用)"
 exit 0
