@@ -1472,7 +1472,7 @@
     {
       "name": "voicetranser",
       "source": "./external_plugins/voicetranser",
-      "icon": "assets/voicetranser/icon.png",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/voicetranser/icon.png",
       "description": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",
       "description_i18n": {
         "en": "Local push-to-talk voice input for macOS: hold a global hotkey, speak, release — transcription is pasted at your cursor. Fully local STT (Qwen3-ASR MLX, SenseVoice, mlx-whisper), zero external APIs. The bundled skill guides your agent through install, hotkey wiring, launchd setup and troubleshooting.",
