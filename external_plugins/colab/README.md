@@ -76,7 +76,7 @@ LICENSE                                ← Apache-2.0 full text
 NOTICE.md                              ← legal notice (non-affiliation, attribution)
 CHANGELOG.md                           ← version history
 colab/
-├── .zcode-plugin/plugin.json          ← plugin manifest (v0.1.1)
+├── .zcode-plugin/plugin.json          ← plugin manifest (v0.1.2)
 ├── .mcp.json                          ← official colab-mcp server definition
 └── skills/
     ├── colab-mcp/SKILL.md             ← browser pairing flow & troubleshooting
