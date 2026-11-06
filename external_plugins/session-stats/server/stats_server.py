@@ -160,9 +160,15 @@ def session_family(main_id: str) -> list[str]:
 
 # 请求行的过滤条件由调用方给（current: session_id IN (...)，today: started_at >= ?）
 
+# decode 窗口下限：部分供应商（如 minimax）的 first_token_at 不可靠——要么 NULL，
+# 要么与 completed_at 几乎相等（实测 26ms 出 627 token → 2.4 万 tok/s）。
+# 窗口 <500ms 的行不参与任何 TPS 计算，宁可少算也不让分母趋零爆表。
+MIN_DECODE_MS = 500
+
 _DECODE_GUARD = (
     "output_tokens > 0 AND first_token_at IS NOT NULL "
-    "AND completed_at IS NOT NULL AND completed_at > first_token_at"
+    "AND completed_at IS NOT NULL AND completed_at > first_token_at "
+    f"AND completed_at - first_token_at >= {MIN_DECODE_MS}"
 )
 
 
@@ -321,10 +327,14 @@ def build_stats(scope: str, session_id: str | None, session_source: str) -> dict
     payload["cache_hit_pct"] = round(min(hit, 100.0), 1) if hit is not None else None
     payload["models"] = models_breakdown(cur, cond, params)
     payload["recent"] = recent_requests(cur, cond, params)
-    # 最近一次完成请求的 TPS（面板/弹窗「实时 TPS」行）
+    # 最近一次完成请求的 TPS（面板/弹窗「实时 TPS」行）。
+    # 复用 _DECODE_GUARD 的窗口下限：脏 fta 行直接跳过，取最近一条窗口可信的请求。
     live = None
     for r in payload["recent"]:
-        if r["done_at"] is not None and r["fta"] is not None and (r["out"] or 0) > 0 and r["done_at"] > r["fta"]:
+        if (
+            r["done_at"] is not None and r["fta"] is not None and (r["out"] or 0) > 0
+            and r["done_at"] - r["fta"] >= MIN_DECODE_MS
+        ):
             live = round(r["out"] * 1000.0 / (r["done_at"] - r["fta"]), 1)
             break
     payload["live_tps"] = live
@@ -527,7 +537,12 @@ class _StatsHandler(BaseHTTPRequestHandler):
         pass  # 静默访问日志
 
 
-def start_http_service() -> None:
+def start_http_service() -> bool:
+    """在本进程内启动 HTTP 数据服务。
+
+    返回 True=本进程已开始服务；False=端口已有健康实例（或启动失败）。
+    常驻服务进程据此退出，避免自动重打补丁时反复拉起空转实例。
+    """
     class _Server(ThreadingHTTPServer):
         # Windows 上 SO_REUSEADDR 会允许重复绑定活跃端口，关闭以靠异常探测单例
         allow_reuse_address = False
@@ -539,13 +554,14 @@ def start_http_service() -> None:
         except OSError:
             if _health_check():
                 log(f"端口 {HTTP_PORT} 已有健康实例，跳过启动")
-                return
+                return False
             time.sleep(0.5)
             continue
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         log(f"数据服务已启动 http://{HTTP_HOST}:{HTTP_PORT}")
-        return
+        return True
     log(f"数据服务启动失败（端口 {HTTP_PORT} 被占用且无健康实例）")
+    return False
 
 
 def main() -> None:

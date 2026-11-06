@@ -241,19 +241,20 @@
   }
 
   /* 实时 TPS：优先取进行中的请求（token/(now-首token)），否则取最近一次完成的请求 */
+  var MIN_DECODE_MS = 500; // decode 窗口下限：脏 fta（≈completed_at）会把分母打到毫秒级，TPS 爆表
   function liveTps(d) {
     if (!d || !d.recent || !d.recent.length) return null;
     var now = d.generated_at;
     var i, r;
     for (i = 0; i < d.recent.length; i++) {
       r = d.recent[i];
-      if (r.done_at == null && r.fta != null && r.out > 0 && now > r.fta) {
+      if (r.done_at == null && r.fta != null && r.out > 0 && now - r.fta >= MIN_DECODE_MS) {
         return { v: r.out * 1000 / (now - r.fta), inflight: true };
       }
     }
     for (i = 0; i < d.recent.length; i++) {
       r = d.recent[i];
-      if (r.done_at != null && r.fta != null && r.out > 0 && r.done_at > r.fta) {
+      if (r.done_at != null && r.fta != null && r.out > 0 && r.done_at - r.fta >= MIN_DECODE_MS) {
         return { v: r.out * 1000 / (r.done_at - r.fta), inflight: false };
       }
     }
