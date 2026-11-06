@@ -2510,6 +2510,13 @@
     "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
+    "name": "autoresearch",
+    "icon": "autoresearch/icon.png",
+    "source": "https://github.com/luochang212/zcode-autoresearch/blob/main/assets/icon.svg",
+    "mimeType": "image/png",
+    "sha256": "1375e75102719077b460f4b6add3b0c49b7d2c506c6700eb102cfdc50a6e7118"
+  },
+  {
     "name": "zcode-site",
     "icon": "zcode-site/icon.png",
     "source": "ZCode authored asset",
