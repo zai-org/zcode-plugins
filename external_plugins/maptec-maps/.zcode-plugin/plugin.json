@@ -1,0 +1,43 @@
+{
+  "name": "maptec-maps",
+  "description": "Maptec MCP integration and skill for place search, geocoding, route planning, distance matrix, map matching, and IP geolocation.",
+  "description_i18n": {
+    "en": "Maptec MCP integration and skill for place search, geocoding, route planning, distance matrix, map matching, and IP geolocation.",
+    "zh-CN": "Maptec MCP 与技能：地点与周边搜索、地理编码、路线规划、距离矩阵、轨迹绑路与 IP 定位。"
+  },
+  "version": "0.1.2",
+  "author": {
+    "name": "Maptec (云图知行)",
+    "url": "https://github.com/maptec-api/agent-plugins"
+  },
+  "homepage": "https://lbs.maptec.com/docs/en-US/mcp/introduction",
+  "repository": "https://github.com/maptec-api/agent-plugins",
+  "license": "MIT",
+  "keywords": [
+    "maptec",
+    "maps",
+    "geocoding",
+    "routing",
+    "places",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "userConfig": {
+    "maptec_api_key": {
+      "type": "string",
+      "title": "Maptec API Key",
+      "description": "Application API key from https://lbs.maptec.com/console/ . Enter the key itself, without Bearer.",
+      "required": true,
+      "sensitive": true
+    }
+  },
+  "mcpServers": {
+    "maptec": {
+      "type": "http",
+      "url": "https://mcp.maptec.com/mcp",
+      "headers": {
+        "Authorization": "${user_config.maptec_api_key}"
+      }
+    }
+  }
+}
