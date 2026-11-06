@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "python",
+            "args": ["${ZCODE_PLUGIN_ROOT}/hooks/write_session.py"],
+            "timeoutMs": 3000,
+            "statusMessage": "session-stats: 记录当前会话 id"
+          }
+        ]
+      }
+    ]
+  }
+}
