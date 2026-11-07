@@ -14,8 +14,8 @@ description: >-
 
 | 参数 | 含义 | 怎么定 |
 |---|---|---|
-| `AGENT_ID` | 本会话的 A2A 身份 | `zcode-<host>-<slug>`（如 zcode-node-2-halle）；新机器首次可先用 mail-send.py 发一封信自建档（exec 即注册） |
-| `BASE` | mailbox 状态层根目录 | WSL 侧 `~/.agents-mailbox`（laptop: /home/halle，desktop: /home/remedy） |
+| `AGENT_ID` | 本会话的 A2A 身份 | `zcode-<host>-<slug>`（如 zcode-host-a-user-a）；新机器首次可先用 mail-send.py 发一封信自建档（exec 即注册） |
+| `BASE` | mailbox 状态层根目录 | WSL 侧 `~/.agents-mailbox`（host-a: /home/user-a，host-b: /home/user-b） |
 | 前缀 | world.run 怎么进 Linux | Windows 侧 ZCode 用 `wsl`；纯 Linux ZCode 会话把 `wsl -e` 三段简化为直接命令 |
 
 ## 第二步：布守望
@@ -43,6 +43,6 @@ description: >-
 
 ## 原理备忘（为什么这样设计）
 
-- `world.run` timeoutMs 无上限 → 单窗可守 4 小时，等待零模型成本；
+- `world.run` timeoutMs 无上限 → 单窗可守约 3.75 小时（内窗 2700×5s，必须给 timeoutMs 留 ≥15 分钟余量——内窗逼近 timeout 会让安静满窗超时熔断整个 run，11-05 实测教训）；
 - `report()` 批量到 run 结束才送达 → 实时性靠 escalation（workflow actor 唯一的中-run 上行通道；它们没有 RespondToCoordinator，那是 Agent 工具的 subagent 才有的）；
 - 出队即 diff：归档后队列排空，下一封必然是新信，不会重读。
