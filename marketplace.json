@@ -1499,6 +1499,44 @@
         "image-to-video",
         "mcp"
       ]
+    },
+    {
+      "name": "craft",
+      "source": "./external_plugins/craft",
+      "displayName": "Craft Connector",
+      "displayName_i18n": {
+        "en": "Craft Connector",
+        "zh-CN": "Craft 连接器"
+      },
+      "description": "Craft Connector: read, search and create notes in Craft (craft.do) and maintain daily notes – via the official Craft API and the craftdocs:// URL scheme.",
+      "description_i18n": {
+        "en": "Craft Connector: read, search and create notes in Craft (craft.do) and maintain daily notes – via the official Craft API and the craftdocs:// URL scheme.",
+        "zh-CN": "Craft 连接器：通过官方 Craft API 和 craftdocs:// URL Scheme 读取、搜索、创建 Craft (craft.do) 笔记并维护每日笔记。"
+      },
+      "version": "0.1.4",
+      "author": {
+        "name": "Deebeli"
+      },
+      "category": "productivity",
+      "keywords": [
+        "craft",
+        "craft.do",
+        "notes",
+        "daily-notes",
+        "knowledge-base"
+      ],
+      "examplePrompts": [
+        "Add an entry to my Craft daily note summarizing today's progress",
+        "Search my Craft notes for the onboarding checklist and quote the exact steps",
+        "Create a Craft note with the three takeaways from this conversation"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "在我的 Craft 每日笔记中添加一条，总结今天的进展",
+          "在我的 Craft 笔记中搜索入职清单，并逐字引用具体步骤",
+          "把这次对话的三个要点整理成一条新的 Craft 笔记"
+        ]
+      }
     }
   ]
 }

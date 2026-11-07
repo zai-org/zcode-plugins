@@ -1,0 +1,19 @@
+{
+  "name": "craft",
+  "version": "0.1.4",
+  "description": "Craft Connector: read, search and create notes in Craft (craft.do) and maintain daily notes – via the official Craft API and the craftdocs:// URL scheme.",
+  "description_i18n": {
+    "en": "Craft Connector: read, search and create notes in Craft (craft.do) and maintain daily notes – via the official Craft API and the craftdocs:// URL scheme.",
+    "zh-CN": "Craft 连接器：通过官方 Craft API 和 craftdocs:// URL Scheme 读取、搜索、创建 Craft (craft.do) 笔记并维护每日笔记。"
+  },
+  "author": { "name": "Deebeli" },
+  "keywords": [
+    "craft",
+    "craft.do",
+    "notes",
+    "daily-notes",
+    "knowledge-base"
+  ],
+  "skills": "./skills",
+  "commands": "./commands"
+}
