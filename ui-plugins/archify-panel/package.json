@@ -1,6 +1,6 @@
 {
   "name": "archify-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "ZCode 侧栏面板插件：用 Archify 生成并查看架构图、流程图、ERD 等图形。",
