@@ -21,7 +21,7 @@ import {
 } from './store.js';
 
 const PLUGIN_NAME = 'archify-panel';
-const PLUGIN_VERSION = '0.1.0';
+const PLUGIN_VERSION = '0.2.0';
 const SURFACE_ID = 'archify';
 const PANEL_URI = `ui://${SURFACE_ID}/panel.html`;
 const HTML_MIME = 'text/html;profile=mcp-app';

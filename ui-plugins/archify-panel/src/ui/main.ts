@@ -13,7 +13,7 @@ interface DiagramMeta {
 }
 
 const app = new App(
-  { name: 'archify-panel', version: '0.1.0' },
+  { name: 'archify-panel', version: '0.2.0' },
   { tools: { listChanged: true }, availableDisplayModes: ['inline', 'fullscreen'] },
   { autoResize: false },
 );
@@ -49,16 +49,22 @@ const stage = element('iframe', {
   title: 'Archify 图形',
 });
 
-const statusText = element('span', {}, ['就绪']);
-const statusPath = element('span', {});
+const hint = element('div', { class: 'hint' }, ['还没有图形，请让 Agent 生成一张']);
+const toast = element('div', { class: 'toast', role: 'status' });
 
-const status = element('footer', { class: 'status' }, [statusText, statusPath]);
-root.replaceChildren(element('main', { class: 'stage' }, [stage]), status);
+root.replaceChildren(element('main', { class: 'stage' }, [stage, hint, toast]));
 
-function setStatus(message: string, path?: string, isError = false): void {
-  statusText.textContent = message;
-  statusText.className = isError ? 'error' : '';
-  statusPath.textContent = path ?? '';
+const TOAST_MS = 3000;
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** 提示只在出错或导出结果时浮出一小会儿，平时不留常驻栏 */
+function setStatus(message: string, isError = false): void {
+  toast.textContent = message;
+  toast.className = isError ? 'toast error visible' : 'toast visible';
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.className = 'toast';
+  }, TOAST_MS);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -90,20 +96,6 @@ function applyTheme(): void {
   }
 }
 
-function describeGates(gates: Record<string, string>): string {
-  const browser = gates['browser-check'];
-  const degraded = browser === 'skipped';
-  const summary = Object.entries(gates)
-    .map(([name, state]) => `${name}=${state}`)
-    .join('，');
-  return degraded ? `${summary}（未做浏览器校验）` : summary;
-}
-
-function renderDiagramMeta(diagram: DiagramMeta): void {
-  state.diagram = diagram;
-  setStatus(describeGates(diagram.gates), diagram.htmlPath);
-}
-
 async function loadArtifact(diagram: DiagramMeta): Promise<void> {
   const result = await app.readServerResource({ uri: INTERACTIVE_URI(diagram.id) });
   const content = result.contents[0];
@@ -122,14 +114,15 @@ async function loadArtifact(diagram: DiagramMeta): Promise<void> {
 }
 
 async function showDiagram(diagram: DiagramMeta): Promise<void> {
+  state.diagram = diagram;
+  hint.hidden = true;
   try {
-    renderDiagramMeta(diagram);
     await loadArtifact(diagram);
     await sleep(120);
     applyTheme();
     await reportContext();
   } catch (error) {
-    setStatus(`载入失败：${(error as Error).message}`, undefined, true);
+    setStatus(`载入失败：${(error as Error).message}`, true);
   }
 }
 
@@ -170,16 +163,17 @@ async function saveAndOffer(blob: Blob, name: string, mimeType: string): Promise
     });
     const uri = structured.uri as string | undefined;
     const path = structured.path as string | undefined;
-    setStatus(`已导出 ${name}`, path);
+    const where = path ? `（${path}）` : '';
+    setStatus(`已导出 ${name}${where}`);
     if (uri) {
       try {
         await app.downloadFile({ contents: [{ type: 'resource_link', uri, mimeType, name }] });
       } catch {
-        setStatus(`已导出 ${name}（宿主未弹出另存为）`, path);
+        setStatus(`已导出 ${name}${where}，宿主未弹出另存为`);
       }
     }
   } catch (error) {
-    setStatus(`导出失败：${(error as Error).message}`, undefined, true);
+    setStatus(`导出失败：${(error as Error).message}`, true);
   }
 }
 
@@ -240,7 +234,7 @@ async function boot(): Promise<void> {
   try {
     await app.connect(new PostMessageTransport(window.parent, window.parent));
   } catch (error) {
-    setStatus(`连接宿主失败：${(error as Error).message}`, undefined, true);
+    setStatus(`连接宿主失败：${(error as Error).message}`, true);
     return;
   }
   const theme = app.getHostContext()?.theme;
@@ -254,10 +248,10 @@ async function boot(): Promise<void> {
     if (diagram) {
       await showDiagram(diagram);
     } else {
-      setStatus('还没有图形，请让 Agent 生成一张');
+      hint.hidden = false;
     }
   } catch (error) {
-    setStatus(`读取当前图失败：${(error as Error).message}`, undefined, true);
+    setStatus(`读取当前图失败：${(error as Error).message}`, true);
   }
 }
 

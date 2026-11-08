@@ -81,7 +81,7 @@ assets/icon.png               插件标识
 
 ## 工作原理
 
-Agent 调用 `render_diagram`，服务端跑 Archify 的 `finalize`（校验、交付、静态检查、浏览器测量四道关卡），产物落盘到工作区 `.archify-panel/` 并登记为当前图。侧栏面板通过 MCP 资源读取产物 HTML，以完整交互模式塞进内层 iframe 的 `srcdoc`；面板薄壳不渲染任何工具栏，只保留底部状态栏。
+Agent 调用 `render_diagram`，服务端跑 Archify 的 `finalize`（校验、交付、静态检查、浏览器测量四道关卡），产物落盘到工作区 `.archify-panel/` 并登记为当前图。侧栏面板通过 MCP 资源读取产物 HTML，以完整交互模式塞进内层 iframe 的 `srcdoc`；面板薄壳不渲染任何工具栏，也不保留常驻状态栏，只有出错或导出结果会浮出一小条提示。
 
 导出走图形自带的「导出」菜单。沙箱 iframe 里浏览器会拦截原生下载，所以面板常驻一条导出桥接：截获产物导出产生的二进制，经 `save_export` 落到工作区 `.archify-panel/exports/`，并请求宿主弹出另存为。
 

@@ -87,14 +87,21 @@ frame.addEventListener('load', () => {
       const innerWin = innerDoc ? innerDoc.defaultView : null;
       const hasArchify = !!(innerWin && innerWin.Archify);
       const theme = innerDoc ? innerDoc.documentElement.getAttribute('data-theme') : null;
+      const statusBar = doc.querySelector('footer, .status') ? 'present' : 'absent';
       document.title = 'PART1|innerLoaded=' + (innerDoc ? 'yes' : 'no') +
-        '|archify=' + hasArchify + '|theme=' + theme;
+        '|archify=' + hasArchify + '|theme=' + theme + '|statusBar=' + statusBar;
       if (!hasArchify) throw new Error('产物未暴露 Archify API');
+      if (statusBar === 'present') throw new Error('面板仍渲染底部状态栏');
       innerWin.Archify.exportMenu.run('png');
-      await new Promise((r) => setTimeout(r, 12000));
-      const afterPng = doc.querySelector('.status span')?.textContent || '';
+      let afterPng = '';
+      for (let i = 0; i < 60; i += 1) {
+        await new Promise((r) => setTimeout(r, 200));
+        afterPng = doc.querySelector('.toast')?.textContent || '';
+        if (afterPng) break;
+      }
       document.title = 'RESULT|innerLoaded=' + (innerDoc ? 'yes' : 'no') +
         '|archify=' + hasArchify + '|theme=' + theme +
+        '|statusBar=' + statusBar +
         '|png=' + afterPng +
         '|events=' + events.join(' ; ');
     } catch (error) {

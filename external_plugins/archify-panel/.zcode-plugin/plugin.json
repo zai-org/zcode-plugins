@@ -1,6 +1,6 @@
 {
   "name": "archify-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "在 ZCode 侧栏生成并查看 Archify 架构图、流程图、ERD 等图形，可在面板里导出 PNG、SVG 与分享卡片。",
   "description_i18n": {
     "en": "Generate and view Archify architecture, workflow, ERD and other diagrams in the ZCode side panel, with PNG, SVG and share-card export.",

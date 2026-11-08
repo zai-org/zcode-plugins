@@ -46,6 +46,7 @@ body {
 }
 
 .stage {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -59,23 +60,43 @@ body {
   background: var(--panel-bg);
 }
 
-.status {
-  border-top: 1px solid var(--panel-border);
-  padding: 5px 10px;
-  color: var(--panel-muted);
-  font-size: 12px;
+.hint {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  justify-content: space-between;
+  justify-content: center;
+  color: var(--panel-muted);
+  font-size: 13px;
+  pointer-events: none;
 }
 
-.status .error {
-  color: var(--panel-danger);
+.hint[hidden] {
+  display: none;
 }
 
-.hint {
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel-surface);
   color: var(--panel-muted);
   font-size: 12px;
-  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+.toast.error {
+  color: var(--panel-danger);
+  border-color: var(--panel-danger);
 }

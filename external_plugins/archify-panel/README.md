@@ -81,7 +81,7 @@ Source (`src/`, `test/` and build scripts) lives in `ui-plugins/archify-panel/` 
 
 ## How it works
 
-The agent calls `render_diagram`; the server runs Archify's `finalize` pipeline (validation, delivery, static checks, browser measurement) and writes the artifact to the workspace `.archify-panel/`, registering it as the current diagram. The side panel reads the artifact HTML via an MCP resource and embeds it in full-interaction mode inside an inner iframe `srcdoc`; the shell renders no toolbar of its own, only a bottom status bar.
+The agent calls `render_diagram`; the server runs Archify's `finalize` pipeline (validation, delivery, static checks, browser measurement) and writes the artifact to the workspace `.archify-panel/`, registering it as the current diagram. The side panel reads the artifact HTML via an MCP resource and embeds it in full-interaction mode inside an inner iframe `srcdoc`; the shell renders no toolbar and keeps no status bar, surfacing only a brief toast on errors and export results.
 
 Exports go through the diagram's own "Export" menu. Sandboxed iframes block native downloads, so the panel keeps a permanent export bridge: it intercepts the binary export output, saves it to `.archify-panel/exports/` via `save_export`, and asks the host to open a save dialog.
 
