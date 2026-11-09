@@ -1,0 +1,13 @@
+--- a/crates/engine/src/cmd/file.rs
++++ b/crates/engine/src/cmd/file.rs
+@@ -263,9 +263,7 @@
+     }
+     #[cfg(target_arch = "wasm32")]
+     {
+-        let name = file_name(path);
+-        let deliver = deliver().ok_or_else(|| bad("save", "saving files is not available in this build; use document.bytes"))?;
+-        deliver(&name, "application/octet-stream", bytes).map_err(|e| bad("save", format!("{name}: {e}")))
++        crate::craft_fs::write(path,bytes).map_err(|e|bad("save",e.to_string()))
+     }
+ }
+ 

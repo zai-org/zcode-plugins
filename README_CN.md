@@ -11,12 +11,14 @@
 - [贡献指南](./CONTRIBUTING_CN.md)（[English](./CONTRIBUTING.md)）
 - [分发格式](./docs/distribution_CN.md)（[English](./docs/distribution.md)）
 - [插件开发教程](./docs/PLUGIN_DEVELOPMENT_CN.md)（[English](./docs/PLUGIN_DEVELOPMENT.md)）
+- [UI Plugin：能力、API 与调试](./UI_PLUGIN.md)（重点示例：Excalidraw）
 
 ## 插件列表
 
 | 插件 | 分类 | 说明 |
 | --- | --- | --- |
 | [**cloudbase-skills**](./plugins/cloudbase-skills) | `developer-tools` | 腾讯云 CloudBase 开发技能与 MCP 集成，覆盖 Web、小程序、数据库、云函数、云托管、云存储和 AI 项目。 |
+| [**blender**](./plugins/blender) | `productivity` | Blender 官方 Lab MCP 集成（仅 MCP，无 UI 面板）：检查并修改场景、执行 bpy、检索文档、截图和渲染。 |
 | [**mimosa**](./plugins/mimosa) | `developer-tools` | 本地优先的代码安全防线，提供写入前 Hook、复查与 Git 门禁、安全命令和可选密封深扫。 |
 | [**github**](./plugins/github) | `developer-tools` | 基于 GitHub CLI 的工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库和 Codespaces。 |
 | [**gitlab**](./plugins/gitlab) | `developer-tools` | 基于 `glab` 的 GitLab 工作流，覆盖 MR、Issue、CI/CD、仓库、Release 和 API，并支持自托管实例。 |
@@ -25,6 +27,28 @@
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | 钉钉 Workspace CLI 工作流：OAuth/设备授权、验证组织账号，并按需安装上游 Skills。 |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | 企业微信 CLI 工作流：覆盖消息、文档、表格、邮件、日历、会议、通讯录和待办，并支持扫码授权与状态检查。 |
 | [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
+
+### UI 插件
+
+Excalidraw、OpenPencil 和 9 个 Craft 插件作为社区插件收录于 [`external_plugins/`](./external_plugins/)，由 `zcoder` 维护。
+
+- `excalidraw` `0.2.3`: 让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。
+- `openpencil` `0.3.2`: 在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，Agent 通过设计工具协同修改、引用选区并生成代码。
+- `zcode-mcp-app-dev` `0.1.1`: 使用官方 SDK 开发 ZCode MCP App，附宿主扩展约定与独立构建指引。
+
+- `photocraft` `0.2.3`：PhotoCraft 图像编辑。
+- `vectorcraft` `0.2.3`：VectorCraft 矢量绘图。
+- `pdfcraft` `0.2.3`：PdfCraft PDF 编辑。
+- `designcraft` `0.2.3`：DesignCraft 页面排版。
+- `wordcraft` `0.2.3`：WordCraft 文字处理。
+- `gridcraft` `0.2.3`：GridCraft 电子表格。
+- `deckcraft` `0.2.3`：DeckCraft 演示文稿。
+- `cadcraft` `0.2.3`：CADCraft CAD 绘图。
+- `soundcraft` `0.2.3`：SoundCraft 音频编辑。
+
+这 9 个 Craft 插件嵌入固定源码版本编译的 Trunk/WASM 编辑器，支持工作区文件导入、保存，并将全部 334 个上游 MCP 工具定义接入当前编辑器。原生系统专属功能仍受 Web 平台限制。构建来源、限制与验证方法见 [共享适配层说明](./ui-plugins/craft-runtime/README.md)。
+
+UI 插件的运行产物（`plugins/<name>/dist/` / `external_plugins/<name>/dist/`）属于构建输出，不提交到 Git。发布流水线从 `ui-plugins/` 源码构建并发布 ZIP；仅靠 Git checkout 无法安装需要编译的 UI 插件。源码开发需要 Node.js 24+ 和 pnpm 10.33.2：运行 `pnpm install --frozen-lockfile` 和 `pnpm build` 后，注册 `dist/local-marketplace`。修改源码或版本后重新构建即可。
 
 ### 金融插件
 
@@ -65,6 +89,12 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 
 ZCode 已内置官方插件市场。打开插件管理器，选择需要的插件并直接安装即可。
 
+### 从源码测试插件
+
+执行 `pnpm install --frozen-lockfile` 和 `pnpm build`，在 **插件市场 → 新增** 中添加 `dist/local-marketplace` 的绝对路径，再按需安装、启用插件。生成的来源包含根 `marketplace.json` 中全部条目，包括自己新增的插件，脚本没有固定插件名单。
+
+普通插件和 UI 插件共用注册、安装和更新流程。修改后重新构建、刷新本地来源，再重新安装选中的插件。构建或启动宿主 `pnpm dev:desktop` 都不会自动安装插件。CLI 命令和检查步骤见[现有开发教程](docs/PLUGIN_DEVELOPMENT_CN.md#18-在客户端本地测试)，编译与资源打包见[构建约定](docs/MCP_APP_BUILD.md)。
+
 ## 社区
 
 插件用着有问题，或者自己在做插件想找人聊聊？扫码加入 ZCode 插件市场开发者群 —— 我们在群里答疑、同步进展、发布市场更新。
@@ -79,7 +109,7 @@ ZCode 已内置官方插件市场。打开插件管理器，选择需要的插�
 
 欢迎社区开发者参与贡献：
 
-1. 将 [`plugins/example-plugin/`](./plugins/example-plugin) 复制到 `plugins/<你的插件名>/`，并阅读[插件开发教程](./docs/PLUGIN_DEVELOPMENT_CN.md)。
+1. 将 [`plugins/example-plugin/`](./plugins/example-plugin) 复制到 `external_plugins/<你的插件名>/`，并阅读[插件开发教程](./docs/PLUGIN_DEVELOPMENT_CN.md)。
 2. 在 [`marketplace.json`](./marketplace.json) 中注册插件并填写分类。
 3. 提供语义一致的中英文说明。
 4. 在本地运行检查：
@@ -89,7 +119,7 @@ python3 scripts/validate.py
 python3 scripts/build_dist.py
 ```
 
-5. 提交 GitHub Pull Request，并完成贡献自查清单。
+5. 提交 GitHub Pull Request，并完成贡献自查清单。**必须在 PR 模板中选择 UI Plugin 或普通插件，并填写涉及的插件名称。** 仅仓库级改动可选“不适用”，判断规则见[插件类型声明](CONTRIBUTING_CN.md#声明插件类型必填)。
 
 维护者会从质量、安全性、兼容性和许可证等方面审核提交。被接受的改动将进入官方发布流程，发布完成后会在 Pull Request 中同步结果。
 
@@ -98,3 +128,7 @@ python3 scripts/build_dist.py
 ## 许可证
 
 Apache License 2.0
+
+## MCP Apps
+
+交互插件源码位于 `ui-plugins/`，安装目录位于 `plugins/` 或 `external_plugins/`。构建与验证见 [MCP App 构建说明](docs/MCP_APP_BUILD.md)；可选的 `zcode-mcp-app-dev` skill 提供官方 SDK 开发指引和 ZCode 扩展示例，不是运行依赖。

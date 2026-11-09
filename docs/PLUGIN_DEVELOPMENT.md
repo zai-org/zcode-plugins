@@ -13,12 +13,13 @@ This is an executable tutorial for developers and Agents. It takes you from the 
 
 ### 1.1 Human quick path
 
-1. Copy `plugins/example-plugin/` to `plugins/<your-plugin-name>/`.
+1. Copy `plugins/example-plugin/` to `external_plugins/<your-plugin-name>/`.
 2. Edit `.zcode-plugin/plugin.json` so `name`, `version`, and the description reflect the real capability.
 3. Keep the components you need and delete unused samples. Leave at least one command, skill, hook, agent, or MCP server.
 4. Write equivalent `README.md` and `README_CN.md` files covering purpose, dependencies, permissions, network access, and side effects.
 5. Register the plugin in the root `marketplace.json`. Keep the registration's `name`, `version`, description, and category aligned with the manifest.
 6. Run validation, build the distribution, and smoke-test the main capability.
+7. Before requesting PR review, declare **UI Plugin** or **Standard plugin** and the affected plugin names in the PR template. Follow the [required classification rules](../CONTRIBUTING.md#declare-the-plugin-type-required).
 
 ### 1.2 Agent execution path
 
@@ -81,7 +82,7 @@ The smallest manifest only needs `name`; all other fields are optional:
 
 `name` must start with a lowercase letter or number and may contain `.`, `_`, and `-`, with 1–128 characters. `commands`, `skills`, `hooks`, `mcpServers`, and `agents` may be directory names, path arrays, or inline objects. Sensitive configuration values can be referenced from MCP declarations as `${user_config.key}`.
 
-### 1.7 The five component types
+### 1.7 Plugin components
 
 | Component | Format and location |
 |-|-|
@@ -90,16 +91,39 @@ The smallest manifest only needs `name`; all other fields are optional:
 | **Sub-agent** | `agents/*.md`; frontmatter requires `name` and `description`, and the body is its system prompt. |
 | **Hooks** | `hooks/hooks.json`; can run at seven built-in events and follow the plugin's enabled state. |
 | **MCP server** | Root `.mcp.json` or manifest `mcpServers`; server keys are automatically namespaced. |
+| **UI surface** | Optional `ui.surfaces` in the same manifest. Each surface names a declared MCP server and its `ui://` page resource. It uses the ordinary plugin lifecycle. |
 
 ### 1.8 Test a plugin locally
 
-1. Create a local `marketplace.json` whose `plugins[].source` points to the plugin directory with a relative path.
-2. In the client, open **Settings → Plugin management → Discover**, click **+**, and add the local marketplace path.
-3. Install and enable the plugin, trigger each changed component in a session, and repeat after refreshing the source.
+Ordinary plugins and UI plugins share this workflow. A UI surface adds a page to a plugin; it does not create another registration or installation mechanism.
+
+1. Put the installable plugin in `plugins/<name>` and add it to the root `marketplace.json`. Keep marketplace, manifest, and source package versions aligned. For a compiled plugin, put sources in `ui-plugins/<name>` and declare `scripts.build` in its `package.json`. Optional `scripts.stage` copies extra runtime resources to `ZCODE_PLUGIN_INSTALL_DIR`. See the [build contract](MCP_APP_BUILD.md).
+2. Run `pnpm install --frozen-lockfile` and `pnpm build`. The build discovers registered source packages and generates `dist/local-marketplace` from **all** root catalogue entries. Ordinary plugins need no source package or build script. Adding your own plugin requires no runner changes.
+3. In ZCode, open **Plugin Marketplace → New**, add the absolute path to `dist/local-marketplace`, then install and enable only the plugins you want to test. The generated source is named `zcode-plugins-local` in this repository. The root marketplace uses a reserved official name, so add the generated copy instead.
+4. After changes, rebuild, refresh that local source, and reinstall the selected plugin. Refreshing a source updates its catalogue; installed plugins are separate copies. Reinstall also copies local edits when the development version is unchanged. Restart ZCode and verify in a new session. Published versions must still be bumped.
+
+Equivalent CLI steps, from this repository (replace `my-plugin` with your manifest name):
+
+```sh
+pnpm build
+zcode plugins marketplace add "$PWD/dist/local-marketplace" --scope user
+zcode plugins install my-plugin@zcode-plugins-local --scope user
+zcode plugins enable my-plugin@zcode-plugins-local --scope user
+zcode plugins list --json
+
+# After editing: refresh the catalogue and reinstall only the chosen plugin.
+pnpm build
+zcode plugins marketplace update zcode-plugins-local
+zcode plugins install my-plugin@zcode-plugins-local --scope user
+```
+
+Use the same application profile for the CLI and desktop. If using the main application's checkout, its built CLI is `node apps/zcode-cli/packages/cli/dist/zcode.cjs` in place of `zcode`; resolve paths from the appropriate repository. `pnpm dev:desktop` launches the host; it does not register, install, or enable plugins. Check marketplace registration, installed records, enabled state, and the actual session before claiming availability.
+
+The local generator never edits installed plugins or user configuration. `pnpm marketplace:local` regenerates the catalogue copy without compiling. If you already registered another local name/path, retain it with `pnpm marketplace:local --name my-local-plugins --output dist/my-local-plugins` and use that name when refreshing or reinstalling. The `zcode-mcp-app-dev` skill is optional documentation, not a dependency or required installation.
 
 ### 1.9 Distribute a marketplace
 
-Put plugins under `plugins/`, list them in the root `marketplace.json`, and publish the marketplace repository. A teammate can add the repository in the **Discover** page and receive the catalog. Hooks run only when the plugin is installed from an official marketplace or a local directory.
+Put partner/community plugins under `external_plugins/` and officially maintained plugins under `plugins/`, list them in the root `marketplace.json`, and publish the marketplace repository. A teammate can add the repository through **Plugin Marketplace → New** and receive the catalogue, then choose which plugins to install. Hooks run only when the plugin is installed from an official marketplace or a local directory.
 
 The built-in plugins are useful examples: start with a small skill, then add commands, Hooks, and MCP only after the basic path works.
 
@@ -154,6 +178,7 @@ The following tables describe the fields used by the public marketplace and plug
 | `license` |  | License identifier such as `MIT`. |
 | `keywords` |  | Search keyword array. |
 | `commands` / `skills` / `hooks` / `mcpServers` / `agents` |  | Component declarations as paths, path arrays, or inline objects. |
+| `ui.surfaces` |  | Optional page declarations: unique `id`, localized `title`, `server` naming an MCP server, `resourceUri` beginning with `ui://`, optional `icon` and `availability: "session"`. |
 | `dependencies` |  | Other plugin dependencies. |
 | `userConfig` |  | User-configurable values. |
 

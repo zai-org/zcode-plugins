@@ -1,0 +1,58 @@
+--- a/crates/engine/src/cmd/file.rs
++++ b/crates/engine/src/cmd/file.rs
+@@ -174,8 +174,12 @@
+     }
+     #[cfg(target_arch = "wasm32")]
+     {
+-        let _ = (s, path);
+-        Err(EngineError::Other("use file.openBytes on the web".into()))
++        let bytes=crate::craft_fs::read(path).map_err(|e|EngineError::Other(e.to_string()))?;
++        let d=if path.to_ascii_lowercase().ends_with(".idml") {
++            designcraft_idml::import_idml(&bytes).map_err(|e|EngineError::Other(e.to_string()))?
++        } else {from_bytes(&bytes)?};
++        let i=s.add_document(DocState::new(d,Some(path.to_owned())));
++        Ok(json!({"index":i}))
+     }
+ }
+ 
+@@ -246,7 +250,6 @@
+         }
+     }
+     let bytes = to_bytes(&st.doc);
+-    #[cfg(not(target_arch = "wasm32"))]
+     std::fs::write(&path, &bytes).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
+     st.path = Some(path.clone());
+     st.saved_revision = st.revision;
+@@ -266,7 +269,7 @@
+         #[cfg(not(target_arch = "wasm32"))]
+         let b = std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
+         #[cfg(target_arch = "wasm32")]
+-        let b: Vec<u8> = vec![];
++        let b=crate::craft_fs::read(path).map_err(|e|EngineError::Other(e.to_string()))?;
+         let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.into());
+         (b, name, Some(path.to_string()))
+     } else {
+@@ -433,7 +436,7 @@
+     #[cfg(not(target_arch = "wasm32"))]
+     let b = std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
+     #[cfg(target_arch = "wasm32")]
+-    let b: Vec<u8> = vec![];
++    let b=crate::craft_fs::read(path).map_err(|e|EngineError::Other(e.to_string()))?;
+     let name = std::path::Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.into());
+     Ok((b, name, Some(path.to_string())))
+ }
+@@ -656,8 +659,12 @@
+     }
+     #[cfg(target_arch = "wasm32")]
+     {
+-        let _ = (s, path);
+-        Err(EngineError::Other("revert isn't available on the web".into()))
++        let bytes=crate::craft_fs::read(&path).map_err(|e|EngineError::Other(e.to_string()))?;
++        let d=if path.to_ascii_lowercase().ends_with(".idml") {
++            designcraft_idml::import_idml(&bytes).map_err(|e|EngineError::Other(e.to_string()))?
++        } else {from_bytes(&bytes)?};
++        let st=s.doc_mut()?;let mut fresh=DocState::new(d,Some(path.clone()));
++        fresh.uid=st.uid;fresh.revision=st.revision+1;*st=fresh;Ok(json!({"path":path}))
+     }
+ }
+ 

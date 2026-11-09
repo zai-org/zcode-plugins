@@ -13,12 +13,13 @@
 
 ### 1.1 给人：快速路径
 
-1. 复制 `plugins/example-plugin/` 到 `plugins/<你的插件名>/`。
+1. 复制 `plugins/example-plugin/` 到 `external_plugins/<你的插件名>/`。
 2. 修改 `.zcode-plugin/plugin.json`，让 `name`、`version` 和描述反映真实能力。
 3. 保留需要的组件，删除不需要的样例；至少留下一个 command、skill、hook、agent 或 MCP server。
 4. 编写语义一致的 `README.md` 和 `README_CN.md`，说明用途、依赖、权限、网络访问和副作用。
 5. 在根目录 `marketplace.json` 注册插件，并保持注册项与插件清单的 `name`、`version`、描述和分类一致。
 6. 运行校验、构建和主要能力的冒烟测试。
+7. 发起 PR 评审前，必须在 PR 模板中声明 **UI Plugin** 或 **普通插件**，并填写涉及的插件名称，遵循[插件类型必填规则](../CONTRIBUTING_CN.md#声明插件类型必填)。
 
 ### 1.2 给 Agent：执行路径
 
@@ -77,7 +78,7 @@ my-plugin/
 
 `name` 须匹配小写字母/数字开头、含 `. _ -`，1–128 字符。组件字段 `commands/skills/hooks/mcpServers/agents` 可写目录名或内联。敏感配置（sensitive）值可在 MCP 里用 `${user_config.键}` 引用。
 
-### 1.7 五种组件怎么写
+### 1.7 插件组件怎么写
 
 | 组件 | 格式与位置 |
 |-|-|
@@ -86,16 +87,39 @@ my-plugin/
 | **子智能体** | `agents/*.md`，frontmatter 必填 `name`/`description`，正文即其 system prompt。 |
 | **Hooks** | `hooks/hooks.json`，可在 7 个内置时机执行；插件 Hook 随插件启停，详情见第 4 节。 |
 | **MCP 服务** | 根目录 `.mcp.json` 或清单 `mcpServers`，接入外部工具，键名自动加命名空间避免冲突。 |
+| **UI 面板** | 同一清单中可选的 `ui.surfaces`，每项关联已声明的 MCP 服务和 `ui://` 页面资源，沿用普通插件生命周期。 |
 
 ### 1.8 在客户端本地测试
 
-1. 本地建好插件目录，再写一份 `marketplace.json`，`plugins[].source` 用相对路径指向插件目录。
-2. 打开「发现」标签页，点 **+** 填该目录的本地路径添加市场（本地路径需真实存在）。
-3. 点 **获取** 安装、用开关启用，在会话里触发组件验证；改完代码刷新即可。
+普通插件和 UI 插件使用同一流程。UI 只是插件多提供一个页面，不需要另一套注册或安装方式。
+
+1. 安装内容放在 `plugins/<name>`，登记到根 `marketplace.json`，保持市场、安装清单和源码包版本一致。需要编译的插件在 `ui-plugins/<name>/package.json` 声明 `scripts.build`；可选 `scripts.stage` 把额外运行资源复制到 `ZCODE_PLUGIN_INSTALL_DIR`。详见[构建约定](MCP_APP_BUILD.md)。
+2. 执行 `pnpm install --frozen-lockfile`、`pnpm build`。构建自动发现已登记的源码包，并把根清单中的**全部条目**生成到 `dist/local-marketplace`。普通插件不需要源码包或构建脚本，新增自己的插件也不需要修改根脚本。
+3. 在 ZCode **插件市场 → 新增**，填写 `dist/local-marketplace` 的绝对路径，再选择需要测试的插件安装、启用。本仓库生成的来源名称是 `zcode-plugins-local`；根清单使用官方保留名称，因此添加生成的本地副本。
+4. 修改后重新构建、刷新该本地来源，再重新安装选中的插件。刷新来源只更新目录，已安装插件是单独的副本；重新安装也会复制开发过程中未改版本的内容。重启 ZCode 并打开新会话验证。正式发布仍必须升级版本。
+
+也可以使用同一套 CLI 命令。在本仓库执行，并把 `my-plugin` 替换为清单中的插件名：
+
+```sh
+pnpm build
+zcode plugins marketplace add "$PWD/dist/local-marketplace" --scope user
+zcode plugins install my-plugin@zcode-plugins-local --scope user
+zcode plugins enable my-plugin@zcode-plugins-local --scope user
+zcode plugins list --json
+
+# 修改后刷新目录，只重新安装选中的插件。
+pnpm build
+zcode plugins marketplace update zcode-plugins-local
+zcode plugins install my-plugin@zcode-plugins-local --scope user
+```
+
+CLI 与桌面必须使用同一应用配置。使用主应用源码时，可用构建后的 `node apps/zcode-cli/packages/cli/dist/zcode.cjs` 替代 `zcode`，路径按所在仓库解析。`pnpm dev:desktop` 负责启动宿主，不负责注册、安装或启用插件。确认可用时要检查来源记录、安装记录、启用状态和实际会话。
+
+生成器不修改用户配置或已安装插件。`pnpm marketplace:local` 可以只重新生成本地副本，不编译代码。已经登记其他名称或目录的本地来源时，用 `pnpm marketplace:local --name my-local-plugins --output dist/my-local-plugins` 保留原身份，后续刷新、安装也使用该名称。`zcode-mcp-app-dev` 只是可选开发说明，不是运行依赖，也不要求安装。
 
 ### 1.9 做一个市场分发给团队
 
-把插件放进市场仓库的 `plugins/`，根目录写 `marketplace.json` 列出条目，推到 GitHub。队友在「发现」点 + 填仓库地址即可一次拿到全部插件。源放官方市场或本地目录，Hooks 才会运行。
+把外部维护插件放进市场仓库的 `external_plugins/`，官方维护插件放进 `plugins/`，根目录写 `marketplace.json` 列出条目，推到 GitHub。队友在「插件市场 → 新增」填仓库地址即可获取目录，再自行选择安装哪些插件。源放官方市场或本地目录，Hooks 才会运行。
 
 自带的官方插件是最好的范例（skill-creator 最简，ios-simulator/android-emulator 最完整）。从纯技能插件起步，跑通后再加命令、Hooks、MCP。
 
@@ -152,6 +176,7 @@ my-plugin/
 | `license` |  | 许可证，如 `MIT`。 |
 | `keywords` |  | 关键词数组。 |
 | `commands` / `skills` / `hooks` / `mcpServers` / `agents` |  | 各类组件声明，可写目录路径字符串、路径数组或内联对象。 |
+| `ui.surfaces` |  | 可选页面声明：唯一 `id`、多语言 `title`、已声明 MCP 服务的 `server`、以 `ui://` 开头的 `resourceUri`，以及可选 `icon` 和 `availability: "session"`。 |
 | `dependencies` |  | 依赖的其他插件。 |
 | `userConfig` |  | 用户可配置项（见下表）。 |
 

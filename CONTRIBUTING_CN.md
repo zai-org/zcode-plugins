@@ -14,7 +14,7 @@
 
 每个插件都必须：
 
-- 位于 `plugins/` 下唯一的 kebab-case 目录；
+- 外部团队、合作方和社区新增插件位于 `external_plugins/` 下唯一的 kebab-case 目录；`plugins/` 保留给官方维护插件；
 - 包含 `.zcode-plugin/plugin.json`，并填写 `name`、`description`、`version` 和 `author`；
 - 在根目录 [`marketplace.json`](./marketplace.json) 中注册，且 `name`、`version` 和描述保持一致；
 - 至少提供一种有效组件：command、skill、hook、agent 或 MCP server；
@@ -31,7 +31,8 @@
 2. 复制示例插件，或在本次改动涉及的现有插件中修改：
 
    ```shell
-   cp -R plugins/example-plugin plugins/<你的插件名>
+   mkdir -p external_plugins
+   cp -R plugins/example-plugin external_plugins/<你的插件名>
    ```
 
 3. 更新插件清单、组件文件、两种语言的 README 和根目录市场条目，确保清单与市场条目的版本一致。
@@ -47,6 +48,16 @@
 
 ## Pull Request 自查清单
 
+### 声明插件类型（必填）
+
+每个 PR 在发起评审前都必须填写 [PR 模板](.github/PULL_REQUEST_TEMPLATE.md) 中的 **插件类型**，且只能勾选一项，同时列出涉及插件的清单 `name`：
+
+- **UI Plugin**：涉及的插件提供 MCP Apps 交互页面，包括 `ui.surfaces` 面板或工具的 `_meta.ui.resourceUri` 页面。即使只改该插件的文档或 skill，或者本次新增、移除交互页面，也选择此项。
+- **普通插件（非 UI）**：涉及的插件不提供 MCP Apps 交互页面。仅有 MCP 工具，或 skill 会生成 Gen UI，都不会使其成为 UI Plugin。
+- **不适用**：仅修改仓库级文档、构建或 CI，不涉及可安装插件的内容。
+
+涉及多个插件时，分别列出名称和类型，只要包含 UI Plugin 就选择 UI Plugin。这项声明不替代市场 `category` 分类，也不改变 Conventional Commits 标题要求。评审者批准前必须确认声明完整且准确。
+
 Pull Request 描述中请写清：
 
 - 改动解决的用户问题；
@@ -57,6 +68,7 @@ Pull Request 描述中请写清：
 
 发起评审前确认：
 
+- [ ] 已勾选必填的插件类型，并列出涉及的插件名称；
 - [ ] 插件名唯一且为 kebab-case；
 - [ ] 必需文件和中英文 README 均已提供；
 - [ ] 分类填写正确；

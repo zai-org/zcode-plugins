@@ -1,0 +1,41 @@
+{
+  "name": "@zcode/plugin-openpencil",
+  "version": "0.3.2",
+  "private": true,
+  "description": "在对话侧栏用 OpenPencil 编辑工作区里的 Figma .fig 设计稿，并让 Agent 通过设计工具协同修改。",
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#openpencil/*": "./src/*",
+    "#ui/*": "./ui/*",
+    "#build/*": "./scripts/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && node scripts/check-web.mjs",
+    "test": "vitest run",
+    "stage": "node scripts/stage.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@open-pencil/core": "0.14.0",
+    "@open-pencil/mcp": "0.14.0",
+    "@open-pencil/pen": "0.14.0",
+    "@open-pencil/scene-graph": "0.14.0",
+    "@open-pencil/vue": "0.14.0",
+    "canvaskit-wasm": "0.40.0",
+    "css-tree": "3.2.1",
+    "vue": "3.5.42",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "bun": "1.3.11",
+    "esbuild": "^0.25.0"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

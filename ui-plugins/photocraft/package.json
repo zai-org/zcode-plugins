@@ -1,0 +1,11 @@
+{
+  "name": "@zcode/plugin-photocraft",
+  "version": "0.2.4",
+  "private": true,
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "scripts": {
+    "build": "node ../craft-runtime/build.mjs",
+    "build:web": "node ../craft-runtime/compile.mjs"
+  }
+}

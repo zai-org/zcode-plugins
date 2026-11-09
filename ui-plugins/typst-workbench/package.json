@@ -1,0 +1,39 @@
+{
+  "name": "@zcode/plugin-typst-workbench",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#t/*": "./src/*",
+    "#ui/*": "./ui/*",
+    "#test/*": "./test/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e.mjs",
+    "preview": "node scripts/preview.mjs",
+    "test:setup": "node scripts/setup-e2e.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.0",
+    "pdfjs-dist": "6.3.289",
+    "playwright-core": "1.59.1",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

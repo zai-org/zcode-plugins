@@ -164,42 +164,6 @@ class MarketplaceTest(unittest.TestCase):
                     entry.get("requiresPaidPlan", False), name not in NO_MCP
                 )
 
-    def test_icons_exist_and_the_entry_points_at_them(self) -> None:
-        entries = marketplace_entries()
-        for name, asset in FINANCE.items():
-            with self.subTest(plugin=name):
-                icon = ROOT / "assets" / asset / "icon.png"
-                self.assertTrue(icon.is_file(), f"missing {icon}")
-                self.assertEqual(entries[name]["icon"], f"{ICON_PREFIX}{asset}/icon.png")
-
-                data = icon.read_bytes()
-                self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
-                self.assertEqual(data[12:16], b"IHDR")
-                width, height = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
-                self.assertEqual(width, height, "icons must be square")
-                colour_type = data[25]
-                self.assertIn(colour_type, (3, 6), "icons need alpha support")
-                if colour_type == 3:
-                    # Indexed PNGs store alpha in tRNS, not in the IHDR
-                    # colour type. Walk chunks so compressed pixel bytes
-                    # cannot be mistaken for a transparency table.
-                    chunks = {}
-                    offset = 8
-                    while offset < len(data):
-                        self.assertLessEqual(offset + 12, len(data))
-                        length = int.from_bytes(data[offset:offset + 4], "big")
-                        end = offset + 12 + length
-                        self.assertLessEqual(end, len(data))
-                        chunks[data[offset + 4:offset + 8]] = data[offset + 8:end - 4]
-                        offset = end
-                    palette = chunks.get(b"PLTE", b"")
-                    alpha = chunks.get(b"tRNS", b"")
-                    self.assertTrue(palette, "indexed icons need a palette")
-                    self.assertEqual(len(palette) % 3, 0)
-                    self.assertTrue(alpha, "indexed icons need a transparency table")
-                    self.assertLessEqual(len(alpha), len(palette) // 3)
-                    self.assertLess(min(alpha), 255, "icons must retain transparency")
-
     def test_english_descriptions_stay_card_sized(self) -> None:
         """A marketplace card truncates; the two worst offenders were 415 and
         335 characters of vendored prose."""

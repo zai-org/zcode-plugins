@@ -1,4 +1,5 @@
 import hashlib
+import io
 import json
 import re
 import tempfile
@@ -44,7 +45,6 @@ class GitHubPluginTests(unittest.TestCase):
 
         self.assertEqual(zcode_manifest, claude_manifest)
         self.assertEqual(zcode_manifest["name"], "github")
-        self.assertEqual(zcode_manifest["version"], "0.1.2")
         self.assertEqual(
             zcode_manifest["author"],
             {"name": "Z.ai", "url": "https://z.ai"},
@@ -63,21 +63,22 @@ class GitHubPluginTests(unittest.TestCase):
         self.assertEqual(entry["description"], manifest["description"])
         self.assertEqual(entry["description_i18n"], manifest["description_i18n"])
         self.assertEqual(entry["author"], manifest["author"])
-        self.assertEqual(
-            entry["icon"],
-            "https://cdn-zcode.z.ai/zcode/official-plugin/assets/github/icon.png",
-        )
-        icon = ROOT / "assets" / "github" / "icon.png"
-        self.assertTrue(icon.is_file())
-        self.assertEqual(
-            hashlib.sha256(icon.read_bytes()).hexdigest(),
-            "916da4b4e72d9e80df2b2162ae47d01db372caadaaaad2e3a26339284965a548",
-        )
 
     def test_all_workflow_skills_are_packaged(self) -> None:
         skill_dirs = {
             path.parent.name
             for path in (PLUGIN / "skills").glob("*/SKILL.md")
+        }
+        self.assertEqual(skill_dirs, EXPECTED_SKILLS)
+
+    def test_manifest_declares_packaged_skills_directory(self) -> None:
+        manifest = load_json(PLUGIN / ".zcode-plugin" / "plugin.json")
+
+        # Claude Code rejects component paths that do not start with "./".
+        self.assertEqual(manifest["skills"], "./skills")
+        skill_dirs = {
+            path.parent.name
+            for path in (PLUGIN / manifest["skills"]).glob("*/SKILL.md")
         }
         self.assertEqual(skill_dirs, EXPECTED_SKILLS)
 
@@ -256,6 +257,33 @@ class GitHubPluginTests(unittest.TestCase):
             link.symlink_to(target)
             with self.assertRaises(secret_sync.DotenvError):
                 secret_sync.read_regular_file(str(link))
+
+    def test_secret_sync_rejects_case_insensitive_duplicates_before_submission(self) -> None:
+        secret_sync = load_secret_sync_module()
+        dotenv = "TOKEN=first\ntoken=second\n"
+
+        with self.assertRaisesRegex(secret_sync.DotenvError, "duplicate secret name token"):
+            secret_sync.parse_dotenv(dotenv)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "secrets.env"
+            path.write_text(dotenv, encoding="utf-8")
+            for action in ("preview", "apply"):
+                argv = ["secret_sync.py", action, "--file", str(path)]
+                if action == "apply":
+                    argv.extend([
+                        "--repo", "example/repo",
+                        "--expect-sha256", secret_sync.content_sha256(dotenv),
+                    ])
+                with (
+                    self.subTest(action=action),
+                    mock.patch("sys.argv", argv),
+                    mock.patch("sys.stderr", new_callable=io.StringIO) as stderr,
+                    mock.patch.object(secret_sync.subprocess, "run") as run,
+                ):
+                    self.assertEqual(secret_sync.main(), 2)
+                    self.assertIn("duplicate secret name token", stderr.getvalue())
+                    run.assert_not_called()
 
     def test_secret_sync_digest_binds_preview_to_apply(self) -> None:
         secret_sync = load_secret_sync_module()

@@ -8,10 +8,8 @@ runs in CI too.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
-import struct
 import sys
 import tempfile
 import unittest
@@ -76,7 +74,7 @@ class ManifestTest(unittest.TestCase):
 
         self.assertEqual(zcode, claude)
         self.assertEqual(zcode["name"], "video2code")
-        self.assertEqual(zcode["version"], "0.6.0")
+        self.assertEqual(zcode["version"], "0.6.1")
         self.assertEqual(zcode["license"], "MIT")
         self.assertEqual(zcode["author"], {"name": "Z.ai", "url": "https://z.ai"})
         self.assertEqual(set(zcode["description_i18n"]), {"en", "zh-CN"})
@@ -99,30 +97,6 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(entry["description_i18n"], manifest["description_i18n"])
         self.assertEqual(entry["author"], manifest["author"])
         self.assertEqual(entry["keywords"], manifest["keywords"])
-        self.assertEqual(
-            entry["icon"],
-            "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video2code/icon.png",
-        )
-
-    def test_icon_matches_the_published_asset(self) -> None:
-        """The marketplace entry points at the CDN, but the CDN only serves what
-        the publish job syncs out of assets/. Pin the bytes so a dangling icon
-        URL or an accidental re-render fails here instead of in the client."""
-        icon = ROOT / "assets" / "video2code" / "icon.png"
-        self.assertTrue(icon.is_file())
-        data = icon.read_bytes()
-        self.assertEqual(
-            hashlib.sha256(data).hexdigest(),
-            "d90515535bf9615f848c80f56d234d606be7cc8e513f31b8564d1895298769e1",
-        )
-
-        # Parsed from the IHDR chunk rather than with Pillow: the repository's
-        # checks are stdlib-only and CI installs no packages.
-        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
-        self.assertEqual(data[12:16], b"IHDR")
-        width, height, _depth, colour_type = struct.unpack(">IIBB", data[16:26])
-        self.assertEqual((width, height), (256, 256))  # square, per assets/README.md
-        self.assertEqual(colour_type, 6)               # truecolour + alpha (transparent bg)
 
     def test_mcp_json_matches_manifest_servers(self) -> None:
         manifest = load_json(PLUGIN / ".zcode-plugin" / "plugin.json")

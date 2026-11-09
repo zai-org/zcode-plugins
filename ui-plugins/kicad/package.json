@@ -1,0 +1,25 @@
+{
+  "name": "@zcode/plugin-kicad",
+  "version": "0.6.1",
+  "private": true,
+  "description": "ZCode KiCad plugin: agents design 2-layer boards from a circuit spec with real KiCad 10 libraries, auto-route, DRC and fab export; the side panel shows the 3D render and DRC verdict, and the board opens in the real KiCad PCB Editor for further editing.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs",
+    "test": "node test/static.test.mjs",
+    "test:e2e": "node test/e2e.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "esbuild": "0.25.12",
+    "playwright-core": "1.59.1",
+    "zod": "4.6.5"
+  }
+}

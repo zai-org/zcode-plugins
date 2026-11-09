@@ -1,0 +1,30 @@
+struct Live<'a> { app: &'a mut PdfCraftApp, ctx: &'a egui::Context }
+thread_local! {
+    static AUTOMATION: RefCell<pdfcraft_automation::Automation> = RefCell::new(pdfcraft_automation::Automation::new());
+}
+impl Live<'_> {
+    fn call(&mut self, name: &str, args: &Value) -> Value {
+        let result = AUTOMATION.with(|automation| automation.borrow_mut().craft_call(&mut self.app.session, name, args));
+        self.app.views.retain(|v| self.app.session.get(v.id).is_some());
+        for doc in self.app.session.docs() {
+            if !self.app.views.iter().any(|v| v.id == doc.id) {
+                self.app.views.push(crate::DocView::new(doc.id, &doc.info, self.app.view_defaults));
+                self.app.active = Some(self.app.views.len() - 1);
+            }
+        }
+        if self.app.views.is_empty() { self.app.active = None; }
+        else if self.app.active.is_some_and(|i| i >= self.app.views.len()) { self.app.active = Some(self.app.views.len() - 1); }
+        self.ctx.request_repaint();
+        match result {
+            Ok(content) => {
+                use base64::Engine as _;
+                let content: Vec<Value> = content.into_iter().map(|c| match c {
+                    pdfcraft_automation::Content::Json(value) => json!({"type":"text", "text":value.to_string()}),
+                    pdfcraft_automation::Content::Png { data, .. } => json!({"type":"image", "mimeType":"image/png", "data":base64::engine::general_purpose::STANDARD.encode(data)}),
+                }).collect();
+                json!({"content":content, "isError":false})
+            }
+            Err(e) => error(e),
+        }
+    }
+}

@@ -1,0 +1,33 @@
+--- a/crates/engine/src/cmd/file.rs
++++ b/crates/engine/src/cmd/file.rs
+@@ -82,7 +82,6 @@
+     s.add_document(DocState::new(p, path, title))
+ }
+ 
+-#[cfg(not(target_arch = "wasm32"))]
+ fn open(s: &mut Session, p: &Value) -> Result<Value> {
+     let path = str_param(p, "path").ok_or_else(|| bad("file.open", "missing `path`"))?;
+     let bytes = std::fs::read(path).map_err(|e| EngineError::Other(format!("{path}: {e}")))?;
+@@ -91,10 +90,7 @@
+     let i = add_opened(s, path, native.then(|| path.to_string()), doc);
+     Ok(json!({"document": i, "slides": s.doc()?.doc.slides.len()}))
+ }
+-#[cfg(target_arch = "wasm32")]
+-fn open(_s: &mut Session, _p: &Value) -> Result<Value> {
+-    Err(EngineError::Other("use file.openBytes in the browser".into()))
+-}
++
+ 
+ fn open_bytes(s: &mut Session, p: &Value) -> Result<Value> {
+     let name = str_param(p, "name").unwrap_or("Presentation");
+@@ -175,8 +171,8 @@
+     std::fs::rename(&tmp, path).map_err(|e| EngineError::Other(format!("{path}: {e}")))
+ }
+ #[cfg(target_arch = "wasm32")]
+-fn write_file(_path: &str, _bytes: &[u8]) -> Result<()> {
+-    Err(EngineError::Other("saving to a path is not available in the browser".into()))
++fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
++    crate::craft_fs::write(path,bytes).map_err(|e| EngineError::Other(e.to_string()))
+ }
+ 
+ fn save(s: &mut Session, p: &Value) -> Result<Value> {

@@ -9,6 +9,9 @@
     "name": "Z.ai",
     "url": "https://z.ai"
   },
+  "unlistedPlugins": [
+    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+  ],
   "plugins": [
     {
       "name": "cloudbase-skills",
@@ -22,7 +25,7 @@
       "author": {
         "name": "TencentCloudBase"
       },
-      "icon": "https://docs.cloudbase.net/en/img/favicon.png",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cloudbase-skills/icon.png",
       "category": "developer-tools",
       "keywords": [
         "cloudbase",
@@ -46,7 +49,7 @@
         "en": "Local-first security guardrails for ZCode with pre-write hooks, end-of-turn review, Git gates, commands, a security-scan skill, and an optional MCP server for sealed deep scans.",
         "zh-CN": "面向 ZCode 的本地优先代码安全防线，提供写入前 Hook、任务收尾复查、Git 门禁、命令、安全扫描 Skill，以及用于密封深扫的可选 MCP 服务。"
       },
-      "version": "1.0.3",
+      "version": "1.0.4",
       "author": {
         "name": "Mimosa"
       },
@@ -67,7 +70,7 @@
         "en": "GitHub CLI workflows for commits, pull requests, issues, releases, Actions, repositories, Codespaces, and other GitHub resources.",
         "zh-CN": "基于 GitHub CLI 的 GitHub 工作流，覆盖提交、Pull Request、Issue、Release、Actions、仓库、Codespaces 等资源。"
       },
-      "version": "0.1.2",
+      "version": "0.1.4",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -117,7 +120,7 @@
         "en": "Records WebM through ZCode's built-in Browser Use WebView and converts it to MP4 with ffmpeg for video/URL replication; no Playwright or external Chromium required.",
         "zh-CN": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium"
       },
-      "version": "0.6.0",
+      "version": "0.6.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -130,6 +133,40 @@
         "webapp",
         "motion"
       ]
+    },
+    {
+      "name": "autoresearch",
+      "source": "./external_plugins/autoresearch",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/autoresearch/icon.png",
+      "description": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate. It measures, keeps what works, reverts what doesn't, and repeats. Provides init/run/log experiment tools (MCP), a loop protocol skill, guardrails (frozen benchmark, checks backpressure, memory injection, Stop continuation), and static + live dashboards.",
+      "description_i18n": {
+        "en": "Autonomous experiment loop for ZCode: set a goal, pick a mechanical metric, and let the agent iterate. It measures, keeps what works, reverts what doesn't, and repeats.",
+        "zh-CN": "ZCode 自主实验循环：设定目标与机械度量，让 agent 迭代。每一轮测量、保留有效改动、回滚无效改动，如此往复。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "luochang212",
+        "url": "https://github.com/luochang212"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "autoresearch",
+        "experiment",
+        "optimization",
+        "loop",
+        "benchmark",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Run an experiment loop to make this benchmark faster without breaking the checks",
+        "Which approaches were tried so far, and why were the discarded ones rejected?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "跑一个实验循环，在不破坏正确性检查的前提下把这个基准跑得更快",
+          "到目前为止试过哪些方向？被丢弃的那些为什么被丢弃？"
+        ]
+      }
     },
     {
       "name": "accounting-and-reporting",
@@ -768,6 +805,672 @@
         "sprint",
         "backlog",
         "oauth"
+      ]
+    },
+    {
+      "name": "hyper3d-rodin",
+      "displayName": "Hyper3D Rodin",
+      "displayName_i18n": {
+        "en": "Hyper3D Rodin",
+        "zh-CN": "Hyper3D Rodin"
+      },
+      "description": "Turn text or reference images into 3D models, split generated models into parts, and download assets for your project.",
+      "description_i18n": {
+        "en": "Turn text or reference images into 3D models, split generated models into parts, and download assets for your project.",
+        "zh-CN": "将文字或参考图片生成 3D 模型，把生成的模型拆分为独立部件，并下载到项目中使用。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Deemos",
+        "url": "https://hyper3d.ai"
+      },
+      "homepage": "https://hyper3d.ai",
+      "license": "MIT",
+      "keywords": [
+        "hyper3d",
+        "rodin",
+        "3d",
+        "text-to-3d",
+        "image-to-3d",
+        "bang",
+        "mcp"
+      ],
+      "source": "./plugins/hyper3d-rodin",
+      "category": "游戏/3D",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.png"
+    },
+    {
+      "name": "zcode-mcp-app-dev",
+      "version": "0.1.1",
+      "description": "Develop MCP Apps for ZCode with official SDKs and a small host-extension reference.",
+      "description_i18n": {
+        "en": "Develop MCP Apps for ZCode with official SDKs and a small host-extension reference.",
+        "zh-CN": "使用官方 SDK 开发 ZCode MCP App，附宿主扩展约定与独立构建指引。"
+      },
+      "author": {
+        "name": "ZCode"
+      },
+      "source": "./plugins/zcode-mcp-app-dev",
+      "category": "developer-tools",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/zcode-mcp-app-dev/icon.png"
+    },
+    {
+      "name": "excalidraw",
+      "componentTypes": ["ui"],
+      "displayName": "Excalidraw",
+      "displayName_i18n": {
+        "en": "Excalidraw",
+        "zh-CN": "Excalidraw"
+      },
+      "version": "0.3.4",
+      "source": "./external_plugins/excalidraw",
+      "description": "让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。",
+      "description_i18n": {
+        "en": "Create and edit diagrams with Excalidraw and MCP tools.",
+        "zh-CN": "让 Agent 生成图形，在对话侧栏用 Excalidraw 编辑、引用选区、继续修改并导出。"
+      },
+      "category": "productivity",
+      "author": {
+        "name": "zcoder"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/excalidraw/icon.png"
+    },
+    {
+      "name": "photocraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
+      "source": "./external_plugins/photocraft",
+      "componentTypes": ["ui"],
+      "displayName": "PhotoCraft",
+      "displayName_i18n": {
+        "en": "PhotoCraft",
+        "zh-CN": "PhotoCraft"
+      },
+      "description": "PhotoCraft image editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "PhotoCraft image editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 PhotoCraft 进行图片编辑，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "photocraft"
+      ]
+    },
+    {
+      "name": "vectorcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
+      "source": "./external_plugins/vectorcraft",
+      "componentTypes": ["ui"],
+      "displayName": "VectorCraft",
+      "displayName_i18n": {
+        "en": "VectorCraft",
+        "zh-CN": "VectorCraft"
+      },
+      "description": "VectorCraft vector illustration in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "VectorCraft vector illustration in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 VectorCraft 进行矢量绘图，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "vectorcraft"
+      ]
+    },
+    {
+      "name": "pdfcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
+      "source": "./external_plugins/pdfcraft",
+      "componentTypes": ["ui"],
+      "displayName": "PdfCraft",
+      "displayName_i18n": {
+        "en": "PdfCraft",
+        "zh-CN": "PdfCraft"
+      },
+      "description": "PdfCraft PDF editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "PdfCraft PDF editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 PdfCraft 进行PDF 编辑，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "pdfcraft"
+      ]
+    },
+    {
+      "name": "designcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
+      "source": "./external_plugins/designcraft",
+      "componentTypes": ["ui"],
+      "displayName": "DesignCraft",
+      "displayName_i18n": {
+        "en": "DesignCraft",
+        "zh-CN": "DesignCraft"
+      },
+      "description": "DesignCraft page layout in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "DesignCraft page layout in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 DesignCraft 进行页面排版，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "designcraft"
+      ]
+    },
+    {
+      "name": "wordcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
+      "source": "./external_plugins/wordcraft",
+      "componentTypes": ["ui"],
+      "displayName": "WordCraft",
+      "displayName_i18n": {
+        "en": "WordCraft",
+        "zh-CN": "WordCraft"
+      },
+      "description": "WordCraft word processing in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "WordCraft word processing in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 WordCraft 进行文字处理，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "wordcraft"
+      ]
+    },
+    {
+      "name": "gridcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
+      "source": "./external_plugins/gridcraft",
+      "componentTypes": ["ui"],
+      "displayName": "GridCraft",
+      "displayName_i18n": {
+        "en": "GridCraft",
+        "zh-CN": "GridCraft"
+      },
+      "description": "GridCraft spreadsheets in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "GridCraft spreadsheets in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 GridCraft 进行电子表格，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "gridcraft"
+      ]
+    },
+    {
+      "name": "deckcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
+      "source": "./external_plugins/deckcraft",
+      "componentTypes": ["ui"],
+      "displayName": "DeckCraft",
+      "displayName_i18n": {
+        "en": "DeckCraft",
+        "zh-CN": "DeckCraft"
+      },
+      "description": "DeckCraft presentations in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "DeckCraft presentations in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 DeckCraft 进行演示文稿，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "deckcraft"
+      ]
+    },
+    {
+      "name": "cadcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
+      "source": "./external_plugins/cadcraft",
+      "componentTypes": ["ui"],
+      "displayName": "CADCraft",
+      "displayName_i18n": {
+        "en": "CADCraft",
+        "zh-CN": "CADCraft"
+      },
+      "description": "CADCraft CAD drafting in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "CADCraft CAD drafting in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 CADCraft 进行CAD 绘图，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "cadcraft"
+      ]
+    },
+    {
+      "name": "soundcraft",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
+      "source": "./external_plugins/soundcraft",
+      "componentTypes": ["ui"],
+      "displayName": "SoundCraft",
+      "displayName_i18n": {
+        "en": "SoundCraft",
+        "zh-CN": "SoundCraft"
+      },
+      "description": "SoundCraft audio editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+      "description_i18n": {
+        "en": "SoundCraft audio editing in a ZCode panel, with workspace file opening and host-mediated exports.",
+        "zh-CN": "在 ZCode 面板中使用 SoundCraft 进行音频编辑，支持打开工作区文件和通过宿主保存导出。"
+      },
+      "version": "0.2.4",
+      "author": {
+        "name": "zcoder"
+      },
+      "category": "productivity",
+      "keywords": [
+        "artcraft",
+        "wasm",
+        "ui-plugin",
+        "soundcraft"
+      ]
+    },
+    {
+      "name": "tripo-3d",
+      "source": "./plugins/tripo-3d",
+      "displayName": "Tripo 3D",
+      "displayName_i18n": {
+        "en": "Tripo 3D",
+        "zh-CN": "Tripo 3D"
+      },
+      "description": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
+      "description_i18n": {
+        "en": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
+        "zh-CN": "用文字或图片生成带贴图的 3D 模型，添加骨骼与动画、精简模型面数，导出用于游戏或 3D 打印的素材。需使用 Tripo 国内站账号。"
+      },
+      "version": "0.1.4",
+      "author": {
+        "name": "VAST",
+        "url": "https://www.tripo3d.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/tripo-3d/icon.png",
+      "category": "游戏/3D",
+      "keywords": [
+        "3d",
+        "asset-generation",
+        "game-development",
+        "glb",
+        "fbx",
+        "text-to-3d",
+        "image-to-3d",
+        "3d-printing",
+        "rigging",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Generate a low-poly treasure chest and export it as FBX for Unity",
+        "Turn this concept image into a textured 3D model and export it as GLB",
+        "Make a 3D-printable knight figurine and export STL"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成一个低多边形的宝箱 3D 模型，导出 FBX 给 Unity 用",
+          "把这张概念图变成带贴图的 3D 模型，导出 GLB",
+          "生成一个可 3D 打印的骑士小雕像，导出 STL 文件"
+        ]
+      }
+    },
+    {
+      "name": "kicad",
+      "source": "./external_plugins/kicad",
+      "description": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+      "description_i18n": {
+        "en": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+        "zh-CN": "把 KiCad 10 嵌入对话：Agent 用电路 spec 设计双层板（真实 KiCad 库、自动布线、DRC、Gerber/BOM/贴片坐标），侧栏面板显示 3D 渲染和 DRC 结论；一键在真实的 KiCad PCB Editor 里继续编辑，保存后自动同步回对话。"
+      },
+      "version": "0.6.1",
+      "author": {
+        "name": "冯小平",
+        "url": "https://github.com/fxp"
+      },
+      "category": "developer-tools",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
+      "componentTypes": ["ui"],
+      "displayName": "KiCad",
+      "displayName_i18n": {
+        "en": "KiCad",
+        "zh-CN": "KiCad"
+      },
+      "keywords": [
+        "kicad",
+        "pcb",
+        "electronics",
+        "hardware",
+        "ui"
+      ]
+    },
+    {
+      "name": "jupyter-notebook",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/jupyter-notebook/icon.png",
+      "componentTypes": [
+        "ui"
+      ],
+      "displayName": "Jupyter Notebook",
+      "displayName_i18n": {
+        "en": "Jupyter Notebook",
+        "zh-CN": "Jupyter Notebook"
+      },
+      "version": "0.2.0",
+      "source": "./plugins/jupyter-notebook",
+      "description": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。",
+      "description_i18n": {
+        "en": "Work on Jupyter notebooks in a side panel: connect to a running Jupyter Server or start one for the workspace, and edit and run cells together with the agent.",
+        "zh-CN": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。"
+      },
+      "category": "developer-tools",
+      "author": {
+        "name": "ZCode"
+      }
+    },
+    {
+      "name": "typst-workbench",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/typst-workbench/icon.png",
+      "componentTypes": [
+        "ui"
+      ],
+      "displayName": "Typst Workbench",
+      "displayName_i18n": {
+        "en": "Typst Workbench",
+        "zh-CN": "Typst 工作台"
+      },
+      "version": "0.2.0",
+      "source": "./plugins/typst-workbench",
+      "description": "用你本机的 Typst 在对话侧栏实时预览文档：Agent 改完文件预览即刻更新，查看错误与渲染页面、在预览中标出位置、导出 PDF；你可以选中预览中的文字，连同对应的源码位置发给 Agent。",
+      "description_i18n": {
+        "en": "Live-preview Typst documents in a side panel with the Typst installed on your computer: the preview updates the moment the agent saves a file, the agent checks errors, looks at rendered pages, points at places in the preview and exports PDFs, and you can send selected text to the agent together with its source location.",
+        "zh-CN": "用你本机的 Typst 在对话侧栏实时预览文档：Agent 改完文件预览即刻更新，查看错误与渲染页面、在预览中标出位置、导出 PDF；你可以选中预览中的文字，连同对应的源码位置发给 Agent。"
+      },
+      "category": "productivity",
+      "author": {
+        "name": "ZCode"
+      }
+    },
+    {
+      "name": "zotero",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/zotero/icon.png",
+      "componentTypes": [
+        "ui"
+      ],
+      "displayName": "Zotero",
+      "displayName_i18n": {
+        "en": "Zotero",
+        "zh-CN": "Zotero"
+      },
+      "version": "0.2.1",
+      "source": "./plugins/zotero",
+      "description": "在对话侧栏使用你的 Zotero 文库：搜索与阅读论文和你的高亮，Agent 在 PDF 中标出依据、生成引用与 .bib 文件，并可导入论文、写笔记、整理分类。",
+      "description_i18n": {
+        "en": "Work with your Zotero library in a side panel: search and read papers and your highlights, let the agent highlight evidence in PDFs, cite and keep a .bib file, and import papers, write notes and organise collections.",
+        "zh-CN": "在对话侧栏使用你的 Zotero 文库：搜索与阅读论文和你的高亮，Agent 在 PDF 中标出依据、生成引用与 .bib 文件，并可导入论文、写笔记、整理分类。"
+      },
+      "category": "productivity",
+      "author": {
+        "name": "ZCode"
+      }
+    },
+    {
+      "name": "unreal-engine",
+      "source": "./plugins/unreal-engine",
+      "displayName": "Unreal Engine",
+      "description": "Build and edit Unreal Engine levels, adjust scene actors, and create and debug Blueprint logic for game prototypes.",
+      "description_i18n": {
+        "zh-CN": "在 Unreal Engine 中搭建和编辑关卡、调整场景物体，创建与调试蓝图逻辑，制作游戏原型。",
+        "en": "Build and edit Unreal Engine levels, adjust scene actors, and create and debug Blueprint logic for game prototypes."
+      },
+      "version": "0.1.3",
+      "author": {
+        "name": "Z.ai"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unreal-engine/icon.png",
+      "category": "游戏/3D",
+      "keywords": [
+        "unreal-engine",
+        "ue",
+        "mcp",
+        "game-development"
+      ]
+    },
+    {
+      "name": "anet",
+      "displayName": "AgentNetwork (anet)",
+      "displayName_i18n": {
+        "en": "AgentNetwork (anet)",
+        "zh-CN": "AgentNetwork（anet）"
+      },
+      "source": "./external_plugins/anet",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/anet/icon.png",
+      "description": "Delegate tasks to other AI agents over A2A through a local AgentNetwork (anet) node: find agents, send and track end-to-end encrypted tasks, settle priced skills within operator limits, and answer tasks sent to this node.",
+      "description_i18n": {
+        "en": "Delegate tasks to other AI agents over A2A through a local AgentNetwork (anet) node: find agents, send and track end-to-end encrypted tasks, settle priced skills within operator limits, and answer tasks sent to this node.",
+        "zh-CN": "通过本机 AgentNetwork（anet）节点经 A2A 协议把任务交给其他 AI 智能体：发现智能体，发送并跟踪端到端加密的任务，在运营者设定的额度内支付付费技能，并答复其他智能体发给本节点的任务。"
+      },
+      "version": "0.1.3",
+      "author": {
+        "name": "Agent Network Research",
+        "url": "https://agentnetwork.org.cn"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "anet",
+        "agentnetwork",
+        "a2a",
+        "agent-to-agent",
+        "mcp",
+        "x402",
+        "multi-agent"
+      ]
+    },
+    {
+      "name": "ruic-card",
+      "source": "./external_plugins/ruic-card",
+      "description": "Holographic collectible-card generator: layered artwork + Blender + Three.js, in two routes - paint the four layers from a description or reference image, or derive them from a photo you already have (rembg cutout, optional watermark removal, animation render and MP4 / WeChat-sized GIF deliverables). Outputs an interactive parallax card website plus an editable card.blend project.",
+      "description_i18n": {
+        "en": "Holographic collectible-card generator: layered artwork + Blender + Three.js, in two routes - paint the four layers from a description or reference image, or derive them from a photo you already have (rembg cutout, optional watermark removal, animation render and MP4 / WeChat-sized GIF deliverables). Outputs an interactive parallax card website plus an editable card.blend project.",
+        "zh-CN": "全息闪卡生成器：分层画稿 + Blender + Three.js，两条路线——用描述或参考图绘制四层图，或直接把已有照片切成四层（rembg 抠图、可选去水印，附动画渲染与 MP4 / 微信动图交付）。产出可交互的 3D 视差闪卡网页与可编辑的 card.blend 工程。"
+      },
+      "version": "1.1.1",
+      "author": {
+        "name": "liuzhiqiang23",
+        "url": "https://github.com/liuzhiqiang23"
+      },
+      "license": "MIT",
+      "category": "游戏/3D",
+      "keywords": [
+        "holographic",
+        "card",
+        "blender",
+        "threejs",
+        "parallax",
+        "creative",
+        "photo",
+        "rembg",
+        "watermark",
+        "video"
+      ]
+    },
+    {
+      "name": "libtv-cli",
+      "displayName": "LibTV CLI",
+      "displayName_i18n": {
+        "en": "LibTV CLI",
+        "zh-CN": "LibTV CLI"
+      },
+      "source": "./plugins/libtv-cli",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/libtv-cli/icon.png",
+      "description": "Official LibTV CLI skill for video creation canvases, workspaces, nodes, models, uploads, and generation workflows.",
+      "description_i18n": {
+        "en": "Official LibTV CLI skill for video creation canvases, workspaces, nodes, models, uploads, and generation workflows.",
+        "zh-CN": "LibTV 官方 CLI 技能，支持视频创作画布、工作区、节点、模型、素材上传与生成工作流。"
+      },
+      "version": "0.2.0",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "keywords": [
+        "libtv-cli",
+        "cli",
+        "skills"
+      ],
+      "category": "productivity"
+    },
+    {
+      "name": "godot",
+      "version": "0.4.0",
+      "description": "Develop games with the official Godot CLI and show each iteration in the original desktop editor.",
+      "description_i18n": {
+        "en": "Develop games with the official Godot CLI and show each iteration in the original desktop editor.",
+        "zh-CN": "使用官方 Godot CLI 开发游戏，在原版桌面编辑器中查看每轮场景与运行效果。"
+      },
+      "author": {
+        "name": "ZCode"
+      },
+      "source": "./plugins/godot",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/godot/icon.png",
+      "displayName": "Godot",
+      "displayName_i18n": {
+        "en": "Godot",
+        "zh-CN": "Godot"
+      },
+      "category": "游戏/3D",
+      "keywords": [
+        "godot",
+        "godot-cli",
+        "game",
+        "3d",
+        "gdscript",
+        "native"
+      ]
+    },
+    {
+      "name": "blender",
+      "displayName": "Blender",
+      "displayName_i18n": {
+        "en": "Blender",
+        "zh-CN": "Blender"
+      },
+      "source": "./plugins/blender",
+      "description": "Use the official Blender CLI to install or locate Blender, model in visible desktop iterations, and inspect images before refining the same project.",
+      "description_i18n": {
+        "en": "Use the official Blender CLI to install or locate Blender, model in visible desktop iterations, and inspect images before refining the same project.",
+        "zh-CN": "引导安装和使用官方 Blender CLI，逐轮打开界面建模，实际看图后调整同一项目。"
+      },
+      "version": "0.4.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "homepage": "https://www.blender.org",
+      "repository": "https://github.com/blender/blender",
+      "license": "GPL-3.0-or-later",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/blender/icon.png",
+      "category": "游戏/3D",
+      "keywords": [
+        "blender",
+        "blender-cli",
+        "3d",
+        "render",
+        "bpy",
+        "gltf",
+        "batch",
+        "automation"
+      ]
+    },
+    {
+      "name": "unity",
+      "version": "0.1.5",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unity/icon.png",
+      "description": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
+      "description_i18n": {
+        "en": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
+        "zh-CN": "在 Unity 中搭建游戏场景、编辑物体和资源、编写 C# 脚本，运行并调试游戏原型。"
+      },
+      "author": {
+        "name": "Z.ai"
+      },
+      "source": "./plugins/unity",
+      "category": "游戏/3D",
+      "keywords": [
+        "unity",
+        "game-development",
+        "unity-cli",
+        "skills"
+      ]
+    },
+    {
+      "name": "jev-decisions",
+      "source": "./external_plugins/jev-decisions",
+      "description": "Calibrated judgment tools for ZCode agents via the community jev-mcp server: verify claims against evidence, screen untrusted text, classify, decide, and gate task completion. Ships a skill that teaches when to reach for a judgment tool instead of answering directly.",
+      "description_i18n": {
+        "en": "Calibrated judgment tools for ZCode agents via the community jev-mcp server: verify claims against evidence, screen untrusted text, classify, decide, and gate task completion. Ships a skill that teaches when to reach for a judgment tool instead of answering directly.",
+        "zh-CN": "通过社区版 jev-mcp 服务为 ZCode 智能体提供校准判断工具：对照证据核实结论、筛查不可信文本、批量分类、多候选择优、任务完成门禁。内置一个 Skill，教会智能体何时应调用判断工具而不是直接凭阅读作答。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "kittimzhe",
+        "url": "https://github.com/kittimzhe"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "jev",
+        "judgment",
+        "decision",
+        "guardrails",
+        "mcp",
+        "verification"
       ]
     }
   ]

@@ -1,0 +1,382 @@
+/*
+ * 设置页组件：要求清单、交给 Agent、已交给 Agent、手动安装。
+ * 颜色与尺寸取 --su-*，由各插件的 panel.css 映射到自己的 token（随主题切换）。
+ */
+
+/* ---------- 要求清单 ---------- */
+.req > .label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.setup .label .live {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 400;
+  color: var(--su-fg3);
+}
+.setup .label .check-again {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: 400;
+  color: var(--su-fg2);
+  cursor: pointer;
+}
+.setup .label .check-again:hover:not(:disabled) {
+  color: var(--su-fg);
+}
+.req .row {
+  gap: 12px;
+}
+.req .row .t {
+  line-height: 20px;
+}
+.req .row .d {
+  font-size: var(--su-text-sm);
+  line-height: 16px;
+  color: var(--su-fg3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.req .row .d.mono {
+  font-family: var(--su-mono);
+  font-size: calc(var(--su-text-sm) - 0.5px);
+}
+.req .row.dim .t {
+  color: var(--su-fg2);
+}
+.req .tag {
+  flex: none;
+  font-size: var(--su-text-sm);
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--su-fg3);
+}
+.req .tag.warn {
+  color: var(--su-warning-fg);
+}
+.req .tag.bad {
+  color: var(--su-danger-fg);
+}
+.req .tag.version {
+  font-family: var(--su-mono);
+  font-size: calc(var(--su-text-sm) - 0.5px);
+}
+.req .card-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--su-border);
+  background: var(--su-surface);
+  font-size: var(--su-text-sm);
+  line-height: 16px;
+  color: var(--su-fg3);
+}
+.req .card-foot .sep {
+  opacity: 0.6;
+}
+.glyph {
+  flex: none;
+  display: block;
+}
+@keyframes su-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.glyph.spin,
+.su-spin {
+  animation: su-spin 0.9s linear infinite;
+}
+
+/* ---------- 交给 Agent ---------- */
+.handoff .head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px 10px;
+}
+.handoff .head .t {
+  font-weight: 500;
+  line-height: 22px;
+}
+.handoff .head .d {
+  font-size: var(--su-text-sm);
+  line-height: 17px;
+  color: var(--su-fg2);
+  text-wrap: pretty;
+}
+.su-tile {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: var(--su-r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--su-agent-surface);
+  color: var(--su-agent);
+}
+.msg {
+  position: relative;
+  margin: 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--su-r-lg);
+  background: var(--su-surface);
+  font-size: var(--su-text-sm);
+  line-height: 18px;
+  color: var(--su-fg);
+  max-height: 128px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.msg.full {
+  max-height: none;
+}
+.msg:not(.full)::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--su-card), var(--su-fg) 3%));
+  pointer-events: none;
+}
+.msg :where(p) {
+  margin: 0;
+}
+/* 段落之间空一行，与纯文本消息一致 */
+.msg > * + * {
+  margin-top: 1em;
+}
+.msg ul,
+.msg ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.msg .facts {
+  color: var(--su-fg2);
+}
+.msg code {
+  font-family: var(--su-mono);
+  font-size: calc(var(--su-text-sm) - 0.5px);
+}
+.handoff .foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 14px;
+}
+.handoff .foot .error,
+.sent-message .error {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--su-text-sm);
+  color: var(--su-danger-fg);
+}
+.setup .btn.link {
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--su-text-sm);
+  color: var(--su-fg2);
+}
+.setup .btn.link:hover:not(:disabled) {
+  background: none;
+  color: var(--su-fg);
+}
+
+/* ---------- 已交给 Agent ---------- */
+.sent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border-radius: var(--su-r-xl);
+  background: var(--su-agent-surface);
+  border: 1px solid color-mix(in srgb, var(--su-agent) 28%, transparent);
+}
+.sent .grow {
+  flex: 1;
+  min-width: 0;
+}
+.sent .t {
+  color: var(--su-agent);
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.sent .d {
+  font-size: var(--su-text-sm);
+  line-height: 16px;
+  color: var(--su-fg2);
+}
+.sent-message {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: -12px;
+}
+.sent-message .msg {
+  margin: 0;
+  border: 1px solid var(--su-border);
+}
+.sent-message .actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- 手动安装 ---------- */
+.setup button.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  align-self: flex-start;
+  cursor: pointer;
+}
+.setup button.label .icon {
+  transition: transform 0.12s;
+}
+.setup button.label:not(.open) .icon {
+  transform: rotate(-90deg);
+}
+.seg {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--su-r-lg);
+  background: var(--su-hover-strong);
+}
+.seg button {
+  height: 24px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--su-r-md);
+  background: transparent;
+  font: inherit;
+  font-size: var(--su-text-sm);
+  color: var(--su-fg2);
+  cursor: pointer;
+}
+.seg button[aria-pressed="true"] {
+  background: var(--su-card);
+  color: var(--su-fg);
+  box-shadow: var(--su-shadow-sm);
+}
+
+/* ---------- 应用内步骤（如 Zotero 的设置项） ---------- */
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps li {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  align-items: flex-start;
+}
+.steps li + li {
+  border-top: 1px solid var(--su-border);
+}
+.steps .n {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1px solid var(--su-border-strong);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--su-fg2);
+  font-variant-numeric: tabular-nums;
+}
+.steps .body {
+  flex: 1;
+  min-width: 0;
+}
+.crumbs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--su-text-sm);
+  vertical-align: 1px;
+}
+.crumbs b {
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--su-r-md);
+  background: var(--su-hover-strong);
+}
+.crumbs .icon {
+  color: var(--su-fg3);
+}
+.keys {
+  font-size: var(--su-text-sm);
+  color: var(--su-fg3);
+}
+.pref {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--su-r-lg);
+  border: 1px dashed var(--su-border-strong);
+  font-size: var(--su-text-sm);
+  line-height: 17px;
+}
+.pref .box {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-top: 1.5px;
+  border-radius: 3px;
+  border: 1.5px solid var(--su-fg2);
+}
+
+/* ---------- 就绪 ---------- */
+.setup .tile .badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--su-bg);
+  display: grid;
+  place-items: center;
+}
+.setup .continue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- 对话卡片 ---------- */
+.lamp.agent {
+  background: var(--su-agent);
+}
+.lamp.warn {
+  background: var(--su-warning);
+}

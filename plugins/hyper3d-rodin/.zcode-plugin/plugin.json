@@ -1,0 +1,31 @@
+{
+  "name": "hyper3d-rodin",
+  "displayName": "Hyper3D Rodin",
+  "displayName_i18n": {
+    "en": "Hyper3D Rodin",
+    "zh-CN": "Hyper3D Rodin"
+  },
+  "description": "Turn text or reference images into 3D models, split generated models into parts, and download assets for your project.",
+  "description_i18n": {
+    "en": "Turn text or reference images into 3D models, split generated models into parts, and download assets for your project.",
+    "zh-CN": "将文字或参考图片生成 3D 模型，把生成的模型拆分为独立部件，并下载到项目中使用。"
+  },
+  "version": "0.1.1",
+  "author": {
+    "name": "Deemos",
+    "url": "https://hyper3d.ai"
+  },
+  "homepage": "https://hyper3d.ai",
+  "license": "MIT",
+  "keywords": [
+    "hyper3d",
+    "rodin",
+    "3d",
+    "text-to-3d",
+    "image-to-3d",
+    "bang",
+    "mcp"
+  ],
+  "skills": "./skills",
+  "mcpServers": "./.mcp.json"
+}

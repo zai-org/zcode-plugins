@@ -1,0 +1,14 @@
+{
+  "name": "zcode-mcp-app-dev",
+  "version": "0.1.1",
+  "description": "Develop MCP Apps for ZCode with official SDKs and a small host-extension reference.",
+  "description_i18n": {
+    "en": "Develop MCP Apps for ZCode with official SDKs and a small host-extension reference.",
+    "zh-CN": "使用官方 SDK 开发 ZCode MCP App，附宿主扩展约定与独立构建指引。"
+  },
+  "author": {
+    "name": "ZCode"
+  },
+  "license": "MIT",
+  "skills": "skills"
+}

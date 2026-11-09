@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "anet": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/bin/anet-mcp.sh"
+      ],
+      "env": {
+        "ANET_PLUGIN_IDENTITY": "${user_config.identity}",
+        "ANET_PLUGIN_BIN": "${user_config.anetPath}"
+      },
+      "enabled": true,
+      "timeoutMs": 900000
+    }
+  }
+}

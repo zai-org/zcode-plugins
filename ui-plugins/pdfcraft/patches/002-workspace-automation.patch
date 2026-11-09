@@ -1,0 +1,75 @@
+--- a/crates/automation/src/comments.rs
++++ b/crates/automation/src/comments.rs
+@@ -482,7 +482,7 @@
+                 return Err(ToolError::InvalidArgs("path is only for an image signature or initials; pass either path or text".into()));
+             }
+             let path = self.resolve(path, false)?;
+-            let file = std::fs::File::open(&path).map_err(|e| failed(format!("{}: {e}", path.display())))?;
++            let file = crate::craft_fs::read(&path).map(std::io::Cursor::new).map_err(|e| failed(format!("{}: {e}", path.display())))?;
+             let image = if scan {
+                 let sensitivity = match sensitivity {
+                     None => pdfcraft_engine::signature_scan::DEFAULT_SENSITIVITY,
+--- a/crates/automation/src/signing.rs
++++ b/crates/automation/src/signing.rs
+@@ -209,7 +209,7 @@
+         let Some(o) = g.as_object().filter(|o| o.len() == 1) else { return Err(bad(kinds)) };
+         if let Some(path) = o.get("image") {
+             let path = self.resolve(path.as_str().ok_or_else(|| bad("graphic.image must be a path"))?, false)?;
+-            let file = std::fs::File::open(&path).map_err(|e| bad(format!("graphic.image {}: {e}", path.display())))?;
++            let file = crate::craft_fs::read(&path).map(std::io::Cursor::new).map_err(|e| bad(format!("graphic.image {}: {e}", path.display())))?;
+             return Ok(pdfcraft_engine::SignatureImage::read(file).map_err(|e| bad(e.to_string()))?.graphic());
+         }
+         if let Some(text) = o.get("text") {
+--- a/crates/automation/src/a11y.rs
++++ b/crates/automation/src/a11y.rs
+@@ -114,7 +114,7 @@
+ fn read_review_sidecar(path: &std::path::Path) -> Result<Vec<u8>> {
+     use std::io::Read;
+     let mut bytes = Vec::new();
+-    std::fs::File::open(path).and_then(|file| file.take(MAX_REVIEW_SIDECAR_BYTES.saturating_add(1)).read_to_end(&mut bytes)).map_err(failed)?;
++    crate::craft_fs::read(path).map(std::io::Cursor::new).and_then(|file| file.take(MAX_REVIEW_SIDECAR_BYTES.saturating_add(1)).read_to_end(&mut bytes)).map_err(failed)?;
+     if bytes.len() as u64 > MAX_REVIEW_SIDECAR_BYTES {
+         return Err(failed("file is not an accessibility review sidecar"));
+     }
+--- a/crates/engine/src/links.rs
++++ b/crates/engine/src/links.rs
+@@ -218,7 +218,7 @@
+     if meta.len() > MAX_REMOTE_DOCUMENT_BYTES {
+         return Err(RemoteDocumentPathError::TooLarge);
+     }
+-    let file = std::fs::File::open(path).map_err(|e| RemoteDocumentPathError::Read(e.to_string()))?;
++    let file = crate::craft_fs::read(path).map(std::io::Cursor::new).map_err(|e| RemoteDocumentPathError::Read(e.to_string()))?;
+     let mut bytes = Vec::with_capacity(usize::try_from(meta.len()).unwrap_or(0));
+     file.take(MAX_REMOTE_DOCUMENT_BYTES.saturating_add(1)).read_to_end(&mut bytes).map_err(|e| RemoteDocumentPathError::Read(e.to_string()))?;
+     if u64::try_from(bytes.len()).map_or(true, |n| n > MAX_REMOTE_DOCUMENT_BYTES) {
+--- a/crates/engine/src/text_fonts.rs
++++ b/crates/engine/src/text_fonts.rs
+@@ -34,6 +34,7 @@
+ 
+ /// Bounded, symlink-free scan. Only standalone, openly licensed, embeddable faces are listed.
+ /// The caller controls roots (automation resolves confinement before calling this).
++#[cfg(not(target_arch = "wasm32"))]
+ pub fn discover(roots: &[PathBuf]) -> Vec<FontFile> {
+     use std::io::Read;
+     let mut pending: Vec<_> = roots.iter().take(16).map(|r| (r.clone(), 0usize)).collect();
+@@ -76,3 +77,20 @@
+ fn font_extension(path: &Path) -> bool {
+     path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("ttf") || e.eq_ignore_ascii_case("otf"))
+ }
++
++#[cfg(target_arch = "wasm32")]
++pub fn discover(roots: &[PathBuf]) -> Vec<FontFile> {
++    let mut files=Vec::new(); let mut seen=std::collections::HashSet::new(); let mut budget=64usize << 20;
++    for root in roots.iter().take(16) {
++        for path in crate::craft_fs::list(&root.to_string_lossy()).unwrap_or_default() {
++            let path=PathBuf::from(path);
++            if !font_extension(&path) || !seen.insert(path.clone()) {continue;}
++            let Ok(bytes)=crate::craft_fs::read(&path) else {continue};
++            if bytes.len() > (16 << 20) || bytes.len()>budget {continue;}
++            budget-=bytes.len();
++            if pdfcraft_fonts::embedding::validate_document_input(&bytes).is_err() {continue;}
++            if let Ok((family,face))=pdfcraft_fonts::embedding::names(&bytes) {files.push(FontFile {path,family,face});}
++        }
++    }
++    files.sort_by(|a,b|a.face.cmp(&b.face).then(a.path.cmp(&b.path)));files
++}

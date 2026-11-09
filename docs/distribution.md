@@ -59,6 +59,20 @@ Official ZCode clients select an available trusted source automatically. Compati
 
 ### Field Rules
 
+- Source trees use `plugins/<name>` for officially maintained plugins and
+  `external_plugins/<name>` for partner/community maintained plugins. Intake
+  checks classify new external submissions before publication; fixes to an
+  existing plugin retain its ownership. Usage `category` remains independent.
+- The publisher derives `publisherType` (`official` or `community`) from the
+  source root and preserves it when replacing `source` with the ZIP URL.
+  Clients without this field retain legacy display behavior. Identity remains
+  `<name>@zcode-plugins-official`; moving a source tree does not move installed
+  data or change immutable artifact paths or bytes.
+- Valid manifest `ui.surfaces` declarations produce `ui` in published
+  `componentTypes`, allowing discovery before installation. The validator checks
+  surface IDs, localized titles, declared MCP servers, `ui://` resources and
+  session availability. These are capability metadata, not execution grants.
+
 - `description` is the English compatibility fallback.
 - `description_i18n` may provide localized descriptions. Clients should try the exact locale, language fallback, `en`, and finally `description`.
 - `source: "url"` with `type: "zip"` means the URL points directly to a plugin archive.
@@ -89,3 +103,7 @@ Clients should apply standard archive safety checks, including blocking absolute
 - The marketplace document and downloaded archive must be obtained from trusted HTTPS endpoints.
 
 Marketplace maintainers handle publication and service operations. Contributors only need to update the plugin source, manifest, documentation, version, and root marketplace entry in their pull request.
+
+## Existing source classification
+
+Existing plugins, including CloudBase Skills, Mimosa, and Hyper3D Rodin, remain under `plugins/` for now. This change introduces classification for new external submissions without migrating existing source trees. Their package contents, versions, IDs, and archive paths remain unchanged.

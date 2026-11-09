@@ -1,0 +1,13 @@
+--- a/crates/engine/src/cmd/export.rs
++++ b/crates/engine/src/cmd/export.rs
+@@ -601,8 +601,8 @@
+     std::fs::write(path, bytes).map_err(|e| EngineError::Other(format!("{path}: {e}")))
+ }
+ #[cfg(target_arch = "wasm32")]
+-fn write_file(path: &str, _bytes: &[u8]) -> Result<()> {
+-    Err(EngineError::Other(format!("{path}: no file system on the web; omit `path` to get the bytes")))
++fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
++    crate::craft_fs::write(path,bytes).map_err(|e|EngineError::Other(e.to_string()))
+ }
+ 
+ #[cfg(test)]

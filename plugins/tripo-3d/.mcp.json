@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "tripo": {
+      "type": "http",
+      "url": "https://developers.tripo3d.com/mcp",
+      "enabled": true,
+      "timeoutMs": 90000
+    }
+  }
+}

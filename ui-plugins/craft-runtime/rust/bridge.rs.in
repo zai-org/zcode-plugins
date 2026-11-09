@@ -1,0 +1,96 @@
+//! MCP requests execute on the UI thread against the visible application's state.
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use serde_json::{Value, json};
+use wasm_bindgen::prelude::*;
+use crate::__APP__;
+
+thread_local! {
+    static REQUESTS: RefCell<VecDeque<Value>> = const { RefCell::new(VecDeque::new()) };
+    static REPLIES: RefCell<VecDeque<Value>> = const { RefCell::new(VecDeque::new()) };
+    static BUSY: RefCell<bool> = const { RefCell::new(false) };
+    static CONTEXT: RefCell<Option<egui::Context>> = const { RefCell::new(None) };
+}
+
+#[wasm_bindgen]
+pub fn craft_submit(request: &str) -> Result<(), JsValue> {
+    if request.len() > 8 * 1024 * 1024 { return Err(JsValue::from_str("Request exceeds 8 MiB")); }
+    let value: Value = serde_json::from_str(request).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    REQUESTS.with(|q| {
+        let mut q = q.borrow_mut();
+        if q.len() >= 32 { return Err(JsValue::from_str("Editor request queue is full")); }
+        q.push_back(value);
+        Ok(())
+    })?;
+    CONTEXT.with(|c| { if let Some(ctx) = c.borrow().as_ref() { ctx.request_repaint(); } });
+    Ok(())
+}
+
+#[wasm_bindgen]
+pub fn craft_take_reply() -> String {
+    REPLIES.with(|q| q.borrow_mut().pop_front().unwrap_or(Value::Null).to_string())
+}
+
+#[wasm_bindgen]
+pub fn craft_idle() -> bool { BUSY.with(|b| !*b.borrow()) }
+
+#[wasm_bindgen]
+pub fn craft_catalog() -> String { __CATALOG__.to_string() }
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(catch, js_namespace = globalThis, js_name = __craftRead)]
+    fn host_read(path: &str) -> Result<js_sys::Uint8Array, JsValue>;
+    #[wasm_bindgen(catch, js_namespace = globalThis, js_name = __craftWrite)]
+    fn host_write(path: &str, bytes: &[u8]) -> Result<(), JsValue>;
+    #[wasm_bindgen(catch, js_namespace = globalThis, js_name = __craftScreenshot)]
+    pub(super) fn host_screenshot() -> Result<String, JsValue>;
+}
+#[allow(dead_code)]
+pub(super) fn read(path: &str) -> Result<Vec<u8>, String> { host_read(path).map(|v| v.to_vec()).map_err(|e| format!("{e:?}")) }
+#[allow(dead_code)]
+pub(super) fn write(path: &str, bytes: &[u8]) -> Result<(), String> { host_write(path, bytes).map_err(|e| format!("{e:?}")) }
+pub(super) fn error(message: impl ToString) -> Value {
+    json!({"isError": true, "content": [{"type":"text", "text":message.to_string()}]})
+}
+fn unwrap_control(value: Value) -> Result<Value, String> {
+    if value["ok"].as_bool() == Some(true) { Ok(value["result"].clone()) }
+    else { Err(value["error"].as_str().unwrap_or("Control request failed").to_owned()) }
+}
+
+struct Live<'a> { app: &'a mut __APP__, ctx: &'a egui::Context }
+impl __MCP__::Backend for Live<'_> {
+    fn has_ui(&self) -> bool { true }
+    fn describe(&self) -> String { "ZCode live WASM editor".into() }
+    fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
+        if method == "ui.screenshot" {
+            let data = host_screenshot().map_err(|e| format!("{e:?}"))?;
+            if let Some(path) = params["path"].as_str() {
+                use base64::Engine as _;
+                write(path,&base64::engine::general_purpose::STANDARD.decode(&data).map_err(|e|e.to_string())?)?;
+            }
+            return Ok(json!({"path":params.get("path"),"png_base64":data,"png":data,"pngBase64":data,"data":data,"dataBase64":data,"mimeType":"image/png"}));
+        }
+        __CONTROL__
+    }
+}
+
+pub(crate) fn pump(app: &mut __APP__, ctx: &egui::Context) {
+    CONTEXT.with(|c| *c.borrow_mut() = Some(ctx.clone()));
+    BUSY.with(|b| *b.borrow_mut() = __BUSY__);
+    // One operation per frame: pointer/key requests are rendered before the next operation.
+    let request = REQUESTS.with(|q| q.borrow_mut().pop_front());
+    let Some(request) = request else { return };
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        __SERVICES_BEGIN__
+        let name = request["name"].as_str().unwrap_or("");
+        let args = request.get("arguments").cloned().unwrap_or_else(|| json!({}));
+        let mut backend = Live { app, ctx };
+        let result = __CALL__;
+        __SERVICES_END__
+        result
+    })).unwrap_or_else(|_| error("Editor command panicked; inspect the document before retrying"));
+    BUSY.with(|b| *b.borrow_mut() = __BUSY__);
+    REPLIES.with(|q| q.borrow_mut().push_back(json!({"id":request["id"],"result":result})));
+    ctx.request_repaint();
+}

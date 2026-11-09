@@ -1,0 +1,51 @@
+{
+  "name": "zotero",
+  "version": "0.2.1",
+  "description": "在对话侧栏使用你的 Zotero 文库：搜索与阅读论文和你的高亮，Agent 在 PDF 中标出依据、生成引用与 .bib 文件，并可导入论文、写笔记、整理分类。",
+  "author": {
+    "name": "ZCode"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "zotero": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 420000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "ZOTERO_URL": "${user_config.zoteroUrl}"
+      }
+    }
+  },
+  "userConfig": {
+    "zoteroUrl": {
+      "type": "string",
+      "default": "",
+      "title": "Zotero 地址",
+      "description": "可选。Zotero 本地服务地址，默认 http://127.0.0.1:23119。仅在修改过 Zotero 的端口时填写；只接受本机地址。"
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "zotero",
+        "title": {
+          "zh-CN": "Zotero",
+          "en-US": "Zotero"
+        },
+        "icon": "library",
+        "server": "zotero",
+        "resourceUri": "ui://zotero/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "Work with your Zotero library in a side panel: search and read papers and your highlights, let the agent highlight evidence in PDFs, cite and keep a .bib file, and import papers, write notes and organise collections.",
+    "zh-CN": "在对话侧栏使用你的 Zotero 文库：搜索与阅读论文和你的高亮，Agent 在 PDF 中标出依据、生成引用与 .bib 文件，并可导入论文、写笔记、整理分类。"
+  }
+}

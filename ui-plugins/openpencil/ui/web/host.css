@@ -1,0 +1,99 @@
+#root {
+  height: 100%;
+  width: 100%;
+  padding: 0 !important;
+}
+.zcode-host-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 11px;
+}
+.zcode-host-bar span {
+  color: var(--color-muted);
+  flex: 1;
+}
+.zcode-host-bar button,
+.zcode-ai-panel button,
+.zcode-path-dialog button {
+  border: 1px solid var(--color-border);
+  background: var(--color-panel-field);
+  padding: 5px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.zcode-host-bar button:hover,
+.zcode-ai-panel button:hover,
+.zcode-path-dialog button:hover {
+  background: var(--color-hover);
+}
+.zcode-ai-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow: auto;
+}
+.zcode-ai-panel p {
+  color: var(--color-muted);
+}
+.zcode-ai-panel textarea,
+.zcode-path-dialog input {
+  background: var(--color-input);
+  border: 1px solid var(--color-border);
+  padding: 8px;
+  border-radius: 5px;
+  color: var(--color-surface);
+}
+.zcode-ai-panel textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.zcode-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #0005;
+  padding: 16px;
+}
+.zcode-path-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, 100%);
+  padding: 20px;
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px #0005;
+}
+.zcode-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.zcode-file-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  max-height: 35vh;
+  overflow: auto;
+}
+.zcode-file-list button {
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.zcode-error {
+  width: 100%;
+  color: var(--color-error);
+  overflow-wrap: anywhere;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

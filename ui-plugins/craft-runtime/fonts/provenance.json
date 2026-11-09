@@ -1,0 +1,21 @@
+{
+  "family": "LXGW WenKai",
+  "style": "Regular",
+  "repository": "https://github.com/lxgw/LxgwWenKai",
+  "commit": "bce47e180d802eaca4b21741d4bc1fc5fa1b541a",
+  "license": "OFL-1.1",
+  "files": [
+    {
+      "file": "LXGWWenKai-Regular.ttf",
+      "source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai/bce47e180d802eaca4b21741d4bc1fc5fa1b541a/fonts/TTF/LXGWWenKai-Regular.ttf",
+      "bytes": 25575676,
+      "sha256": "39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009"
+    },
+    {
+      "file": "OFL-LXGWWenKai.txt",
+      "source": "https://raw.githubusercontent.com/lxgw/LxgwWenKai/bce47e180d802eaca4b21741d4bc1fc5fa1b541a/OFL.txt",
+      "bytes": 5171,
+      "sha256": "1a25e35da1031c6c3436fde545bb9cb5aca954e9873afe510c834b8b79bd21a0"
+    }
+  ]
+}

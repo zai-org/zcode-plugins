@@ -1,0 +1,11 @@
+--- a/crates/engine/src/lib.rs
++++ b/crates/engine/src/lib.rs
+@@ -905,7 +905,7 @@
+             large_tabs: false,
+             ui_scaling: 1.0,
+             scale_cursor_with_ui: false,
+-            interface_language: s("auto"),
++            interface_language: s(if cfg!(target_arch = "wasm32") { "zh-hans" } else { "auto" }),
+             system_title_bar: false,
+             gpu_performance: true,
+             animated_zoom: true,

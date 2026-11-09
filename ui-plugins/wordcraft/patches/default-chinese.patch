@@ -1,0 +1,11 @@
+--- a/crates/ui-egui/src/lib.rs
++++ b/crates/ui-egui/src/lib.rs
+@@ -229,7 +229,7 @@
+             show_discord: true,
+             author: String::new(),
+             window: None,
+-            language: i18n::AUTO.into(),
++            language: if cfg!(target_arch = "wasm32") { "zh-hans" } else { i18n::AUTO }.into(),
+             editing: wordcraft_engine::Prefs::default(),
+             read_aloud_rate: 1.0,
+             read_aloud_skip_citations: true,

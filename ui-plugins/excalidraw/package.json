@@ -1,0 +1,38 @@
+{
+  "name": "@zcode/plugin-excalidraw",
+  "version": "0.3.4",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#excalidraw/*": "./src/*",
+    "#ui/*": "./ui/*",
+    "#build/*": "./scripts/*"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node scripts/e2e.mjs && node scripts/cold-start-e2e.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.0",
+    "playwright-core": "1.59.1"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

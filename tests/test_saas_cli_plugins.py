@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
-import struct
 import unittest
 from pathlib import Path
-from urllib.parse import urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,36 +38,6 @@ def frontmatter(path: Path) -> str:
 
 
 class SaaSCLIPluginContract(unittest.TestCase):
-    def test_official_icons_have_consistent_canvas_and_provenance(self) -> None:
-        expected = {
-            "alibaba-cloud-cli": (
-                "37c636a4890e30a7ae7c3654144757b89c7d1a31d61c1b87ef40962d39e2b33c",
-                "avatars.githubusercontent.com",
-            ),
-            "lark-cli": (
-                "ed459fb792bdd0abef88ee91f1ec82925d9c04fdbfcb3b72cf8d67b02f6f2748",
-                "p1-hera.feishucdn.com",
-            ),
-        }
-        entries = {item["name"]: item for item in load_json(ROOT / "marketplace.json")["plugins"]}
-        sources = {item["name"]: item for item in json.loads(
-            (ROOT / "assets" / "icon-sources.json").read_text(encoding="utf-8")
-        )}
-        for name, (digest, host) in expected.items():
-            with self.subTest(plugin=name):
-                data = (ROOT / "assets" / name / "icon.png").read_bytes()
-                self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
-                self.assertEqual(data[12:16], b"IHDR")
-                # PNG IHDR: width, height, bit depth, RGBA color type.
-                self.assertEqual(struct.unpack(">IIBB", data[16:26]), (256, 256, 8, 6))
-                self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
-                self.assertEqual(sources[name]["sha256"], digest)
-                self.assertEqual(sources[name]["icon"], f"{name}/icon.png")
-                self.assertEqual(urlsplit(sources[name]["source"]).scheme, "https")
-                self.assertEqual(urlsplit(sources[name]["source"]).hostname, host)
-                self.assertEqual(entries[name]["icon"],
-                    f"https://cdn-zcode.z.ai/zcode/official-plugin/assets/{name}/icon.png")
-
     def test_manifests_and_marketplace_entries_are_consistent(self) -> None:
         marketplace = load_json(ROOT / "marketplace.json")
         entries = {entry["name"]: entry for entry in marketplace["plugins"]}

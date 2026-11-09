@@ -1,0 +1,11 @@
+--- a/crates/fonts/build.rs
++++ b/crates/fonts/build.rs
+@@ -52,7 +52,7 @@
+         }
+         let arabic = scripts.split(',').any(|s| s.trim() == "Arab");
+         let web_face = (*family == "BIZ UDPGothic" && *style == "Regular") || arabic;
+-        if wasm && !web_face {
++        if wasm && *family != "LXGW WenKai" && !web_face {
+             continue;
+         }
+         let path = dir.join(file).canonicalize().map_err(|e| format!("{file}: {e}"))?;

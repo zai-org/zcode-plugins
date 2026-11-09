@@ -1,0 +1,51 @@
+{
+  "name": "typst-workbench",
+  "version": "0.2.0",
+  "description": "用你本机的 Typst 在对话侧栏实时预览文档：Agent 改完文件预览即刻更新，查看错误与渲染页面、在预览中标出位置、导出 PDF；你可以选中预览中的文字，连同对应的源码位置发给 Agent。",
+  "author": {
+    "name": "ZCode"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "typst": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 620000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "TYPST_WORKBENCH_TYPST": "${user_config.typstPath}"
+      }
+    }
+  },
+  "userConfig": {
+    "typstPath": {
+      "type": "string",
+      "default": "",
+      "title": "Typst 路径",
+      "description": "可选。typst 可执行文件的完整路径。默认在 PATH 与常见安装位置中查找；只在 Typst 装在其他位置时填写。"
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "typst",
+        "title": {
+          "zh-CN": "Typst",
+          "en-US": "Typst"
+        },
+        "icon": "file-text",
+        "server": "typst",
+        "resourceUri": "ui://typst-workbench/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "Live-preview Typst documents in a side panel with the Typst installed on your computer: the preview updates the moment the agent saves a file, the agent checks errors, looks at rendered pages, points at places in the preview and exports PDFs, and you can send selected text to the agent together with its source location.",
+    "zh-CN": "用你本机的 Typst 在对话侧栏实时预览文档：Agent 改完文件预览即刻更新，查看错误与渲染页面、在预览中标出位置、导出 PDF；你可以选中预览中的文字，连同对应的源码位置发给 Agent。"
+  }
+}

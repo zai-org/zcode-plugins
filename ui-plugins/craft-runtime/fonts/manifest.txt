@@ -1,0 +1,2 @@
+# Family | Style | Path | Scripts | License | License file | SHA256 | Source
+LXGW WenKai | Regular | fonts/LXGWWenKai-Regular.ttf | Hans,Hant,Jpan,Kore | OFL-1.1 | fonts/OFL-LXGWWenKai.txt | 39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009 | https://raw.githubusercontent.com/lxgw/LxgwWenKai/bce47e180d802eaca4b21741d4bc1fc5fa1b541a/fonts/TTF/LXGWWenKai-Regular.ttf

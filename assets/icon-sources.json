@@ -69,9 +69,10 @@
     "source": "https://avatars.githubusercontent.com/u/941070?v=4&s=512",
     "matchedBy": "official-github-organization-avatar-normalized",
     "homepage": "https://github.com/aliyun",
-    "normalization": "Trim transparent margins, resize proportionally to 176px wide, center on a transparent 256x256 RGBA canvas; preserve brand colors.",
     "mimeType": "image/png",
-    "sha256": "37c636a4890e30a7ae7c3654144757b89c7d1a31d61c1b87ef40962d39e2b33c"
+    "sha256": "97670ce6169cbf68bbc50aa9bd988b4d7096effbec80bbad1dcdc011d7495848",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius",
+    "originalNormalization": "Trim transparent margins, resize proportionally to 176px wide, center on a transparent 256x256 RGBA canvas; preserve brand colors."
   },
   {
     "name": "alloydb",
@@ -120,7 +121,8 @@
     "matchedBy": "official-homepage-apple-touch-icon",
     "homepage": "https://developer.android.com/studio/run/emulator",
     "mimeType": "image/png",
-    "sha256": "ead629480a3a5c6d50a2133690e7917e70bb64d51ee48cd905ae498afdc75d6b"
+    "sha256": "cc41354277f925c7510ce1c3b0b545287919a83c5283d8b45f1f2baf150976f6",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "apollo",
@@ -336,7 +338,8 @@
     "icon": "browser-use/icon.png",
     "source": "/Users/utom/Downloads/Frame 768592708.png",
     "mimeType": "image/png",
-    "sha256": "995cb91204c5b0bab250909b6478d176c80f3abfff0fb3117c65c094ee78bf99"
+    "sha256": "e44d33d59b17a79312a77f388dc69720b6ebe8d533439be794b2a572b07e502c",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "build-with-wordpress",
@@ -719,11 +722,12 @@
   {
     "name": "dingtalk-cli",
     "icon": "dingtalk-cli/icon.png",
-    "source": "https://gw.alicdn.com/imgextra/i3/O1CN014ZbI6ZTEhdC0ttN2_!!6000000003783-2-tps-444-444.png",
+    "source": "https://github.com/ant-design/ant-design-icons/blob/master/packages/icons-svg/svg/outlined/dingding.svg",
     "matchedBy": "official-homepage-favicon",
     "homepage": "https://www.dingtalk.com",
     "mimeType": "image/png",
-    "sha256": "b3fb0715857df5d23213b5265166fabcb7f7b4b290890d7b5682a027cf39c85d"
+    "sha256": "b39c4e2755570ad6b4bf3c822e676977d2d8cab8e03b283acdd005477e883277",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "discord",
@@ -867,7 +871,8 @@
     "icon": "github/icon.png",
     "source": "/plugins/github/assets/logo.png",
     "mimeType": "image/png",
-    "sha256": "916da4b4e72d9e80df2b2162ae47d01db372caadaaaad2e3a26339284965a548"
+    "sha256": "01c0884f25a62ab93aed09a2eb997daec08012d1c037372db994dd754e264c10",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "gitlab",
@@ -875,7 +880,8 @@
     "source": "https://about.gitlab.com/images/press/gitlab-logo-500-rgb.png",
     "matchedBy": "official-gitlab-press-kit-logomark-trimmed-centered-176px",
     "mimeType": "image/png",
-    "sha256": "b67e1ff07805a95f62f01a8ce1797ae3e25be22d79252f074a73056d249c62d5"
+    "sha256": "c610cf33af9ab26590305597697c9edf6a81a710b9c6c6ac852bd0f043614333",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "gopls-lsp",
@@ -990,7 +996,8 @@
     "matchedBy": "official-installed-app-icon",
     "homepage": "https://developer.apple.com/documentation/xcode/running-your-app-on-simulated-or-physical-devices",
     "mimeType": "image/png",
-    "sha256": "455d34704f7a0a6759b68270419498f09bd98af2a1ec8e4cddfb93c97cc55b04"
+    "sha256": "99a1ee03ab1000b521d9b69ceb11b95f7e9c094b6faa8aa85f2fdfa1c63291b2",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "jdtls-lsp",
@@ -1057,9 +1064,10 @@
     "source": "https://p1-hera.feishucdn.com/tos-cn-i-jbbdkfciu3/84a9f036fe2b44f99b899fff4beeb963~tplv-jbbdkfciu3-image:512:512.image",
     "matchedBy": "official-homepage-open-graph-image-normalized",
     "homepage": "https://www.feishu.cn/",
-    "normalization": "Use the official homepage image at 512px, trim transparent margins, resize proportionally to 160px wide, center on a transparent 256x256 RGBA canvas; preserve brand colors.",
     "mimeType": "image/png",
-    "sha256": "ed459fb792bdd0abef88ee91f1ec82925d9c04fdbfcb3b72cf8d67b02f6f2748"
+    "sha256": "4a78fb960d46534b42f9a4fa4539d9302d04bbf1ea4519c1e75cbd205e94bf99",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius",
+    "originalNormalization": "Use the official homepage image at 512px, trim transparent margins, resize proportionally to 160px wide, center on a transparent 256x256 RGBA canvas; preserve brand colors."
   },
   {
     "name": "learn-with-coursera",
@@ -1334,8 +1342,9 @@
     "matchedBy": "official-homepage-favicon-svg-converted-padded",
     "homepage": "https://obsidian.md",
     "mimeType": "image/png",
-    "sha256": "6e4b6881c3e3c304cbcaa53ffb202aa68fece3a0082a451f1638ff2c730a1285",
-    "transform": "Render SVG at 216x216 centered on a transparent 256x256 canvas (20px padding)."
+    "sha256": "ea95d8015693a29d7950448b3e93eb4bc02bb19bf79fcb80729dd1c5fe33fabb",
+    "transform": "Render SVG at 216x216 centered on a transparent 256x256 canvas (20px padding).",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "oracle-ai-data-platform-workbench-databricks-migrator",
@@ -1596,7 +1605,8 @@
     "icon": "restore-legacy-sessions/icon.png",
     "source": "/Users/utom/Downloads/Frame 768592707.png",
     "mimeType": "image/png",
-    "sha256": "f25a869f54f5c2369f8848f022af9a0adcaff1319f0fcdd0608496df62fa23b7"
+    "sha256": "38a017710307cc70fbee1d0fe38d581b62959e928c63034418571354da19699e",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "revenuecat",
@@ -1762,7 +1772,8 @@
     "icon": "skill-creator/icon.png",
     "source": "/Users/utom/Downloads/skill-creator.png",
     "mimeType": "image/png",
-    "sha256": "7501368309eeaa25e95b2249170367a22af0e95a8afb4f438f94ba2637700d86"
+    "sha256": "cf2825818b76010aa32e56ff42ea58315c99f9d41f13dabae29167ff51801d22",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "slack",
@@ -1903,6 +1914,16 @@
     "sha256": "fae7e309cbc0bde28eab6ea19403cdf78722e543ab630d98c8694703b7d38d82"
   },
   {
+    "name": "tripo-3d",
+    "icon": "tripo-3d/icon.png",
+    "source": "https://github.com/vast-enterprise/Tripo-Api-Plugin-Kimi/blob/master/plugin/icon.png",
+    "matchedBy": "official-repository-asset",
+    "homepage": "https://www.tripo3d.ai",
+    "mimeType": "image/png",
+    "sha256": "a85e05cad881498c048a4ce6bcef99b6eb3bcb89172d446a577207102f55057b",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
     "name": "twilio-developer-kit",
     "icon": "twilio-developer-kit/icon.png",
     "source": "/plugins/twilio-developer-kit/assets/logo.svg",
@@ -1940,6 +1961,15 @@
     "matchedBy": "official-github-organization-avatar",
     "mimeType": "image/png",
     "sha256": "a8384578a86e4e7ae1fe273572ffff566d748c98b7eb6eff1321294005bd8b2b"
+  },
+  {
+    "name": "unreal-engine",
+    "icon": "unreal-engine/icon.png",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/4d29a35c954699b389a834aacc97dd6e7e74143c/icons/unrealengine.svg",
+    "matchedBy": "brand-vector-mirror-solid-black-background",
+    "homepage": "https://www.unrealengine.com/en-US/branding",
+    "mimeType": "image/png",
+    "sha256": "8f384cbb86e11b04a0ad257319efcb58a9cad2fac21362c883e4cb7e9bc65d53"
   },
   {
     "name": "unreal-engine-skills-for-claude-code",
@@ -2008,7 +2038,8 @@
     "matchedBy": "official-homepage-share-image",
     "homepage": "https://work.weixin.qq.com",
     "mimeType": "image/png",
-    "sha256": "f89d5976ca6382cb1cab856bfd572daa543bd855e39431825cff0b14c1fbd1be"
+    "sha256": "2b6b8b2aaeb09f4965b28584e9c9805bb8b8df45b169f385e3a907c603fe075d",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "windsor-ai",
@@ -2055,7 +2086,8 @@
     "icon": "zcode-cua/icon.png",
     "source": "/Users/utom/Downloads/Frame 768592709.png",
     "mimeType": "image/png",
-    "sha256": "dd6624d39a0e36f579c794542dc7506ec22f3ccd352e7c36187d173522f54d4b"
+    "sha256": "5aa641b353e9a199685baf93682af345a43edd73199608ea51f88f055ab47ecc",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
     "name": "zilliz",
@@ -2097,5 +2129,435 @@
     "homepage": "https://www.zyte.com",
     "mimeType": "image/png",
     "sha256": "8613b1dc383a3b6090a8a81aefc13f4867667fbf1902dc35471f8d554e69a1cd"
+  },
+  {
+    "name": "accounting-reporting",
+    "icon": "accounting-reporting/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "69cc0bfcddbbe89f145c380a154df115746c756ac3249e63404d994b9dbfbe2c",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "blender",
+    "icon": "blender/icon.png",
+    "source": "https://github.com/simple-icons/simple-icons/blob/develop/icons/blender.svg",
+    "sha256": "b935582da3c2fc273637d32d9ca770d3ee3f8e10b1bf879b38412404e759ee66",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "business-analysis",
+    "icon": "business-analysis/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "9974d0240ab11625d3143996e3e1be92bceebb14375715943946c8d6b5b2abcf",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "cloudbase-skills",
+    "icon": "cloudbase-skills/icon.png",
+    "source": "https://docs.cloudbase.net/en/img/favicon.png",
+    "sha256": "9dcb885a5ea1ab8ce8f502f42da50c659a95aa190392be65afb7128e09b9f95c",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius; mark scaled to 78%"
+  },
+  {
+    "name": "corporate-client-acquisition",
+    "icon": "corporate-client-acquisition/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "f85803b32716af29ea4e26dc16479137d484bc3919139dd3162ba1f3745f5883",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "corporate-due-diligence",
+    "icon": "corporate-due-diligence/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "d78a3a12ef4b2ba9770959a75208e14bb6b32a6b60905da72f4952c84e7c1885",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "documents",
+    "icon": "documents/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/document-skills/icon.png",
+    "sha256": "f60ed2375ac3c91483c03f7cdba5af2841975e2772db13310bb0eae6d954788b",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "equity-research",
+    "icon": "equity-research/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "e0ea2767b44d6cb32fc94b0f13b6f335436255993ae8dfeea79bba8fc9a26a0d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "excalidraw",
+    "icon": "excalidraw/icon.png",
+    "source": "https://github.com/excalidraw/excalidraw/blob/master/public/favicon.svg",
+    "sha256": "d83da3fd7ef0f94f73cbcede7da924391544cb6cf522d14b97cae64ba60c35b6",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "finance-search",
+    "icon": "finance-search/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/finance-search/icon.png",
+    "sha256": "4e7ed7ea4d203ff11795ed7ef6b4ccac1c3ea1df6776f64afdce8335813d587e",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "fixed-income-research",
+    "icon": "fixed-income-research/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "ffa3da064a7a65405766a0ec49b79a68f3f439b5bab10f68ba76059ac5cc40d0",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "fund-research",
+    "icon": "fund-research/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "8554a5e06237ca00e696d54ebaf0689ffdbe417fa00933369d6d3863f34977f8",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "hexin",
+    "icon": "hexin/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hexin/icon.png",
+    "sha256": "3363bad139231f7c7dcbb1bbcbe1626e4986770d71868107473765333e139b5d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "hyper3d-rodin",
+    "icon": "hyper3d-rodin/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-rodin/icon.jpg",
+    "sha256": "e7d6cc2ca8472f053306e04433b3670569bc6264f2127b4b3b8185a48eae0436",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "image-search",
+    "icon": "image-search/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "dbc6a211b375ceba7b9f34319816d5c1bf69945cc0a6c1a06afa1b07e8c72bc4",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "macro-strategy",
+    "icon": "macro-strategy/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "0586456273eb349a3c90825d891231875e6793cf8a61ab1a5da639060c70bdc5",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "mimosa",
+    "icon": "mimosa/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/mimosa/icon.png",
+    "sha256": "8a7f77558c84833c23b523c0adfd7c46c8d71f564e9166b5fd18e122a0bd57a5",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "openpencil",
+    "icon": "openpencil/icon.png",
+    "source": "https://github.com/open-pencil/open-pencil/blob/master/assets/brand/mark.svg",
+    "sha256": "98bf923d5edafb6b2a91981033d735dd0ccd290baffded2bbdc3681169f1c083",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "pdf",
+    "icon": "pdf/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/document-skills/icon.png",
+    "sha256": "f21abc750c21898b9c4f59963caa34b954fb1509209eb9a4df7b349594e3b906",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "plugin-creator",
+    "icon": "plugin-creator/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "b4a1e8271641888e8ff307b14d6ab633d37e00ba7409476ac991d4bb5a24ccf9",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "portfolio-tracking",
+    "icon": "portfolio-tracking/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "0a8669f33c8ecf9864efd77a4fd66525dc69d31df592e95bdab004bdfe30267d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "presentations",
+    "icon": "presentations/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/document-skills/icon.png",
+    "sha256": "c94b59af0c2eb4e83b9ab627f5508526f5eed0925a5756c81e8f210fcace1950",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "spreadsheets",
+    "icon": "spreadsheets/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/document-skills/icon.png",
+    "sha256": "fa9fc6c219c7bdab2066dcb0c87f7583b4a9e66cdbd53715db565bafb8ff5f28",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "tencent-meeting-cli",
+    "icon": "tencent-meeting-cli/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/tencent-meeting-cli/icon.png",
+    "sha256": "36078632bc05bdf37cddee51dc184cdd6ab8c278ffbe4e5b184afb351685699d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "tianyancha",
+    "icon": "tianyancha/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/tianyancha/icon.png",
+    "sha256": "b1aadc88787b69c0a59d5e8c796b7338dc00f6a1524c08633cc077b72754c17b",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "trade-calculator",
+    "icon": "trade-calculator/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "fdb70af1ae2a414f1e8ab5a777b82fb1e80552f1cd5a49ef14eae34ea53efc3c",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "video-agent",
+    "icon": "video-agent/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "4e3e23ff67a95ed0a1a077c70762181949faae2c2baa9405911692600c4a51e8",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "video2code",
+    "icon": "video2code/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video2code/icon.png",
+    "sha256": "696c2fbc2c504c6e92fb383c0067e6f5ad0a6f2eb7c6c6fe38fd7f9bb519e08b",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "visualize",
+    "icon": "visualize/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "de3486f9c7780ee4db505114b8d3456f17002a7f5905e14d63c0dd3f0be75928",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "wind",
+    "icon": "wind/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wind/icon.png",
+    "sha256": "34ed4aebf7faa6732b79089ece13217e75b1b1295fdaf5b85e90fc5f310146b0",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "zcode-guide",
+    "icon": "zcode-guide/icon.png",
+    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/zcode-guide/icon.png",
+    "sha256": "bcfdc509989ba216bd0aa5fa63694a6b5e20fe5a9cb90792c4d7d3bceed1f0a1",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "zcode-mcp-app-dev",
+    "icon": "zcode-mcp-app-dev/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "ae7d4b0ad4b20a4568854002816acca1d2e03169a3d580eb9872d640ded14942",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "photocraft",
+    "icon": "photocraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/photocraft/ed7df56a2455375240959bae6e5273a71d858d84/assets/app-icon/photocraft.svg",
+    "homepage": "https://github.com/storytold/photocraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "94f110c86d6d64243310a6b0bcf1c35be0ec540e39560ffd41cacdd10a31acdc"
+  },
+  {
+    "name": "vectorcraft",
+    "icon": "vectorcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/vectorcraft/a06717777828867557d759c674283304f63c04ae/assets/app-icon/vectorcraft.svg",
+    "homepage": "https://github.com/storytold/vectorcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "fcc18fe26422fce4d645ba7e40badb760468638920d38940c3f65e100fdbc9b8"
+  },
+  {
+    "name": "pdfcraft",
+    "icon": "pdfcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/pdfcraft/c1a41cc5c7c2460fb60af880af69ee28a0c71bd5/assets/app-icon/pdfcraft.svg",
+    "homepage": "https://github.com/storytold/pdfcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "19ea09fc4afa6f5011d15e6ff4102814fbcd50a8fa6681384b280e1f873b72d9"
+  },
+  {
+    "name": "designcraft",
+    "icon": "designcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/designcraft/43a46c04bf8cd8c8a48a347f6deaa9613223aa54/assets/app-icon/designcraft.svg",
+    "homepage": "https://github.com/storytold/designcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "e65ae6801cab8f218d116b661e4012f7ebea15474824c0d3cb4cbd9ef0805b47"
+  },
+  {
+    "name": "wordcraft",
+    "icon": "wordcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/wordcraft/04f6f53b8a4d8140c7bb62f949b0a6099a473da1/assets/app-icon/wordcraft.svg",
+    "homepage": "https://github.com/storytold/wordcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "f445b821783eb9f52685845f586afc8decc30a5590a9dfc42d36a5c39a2c4405"
+  },
+  {
+    "name": "gridcraft",
+    "icon": "gridcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/gridcraft/84acf6293b1dc1fc09837524e035d674eb4d6741/assets/app-icon/gridcraft.svg",
+    "homepage": "https://github.com/storytold/gridcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "ed2b93a238a06bf7e399776578fc27ede37d47d44f8b9e1058ab75aa547feda2"
+  },
+  {
+    "name": "deckcraft",
+    "icon": "deckcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/deckcraft/457406a7a5b62425e915926c8ccb0984e61a198c/assets/app-icon/hicolor/scalable/apps/ai.storyteller.deckcraft.svg",
+    "homepage": "https://github.com/storytold/deckcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "2c1fe6f69085de7a989d50d5425c07a6fb7abab65a72ed979c1c500d93051e6a"
+  },
+  {
+    "name": "cadcraft",
+    "icon": "cadcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/cadcraft/e707ab4d7cc10102e550ad4c5bcecef1084a9baa/assets/app-icon/cadcraft-1024.png",
+    "homepage": "https://github.com/storytold/cadcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "522552718e50e2dd2f0abe2df922498aef713d2e73805d8c8dc9777333df8be0"
+  },
+  {
+    "name": "soundcraft",
+    "icon": "soundcraft/icon.png",
+    "source": "https://raw.githubusercontent.com/storytold/soundcraft/c0cb99340891d306e216582db465f3594b89dc1d/assets/app-icon/icon.svg",
+    "homepage": "https://github.com/storytold/soundcraft",
+    "matchedBy": "upstream-app-icon",
+    "mimeType": "image/png",
+    "license": "MIT",
+    "modifications": "Square full-bleed background; 256px PNG. Artwork preserved; corner rounding delegated to client.",
+    "sha256": "f5780e9b7af3f1d624481e72cfe6e5cdd0367458f58c661538c1f67041800673"
+  },
+  {
+    "name": "typst-workbench",
+    "icon": "typst-workbench/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "28a15347a420230e464fe19ddc634a7ecd72565b8aa8739a0107fd3e12d5a2bc",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "jupyter-notebook",
+    "icon": "jupyter-notebook/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "167539ba9f405bb96023cd83c2d219d126f816b5f99a2b4db445a23c1deb9f94",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "zotero",
+    "icon": "zotero/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "f3f4002481f4b84175634de34730af02bde2cf125fab10add753425fc8dc0727",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "autoresearch",
+    "icon": "autoresearch/icon.png",
+    "source": "https://github.com/luochang212/zcode-autoresearch/blob/main/assets/icon.svg",
+    "mimeType": "image/png",
+    "sha256": "1375e75102719077b460f4b6add3b0c49b7d2c506c6700eb102cfdc50a6e7118"
+  },
+  {
+    "name": "zcode-site",
+    "icon": "zcode-site/icon.png",
+    "source": "ZCode authored asset",
+    "sha256": "9d7f32e5bf2e0bf1f1b1967268534090c611fd308659a0360c1c729b35553d7d",
+    "mimeType": "image/png",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "anet",
+    "icon": "anet/icon.png",
+    "source": "https://avatars.githubusercontent.com/u/305781773?s=256&v=4",
+    "matchedBy": "official-github-organization-avatar",
+    "homepage": "https://agentnetwork.org.cn",
+    "mimeType": "image/png",
+    "sha256": "2ff11555dd0be1f5efeac9005014770d2898f220d20367da32ba4434566d2a68"
+  },
+  {
+    "name": "kicad",
+    "icon": "kicad/icon.png",
+    "source": "Original artwork drawn for this plugin: ui-plugins/kicad/ui/src/logo.svg (a chat bubble holding a PCB trace with pads and a via; the same file is inlined in the panel header), rendered to PNG with headless Chrome; contains no KiCad logo or other third-party image",
+    "matchedBy": "original-artwork",
+    "mimeType": "image/png",
+    "sha256": "0df90e74c4865fda417b2ccb0f95266a6392834ccb449fc1602bb059482d62ad",
+    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "unity",
+    "icon": "unity/icon.png",
+    "source": "https://github.com/Unity-Technologies.png?size=256",
+    "matchedBy": "official-github-organization-avatar",
+    "homepage": "https://unity.com",
+    "mimeType": "image/png",
+    "sha256": "300cc9cf57b29fe09b43e587b23f563c390bb67242227524acfcc28fc477f4f7"
+  },
+  {
+    "name": "libtv-cli",
+    "icon": "libtv-cli/icon.png",
+    "source": "https://www.liblib.tv/pwa/libtv/icon-512.png",
+    "matchedBy": "official-pwa-icon-512",
+    "homepage": "https://www.liblib.tv",
+    "mimeType": "image/png",
+    "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
   }
 ]

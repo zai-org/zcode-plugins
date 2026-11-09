@@ -11,6 +11,9 @@ Derive the current contract from repository files, not memory or examples from o
 - Its actual component directories: `commands/`, `skills/`, `agents/`, and `hooks/`, plus `.mcp.json` when present
 - The matching entry in the root `marketplace.json`
 - Repository validators and tests for machine-enforced behavior
+- MCP App build sources under `ui-plugins/<name>/` and [the build contract](docs/MCP_APP_BUILD.md) when changing interactive plugins
+
+For local testing, ordinary plugins and UI plugins share [the existing development workflow](docs/PLUGIN_DEVELOPMENT.md#18-test-a-plugin-locally). The root marketplace is the only catalogue: never hardcode plugin names in generic build or registration scripts, and never force-install a development skill. Compiled plugins own their build and optional stage scripts. `pnpm build` generates `dist/local-marketplace`; developers register this source and choose what to install. Rebuild, refresh the source, and reinstall selected plugins after changes. The host's `pnpm dev:desktop` only starts the application. Verify the marketplace record, installation, enabled state, and actual UI in the same application profile before reporting availability. Preserve existing source identities and plugin data.
 
 ## Workflow
 
@@ -45,6 +48,8 @@ For a new plugin, start from `plugins/example-plugin/`, remove unused sample com
 Run the baseline checks from the repository root:
 
 ```shell
+pnpm install --frozen-lockfile
+pnpm build
 python3 scripts/validate.py
 python3 scripts/build_dist.py
 git diff --check
@@ -76,6 +81,7 @@ When adding a plugin, keep the merge request focused on the plugin package and i
 
 ## Git and Merge Request Workflow
 
+- Before requesting review, complete the required plugin-type section in the PR template: UI Plugin, Standard plugin, or Not applicable for repository-only changes. List affected manifest names; classify plugins with MCP Apps interactive pages as UI Plugin even for docs-only edits to that plugin. See the [classification rules](CONTRIBUTING.md#declare-the-plugin-type-required).
 - Use Conventional Commits for commit messages and merge request titles, for example `fix(assets): refresh business plugin icons`.
 - Before pushing a working branch or updating its merge request, fetch the latest `origin/main` and rebase the working branch onto it.
 - Resolve and verify any rebase conflicts locally before publishing the rewritten history.

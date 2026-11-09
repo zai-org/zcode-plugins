@@ -1,6 +1,6 @@
 {
   "name": "mimosa",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Local-first security guardrails for ZCode with pre-write hooks, end-of-turn review, Git gates, commands, a security-scan skill, and an optional MCP server for sealed deep scans.",
   "description_i18n": {
     "en": "Local-first security guardrails for ZCode with pre-write hooks, end-of-turn review, Git gates, commands, a security-scan skill, and an optional MCP server for sealed deep scans.",

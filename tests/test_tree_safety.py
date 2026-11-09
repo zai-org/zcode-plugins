@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 from pathlib import Path
 
 
@@ -143,13 +144,66 @@ class BytecodeExclusionTest(unittest.TestCase):
         self.assertEqual(digest, build_dist.sha256_of(second))
 
 
+class CapScopeTest(unittest.TestCase):
+    """The file and size caps bound one plugin, not the marketplace.
+
+    Applying the per-plugin cap to the whole of plugins/ made the repository
+    fail as soon as the legal plugins together outgrew a single plugin's limit.
+    """
+
+    def setUp(self) -> None:
+        self.root = Path(tempfile.mkdtemp(prefix="cap-scope-")) / "plugins"
+        for name in ("alpha", "beta"):
+            (self.root / name).mkdir(parents=True)
+            (self.root / name / "payload.bin").write_bytes(b"x" * 6)
+
+    def test_plugins_within_the_cap_may_exceed_it_together(self) -> None:
+        with mock.patch.object(validate, "MAX_PLUGIN_BYTES", 10):
+            for name in ("alpha", "beta"):
+                self.assertEqual(validate.tree_violations(self.root / name, name), [])
+            self.assertEqual(validate.tree_violations(self.root, "plugins", caps=False), [])
+
+    def test_one_oversize_plugin_is_still_rejected(self) -> None:
+        (self.root / "beta" / "payload.bin").write_bytes(b"x" * 11)
+        with mock.patch.object(validate, "MAX_PLUGIN_BYTES", 10):
+            self.assertEqual(validate.tree_violations(self.root / "alpha", "alpha"), [])
+            self.assertEqual(
+                validate.tree_violations(self.root / "beta", "beta"),
+                ["beta: 11 bytes exceeds the 10 byte limit"],
+            )
+
+    def test_one_plugin_with_too_many_files_is_still_rejected(self) -> None:
+        (self.root / "alpha" / "extra.bin").write_bytes(b"x")
+        with mock.patch.object(validate, "MAX_PLUGIN_FILES", 1):
+            self.assertEqual(validate.tree_violations(self.root / "beta", "beta"), [])
+            self.assertEqual(
+                validate.tree_violations(self.root / "alpha", "alpha"),
+                ["alpha: 2 files exceeds the 1 file limit"],
+            )
+
+    def test_a_root_sweep_without_caps_still_reports_symlinks(self) -> None:
+        os.symlink(self.root / "alpha" / "payload.bin", self.root / "beta" / "leak.bin")
+        self.assertEqual(
+            validate.tree_violations(self.root, "plugins", caps=False),
+            ["plugins: beta/leak.bin is a symlink (not allowed)"],
+        )
+
+
 class RepositoryTreeTest(unittest.TestCase):
     def test_current_repository_has_no_symlinks_in_published_trees(self) -> None:
-        for name in ("plugins", "assets"):
-            self.assertEqual(validate.tree_violations(ROOT / name, name), [])
+        for name in validate.PLUGIN_ROOTS:
+            self.assertEqual(validate.tree_violations(ROOT / name, name, caps=False), [])
+        self.assertEqual(validate.tree_violations(ROOT / "assets", "assets"), [])
+
+    def test_every_plugin_stays_within_the_per_plugin_caps(self) -> None:
+        for plugin in sorted(path for name in validate.PLUGIN_ROOTS for path in (ROOT / name).glob("*")):
+            if not plugin.is_dir():
+                continue
+            with self.subTest(plugin=plugin.name):
+                self.assertEqual(validate.tree_violations(plugin, plugin.name), [])
 
     def test_no_plugin_artifact_would_ship_bytecode(self) -> None:
-        for plugin in sorted((ROOT / "plugins").iterdir()):
+        for plugin in sorted(path for name in validate.PLUGIN_ROOTS for path in (ROOT / name).glob("*")):
             if not plugin.is_dir():
                 continue
             with self.subTest(plugin=plugin.name):

@@ -1,0 +1,30 @@
+{
+  "name": "zcode-plugins-build",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-plugins.mjs",
+    "test": "vitest run tests/mcp-app-client.test.ts tests/local-marketplace.test.ts && pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "oxlint ui-plugins scripts/*.mjs",
+    "test:artifacts": "node --test scripts/prepare-kicad-runtime.test.mjs && node scripts/test-mcp-app-artifacts.mjs",
+    "test:pages": "node scripts/test-mcp-app-pages.mjs",
+    "marketplace:local": "node scripts/build-local-marketplace.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@types/node": "25.5.0",
+    "esbuild": "0.25.12",
+    "oxfmt": "0.41.0",
+    "oxlint": "1.57.0",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.2",
+    "vitest": "4.1.4",
+    "zod": "4.6.5"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@10.33.2"
+}

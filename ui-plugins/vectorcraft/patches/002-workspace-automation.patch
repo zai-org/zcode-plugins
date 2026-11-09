@@ -1,0 +1,40 @@
+--- a/crates/engine/src/cmd/fileio/mod.rs
++++ b/crates/engine/src/cmd/fileio/mod.rs
+@@ -940,27 +940,29 @@
+ 
+ #[cfg(target_arch = "wasm32")]
+ pub(crate) fn read_file(path: &str) -> Result<Vec<u8>> {
+-    Err(no_fs(path))
++    crate::craft_fs::read(path).map_err(|e| EngineError::Other(e.to_string()))
+ }
+ 
+ #[cfg(target_arch = "wasm32")]
+-pub(crate) fn write_file(path: &str, _: &[u8]) -> Result<()> {
+-    Err(no_fs(path))
++pub(crate) fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
++    crate::craft_fs::write(path,bytes).map_err(|e|EngineError::Other(e.to_string()))
+ }
+ 
+ #[cfg(target_arch = "wasm32")]
+-pub fn write_file_with(path: &str, _: &mut dyn FnMut(&mut dyn std::io::Write) -> std::io::Result<()>) -> Result<()> {
+-    Err(no_fs(path))
++pub fn write_file_with(path: &str, writer: &mut dyn FnMut(&mut dyn std::io::Write) -> std::io::Result<()>) -> Result<()> {
++    let mut bytes=Vec::new();writer(&mut bytes).map_err(|e|EngineError::Other(e.to_string()))?;
++    write_file(path,&bytes)
+ }
+ 
+ #[cfg(target_arch = "wasm32")]
+ pub(crate) fn create_dir(path: &str) -> Result<()> {
+-    Err(no_fs(path))
++    crate::craft_fs::create_dir_all(path).map_err(|e|EngineError::Other(e.to_string()))
+ }
+ 
+ #[cfg(target_arch = "wasm32")]
+-pub(crate) fn write_new_file(path: &str, _: &[u8]) -> Result<()> {
+-    Err(no_fs(path))
++pub(crate) fn write_new_file(path: &str, bytes: &[u8]) -> Result<()> {
++    if crate::craft_fs::read(path).is_ok() {return Err(EngineError::Other(format!("{path}: already exists")));}
++    write_file(path,bytes)
+ }
+ 
+ /// File-name parts for artboards `boards` of `doc`: the artboard's name with unsafe characters as

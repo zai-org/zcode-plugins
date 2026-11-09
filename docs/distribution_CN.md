@@ -89,3 +89,11 @@ ZCode 官方客户端会自动选择可用的受信任来源。兼容客户端�
 - 市场目录和插件制品都必须从受信任的 HTTPS 地址获取。
 
 市场维护者负责发布和服务运维。贡献者在 Pull Request 中只需更新插件源码、清单、文档、版本号和根目录市场条目。
+
+## 插件收录分类与界面能力
+
+官方维护插件放在 `plugins/<name>`，外部团队、合作方与社区维护插件放在 `external_plugins/<name>`。发布器根据目录生成 `publisherType`（`official` 或 `community`），在 `source` 改写为 ZIP 地址后继续保留。用途分类 `category` 独立填写。外部新增提交在收录阶段检查归属；修复已有插件不改变其维护归属。
+
+清单中合法的 `ui.surfaces` 使发布目录的 `componentTypes` 包含 `ui`，安装前即可发现界面能力。校验覆盖面板 ID、标题、已声明 MCP server、`ui://` 资源地址与 session 可用范围。能力与归属字段不授予执行权限。
+
+现有插件（包括 CloudBase Skills、Mimosa 和 Hyper3D Rodin）暂时保留在 `plugins/`。本次保留外部新增插件的收录分类逻辑，不迁移已有插件目录。其安装包内容、版本、插件名、市场 ID 和 ZIP 路径均保持不变。

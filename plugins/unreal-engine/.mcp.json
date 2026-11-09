@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "unreal-mcp": {
+      "type": "http",
+      "url": "${user_config.endpoint}"
+    }
+  }
+}

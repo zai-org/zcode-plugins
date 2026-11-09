@@ -1,0 +1,11 @@
+--- a/crates/engine/src/prefs.rs
++++ b/crates/engine/src/prefs.rs
+@@ -300,7 +300,7 @@
+             show_canvas_dots: true,
+             canvas_border: CanvasBorder::DropShadow,
+             ui_scale: UiScale::Auto,
+-            language: "auto".into(),
++            language: if cfg!(target_arch = "wasm32") { "zh-hans" } else { "auto" }.into(),
+             ui_font_size: UiFontSize::Small,
+             show_channels_in_color: false,
+             dynamic_color_sliders: true,

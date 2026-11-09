@@ -1,0 +1,56 @@
+--- a/crates/engine/src/cmd/file.rs
++++ b/crates/engine/src/cmd/file.rs
+@@ -194,7 +194,12 @@
+             return Ok(json!({ "index": i, "entities": s.docs.get(i).map(|d| d.doc.entity_count()) }));
+         }
+         #[cfg(target_arch = "wasm32")]
+-        return Err(bad("open", "paths are not available on the web; pass `data`"));
++        {
++            let bytes=crate::craft_fs::read(_path).map_err(|e|bad("open",e.to_string()))?;
++            let i=open_bytes(s,&bytes,_path,Some(_path.to_owned()))?;
++            super::blocks::xref::after_open(s,i);
++            return Ok(json!({"index":i}));
++        }
+     }
+     let data = str_param(p, "data").ok_or_else(|| bad("open", "`path` or `data` (base64) is required"))?;
+     let bytes = base64_decode(data).ok_or_else(|| bad("open", "invalid base64"))?;
+--- a/crates/engine/src/cmd/exchange.rs
++++ b/crates/engine/src/cmd/exchange.rs
+@@ -183,7 +183,7 @@
+         std::fs::read(_path).map_err(|e| bad("import", format!("{_path}: {e}")))
+     }
+     #[cfg(target_arch = "wasm32")]
+-    Err(bad("import", "paths are not available on the web; pass `data`"))
++    crate::craft_fs::read(_path).map_err(|e|bad("import",e.to_string()))
+ }
+ 
+ /// Add the source's layers, linetypes and styles that this drawing doesn't have (a name that
+--- a/crates/engine/src/cmd/file/compare.rs
++++ b/crates/engine/src/cmd/file/compare.rs
+@@ -106,7 +106,7 @@
+         std::fs::read(_path).map_err(|e| bad("compare", format!("{_path}: {e}")))
+     }
+     #[cfg(target_arch = "wasm32")]
+-    Err(bad("compare", "paths are not available on the web: open the other drawing and compare with it by name (`document`)"))
++    crate::craft_fs::read(_path).map_err(|e|bad("compare",e.to_string()))
+ }
+ 
+ /// Rounds coordinates (1e-6) so that a drawing written and read back still matches itself.
+--- a/crates/engine/src/cmd/file/template.rs
++++ b/crates/engine/src/cmd/file/template.rs
+@@ -78,5 +78,5 @@
+ 
+ #[cfg(target_arch = "wasm32")]
+ fn read_bytes(path: &str) -> Result<Vec<u8>> {
+-    Err(bad("new", format!("template {path}: paths are not available on the web")))
++    crate::craft_fs::read(path).map_err(|e|bad("new",e.to_string()))
+ }
+--- a/crates/engine/src/cmd/helpers.rs
++++ b/crates/engine/src/cmd/helpers.rs
+@@ -138,5 +138,5 @@
+ 
+ #[cfg(target_arch = "wasm32")]
+ fn read_support_file(cmd: &str, _path: &str) -> crate::Result<String> {
+-    Err(super::bad(cmd, "paths are not available on the web; pass the file's contents"))
++    crate::craft_fs::read_to_string(_path).map_err(|e|super::bad(cmd,e.to_string()))
+ }

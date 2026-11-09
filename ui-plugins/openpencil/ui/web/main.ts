@@ -1,0 +1,20 @@
+import { createApp } from "vue";
+import { createHead } from "@unhead/vue/client";
+import { EDITOR_KEY } from "@open-pencil/vue";
+import { createTab } from "#ui/web/tabs.ts";
+import { useEditorStore } from "@/app/editor/active-store";
+import router from "#ui/web/router.ts";
+import App from "#ui/web/App.vue";
+import { installFetchShim, installWorkerShim } from "#ui/assets.ts";
+import { configureFonts } from "#ui/fonts.ts";
+import "@/app.css";
+import "#ui/web/host.css";
+
+installFetchShim();
+await installWorkerShim();
+configureFonts();
+createTab();
+await router.push("/");
+const app = createApp(App);
+app.provide(EDITOR_KEY, useEditorStore());
+app.use(createHead()).use(router).mount("#root");

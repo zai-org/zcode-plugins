@@ -1,0 +1,23 @@
+--- a/crates/engine/src/io.rs
++++ b/crates/engine/src/io.rs
+@@ -769,11 +769,6 @@
+ /// Write one output file: to `path` natively; in the browser, delivered under its file name.
+ /// Without this, every export on the web failed with «operation not supported on this platform».
+ pub fn write_file(path: &str, bytes: &[u8]) -> Result<()> {
+-    if cfg!(target_arch = "wasm32") {
+-        let deliver = DELIVER.get().ok_or_else(|| EngineError::Io("saving files is not available in this build".into()))?;
+-        let name = Path::new(path).file_name().and_then(|n| n.to_str()).filter(|n| !n.is_empty()).unwrap_or("Untitled");
+-        return deliver(name, bytes).map_err(EngineError::Io);
+-    }
+     std::fs::write(path, bytes).map_err(|err| EngineError::Io(format!("{path}: {err}")))
+ }
+ 
+@@ -821,7 +816,7 @@
+         s.name = stem;
+     }
+     let (bytes, fresh) = session_bundle(&s)?;
+-    let file = format!("{}.{BUNDLE_EXTENSION}", sanitize_name(&fresh.name));
++    let file = Path::new(path).with_extension(BUNDLE_EXTENSION).to_string_lossy().into_owned();
+     write_file(&file, &bytes)?;
+     let written = fresh.sources.iter().filter(|x| fresh.pool.get(x.id).is_some()).count();
+     *e.session_mut() = fresh;

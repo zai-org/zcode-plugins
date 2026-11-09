@@ -20,9 +20,10 @@ Conventions:
 
 - One subdirectory per plugin, named after the plugin (kebab-case).
 - Icons: `icon.png`, square, ideally 256×256 (or larger power of two).
-- Keep icon backgrounds transparent and preserve the authored Figma colors.
-  The client supplies the theme-aware rounded container and centers the glyph
-  at two-thirds of the container size.
+- Solid or transparent backgrounds are supported; corner clipping belongs to the client.
+- `tests/test_icon_assets.py` owns the shared PNG integrity/square-canvas, CDN reference,
+  and provenance hash checks. Do not pin dimensions, alpha channels, or image hashes
+  in individual plugin tests. Update `icon-sources.json` when changing recorded assets.
 - Assets are **mutable**: re-committing a file with new content re-uploads it
   in place and refreshes its CDN cache (browser caches expire within 1 hour).
 - Deleting a file here does **not** delete it from OSS; clean up manually if

@@ -1,0 +1,50 @@
+{
+  "name": "jupyter-notebook",
+  "version": "0.2.0",
+  "description": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。",
+  "author": {
+    "name": "ZCode"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "mcpServers": {
+    "jupyter-notebook": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 240000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "JUPYTER_NOTEBOOK_PYTHON": "${user_config.pythonPath}"
+      }
+    }
+  },
+  "userConfig": {
+    "pythonPath": {
+      "type": "file",
+      "default": "",
+      "title": "Python 解释器",
+      "description": "可选。start_server 使用的 Python，需要装有 jupyter-server 与 ipykernel。留空时依次查找工作区 .venv / venv、当前激活的环境和 PATH。"
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "jupyter-notebook",
+        "title": {
+          "zh-CN": "Jupyter Notebook",
+          "en-US": "Jupyter Notebook"
+        },
+        "icon": "notebook",
+        "server": "jupyter-notebook",
+        "resourceUri": "ui://jupyter-notebook/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "Work on Jupyter notebooks in a side panel: connect to a running Jupyter Server or start one for the workspace, and edit and run cells together with the agent.",
+    "zh-CN": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。"
+  }
+}

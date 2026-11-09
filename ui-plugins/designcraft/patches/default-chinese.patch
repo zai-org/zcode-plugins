@@ -1,0 +1,11 @@
+--- a/crates/ui-egui/src/lib.rs
++++ b/crates/ui-egui/src/lib.rs
+@@ -316,7 +316,7 @@
+             proof_colors: false,
+             proof_setup: Default::default(),
+             dynamic_spelling: false,
+-            language: String::new(),
++            language: if cfg!(target_arch = "wasm32") { "zh".into() } else { String::new() },
+             flattener: String::new(),
+             pdf_export: PdfExportSettings::default(),
+             separation: None,
