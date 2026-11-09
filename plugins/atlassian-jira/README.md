@@ -1,6 +1,6 @@
 # Atlassian Jira
 
-Connect ZCode to **Jira** and **Confluence** on **Atlassian Cloud** through [Atlassian's official remote MCP server](https://developer.atlassian.com/change-log/blog/2025/07/01/mcp-server-beta/) (part of Rovo). No local server, no API token files: the plugin declares the hosted endpoint and ZCode handles OAuth 2.1 sign-in in the browser on first use.
+Connect ZCode to **Jira** and **Confluence** on **Atlassian Cloud** through [Atlassian's official remote MCP server](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/) (v2, part of Rovo). No local server, no API token files: the plugin declares the hosted endpoint and ZCode handles OAuth 2.1 sign-in in the browser on first use.
 
 ## What it gives you
 
@@ -30,7 +30,7 @@ atlassian-jira/
 
 | Name | Type | Endpoint | Auth |
 | --- | --- | --- | --- |
-| `atlassian` | `http` (remote) | `https://mcp.atlassian.com/v1/mcp` | OAuth 2.1 via browser on first use |
+| `atlassian` | `http` (remote) | `https://mcp.atlassian.com/v2/mcp` | OAuth 2.1 via browser on first use |
 
 ## Getting started
 
@@ -49,7 +49,7 @@ atlassian-jira/
 - **401 / not authenticated**: open ZCode → Settings → MCP and check the `atlassian` server status; restart the session to retry the OAuth flow.
 - **Connection timeout**: Atlassian Cloud can be slow to answer; raise `timeoutMs` in `.mcp.json`.
 - **Empty results or no sites**: verify the site is authorized for AI/MCP access in the Atlassian administration settings and that the user has a Jira license there.
-- **Endpoint changes**: if Atlassian revises the route, update `url` in `.mcp.json`; the current endpoint is documented on Atlassian's Remote MCP Server page.
+- **Endpoint changes**: if Atlassian revises the route, update `url` in `.mcp.json`; the current endpoint is documented in [Atlassian's Remote MCP Server guide](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/).
 
 ## License
 

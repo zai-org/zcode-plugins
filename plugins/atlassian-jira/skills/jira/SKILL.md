@@ -5,7 +5,7 @@ description: Work with Jira and Confluence on Atlassian Cloud through Atlassian'
 
 # Atlassian Jira (official Atlassian remote MCP server)
 
-This plugin brings the MCP tools of Atlassian's official remote server (`https://mcp.atlassian.com/v1/mcp`), exposed by Atlassian as part of Rovo. Tools are registered under the `mcp__atlassian__` prefix and cover Jira and Confluence: search, read, create, edit, transition, and comment. Check the exact tool names available in the current session before calling them; do not assume specific tool names.
+This plugin brings the MCP tools of Atlassian's official remote server (`https://mcp.atlassian.com/v2/mcp`), exposed by Atlassian as part of Rovo. Tools are registered under the `mcp__atlassian__` prefix and cover Jira and Confluence: search, read, create, edit, transition, and comment. Check the exact tool names available in the current session before calling them; do not assume specific tool names.
 
 Respond in the user's language.
 

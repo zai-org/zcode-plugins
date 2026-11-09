@@ -1,6 +1,6 @@
 # Atlassian Jira
 
-通过 [Atlassian 官方远程 MCP 服务器](https://developer.atlassian.com/change-log/blog/2025/07/01/mcp-server-beta/)（Rovo 的一部分）把 ZCode 接入 **Atlassian Cloud** 上的 **Jira** 与 **Confluence**。无需本地服务进程，也不用手动管理 API Token：插件只声明托管端点，首次使用时由 ZCode 在浏览器中完成 OAuth 2.1 登录授权。
+通过 [Atlassian 官方远程 MCP 服务器](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/)（v2，Rovo 的一部分）把 ZCode 接入 **Atlassian Cloud** 上的 **Jira** 与 **Confluence**。无需本地服务进程，也不用手动管理 API Token：插件只声明托管端点，首次使用时由 ZCode 在浏览器中完成 OAuth 2.1 登录授权。
 
 ## 提供什么
 
@@ -30,7 +30,7 @@ atlassian-jira/
 
 | 名称 | 类型 | 端点 | 认证 |
 | --- | --- | --- | --- |
-| `atlassian` | `http`（远程） | `https://mcp.atlassian.com/v1/mcp` | 首次使用时浏览器完成 OAuth 2.1 |
+| `atlassian` | `http`（远程） | `https://mcp.atlassian.com/v2/mcp` | 首次使用时浏览器完成 OAuth 2.1 |
 
 ## 快速开始
 
@@ -49,7 +49,7 @@ atlassian-jira/
 - **401 / 未认证**：打开 ZCode → Settings → MCP 查看 `atlassian` 服务器状态；重启会话以重试 OAuth 授权。
 - **连接超时**：Atlassian Cloud 有时响应较慢；可在 `.mcp.json` 中调大 `timeoutMs`。
 - **结果为空或没有站点**：确认该站点已在 Atlassian 管理设置中允许 AI/MCP 访问，且用户在该站点拥有 Jira 许可证。
-- **端点变更**：如 Atlassian 调整路径，请更新 `.mcp.json` 中的 `url`；当前端点见 Atlassian Remote MCP Server 官方文档。
+- **端点变更**：如 Atlassian 调整路径，请更新 `.mcp.json` 中的 `url`；当前端点见 [Atlassian Remote MCP Server 官方文档](https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/)。
 
 ## 许可证
 
