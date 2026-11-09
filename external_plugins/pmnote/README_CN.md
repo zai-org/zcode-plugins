@@ -7,4 +7,4 @@
 - 需要联网访问 pmnote.ai 和相关公开来源。
 - 可选的动态面经、作品和工具详情只读脚本需要 Python 3；无需账号或 API 密钥。面经检索只发送所需关键词。
 - 插件没有 Hook 或 MCP 服务，不向 PMNote 写入数据。外部网站遵循各自规则。
-- Skill 文件使用随附的 [PMNote 许可](skills/pmnote/LICENSE)。作者授权 ZCode 官方市场分发此插件；链接指向的第三方作品权利仍归各自权利人。
+- Skill 文件使用随附的 [MIT 许可](skills/pmnote/LICENSE)；链接指向的第三方作品权利仍归各自权利人。

@@ -1,47 +1,21 @@
-PMNote Skill 免费使用许可
-版本 2.0 · 2026-11-02
-Copyright (c) 2026 PMNote. 保留所有未明确授予的权利。
+MIT License
 
-1. 适用范围
+Copyright (c) 2026 PMNote
 
-本许可适用于随附本许可的 PMNote Skill 文件，以及仓库中由 PMNote 享有
-著作权的指令、文档、脚本和索引编排。这是一份免费使用许可，不是开源许可。
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-2. 免费使用
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-个人和组织均可免费、非独占地下载、安装、备份和使用官方 PMNote Skill，
-用于个人学习、日常工作、团队协作及商业项目，包括为雇主或客户完成实际任务。
-无需因使用人数、工作用途或商业项目另行付费或取得 PMNote 授权。
-
-允许在个人及团队自用的 Agent 环境中加载、检索和阅读，进行必要的复制、
-缓存及内部适配，并在同一组织或同一项目团队内部共享该适配版本。副本须保留
-PMNote 作者归属、本许可及版权说明，不得将内部适配版本冒称 PMNote 官方版本。
-
-用户选择的 Agent 服务可以代为处理上述使用，不因此取得独立公开分发、
-转售或训练模型的权利。团队内部使用不等于向第三方分发 Skill 产品。
-
-3. 需要另行授权的使用
-
-第 2 条之外，公开再分发本项目或其衍生版本、转售 Skill 本身、出租、再许可，
-或将 Skill 打包到面向第三方分发的产品、知识库、Agent 或服务中，须事先取得
-PMNote 书面授权。使用 Skill 本身或其编排训练模型同样须另行取得书面授权。
-可以分享官方仓库和下载页面的链接，邀请他人从官方入口免费获取。
-
-4. 链接指向的作品
-
-索引中的链接不构成对文章、音频、视频、课程正文或其他作品的版权授权。
-使用 Skill 参考公开事实和方法完成工作，不代表获得复制、改编、传播原作品
-或训练模型的权利。访问及使用原作品，须遵守原作品适用的授权及法律规定；
-付费内容仍须通过正式渠道取得访问权限。第三方作品的权利归各自权利人。
-
-5. 既有权利和平台规则
-
-本许可不追溯撤销此前版本下已有效取得的授权，不限制适用法律允许的引用
-等例外，也不主张对事实、思想或通用方法享有排他权利。
-通过 GitHub 公开仓库提供文件时，GitHub 服务条款已授予的平台及用户权利
-（包括站内查看和 Fork）不受本许可缩减；这不额外授权本许可未允许的用途。
-
-6. ZCode 官方市场发行授权
-
-PMNote 授权 ZCode 官方插件市场分发本插件的随附 Skill 文件。
-此授权不改变本许可对其他第三方再分发和外链作品的约定。
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

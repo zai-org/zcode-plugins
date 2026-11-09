@@ -1,6 +1,6 @@
 {
   "name": "pmnote",
-  "version": "1.5.4",
+  "version": "1.5.6",
   "description": "Search PMNote public sources to help game project managers with delivery, collaboration, career preparation, and AI tools.",
   "description_i18n": {
     "en": "Search PMNote public sources to help game project managers with delivery, collaboration, career preparation, and AI tools.",
@@ -11,7 +11,7 @@
     "url": "https://pmnote.ai"
   },
   "homepage": "https://pmnote.ai",
-  "license": "LicenseRef-PMNote",
+  "license": "MIT",
   "skills": "skills",
   "keywords": [
     "game-project-management",

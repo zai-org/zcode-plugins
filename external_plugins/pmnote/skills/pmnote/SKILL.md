@@ -1,14 +1,14 @@
 ---
 name: pmnote
 description: 查阅 PMNote 公开原文，分析游戏项目管理中的版本排期、交付风险、跨团队协作和美术管线，准备游戏PM求职与面试、选择游戏研发AI工具。用于这些具体问题，即使未提PMNote；不用于未经澄清的产品经理问题。
-license: Proprietary. 个人、团队工作及商业项目免费使用；再分发等边界见 LICENSE。
+license: MIT
 metadata:
-  version: "1.5.4"
+  version: "1.5.6"
 ---
 
 # PMNote
 
-个人学习、个人及团队工作、商业项目均可免费使用。作者署名、内部适配与再分发等边界见 [LICENSE](LICENSE)。
+本 Skill 文件以 MIT 许可发布，详见 [LICENSE](LICENSE)。链接指向的外部文章和其他作品的权利不因此改变。
 
 这里的 PM 指游戏项目管理。先从[分类索引](references/index.md)选择相关分类，按问题查找标题，优先打开 PMNote 站内文章与配套文字，再结合原文回答，附上来源链接。无需通读所有目录。
 

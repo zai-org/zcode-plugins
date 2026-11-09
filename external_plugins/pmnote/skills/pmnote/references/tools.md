@@ -29,6 +29,7 @@
 - [Gemini Notebook](https://pmnote.ai/tools/notebooklm)
 - [Notion AI](https://pmnote.ai/tools/notion-ai)
 - [Nwiro AI Pro](https://pmnote.ai/tools/nwiro-ai-pro)
+- [OpenRig](https://pmnote.ai/tools/openrig)
 - [Plask Motion](https://pmnote.ai/tools/plask)
 - [Recraft](https://pmnote.ai/tools/recraft)
 - [RenderDoc MCP · scarletfantasy](https://pmnote.ai/tools/renderdoc-mcp)
