@@ -5,7 +5,7 @@
     "en": "Maptec MCP integration and skill for place search, geocoding, route planning, distance matrix, map matching, and IP geolocation.",
     "zh-CN": "Maptec MCP 与技能：地点与周边搜索、地理编码、路线规划、距离矩阵、轨迹绑路与 IP 定位。"
   },
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": {
     "name": "Maptec (云图知行)",
     "url": "https://github.com/maptec-api/agent-plugins"
@@ -28,7 +28,7 @@
       "title": "Maptec API Key",
       "description": "Application API key from https://lbs.maptec.com/console/ . Enter the key itself, without Bearer.",
       "required": true,
-      "sensitive": true
+      "sensitive": false
     }
   },
   "mcpServers": {

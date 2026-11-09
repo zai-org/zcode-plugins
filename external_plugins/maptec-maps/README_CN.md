@@ -11,7 +11,7 @@
 启用本插件即允许 Agent 通过 HTTPS 访问 Maptec 托管的 MCP 服务；你发起的地图相关请求（地点、地址、路线、IP 等）会发送到 Maptec。
 
 - **网络**：向 `https://mcp.maptec.com/mcp` 发起 HTTPS 请求（Streamable HTTP MCP）。
-- **凭据**：需要 Maptec 应用 API Key，通过宿主安全插件配置项 `maptec_api_key` 填写；勿在对话或仓库中明文保存密钥。
+- **凭据**：需要 Maptec 应用 API Key，在插件设置中配置 `maptec_api_key`（ZCode 将该字段视为非敏感项）；勿在对话或仓库中明文保存密钥。
 - **Authorization**：请求头使用**原始 API Key**，不要自行添加 `Bearer` 前缀（除非 Maptec 文档另有要求）。
 - **本地执行**：不包含 Hook 或本地 stdio MCP，仅包含远程 MCP 声明与技能文件。
 - **计费与配额**：按 Maptec 账户与产品条款计费。
@@ -22,7 +22,7 @@
 
 1. 在 ZCode **设置 → 插件** 中，从官方市场安装 **maptec-maps**（收录后可用）。
 2. 启用插件。
-3. 在插件详情 **高级信息 → 配置** 中保存 **Maptec API Key**（需宿主支持敏感配置）。若当前版本暂不支持敏感项，可单独配置已鉴权的 Maptec MCP，并依赖技能完成工具选择。
+3. 在插件详情 **高级信息 → 配置** 中保存 **Maptec API Key**。也可单独配置已鉴权的 Maptec MCP，并依赖技能完成工具选择。
 
 ## 验证
 

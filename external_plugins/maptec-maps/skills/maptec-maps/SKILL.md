@@ -3,7 +3,7 @@ name: maptec-maps
 description: Search places and nearby businesses, resolve addresses or coordinates, plan routes, compare travel distances, match road tracks, and locate IP addresses using Maptec MCP. Use when Maptec is requested or is the connected map provider, including mapping requests that do not mention Maptec by name.
 description_zh: 使用 Maptec MCP 进行地点与周边搜索、地理编码、路线规划、距离计算、轨迹绑路与 IP 定位；当用户需要地图、路线、地址或坐标查询时使用。
 description_en: Search places, geocode, plan routes, and related map tasks with Maptec MCP; use for map, routing, address, or coordinate requests.
-version: 0.1.2
+version: 0.1.3
 author: 云图知行
 ---
 
