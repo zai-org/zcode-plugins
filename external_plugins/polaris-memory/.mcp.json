@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "polaris-memory": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/srv/polaris_mcp_server.py",
+        "--storage", "${CLAUDE_PLUGIN_ROOT}/data/memory.pt"
+      ],
+      "timeoutMs": 120000
+    }
+  }
+}

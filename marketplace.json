@@ -1443,6 +1443,31 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "polaris-memory",
+      "source": "./external_plugins/polaris-memory",
+      "displayName": "POLARIS Memory",
+      "displayName_i18n": {
+        "en": "POLARIS Memory",
+        "zh-CN": "POLARIS 永久记忆"
+      },
+      "description": "Long-term permanent memory for AI coding assistants: two-stage semantic recall, novelty-gated auto-remember, GDPR-style forgetting, self-healing storage. Free tier: 1000 searches/month.",
+      "description_i18n": {
+        "en": "Long-term permanent memory for AI coding assistants: two-stage semantic recall, novelty-gated auto-remember, GDPR-style forgetting, self-healing storage. Free tier: 1000 searches/month.",
+        "zh-CN": "给 AI 编程助手装上长期记忆:值空间两级语义召回、novelty 自动去重、GDPR 式定向遗忘、损坏自愈。个人免费,每月 1000 次搜索额度。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "POLARIS"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "memory",
+        "mcp",
+        "zh",
+        "knowledge"
+      ]
     }
   ]
 }
