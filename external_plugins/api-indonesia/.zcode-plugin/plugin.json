@@ -1,0 +1,35 @@
+{
+  "name": "api-indonesia",
+  "version": "0.1.0",
+  "description": "Indonesian public data from official sources through one MCP server: administrative regions down to villages and postal codes, region boundaries, public holidays, prayer times, Hijri dates, schools, universities, hospitals, earthquakes, weather, air quality, exchange rates, minimum wage, QRIS parsing, rupiah formatting and more.",
+  "description_i18n": {
+    "en": "Indonesian public data from official sources through one MCP server: administrative regions down to villages and postal codes, region boundaries, public holidays, prayer times, Hijri dates, schools, universities, hospitals, earthquakes, weather, air quality, exchange rates, minimum wage, QRIS parsing, rupiah formatting and more.",
+    "zh-CN": "通过一个 MCP 服务器访问来自官方来源的印尼公共数据：从省到村和邮政编码的行政区划、区域边界、公共假期、礼拜时间、伊斯兰历日期、学校、大学、医院、地震、天气、空气质量、汇率、最低工资、QRIS 解析、印尼盾金额格式化等。"
+  },
+  "author": {
+    "name": "Khaisa Studio",
+    "url": "https://apiindonesia.id"
+  },
+  "homepage": "https://apiindonesia.id",
+  "repository": "https://github.com/khmuhtadin/api-indonesia-examples",
+  "license": "MIT",
+  "keywords": [
+    "indonesia",
+    "government-data",
+    "regions",
+    "holidays",
+    "prayer-times",
+    "schools",
+    "earthquakes",
+    "exchange-rates",
+    "mcp"
+  ],
+  "userConfig": {
+    "api_key": {
+      "title": "API Indonesia API key",
+      "description": "Optional. Leave empty to use the OAuth sign-in prompt. Create a key at https://dashboard.apiindonesia.id/register.",
+      "type": "string",
+      "default": ""
+    }
+  }
+}
