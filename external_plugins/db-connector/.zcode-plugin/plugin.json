@@ -1,0 +1,16 @@
+{
+  "name": "db-connector",
+  "version": "0.1.2",
+  "description": "Read-only access to MySQL/PostgreSQL/MongoDB: multi-environment connections, parameter-bound safe queries and schema browsing",
+  "description_i18n": {
+    "en": "Read-only access to MySQL/PostgreSQL/MongoDB: multi-environment connections, parameter-bound safe queries and schema browsing",
+    "zh-CN": "只读连接 MySQL/PostgreSQL/MongoDB：多环境多连接配置、参数绑定安全查询与结构浏览"
+  },
+  "author": { "name": "mojianjjun" },
+  "license": "Apache-2.0",
+  "repository": "https://github.com/mojianjjun/zcode-plugins",
+  "homepage": "https://github.com/mojianjjun/zcode-plugins/tree/main/db-connector",
+  "keywords": ["database", "mysql", "postgresql", "mongodb", "readonly", "mcp"],
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills"
+}

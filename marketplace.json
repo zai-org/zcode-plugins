@@ -1443,6 +1443,28 @@
         "mcp",
         "verification"
       ]
+    },
+    {
+      "name": "db-connector",
+      "source": "./external_plugins/db-connector",
+      "description": "Read-only access to MySQL/PostgreSQL/MongoDB: multi-environment connections, parameter-bound safe queries and schema browsing",
+      "description_i18n": {
+        "en": "Read-only access to MySQL/PostgreSQL/MongoDB: multi-environment connections, parameter-bound safe queries and schema browsing",
+        "zh-CN": "只读连接 MySQL/PostgreSQL/MongoDB：多环境多连接配置、参数绑定安全查询与结构浏览"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "mojianjjun"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "database",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "readonly",
+        "mcp"
+      ]
     }
   ]
 }

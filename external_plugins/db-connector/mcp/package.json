@@ -1,0 +1,26 @@
+{
+  "name": "db-connector-mcp",
+  "version": "0.1.2",
+  "private": true,
+  "description": "db-connector MCP server (stdio): read-only MySQL/PostgreSQL/MongoDB access",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle": "tsc -p tsconfig.json && esbuild dist/db-connect-server.js --bundle --platform=node --format=cjs --target=node18 --legal-comments=inline --outfile=dist/db-connect-server.bundle.cjs",
+    "test": "node test/smoke.mjs",
+    "test:real": "node test/real-mysql.mjs"
+  },
+  "dependencies": {
+    "mongodb": "^6.10.0",
+    "mysql2": "^3.11.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.6.0"
+  }
+}

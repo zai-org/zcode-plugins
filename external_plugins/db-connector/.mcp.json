@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "db-connector": {
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/dist/db-connect-server.bundle.cjs"]
+    }
+  }
+}
