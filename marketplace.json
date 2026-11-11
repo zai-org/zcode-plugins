@@ -1471,6 +1471,11 @@
     },
     {
       "name": "pmnote",
+      "displayName": "PMNote Game Project Management",
+      "displayName_i18n": {
+        "en": "PMNote Game Project Management",
+        "zh-CN": "PMNote 游戏项目管理"
+      },
       "source": "./external_plugins/pmnote",
       "description": "Search PMNote public sources to help game project managers with delivery, collaboration, career preparation, and AI tools.",
       "description_i18n": {
@@ -1485,10 +1490,28 @@
       "category": "productivity",
       "keywords": [
         "game-project-management",
+        "game-pm",
         "游戏项目管理",
+        "游戏PM",
+        "项目管理",
+        "面试",
         "interview",
+        "career",
+        "game-development",
         "ai-tools"
-      ]
+      ],
+      "examplePrompts": [
+        "Review the delivery risks in this release schedule, drawing on PMNote's game PM articles",
+        "Find PMNote interview notes to help me prepare for a game PM interview",
+        "Which AI tools in PMNote's catalog fit turning reference art into 3D asset prototypes?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "参考 PMNote 的游戏 PM 文章，帮我审一下这个版本排期的交付风险",
+          "查一下 PMNote 的面经，帮我准备游戏 PM 面试",
+          "PMNote 的 AI 工具目录里，哪些适合把参考图做成 3D 资产原型？"
+        ]
+      }
     }
   ]
 }
