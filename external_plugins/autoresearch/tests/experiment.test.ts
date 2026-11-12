@@ -9,6 +9,7 @@ import {
   detectPlateau,
   median,
   normalizeHypothesis,
+  hypothesesSimilar,
   directionLabel,
   detectDoomLoop,
 } from "../mcp/lib/experiment.ts";
@@ -40,6 +41,28 @@ test("parseMetricLines rejects dangerous keys and non-numbers", () => {
 test("parseMetricLines returns primary undefined when metric not seen", () => {
   const { primary } = parseMetricLines("METRIC other=1\n", "time_ms");
   assert.equal(primary, undefined);
+});
+
+test("parseMetricLines accepts hyphenated metric names", () => {
+  // p95-style names are common; the name charset must not silently drop them.
+  const { metrics, primary } = parseMetricLines(
+    "METRIC tokens-per-sec=128\nMETRIC time_ms=42",
+    "tokens-per-sec",
+  );
+  assert.deepEqual(metrics, { "tokens-per-sec": 128, time_ms: 42 });
+  assert.equal(primary, 128);
+});
+
+test("parseMetricLines surfaces near-miss METRIC lines for loud diagnostics", () => {
+  // A silently dropped primary metric only surfaces later as a confusing
+  // keep-gate error; near-misses are collected so the server can log them.
+  const { metrics, primary, nearMisses } = parseMetricLines(
+    "METRIC time_ms=abc\nMETRIC =5\nMETRIC ok=1\nnot a metric",
+    "ok",
+  );
+  assert.deepEqual(nearMisses, ["METRIC time_ms=abc", "METRIC =5"]);
+  assert.deepEqual(metrics, { ok: 1 });
+  assert.equal(primary, 1);
 });
 
 test("isBetter is direction-aware", () => {
@@ -74,6 +97,33 @@ test("computeConfidence uses MAD noise floor", () => {
   );
 });
 
+// Regression (worth-fix 2026-11-11, segment dota2-logloss run 6): on a
+// deterministic benchmark the pooled outcome spread across experiments is
+// effect size, not measurement noise — a bitwise-exact keep was reported as
+// "yellow 1.5× noise" and the loop was nudged into pointless repeat
+// re-measurement (which plateauHintText already declines for the same
+// benchmark). Deterministic input has a single-point noise band: any delta is
+// exact signal, so no confidence ratio is reported.
+test("computeConfidence returns null for a deterministic benchmark", () => {
+  const values = [0.662184, 0.664594, 0.662466, 0.662506, 0.662421, 0.661943];
+  const pooled = computeConfidence({
+    values,
+    baseline: 0.662184,
+    best: 0.661943,
+  });
+  assert.ok(pooled);
+  assert.equal(pooled.level, "yellow");
+  assert.equal(
+    computeConfidence({
+      values,
+      baseline: 0.662184,
+      best: 0.661943,
+      deterministic: true,
+    }),
+    null,
+  );
+});
+
 test("unwrapMeasureCommand allows the benchmark script with wrappers", () => {
   assert.equal(
     unwrapMeasureCommand(".auto/measure.sh", "measure.sh"),
@@ -94,6 +144,35 @@ test("unwrapMeasureCommand allows the benchmark script with wrappers", () => {
   );
   assert.equal(
     unwrapMeasureCommand("env X=1 bash .auto/measure.sh", "measure.sh"),
+    "bash .auto/measure.sh",
+  );
+});
+
+// Regression (evidence 2026-11-04): the assignment-prefix strip used an
+// unchecked `\S*` value, so `X=$(id) bash .auto/measure.sh` passed the lock
+// while bash executed the substitution in the prefix. The value now goes
+// through the same character whitelist as script args.
+test("unwrapMeasureCommand rejects command substitution in assignment prefixes", () => {
+  assert.equal(
+    unwrapMeasureCommand("X=$(id) bash .auto/measure.sh", "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand("X=`id` bash .auto/measure.sh", "measure.sh"),
+    null,
+  );
+  assert.equal(
+    unwrapMeasureCommand("env X=$(id) bash .auto/measure.sh", "measure.sh"),
+    null,
+  );
+  assert.equal(unwrapMeasureCommand("X=$(id); evil", "measure.sh"), null);
+  assert.equal(
+    unwrapMeasureCommand('X="quoted" bash .auto/measure.sh', "measure.sh"),
+    null,
+  );
+  // benign prefixes still pass (whitelist chars: word . / : = + -)
+  assert.equal(
+    unwrapMeasureCommand("FOO=a+b/c:d=e bash .auto/measure.sh", "measure.sh"),
     "bash .auto/measure.sh",
   );
 });
@@ -127,9 +206,9 @@ test("unwrapMeasureCommand rejects shell injection after the script (whitelist)"
     unwrapMeasureCommand("bash .auto/measure.sh \recho PWNED", "measure.sh"),
     null,
   );
-  // redirection
+  // redirection (relative fixture target — the repo keeps absolute-path literals out of its tree)
   assert.equal(
-    unwrapMeasureCommand("bash .auto/measure.sh > /tmp/x", "measure.sh"),
+    unwrapMeasureCommand("bash .auto/measure.sh > out.txt", "measure.sh"),
     null,
   );
   // backtick / dollar / quotes / glob
@@ -293,6 +372,34 @@ test("directionLabel takes hypothesis, else description clause", () => {
   assert.equal(directionLabel({ status: "keep" }), "keep");
 });
 
+test("directionLabel keeps decimals intact (dot is not a clause boundary)", () => {
+  // 2026-11-05, ml-auto dota2-wave1: the old split treated the half-width
+  // period as a clause boundary, so the memory injection presented
+  // "bagging_fraction 0" / "lambda_l2 1" / "lr 0" as tried directions.
+  assert.equal(
+    directionLabel({
+      asi: {
+        hypothesis:
+          "bagging_fraction 0.8 + bagging_freq 1：行采样方差缩减在 dota2 灵敏",
+      },
+    }),
+    "bagging_fraction 0.8 + bagging_freq 1：行采…", // 40-cap still applies, dot intact
+  );
+  assert.equal(
+    directionLabel({ asi: { hypothesis: "lambda_l2 1.0：正则" } }),
+    "lambda_l2 1.0：正则",
+  );
+  assert.equal(
+    directionLabel({ asi: { hypothesis: "lr 0.05 x n_estimators 600" } }),
+    "lr 0.05 x n_estimators 600",
+  );
+  // real clause boundaries still split
+  assert.equal(
+    directionLabel({ asi: { hypothesis: "lr 0.05；然后看 600" } }),
+    "lr 0.05",
+  );
+});
+
 test("detectDoomLoop flags repeats and oscillation, not normal progress", () => {
   const run = (d: string) => ({ description: d });
   // oscillation A→B→A→B
@@ -327,6 +434,45 @@ test("detectDoomLoop flags repeats and oscillation, not normal progress", () => 
   );
   // too few runs → null
   assert.equal(detectDoomLoop([run("a"), run("a")]), null);
+});
+
+test("detectDoomLoop ignores infra-failure rows when scanning the window", () => {
+  const run = (d: string, infra?: boolean) => ({
+    description: d,
+    ...(infra ? { asi: { infra: true } } : {}),
+  });
+  // The same hypothesis crashing over and over with asi.infra: true (network
+  // outage retries) is environment noise, not the agent thrashing.
+  assert.equal(
+    detectDoomLoop([
+      run("try the sieve", true),
+      run("try the sieve", true),
+      run("try the sieve", true),
+      run("try the sieve", true),
+    ]),
+    null,
+  );
+  // Infra rows are removed before the window is taken, so a real repeat
+  // interleaved with infra noise still triggers.
+  assert.equal(
+    detectDoomLoop([
+      run("try the sieve", true),
+      run("try the sieve"),
+      run("try the sieve"),
+      run("try the sieve"),
+    ])?.pattern,
+    "repeat",
+  );
+  // Non-infra oscillation keeps the existing behavior.
+  assert.equal(
+    detectDoomLoop([
+      run("sieve approach"),
+      run("bitpacking"),
+      run("sieve approach v2"),
+      run("bitpacking v2"),
+    ])?.pattern,
+    "oscillate",
+  );
 });
 
 test("isStopReached: noop neither counts as a failure nor keeps the streak", () => {
@@ -375,4 +521,47 @@ test("isStopReached: noop neither counts as a failure nor keeps the streak", () 
     ),
     false,
   );
+});
+
+test("CJK hypotheses without spaces dedupe and trigger doom-loop", () => {
+  assert.equal(
+    hypothesesSimilar(
+      normalizeHypothesis("试埃氏筛"),
+      normalizeHypothesis("试埃氏筛变体"),
+    ),
+    true,
+  );
+  assert.equal(
+    hypothesesSimilar(
+      normalizeHypothesis("试 sqrt 截断"),
+      normalizeHypothesis("试 sqrt 截断变体"),
+    ),
+    true,
+  );
+
+  const runs = ["试埃氏筛", "试位运算", "试埃氏筛变体", "试位运算变体"].map(
+    (description, i) => ({
+      run: i + 1,
+      status: "discard",
+      metric: 10,
+      description,
+    }),
+  );
+  assert.equal(detectDoomLoop(runs)?.pattern, "oscillate");
+});
+
+// Regression (worth-fix 2026-11-07): a crash row carrying a legacy 0
+// placeholder must not enter the plateau window. With the row included, the
+// window's first value becomes 0 and the flat real values look like a 10×
+// "improvement" (plateau false); excluded, the flat window correctly plateaus.
+test("detectPlateau excludes crash rows (legacy placeholders are not data points)", () => {
+  const rows = [
+    { run: 1, status: "keep", metric: 10 },
+    { run: 2, status: "crash", metric: 0 }, // pre-ADR-10 placeholder
+    { run: 3, status: "keep", metric: 10 },
+    { run: 4, status: "keep", metric: 10 },
+    { run: 5, status: "keep", metric: 10 },
+    { run: 6, status: "keep", metric: 10 },
+  ];
+  assert.equal(detectPlateau(rows, { window: 5, minImprovement: 0.01 }), true);
 });

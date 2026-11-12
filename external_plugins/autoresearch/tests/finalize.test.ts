@@ -2,11 +2,12 @@
 // incremental file sets, deletions, whitespace paths, relative groups.json).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { resolveBash } from "../mcp/lib/bash.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const FINALIZE = join(ROOT, "scripts", "finalize.sh");
@@ -21,6 +22,7 @@ function setup() {
   // default `git init` to master, so pin it instead of relying on the default
   for (const a of [
     ["init", "-q", "-b", "main"],
+    ["config", "core.autocrlf", "false"],
     ["config", "user.email", "t@t"],
     ["config", "user.name", "t"],
   ]) {
@@ -65,7 +67,9 @@ test("finalize splits two non-overlapping kept commits into branches", () => {
     { title: "t1", last_commit: c1, slug: "a" },
     { title: "t2", last_commit: c2, slug: "b" },
   ]);
-  const out = execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+  const out = execFileSync(resolveBash(), [FINALIZE, cwd, g], {
+    encoding: "utf8",
+  });
   assert.match(out, /autoresearch\/opt\/01-a/);
   assert.match(out, /autoresearch\/opt\/02-b/);
   // each branch has exactly its own file change
@@ -99,7 +103,7 @@ test("finalize rejects overlapping files across groups and rolls back", () => {
   ]);
   let threw = false;
   try {
-    execFileSync("bash", [FINALIZE, cwd, g2], { encoding: "utf8" });
+    execFileSync(resolveBash(), [FINALIZE, cwd, g2], { encoding: "utf8" });
   } catch (e) {
     threw = true;
     assert.match(
@@ -123,7 +127,7 @@ test("finalize gives the Nth branch only its own group's files", () => {
     { title: "t1", last_commit: c1, slug: "a" },
     { title: "t2", last_commit: c2, slug: "b" },
   ]);
-  execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+  execFileSync(resolveBash(), [FINALIZE, cwd, g], { encoding: "utf8" });
   // branch 02 must contain only b.js — not group 1's a.js (incremental set)
   const diff = git(cwd, [
     "diff",
@@ -142,6 +146,7 @@ test("finalize handles a group containing a deleted file", () => {
   const cwd = mkdtempSync(join(tmpdir(), "ar-fin-del-"));
   for (const a of [
     ["init", "-q", "-b", "main"],
+    ["config", "core.autocrlf", "false"],
     ["config", "user.email", "t@t"],
     ["config", "user.name", "t"],
   ]) {
@@ -172,7 +177,9 @@ test("finalize handles a group containing a deleted file", () => {
     { title: "t1", last_commit: c1, slug: "b" },
     { title: "t2", last_commit: c2, slug: "rm" },
   ]);
-  const out = execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+  const out = execFileSync(resolveBash(), [FINALIZE, cwd, g], {
+    encoding: "utf8",
+  });
   assert.match(out, /autoresearch\/opt\/02-rm/);
   // a.js absent from branch 02's tree, untouched on branch 01
   let exists = true;
@@ -198,7 +205,7 @@ test("finalize rollback leaves no residue and rerun succeeds", () => {
   ]);
   let threw = false;
   try {
-    execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+    execFileSync(resolveBash(), [FINALIZE, cwd, g], { encoding: "utf8" });
   } catch (e) {
     threw = true;
     assert.match(
@@ -227,7 +234,9 @@ test("finalize rollback leaves no residue and rerun succeeds", () => {
     cwd,
     stdio: "ignore",
   });
-  const out = execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+  const out = execFileSync(resolveBash(), [FINALIZE, cwd, g], {
+    encoding: "utf8",
+  });
   assert.match(out, /autoresearch\/opt\/02-b/);
 });
 
@@ -235,6 +244,7 @@ test("finalize handles file names containing spaces", () => {
   const cwd = mkdtempSync(join(tmpdir(), "ar-fin-space-"));
   for (const a of [
     ["init", "-q", "-b", "main"],
+    ["config", "core.autocrlf", "false"],
     ["config", "user.email", "t@t"],
     ["config", "user.name", "t"],
   ]) {
@@ -257,7 +267,7 @@ test("finalize handles file names containing spaces", () => {
   const g = groups(cwd, "opt", [
     { title: "t1", last_commit: c1, slug: "spaced" },
   ]);
-  execFileSync("bash", [FINALIZE, cwd, g], { encoding: "utf8" });
+  execFileSync(resolveBash(), [FINALIZE, cwd, g], { encoding: "utf8" });
   assert.equal(
     git(cwd, ["show", "autoresearch/opt/01-spaced:my file.js"]),
     "v2\n",
@@ -271,10 +281,37 @@ test("finalize accepts a bare relative groups.json path", () => {
     { title: "t2", last_commit: c2, slug: "b" },
   ]);
   // invoke from inside the project with "." and a bare relative groups.json
-  const out = execFileSync("bash", [FINALIZE, ".", "groups.json"], {
+  const out = execFileSync(resolveBash(), [FINALIZE, ".", "groups.json"], {
     cwd,
     encoding: "utf8",
   });
   assert.match(out, /autoresearch\/opt\/01-a/);
   assert.match(out, /autoresearch\/opt\/02-b/);
+});
+
+test("finalize refuses a dirty working tree instead of gambling it on checkout -f", () => {
+  const { cwd, c1 } = setup();
+  // Uncommitted work in progress: the rollback path's `git checkout -f`
+  // would discard exactly this, so finalize must refuse up front.
+  writeFileSync(join(cwd, "a.js"), "v3-uncommitted\n");
+  const g = groups(cwd, "opt", [{ title: "t1", last_commit: c1, slug: "a" }]);
+  let threw = false;
+  try {
+    execFileSync(resolveBash(), [FINALIZE, cwd, g], { encoding: "utf8" });
+  } catch (e) {
+    threw = true;
+    assert.equal((e as { status?: number }).status, 2);
+    assert.match(
+      String((e as { stderr?: unknown }).stderr ?? ""),
+      /uncommitted changes/,
+    );
+  }
+  assert.equal(threw, true, "dirty tree must abort finalize");
+  // Nothing was built and the uncommitted content is still there.
+  assert.equal(
+    git(cwd, ["branch", "--list", "autoresearch/opt/*"]).trim(),
+    "",
+    "no finalize branches created",
+  );
+  assert.equal(readFileSync(join(cwd, "a.js"), "utf8"), "v3-uncommitted\n");
 });

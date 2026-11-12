@@ -6,7 +6,6 @@
 set -euo pipefail
 
 readonly STREAK_THRESHOLD=3
-readonly WINDOW=5
 
 payload="$(cat)"
 
@@ -21,14 +20,16 @@ const tail = fs.readFileSync(log, 'utf8')
   .filter(e => e && e.type === 'run')
   .slice(-5);
 
+// Consecutive-failure semantics match the guardrails spec: only real failures
+// count; keep AND noop both break the chain.
 let streak = 0;
 for (const r of [...tail].reverse()) {
-  if (r.status === 'keep') break;
+  if (r.status === 'keep' || r.status === 'noop') break;
   streak += 1;
 }
 if (streak < 3) process.exit(0);
 
-console.log(`⚠️ ${streak} consecutive non-keep results. Consider:`);
+console.log(`⚠️ ${streak} consecutive failed results. Consider:`);
 console.log('  - re-reading .auto/prompt.md and the benchmark script');
 console.log('  - something structurally different, not another variation of the same idea');
 console.log('  - measuring where time/space is actually spent before the next change');

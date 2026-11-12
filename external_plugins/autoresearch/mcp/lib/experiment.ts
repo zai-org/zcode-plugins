@@ -2,7 +2,10 @@
 // No I/O here so they are unit-testable without a workspace.
 import type { Confidence, Direction, RunLike } from "./types.ts";
 
-export const METRIC_RE = /^METRIC\s+([\w.µ]+)=(\S+)$/;
+// Metric name charset includes `-` (p95-style names) — an over-tight class
+// would silently drop the primary metric and keep would then fail with a
+// confusing "metric must be a finite number" (worth-fix 2026-11-06).
+const METRIC_RE = /^METRIC\s+([\w.µ-]+)=(\S+)$/;
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
@@ -14,20 +17,38 @@ const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 export function parseMetricLines(
   output: unknown,
   metricName?: string,
-): { metrics: Record<string, number>; primary: number | undefined } {
+): {
+  metrics: Record<string, number>;
+  primary: number | undefined;
+  nearMisses: string[];
+} {
   const metrics: Record<string, number> = {};
   let primary: number | undefined;
+  // Near-miss diagnostics: a line that looks like a METRIC row but fails the
+  // parse (bad name charset, non-numeric value) must not vanish silently — a
+  // silently dropped primary metric only surfaces later as a confusing
+  // "metric must be a finite number" on keep. Same never-silent principle as
+  // the ledger's corrupt-line diagnostic.
+  const nearMisses: string[] = [];
   for (const line of String(output ?? "").split("\n")) {
-    const m = METRIC_RE.exec(line.trim());
-    if (!m) continue;
-    const [, name, rawValue] = m;
-    if (FORBIDDEN_KEYS.has(name)) continue;
-    const value = Number(rawValue);
-    if (!Number.isFinite(value)) continue;
-    metrics[name] = value;
-    if (name === metricName) primary = value;
+    const trimmed = line.trim();
+    if (!/^METRIC\s/.test(trimmed)) continue;
+    // Every METRIC-looking line must land in metrics or in nearMisses — the
+    // silent middle (regex passes, Number() fails; name charset rejects) is
+    // where primary metrics used to vanish (never-silent principle, same as
+    // the ledger's corrupt-line diagnostic).
+    const m = METRIC_RE.exec(trimmed);
+    const name = m?.[1];
+    const value =
+      name != null && !FORBIDDEN_KEYS.has(name) ? Number(m?.[2]) : NaN;
+    if (name != null && Number.isFinite(value)) {
+      metrics[name] = value;
+      if (name === metricName) primary = value;
+    } else if (nearMisses.length < 10) {
+      nearMisses.push(trimmed);
+    }
   }
-  return { metrics, primary };
+  return { metrics, primary, nearMisses };
 }
 
 /**
@@ -43,10 +64,7 @@ export function isBetter(
   return direction === "higher" ? current > best : current < best;
 }
 
-/**
- * MAD-based noise floor for the current segment.
- * Returns null when there are fewer than 3 data points or MAD is 0.
- */
+/** Median of the values (null for an empty list); the noise floor lives in computeConfidence. */
 export function median(values: number[]): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -60,12 +78,16 @@ export function computeConfidence({
   values,
   baseline,
   best,
+  deterministic = false,
 }: {
   values: number[];
   baseline: number | null;
   best: number | null;
+  /** Bitwise-reproducible benchmark: the noise floor is a single point, so no MAD ratio exists — any delta is exact signal, not a directional hint. */
+  deterministic?: boolean;
 }): Confidence | null {
   if (values.length < 3 || baseline == null || best == null) return null;
+  if (deterministic) return null;
   const med = median(values);
   if (med == null || med === 0) return null;
   const deviations = values.map((v) => Math.abs(v - med));
@@ -81,13 +103,21 @@ export function computeConfidence({
 /**
  * Enforce that a run_experiment command is (a wrapper around) the benchmark
  * script. Strips leading `FOO=bar` assignments and `env/time/nice/nohup`
- * wrappers, then requires the core command to start with the measure script
- * path. Returns the unwrapped command string, or null when the command is
- * not the benchmark script. Prevents `evil; ./measure.sh` chained injection.
+ * wrappers (assignment values pass the same character whitelist as script
+ * args — a prefix is not a smuggling channel for `$(…)`/backticks), then
+ * requires the core command to start with the measure script path. Returns
+ * the unwrapped command string, or null when the command is not the
+ * benchmark script. Prevents `evil; ./measure.sh` chained injection.
  */
 const WRAP_RE = /^(env|time|nice|nohup)\s+/;
-// leading env assignment including its value: `FOO=1 ` or `FOO="a b" `
-const ASSIGN_RE = /^[A-Za-z_][A-Za-z0-9_]*=\S*\s*/;
+// leading env assignment including its value: `FOO=1 ` or `FOO=a=b `
+const ASSIGN_RE = /^([A-Za-z_][A-Za-z0-9_]*=)(\S*)\s*/;
+// The assignment VALUE goes through the same whitelist idea as the args below:
+// bash executes a prefix assignment before the script runs, so `X=$(id)` or
+// backticks would smuggle arbitrary commands past the lock. Values are
+// restricted to the arg character class minus separators (`\S*` already
+// excludes whitespace).
+const ASSIGN_VALUE_RE = /^[\w./:+=-]*$/;
 
 export function unwrapMeasureCommand(
   command: unknown,
@@ -100,7 +130,11 @@ export function unwrapMeasureCommand(
   let prev: string;
   do {
     prev = cmd;
-    cmd = cmd.replace(ASSIGN_RE, "").trim();
+    const assign = ASSIGN_RE.exec(cmd);
+    if (assign) {
+      if (!ASSIGN_VALUE_RE.test(assign[2])) return null;
+      cmd = cmd.slice(assign[0].length).trim();
+    }
     cmd = cmd.replace(WRAP_RE, "").trim();
   } while (cmd !== prev);
   if (!cmd) return null;
@@ -154,12 +188,28 @@ export function isStopReached(
  * Normalize a hypothesis/description for comparison: lowercase, strip
  * non-alphanumerics, sort tokens. Returns null when there is no signal.
  */
+const CJK_RE = /[\u4e00-\u9fff]/;
+
+/**
+ * A long CJK token is a compound ("试埃氏筛变体"), so treating it as one
+ * whitespace-delimited word makes every variant look unrelated. Bigrams keep
+ * the shared prefix/suffix signal without a segmentation dependency; English
+ * tokens keep their existing word-level behavior.
+ */
+function hypothesisTokens(token: string): string[] {
+  if (!CJK_RE.test(token) || token.length <= 2) return [token];
+  const out: string[] = [];
+  for (let i = 0; i < token.length - 1; i++) out.push(token.slice(i, i + 2));
+  return out;
+}
+
 export function normalizeHypothesis(text: unknown): string | null {
   const tokens = String(text ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length >= 2);
+    .filter((t) => t.length >= 2)
+    .flatMap(hypothesisTokens);
   if (tokens.length === 0) return null;
   return [...tokens].sort().join(" ");
 }
@@ -181,13 +231,17 @@ export function hypothesesSimilar(
 
 /**
  * Direction label for a run: prefer asi.hypothesis, else description; take the
- * leading clause (up to first comma/period/semicolon), capped at 40 chars.
+ * leading clause (up to first comma/semicolon), capped at 40 chars. The half
+ * width period is deliberately NOT a clause boundary: decimals ("lambda_l2
+ * 1.0", "bagging_fraction 0.8") would otherwise be cut at the dot and the
+ * memory injection would present "lambda_l2 1" / "bagging_fraction 0" as the
+ * tried direction (evidence 2026-11-05, ml-auto dota2-wave1).
  */
 export function directionLabel(run: RunLike): string {
   const raw = run?.asi?.hypothesis || run?.description || "";
   const clause =
     String(raw)
-      .split(/[,.;，。；]/)[0]
+      .split(/[,;，。；]/)[0]
       ?.trim() || "";
   return clause.length > 40
     ? clause.slice(0, 40) + "…"
@@ -199,12 +253,17 @@ export function directionLabel(run: RunLike): string {
  * hypotheses. Returns { doomLoop, pattern } or null.
  * - repeat: last 3 runs have similar normalized hypotheses.
  * - oscillate: last 4 runs are [X, Y, X, Y] (X~X, Y~Y, X!~Y).
+ * Rows annotated `asi.infra: true` (infrastructure failure: network outage,
+ * missing dependency, platform throttling) are dropped before the window is
+ * taken — a hypothesis interrupted repeatedly by a broken environment is not
+ * the agent thrashing between ideas.
  */
 export function detectDoomLoop(
   runs: RunLike[],
   { window = 6 } = {},
 ): { doomLoop: boolean; pattern: "repeat" | "oscillate" } | null {
   const norm = runs
+    .filter((r) => r?.asi?.infra !== true)
     .filter((r) => r.description || r?.asi?.hypothesis)
     .slice(-window)
     .map((r) => normalizeHypothesis(r.asi?.hypothesis || r.description))
@@ -254,7 +313,15 @@ export function detectPlateau(
   } = {},
 ): boolean {
   const valid = runs
-    .filter((r) => r.metric != null && Number.isFinite(r.metric))
+    .filter(
+      (r) =>
+        // Crash rows measure nothing (ADR-10; legacy rows carry a 0
+        // placeholder) — they are not data points for the plateau window.
+        // Noop rows DO count: a noop re-measures the metric on unchanged
+        // code, so it is a legitimate trend data point (the repeat:3
+        // confirmation flow relies on it keeping the window flat).
+        r.status !== "crash" && r.metric != null && Number.isFinite(r.metric),
+    )
     .slice(-window);
   if (valid.length < window) return false;
   const first = valid[0].metric;

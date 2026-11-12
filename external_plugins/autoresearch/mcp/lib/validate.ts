@@ -15,7 +15,7 @@ const VALID_STATUS = new Set([
  * A ledger row as the auditor sees it. The audit's whole job is to accept
  * possibly-malformed rows, so fields are loose (string status/type allowed).
  */
-export interface LedgerRow {
+interface LedgerRow {
   type?: string;
   run?: number;
   segment?: number;
@@ -24,7 +24,7 @@ export interface LedgerRow {
   commit?: string | null;
 }
 
-export interface LedgerViolation {
+interface LedgerViolation {
   code: string;
   run?: number;
   message: string;
@@ -49,6 +49,7 @@ export function validateLedger(
 ): LedgerViolation[] {
   const violations: LedgerViolation[] = [];
   const direction = config?.direction ?? "lower";
+  let baseline: number | null = null; // first finite metric in this segment
   let retained: number | null = null; // current best kept metric (null until first keep)
   let expectedRun = 1;
 
@@ -99,14 +100,32 @@ export function validateLedger(
       continue;
     }
 
+    // The segment baseline is the first finite measurement (a legacy crash
+    // row carrying 0 is a placeholder, not a measurement).
+    if (r.status !== "crash" && baseline == null) baseline = metric;
+
     if (r.status === "keep") {
       if (retained == null) {
-        retained = metric; // baseline / first keep
+        // The first keep establishes the retained value, but it must not be
+        // worse than the segment baseline the dashboard/state already show.
+        if (
+          baseline != null &&
+          metric !== baseline &&
+          !isBetter(metric, baseline, direction)
+        ) {
+          push(
+            "keep_without_improvement",
+            r.run,
+            `first keep metric ${metric} is worse than baseline ${baseline} (${direction})`,
+          );
+        } else {
+          retained = metric;
+        }
       } else if (!isBetter(metric, retained, direction)) {
         push(
           "keep_without_improvement",
           r.run,
-          `keep metric ${metric} does not beat retained ${retained} (${direction})`,
+          `keep metric ${metric} does not beat retained ${retained} (${direction}); a keep must improve on the current best — beating the baseline alone is not enough (log this run as discard instead)`,
         );
       } else {
         retained = metric;
