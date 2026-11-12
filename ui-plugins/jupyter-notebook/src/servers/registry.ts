@@ -90,6 +90,7 @@ export function createServerRegistry(deps: RegistryDeps) {
   const clientFactory = deps.clientFactory ?? createJupyterClient;
   const discover = deps.discover ?? (() => discoverServers());
   let launching: Promise<ServerInfo> | null = null;
+  let closing: Promise<void> | null = null;
   let environment: JupyterEnvironment = UNKNOWN_ENVIRONMENT;
   let checkingEnvironment: Promise<JupyterEnvironment> | null = null;
 
@@ -154,9 +155,11 @@ export function createServerRegistry(deps: RegistryDeps) {
 
     /** 连接已有 server。未给 token 时从 URL 的 `?token=` 或本机 runtime 文件取。 */
     async attach({ url, token }: { url: string; token?: string | null }): Promise<ServerInfo> {
+      if (closing) throw new JupyterError("invalid_operation", "The Jupyter Server registry is closed.");
       const normalized = normalizeBaseUrl(url);
       let secret = token?.trim() || normalized.token;
       const runtime = (await discover()).find((server) => server.baseUrl === normalized.baseUrl);
+      if (closing) throw new JupyterError("invalid_operation", "The Jupyter Server registry is closed.");
       if (!secret && runtime) secret = runtime.token;
       const id = serverIdFor(normalized.baseUrl);
       const existing = entries.get(id);
@@ -176,6 +179,7 @@ export function createServerRegistry(deps: RegistryDeps) {
           );
         throw error;
       }
+      if (closing) throw new JupyterError("invalid_operation", "The Jupyter Server registry is closed.");
       const entry: Entry = {
         info: {
           id,
@@ -209,6 +213,7 @@ export function createServerRegistry(deps: RegistryDeps) {
 
     /** 启动本插件自己的 server；已有运行中的 launched server 时直接返回它。 */
     launch({ python, useUv }: { python?: string; useUv?: boolean } = {}): Promise<ServerInfo> {
+      if (closing) return Promise.reject(new JupyterError("invalid_operation", "The Jupyter Server registry is closed."));
       const running = [...entries.values()].find(
         (entry) => entry.process && entry.info.status === "ready",
       );
@@ -259,6 +264,11 @@ export function createServerRegistry(deps: RegistryDeps) {
           .version()
           .then((value) => value.version)
           .catch(() => null);
+        // closeAll 必须覆盖尚未登记的启动；关闭已开始时先回收新进程，不能重新登记。
+        if (closing) {
+          await proc.stop();
+          throw new JupyterError("invalid_operation", "The Jupyter Server registry is closed.");
+        }
         proc.child.once("exit", () => {
           if (entries.get(id) !== entry) return;
           entry.info.status = entry.info.status === "stopped" ? "stopped" : "error";
@@ -325,11 +335,15 @@ export function createServerRegistry(deps: RegistryDeps) {
       return { info: snapshot(entry), client: entry.client };
     },
 
-    async closeAll() {
-      await Promise.allSettled(
-        [...entries.values()].filter((entry) => entry.process).map((entry) => entry.process!.stop()),
-      );
-      entries.clear();
+    closeAll(): Promise<void> {
+      closing ??= (async () => {
+        await launching?.catch(() => undefined);
+        await Promise.allSettled(
+          [...entries.values()].filter((entry) => entry.process).map((entry) => entry.process!.stop()),
+        );
+        entries.clear();
+      })();
+      return closing;
     },
   };
 }

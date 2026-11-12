@@ -1,11 +1,19 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { EventEmitter } from "node:events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeBaseUrl } from "#nb/jupyter/rest.ts";
 import { discoverServers, parseRuntimeFile, runtimeDirs } from "#nb/servers/discover.ts";
 import { findJupyterPython, pythonCandidates } from "#nb/servers/launch.ts";
 import { createServerRegistry, serverIdFor, toServerPath } from "#nb/servers/registry.ts";
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+};
 
 let dir: string;
 beforeEach(async () => {
@@ -126,6 +134,88 @@ describe("python discovery", () => {
 });
 
 describe("registry", () => {
+  it.each(["launch", "version"])("waits for a pending %s before completing shutdown", async (phase) => {
+    const entered = deferred<void>();
+    const resume = deferred<void>();
+    const stop = vi.fn(async () => undefined);
+    const registry = createServerRegistry({
+      workspaceRoot: dir,
+      pythonPath: null,
+      launch: async () => {
+        if (phase === "launch") { entered.resolve(); await resume.promise; }
+        return { baseUrl: "http://127.0.0.1:9/", token: "secret", python: "python", pid: 1,
+          child: new EventEmitter(), logTail: () => "", stop } as never;
+      },
+      clientFactory: (() => ({ version: async () => {
+        if (phase === "version") { entered.resolve(); await resume.promise; }
+        return { version: "2" };
+      } })) as never,
+    });
+    const launch = registry.launch({ useUv: true });
+    const failedLaunch = expect(launch).rejects.toMatchObject({ code: "invalid_operation" });
+    await entered.promise;
+    const closing = registry.closeAll();
+    const closingAgain = registry.closeAll();
+    resume.resolve();
+    await Promise.all([closing, closingAgain, failedLaunch]);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(registry.list()).toEqual([]);
+    await expect(registry.launch({ useUv: true })).rejects.toMatchObject({ code: "invalid_operation" });
+    await expect(registry.attach({ url: "http://127.0.0.1:9/" })).rejects.toMatchObject({ code: "invalid_operation" });
+  });
+
+  it("finishes shutdown when the pending launch fails", async () => {
+    const entered = deferred<void>();
+    const resume = deferred<void>();
+    const error = new Error("startup failed");
+    const registry = createServerRegistry({
+      workspaceRoot: dir, pythonPath: null,
+      launch: async () => { entered.resolve(); await resume.promise; throw error; },
+    });
+    const launch = registry.launch({ useUv: true });
+    const failedLaunch = expect(launch).rejects.toBe(error);
+    await entered.promise;
+    const closing = registry.closeAll();
+    resume.resolve();
+    await Promise.all([closing, failedLaunch]);
+    expect(registry.list()).toEqual([]);
+  });
+
+  it("does not register an attachment that finishes after shutdown", async () => {
+    const entered = deferred<void>();
+    const resume = deferred<void>();
+    const registry = createServerRegistry({
+      workspaceRoot: dir, pythonPath: null, discover: async () => [],
+      clientFactory: (() => ({
+        status: async () => { entered.resolve(); await resume.promise; },
+        version: async () => ({ version: "2" }),
+      })) as never,
+    });
+    const attach = registry.attach({ url: "http://127.0.0.1:9/" });
+    const failedAttach = expect(attach).rejects.toMatchObject({ code: "invalid_operation" });
+    await entered.promise;
+    await registry.closeAll();
+    resume.resolve();
+    await failedAttach;
+    expect(registry.list()).toEqual([]);
+  });
+
+  it("stops only owned servers and shares concurrent shutdown", async () => {
+    const stop = vi.fn(async () => undefined);
+    const registry = createServerRegistry({
+      workspaceRoot: dir, pythonPath: null, discover: async () => [],
+      launch: async () => ({ baseUrl: "http://127.0.0.1:9/", token: "secret", python: "python", pid: 1,
+        child: new EventEmitter(), logTail: () => "", stop }) as never,
+      clientFactory: (() => ({ status: async () => ({}), version: async () => ({ version: "2" }) })) as never,
+    });
+    await registry.launch({ useUv: true });
+    await registry.attach({ url: "http://127.0.0.1:10/" });
+    expect(registry.list()).toHaveLength(2);
+    await Promise.all([registry.closeAll(), registry.closeAll()]);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(registry.list()).toEqual([]);
+  });
+
   it("requires a server before resolving and reports it clearly", () => {
     const registry = createServerRegistry({ workspaceRoot: dir, pythonPath: null, discover: async () => [] });
     expect(() => registry.resolve()).toThrow(expect.objectContaining({ code: "no_server" }));

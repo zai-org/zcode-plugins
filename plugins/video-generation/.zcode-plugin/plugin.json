@@ -1,0 +1,29 @@
+{
+  "name": "video-generation",
+  "version": "0.1.0",
+  "description": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。",
+  "description_i18n": {
+    "en": "Official ZCode video generation: create a short video from text, reference media, or first/last frames, and save it to the workspace.",
+    "zh-CN": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["video-generation", "text-to-video", "image-to-video", "mcp"],
+  "skills": "skills",
+  "mcpServers": {
+    "video_generation": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 330000,
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}
