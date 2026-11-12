@@ -1449,10 +1449,10 @@
       "source": "./plugins/image-generation",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/image-generation/icon.png",
       "requiresPaidPlan": true,
-      "displayName": "Image Generation",
+      "displayName": "Seedream",
       "displayName_i18n": {
-        "en": "Image Generation",
-        "zh-CN": "生图"
+        "en": "Seedream",
+        "zh-CN": "Seedream"
       },
       "description": "ZCode 官方生图：用文字生成图片，或按一张参考图改图，结果保存到工作区。",
       "description_i18n": {
@@ -1477,10 +1477,10 @@
       "source": "./plugins/video-generation",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video-generation/icon.png",
       "requiresPaidPlan": true,
-      "displayName": "Video Generation",
+      "displayName": "Seedance",
       "displayName_i18n": {
-        "en": "Video Generation",
-        "zh-CN": "视频生成"
+        "en": "Seedance",
+        "zh-CN": "Seedance"
       },
       "description": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。",
       "description_i18n": {
