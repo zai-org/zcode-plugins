@@ -1,0 +1,25 @@
+{
+  "name": "litman",
+  "version": "0.1.0",
+  "skills": "./skills",
+  "description": "Set up litman, a local literature manager driven by your AI assistant: installs litman with your consent and connects its skills to ZCode.",
+  "description_i18n": {
+    "en": "Set up litman, a local literature manager driven by your AI assistant: installs litman with your consent and connects its skills to ZCode.",
+    "zh-CN": "接入 litman（由 AI 助手打理的本地文献库）：经你同意后安装 litman，并把它的 skill 接入 ZCode。"
+  },
+  "author": {
+    "name": "Qingxin Wang",
+    "url": "https://litman.dev"
+  },
+  "homepage": "https://litman.dev",
+  "repository": "https://github.com/wqx1999/litman",
+  "license": "MIT",
+  "keywords": [
+    "litman",
+    "literature",
+    "papers",
+    "pdf",
+    "reference-manager",
+    "research"
+  ]
+}

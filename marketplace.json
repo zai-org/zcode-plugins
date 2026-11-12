@@ -1499,6 +1499,29 @@
         "image-to-video",
         "mcp"
       ]
+    },
+    {
+      "name": "litman",
+      "source": "./external_plugins/litman",
+      "description": "Set up litman, a local literature manager driven by your AI assistant: installs litman with your consent and connects its skills to ZCode.",
+      "description_i18n": {
+        "en": "Set up litman, a local literature manager driven by your AI assistant: installs litman with your consent and connects its skills to ZCode.",
+        "zh-CN": "接入 litman（由 AI 助手打理的本地文献库）：经你同意后安装 litman，并把它的 skill 接入 ZCode。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Qingxin Wang",
+        "url": "https://litman.dev"
+      },
+      "category": "productivity",
+      "keywords": [
+        "litman",
+        "literature",
+        "papers",
+        "pdf",
+        "reference-manager",
+        "research"
+      ]
     }
   ]
 }
