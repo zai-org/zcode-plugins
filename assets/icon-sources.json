@@ -2559,5 +2559,21 @@
     "homepage": "https://www.liblib.tv",
     "mimeType": "image/png",
     "sha256": "ada9717d540928baec64105056b93e8e8bc6cfbff145f9f3a9eadb6dd9b90689"
+  },
+  {
+    "name": "image-generation",
+    "icon": "image-generation/icon.png",
+    "source": "ZCode authored asset (https://zhipu-ai.feishu.cn/wiki/XAfLwcmTii9dAHkRXQIcxAFMnze)",
+    "mimeType": "image/png",
+    "sha256": "4da1173e29c7e0d7428f50c00212d5093a1fb3c2fe90ae078ae33e4b7bc85505",
+    "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "video-generation",
+    "icon": "video-generation/icon.png",
+    "source": "ZCode authored asset (https://zhipu-ai.feishu.cn/wiki/XAfLwcmTii9dAHkRXQIcxAFMnze)",
+    "mimeType": "image/png",
+    "sha256": "4da1173e29c7e0d7428f50c00212d5093a1fb3c2fe90ae078ae33e4b7bc85505",
+    "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
   }
 ]

@@ -1447,6 +1447,7 @@
     {
       "name": "image-generation",
       "source": "./plugins/image-generation",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/image-generation/icon.png",
       "requiresPaidPlan": true,
       "displayName": "Image Generation",
       "displayName_i18n": {
@@ -1474,6 +1475,7 @@
     {
       "name": "video-generation",
       "source": "./plugins/video-generation",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video-generation/icon.png",
       "requiresPaidPlan": true,
       "displayName": "Video Generation",
       "displayName_i18n": {
