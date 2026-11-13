@@ -1,0 +1,24 @@
+{
+  "name": "malo-browser",
+  "version": "0.1.12",
+  "description": "Scripted browser demo tool and agent browser runtime: a visible Electron stage for live web demos, hidden 1080p30 recording with evidence files, a director console and a loopback control API, plus a daemon handing out port leases with isolated, profile-backed browser sessions exposing 25 session tools (including network capture).",
+  "description_i18n": {
+    "en": "Scripted browser demo tool and agent browser runtime: a visible Electron stage for live web demos, hidden 1080p30 recording with evidence files, a director console and a loopback control API, plus a daemon handing out port leases with isolated, profile-backed browser sessions exposing 25 session tools (including network capture).",
+    "zh-CN": "脚本化浏览器演示工具兼 agent 浏览器运行时：可见的 Electron 演示舞台、无头 1080p30 录制与证据文件、导演控制台与本地控制 API；守护进程按端口发放租约，提供隔离且可复用登录态的 session，共 25 个 session 工具（含网络抓包）。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/malo-browser",
+  "repository": "https://github.com/Lumos-789/malo-browser",
+  "license": "MIT",
+  "keywords": [
+    "demo",
+    "recording",
+    "electron",
+    "browser",
+    "screencast"
+  ],
+  "skills": "skills"
+}
