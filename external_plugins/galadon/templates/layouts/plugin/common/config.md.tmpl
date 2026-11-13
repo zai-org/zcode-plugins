@@ -1,0 +1,29 @@
+# Configuration
+
+## Runtime
+
+The generated CLI has no required environment variables. Secrets belong in
+`.env`; only variable names go in `.env.example`.
+
+## Local development
+
+With the `python` or `node` stack:
+
+```bash
+scripts/dev.sh ping --json
+bin/{{NPM_NAME}} --version
+```
+
+## Checks
+
+`galadon.yaml` declares the real commands:
+
+- build syntax-checks or compiles the source;
+- test runs the test suite.
+
+`galadon check` runs both and writes `verify/evidence.md`.
+
+## Packaging
+
+Distribution metadata is not generated. Read `docs/packaging.md` before adding a
+manifest, and keep every version in sync with the changelog.

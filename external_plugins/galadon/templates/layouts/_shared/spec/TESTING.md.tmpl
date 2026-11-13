@@ -1,0 +1,24 @@
+# Verification triggers
+
+This is {{PROJECT}}'s trigger matrix: if a change touches a row, run the named
+check before review. The named checks are the ones declared in `galadon.yaml`;
+this file does not invent commands.
+
+- `checks.test` is the test command declared in `galadon.yaml`.
+- `checks.build` is the build command declared in `galadon.yaml`.
+- `galadon check` runs the full current gate, including both.
+
+If `checks.test` does not cover the change, add a test first. An ad-hoc command
+that happens to pass is not evidence and does not replace the project check.
+
+| If you change ... | You must run ... | Evidence to record |
+|---|---|---|
+| a backend route | `checks.build` and `checks.test` | the route test that fails without the change |
+| the database schema | `checks.test`, including migration and rollback cases | migration test output and the restored schema |
+| a UI component | `checks.test`, including render and interaction cases | component test output and the affected state |
+| deployment config | `checks.build`, then `checks.test`, then `galadon check` | dry-run and gate output |
+| docs only | `checks.test` and `galadon check` | the link or example check that proves the doc |
+
+A change that touches several rows runs the union. Before review, `galadon
+check` must still pass: the matrix narrows what to run while working, it does
+not replace the full gate.

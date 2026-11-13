@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Galadon project configuration",
+  "type": "object",
+  "required": ["project", "template"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "template": {
+      "enum": ["web", "api", "static"]
+    },
+    "role": {
+      "enum": ["solo", "six-ring", "orchestrator"]
+    },
+    "layout": {
+      "enum": ["none", "webapp", "service", "plugin"],
+      "default": "none"
+    },
+    "stack": {
+      "enum": ["python", "node", "none"],
+      "default": "none"
+    },
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "spec": {
+          "type": "string",
+          "default": "spec/spec.md"
+        },
+        "evidence": {
+          "type": "string",
+          "default": "verify/evidence.md"
+        },
+        "retro": {
+          "type": "string",
+          "default": "wiki/retro.md"
+        },
+        "release": {
+          "type": "string",
+          "default": "release/release.json"
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "adapter": {
+          "enum": ["local", "ssh", "k8s"]
+        },
+        "env": {
+          "type": "string"
+        },
+        "build": {
+          "type": "string"
+        },
+        "migrate": {
+          "type": "string"
+        },
+        "release": {
+          "type": "string"
+        },
+        "probe_url": {
+          "type": "string"
+        },
+        "probe_expect": {
+          "type": "string"
+        },
+        "artifact": {
+          "type": "string"
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "properties": {
+        "build": {
+          "type": "string"
+        },
+        "test": {
+          "type": "string"
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
