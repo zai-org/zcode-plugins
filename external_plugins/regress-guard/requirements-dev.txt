@@ -1,0 +1,11 @@
+# regress-guard 开发/自测依赖（运行时零三方依赖——filelock 缺席自动降级，见
+# pre_commit_guard v1.95.1 ImportError 分支；本清单只服务跑自家测试套件）
+pytest>=7
+anyio>=3
+filelock>=3
+# PyYAML（批163）：套件按 yaml 在场校准（manifest 解析/写回走主路径）——
+# CI 新鲜环境缺它走 fallback 解析器，行为微差致 13 用例翻车（2026-10-30
+# 首跑实证）。运行时仍是可选依赖（HAS_YAML 探测），本行只为测试环境对齐。
+pyyaml>=6
+# pytest-cov（批164）：覆盖率基线观察位（CI 打印+WORKFLOW 记录，非门槛）
+pytest-cov>=5
