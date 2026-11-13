@@ -1,0 +1,27 @@
+{
+  "name": "zcode-context",
+  "displayName": "Context Insight",
+  "description": "Context-usage insight dashboard for ZCode: overview KPIs (sessions, tokens, cost estimate, cache hit rate, tool calls, active time), 7-day token+cost chart, 8-week activity heatmap, tool/command/project rankings with click-to-filter, per-session context composition bar, collapsible context browser, trend chart with pinned request detail, event log and file activity filters, cost composition, and an agent formation view. Purely local read-only SQLite queries; no other plugins or system Node.js required.",
+  "description_i18n": {
+    "en": "Context-usage insight dashboard for ZCode: overview KPIs (sessions, tokens, cost estimate, cache hit rate, tool calls, active time), 7-day token+cost chart, 8-week activity heatmap, tool/command/project rankings with click-to-filter, per-session context composition bar, collapsible context browser, trend chart with pinned request detail, event log and file activity filters, cost composition, and an agent formation view. Purely local read-only SQLite queries; no other plugins or system Node.js required.",
+    "zh-CN": "ZCode 上下文洞察仪表盘：洞察总览（会话/Token/费用估算/缓存命中率/工具调用/活跃时长 KPI）、近 7 天 Token+费用图、近 8 周活跃热力图、可点击筛选的工具/命令/项目排行、单会话上下文构成条、可折叠上下文浏览器、趋势图（步进/轮次 × 总计/增量，可固定单步详情）、事件日志与文件活动筛选、费用构成、Agent 编队视图。纯本地只读 SQLite 查询，不依赖其他插件，无需系统 Node.js。"
+  },
+  "version": "0.2.0",
+  "author": {
+    "name": "AwenJackson",
+    "url": "https://github.com/AwenJackson"
+  },
+  "repository": "https://github.com/AwenJackson/zcode-context",
+  "keywords": [
+    "context-window",
+    "token-usage",
+    "token-statistics",
+    "cost-estimation",
+    "cache-hit-rate",
+    "llm-observability",
+    "dashboard",
+    "agent-monitoring",
+    "context-insight",
+    "dsh-context"
+  ]
+}
