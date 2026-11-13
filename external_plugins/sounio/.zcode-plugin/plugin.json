@@ -1,0 +1,16 @@
+{
+  "name": "sounio",
+  "version": "0.1.0",
+  "description": "Check Sounio source files with an existing local compiler and report the exact evidence level.",
+  "description_i18n": {
+    "en": "Check Sounio source files with an existing local compiler and report the exact evidence level.",
+    "zh-CN": "使用已有的本地编译器检查 Sounio 源文件，并准确说明验证证据的层级。"
+  },
+  "author": {
+    "name": "Demetrios Agourakis",
+    "url": "https://github.com/agourakis82"
+  },
+  "homepage": "https://github.com/Sounio-lang/sounio",
+  "license": "Apache-2.0",
+  "keywords": ["sounio", "compiler", "scientific-programming", "diagnostics"]
+}
