@@ -17,7 +17,7 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "video-generation";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.2.0";
 const AUTH_META_KEY = "com.zcode/official-mcp-auth";
 const GENERATE_TOOL = "generate_video";
 const RESULT_TOOL = "get_video_result";
@@ -70,6 +70,11 @@ const AUDIO_MIME = { ".mp3": "audio/mpeg", ".wav": "audio/wav" };
 const VIDEO_EXT = { "video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm" };
 const OUTPUT_EXTENSIONS = new Set(Object.values(VIDEO_EXT));
 
+// 时长与画幅的取值范围以 ToolHub 视频生成接入说明为准：不传时服务端默认 4 秒、16:9。
+const MIN_DURATION = 4;
+const MAX_DURATION = 30;
+const RATIOS = ["16:9", "4:3", "1:1", "3:4", "9:16", "21:9", "adaptive"];
+
 const MATERIAL_DESCRIPTION =
   "工作区内的本地路径、https 地址或 asset:// 地址";
 
@@ -85,6 +90,18 @@ const GENERATE = {
       prompt: {
         type: "string",
         description: "视频描述：主体、动作、场景、镜头运动、风格。",
+      },
+      duration: {
+        type: ["integer", "string"],
+        description:
+          `可选，视频时长（秒）：${MIN_DURATION} 到 ${MAX_DURATION} 的整数，或 -1 由模型自行决定。` +
+          `不传默认 ${MIN_DURATION} 秒。用户说了时长才传；时长越长耗时和消耗越多。`,
+      },
+      ratio: {
+        type: "string",
+        description:
+          `可选，画幅（宽高比）：${RATIOS.join(" / ")}。不传默认 16:9；adaptive 由模型按内容自动适配。` +
+          "用了 first_frame 时画幅跟随首帧图，只能不传或传 adaptive。",
       },
       images: {
         type: "array",
@@ -410,6 +427,41 @@ function listArg(value, name, max) {
   return value;
 }
 
+function durationArg(value) {
+  if (value === undefined || value === null) return undefined;
+  const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  if (!Number.isInteger(n) || (n !== -1 && (n < MIN_DURATION || n > MAX_DURATION))) {
+    throw new ToolError(`duration 必须是 ${MIN_DURATION} 到 ${MAX_DURATION} 的整数秒，或 -1（由模型决定）。`);
+  }
+  return n;
+}
+
+function ratioArg(value, hasFirstFrame) {
+  if (value === undefined || value === null || value === "") return undefined;
+  const ratio = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!RATIOS.includes(ratio)) throw new ToolError(`ratio 只能是 ${RATIOS.join(" / ")}。`);
+  if (hasFirstFrame && ratio !== "adaptive") {
+    throw new ToolError("用了 first_frame 时画幅跟随首帧图：ratio 请不传或传 adaptive。");
+  }
+  return ratio;
+}
+
+/** 本次调用和首次提交不一致的字段；参数非法时按「已修改」处理，不在重放路径里报错。 */
+function replayDiffers(pending, prompt, args) {
+  const changed = [];
+  if (pending.query !== prompt) changed.push("提示词");
+  const sameOr = (read, value, saved) => {
+    try {
+      return read(value) === saved;
+    } catch {
+      return false;
+    }
+  };
+  if (!sameOr(durationArg, args.duration, pending.duration)) changed.push("时长");
+  if (!sameOr((v) => ratioArg(v, false), args.ratio, pending.ratio)) changed.push("画幅");
+  return changed;
+}
+
 async function buildSubmitBody(call, args, prompt) {
   const images = listArg(args.images, "images", 9);
   const videos = listArg(args.videos, "videos", 3);
@@ -420,7 +472,11 @@ async function buildSubmitBody(call, args, prompt) {
   if (firstFrame && images.length + videos.length + audios.length) {
     throw new ToolError("首尾帧与参考图 / 视频 / 音频不能同时使用，请二选一。");
   }
+  const duration = durationArg(args.duration);
+  const ratio = ratioArg(args.ratio, Boolean(firstFrame));
   const body = { query: prompt };
+  if (duration !== undefined) body.duration = duration;
+  if (ratio !== undefined) body.ratio = ratio;
   if (firstFrame) {
     body.first_frame = await resolveMaterial(call, firstFrame, "image");
     if (lastFrame) body.last_frame = await resolveMaterial(call, lastFrame, "image");
@@ -632,8 +688,14 @@ async function generateVideo(args, meta) {
     invocationId,
   });
   // request_id 重放的是首次提交的内容；这次参数不同也不会生效，要让 Agent 知道。
-  if (pending && pending.query !== prompt) {
-    result.content[0].text = `注意：按 request_id 重放的是首次提交的内容（提示词：${pending.query}），本次修改的参数没有生效。\n` + result.content[0].text;
+  if (pending) {
+    const changed = replayDiffers(pending, prompt, args);
+    if (changed.length) {
+      const original = [`提示词：${pending.query}`, `时长：${pending.duration ?? "默认"}`, `画幅：${pending.ratio ?? "默认"}`].join("，");
+      result.content[0].text =
+        `注意：按 request_id 重放的是首次提交的内容（${original}），本次修改的${changed.join("、")}没有生效。\n` +
+        result.content[0].text;
+    }
   }
   return result;
 }

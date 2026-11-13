@@ -224,6 +224,45 @@ class VideoGenerationServerTest(unittest.TestCase):
             {"query": "过渡", "first_frame": "https://a/1.png", "last_frame": "https://a/2.png"},
         )
 
+    def test_duration_and_ratio_pass_through(self):
+        FakeZCode.script[SUBMIT] = [submitted()]
+        FakeZCode.script[QUERY] = [self.finished()]
+
+        result = self.call({"prompt": "竖屏短片", "duration": 8, "ratio": "9:16"})
+
+        self.assertNotIn("isError", result, self.text(result))
+        self.assertEqual(
+            json.loads(self.requests_to(SUBMIT)[0]["body"]),
+            {"query": "竖屏短片", "duration": 8, "ratio": "9:16"},
+        )
+
+    def test_model_chosen_duration_and_adaptive_first_frame(self):
+        FakeZCode.script[SUBMIT] = [submitted()]
+        FakeZCode.script[QUERY] = [self.finished()]
+
+        result = self.call({"prompt": "动起来", "duration": "-1", "ratio": "ADAPTIVE", "first_frame": "https://a/1.png"})
+
+        self.assertNotIn("isError", result, self.text(result))
+        self.assertEqual(
+            json.loads(self.requests_to(SUBMIT)[0]["body"]),
+            {"query": "动起来", "duration": -1, "ratio": "adaptive", "first_frame": "https://a/1.png"},
+        )
+
+    def test_invalid_duration_or_ratio_fail_before_any_request(self):
+        cases = [
+            ({"prompt": "x", "duration": 3}, "duration"),
+            ({"prompt": "x", "duration": 31}, "duration"),
+            ({"prompt": "x", "duration": 5.5}, "duration"),
+            ({"prompt": "x", "ratio": "3:2"}, "ratio"),
+            ({"prompt": "x", "ratio": "16:9", "first_frame": "https://a/1.png"}, "adaptive"),
+        ]
+        for arguments, expected in cases:
+            with self.subTest(arguments=arguments):
+                result = self.call(arguments)
+                self.assertTrue(result["isError"])
+                self.assertIn(expected, self.text(result))
+        self.assertEqual(FakeZCode.requests, [])
+
     def test_invalid_material_combinations_fail_before_any_request(self):
         cases = [
             ({"prompt": "x", "last_frame": "https://a/2.png"}, "first_frame"),
@@ -270,6 +309,33 @@ class VideoGenerationServerTest(unittest.TestCase):
 
         self.assertNotIn("isError", result, self.text(result))
         self.assertEqual(self.requests_to(SUBMIT)[0]["headers"]["idempotency-key"], key)
+
+    def test_replay_reports_changed_duration_and_ratio(self):
+        for arguments, warned in [
+            ({"prompt": "cat", "duration": 8, "ratio": "9:16"}, None),
+            ({"prompt": "cat", "duration": "8", "ratio": "9:16"}, None),
+            ({"prompt": "cat", "duration": 12, "ratio": "1:1"}, "时长、画幅"),
+            ({"prompt": "cat"}, "时长、画幅"),
+        ]:
+            with self.subTest(arguments=arguments):
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [ok({"state": "UNKNOWN"})]
+                result = self.call({"prompt": "cat", "duration": 8, "ratio": "9:16"})
+                self.assertTrue(result["isError"])
+                first = self.requests_to(SUBMIT)[0]
+                key = first["headers"]["idempotency-key"]
+
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [ok({"state": "SUCCEEDED", "replayed": True, "upstream_req_id": "cgt-8"})]
+                FakeZCode.script[QUERY] = [self.finished("cgt-8")]
+                result = self.call({**arguments, "request_id": key})
+
+                self.assertNotIn("isError", result, self.text(result))
+                self.assertEqual(self.requests_to(SUBMIT)[0]["body"], first["body"])
+                if warned:
+                    self.assertIn(f"本次修改的{warned}没有生效", self.text(result))
+                else:
+                    self.assertNotIn("没有生效", self.text(result))
 
     def test_submit_body_cut_off_mid_read_is_replayed_with_the_same_key(self):
         FakeZCode.script[SUBMIT] = [(200, TRUNCATED)]

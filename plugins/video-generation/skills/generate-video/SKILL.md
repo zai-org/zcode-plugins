@@ -13,8 +13,9 @@ Use the `generate_video` and `get_video_result` tools from the `video_generation
    - reference media: pass `images` (up to 9), `videos` (up to 3, `https://` or `asset://` only), and/or `audios` (up to 3, wav / mp3);
    - first/last frame: pass `first_frame`, optionally `last_frame`. Frames cannot be combined with reference media.
    Image and audio paths must be inside the workspace. Images are uploaded automatically. Each local audio file must be under 2 MiB, and the whole request under 4 MiB, so use `https://` for anything larger.
-3. Pass `output_path` only when the user names a location inside the workspace; an existing file is not overwritten. Otherwise the video is saved under `generated-videos/` in the workspace.
-4. Generation takes several minutes. When `generate_video` returns a `task_id` because the video is still running, tell the user it is in progress and call `get_video_result` with that `task_id` (and the same `output_path`) to keep waiting.
+3. Pass `duration` (seconds, 4–30, or -1 to let the model decide; default 4) when the user asks for a length, and `ratio` (`16:9`, `4:3`, `1:1`, `3:4`, `9:16`, `21:9`, `adaptive`; default `16:9`) when the user asks for a shape such as portrait or square. With `first_frame`, leave `ratio` out or use `adaptive`.
+4. Pass `output_path` only when the user names a location inside the workspace; an existing file is not overwritten. Otherwise the video is saved under `generated-videos/` in the workspace.
+5. Generation takes several minutes. When `generate_video` returns a `task_id` because the video is still running, tell the user it is in progress and call `get_video_result` with that `task_id` (and the same `output_path`) to keep waiting.
 
 Every `generate_video` call submits a new task and consumes quota. Never call it again to "retry" a task that is still running — use `get_video_result`. If it reports that the submission was not confirmed and gives a `request_id`, call `generate_video` again later with exactly the same arguments plus that `request_id`.
 
