@@ -1,0 +1,24 @@
+{
+  "name": "baton",
+  "version": "0.4.2",
+  "description": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",
+  "description_i18n": {
+    "en": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",
+    "zh-CN": "OpenSpec 变更的确定性 ticket/DAG/子代理控制面：本地 Python CLI 计算任务前沿并返回会话动作；主会话把任务包派发到隔离 git worktree 中的子代理，只有验证全绿的密封回执才算完成。内置 baton 技能与控制面 CLI。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/baton",
+  "repository": "https://github.com/Lumos-789/baton",
+  "license": "MIT",
+  "keywords": [
+    "openspec",
+    "subagents",
+    "ticket-dag",
+    "workflow",
+    "deterministic-scheduling"
+  ],
+  "skills": "skills"
+}
