@@ -1,0 +1,20 @@
+{
+  "name": "usage-report",
+  "version": "0.4.0",
+  "description": "Injects measured token usage on every user prompt via a UserPromptSubmit hook, so the model appends one line with last-turn and cumulative input/output tokens plus pure-compute and wall-clock duration at the end of its reply.",
+  "description_i18n": {
+    "en": "Injects measured token usage on every user prompt via a UserPromptSubmit hook, so the model appends one line with last-turn and cumulative input/output tokens plus pure-compute and wall-clock duration at the end of its reply.",
+    "zh-CN": "通过 UserPromptSubmit 钩子在每条用户消息时注入真实测量的用量数据，模型在自己回复末尾附上一行：上轮/累计的输入输出 tokens 与纯算耗时/墙钟跨度。"
+  },
+  "author": {
+    "name": "forachange"
+  },
+  "license": "MIT",
+  "keywords": [
+    "usage",
+    "tokens",
+    "stats",
+    "hook",
+    "monitoring"
+  ]
+}
