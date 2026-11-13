@@ -19,7 +19,7 @@ Git 市场安装包已包含编译好的 MCP server 和面板，无需自行构�
 ### Server
 
 - **已在运行的 server**：本机运行的 JupyterLab、Notebook 7 和 `jupyter server` 会被自动发现，无需 token 即可连接。其他 server（包括远程的）通过 URL 和 token 连接（`connect_server` 或面板中的表单）。token 只保存在插件进程内，不会出现在 Agent 或面板中。
-- **为工作区启动 server**：`start_server`（或面板中的启动按钮）运行 `python -m jupyter_server`，只绑定 `127.0.0.1`，使用随机 token，根目录为工作区。按顺序使用第一个装有 `jupyter-server` 与 `ipykernel` 的 Python：插件设置“Python 解释器”、工作区 `.venv` / `venv`、当前激活的 virtualenv 或 conda 环境、PATH 中的 `python3`。插件不会自动安装任何东西；`start_server` 传 `useUv: true` 时改用 `uv run --with jupyter-server --with ipykernel` 运行。会话结束时 server 随之停止。
+- **为工作区启动 server**：`start_server`（或面板中的启动按钮）运行 `python -m jupyter_server`，只绑定 `127.0.0.1`，使用随机 token，根目录为工作区。按顺序使用第一个装有 `jupyter-server` 与 `ipykernel` 的 Python：插件设置“Python 解释器”、工作区 `.venv` / `venv`、当前激活的 virtualenv 或 conda 环境、PATH 中的 `python3`。插件不会自动安装任何东西；`start_server` 传 `useUv: true` 时改用 `uv run --with jupyter-server --with ipykernel` 运行。会话结束时 server 随之停止，包括尚未完成启动的 server。
 - 若同一 server 上的 JupyterLab 已打开该 notebook，面板会加入它的 kernel。
 
 ### 面板

@@ -5,7 +5,7 @@
 ## 分层
 
 - `jupyter/`：Jupyter Server REST（status、kernelspecs、sessions、kernels、contents）与 kernel WebSocket（旧版 JSON 帧，不协商子协议）。只认 `{baseUrl, token}`，不区分 server 来源。
-- `servers/`：`ServerRegistry` 是连接唯一 owner。`attach(url, token)` 连接已有 server；`launch()` 找到装有 `jupyter_server` + `ipykernel` 的 Python，起 `python -m jupyter_server`（仅 `127.0.0.1`、随机端口、`JUPYTER_TOKEN`、root_dir = 工作区），就绪后同样 attach。`discover()` 读 Jupyter runtime 目录的 `jpserver-*.json`。只停止自己 launch 的 server；进程退出时一并停止。
+- `servers/`：`ServerRegistry` 是连接唯一 owner。`attach(url, token)` 连接已有 server；`launch()` 找到装有 `jupyter_server` + `ipykernel` 的 Python，起 `python -m jupyter_server`（仅 `127.0.0.1`、随机端口、`JUPYTER_TOKEN`、root_dir = 工作区），就绪后同样 attach。`discover()` 读 Jupyter runtime 目录的 `jpserver-*.json`。只停止自己 launch 的 server；进程退出时一并停止。`closeAll()` 是终止操作：先拒绝新的连接与启动，等待在途启动完成并回收其进程；并发关闭复用同一次清理，不停止外部 attached server。
 - `servers/environment.ts`：启动前的环境检查（`JupyterEnvironment`）：与 `start_server` 相同的解释器顺序，目标解释器中两个包的版本，环境是否由 uv 管理（pyvenv.cfg 的 `uv =` 或项目的 uv.lock），本机的 uv，以及安装命令（uv 项目 `uv add --dev`，没有 pyproject.toml 的 uv 环境 `uv pip install --python`，其余 pip）。`start_server` 失败时的提示用同一个命令。
 - `domain/`：nbformat 规范化（补 cell id、source 归一为字符串）、编辑操作、输出归并（stream 合并、`clear_output(wait)`、`update_display_data`）、模型摘要。纯函数。
 - `app/notebooks.ts`：`NotebookOwner` 是已打开 notebook 的唯一 owner：文档、revision、kernel session、执行、自动保存与冲突。
