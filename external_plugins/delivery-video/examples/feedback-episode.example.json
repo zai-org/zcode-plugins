@@ -1,0 +1,39 @@
+{
+  "voice": "zh-CN-YunxiNeural",
+  "rate": "+5%",
+  "title": "Bug report - order total stays stale",
+  "intent": "feedback",
+  "issue": {
+    "id": "BUG-123",
+    "title": "Saving the amount keeps the old total in the list",
+    "severity": "major",
+    "environment": "staging / build <version>",
+    "expected": "The list shows the new total right after saving.",
+    "actual": "The list still shows the old total until the page is fully reloaded.",
+    "repro": [
+      "Open the order detail page",
+      "Change the amount to 1200 and save",
+      "Return to the order list and read the total"
+    ]
+  },
+  "segments": [
+    {
+      "id": "01-repro",
+      "phase": "repro",
+      "label": "复现",
+      "shot": "take-01.mp4",
+      "start": 0.5,
+      "end": 12.0,
+      "text": "照着三个步骤操作，保存后返回列表。"
+    },
+    {
+      "id": "02-actual",
+      "phase": "actual",
+      "label": "现象",
+      "shot": "take-02.mp4",
+      "start": 0.5,
+      "end": 9.0,
+      "text": "列表这里仍然是旧总额，和刚才保存的数值对不上。"
+    }
+  ]
+}
