@@ -1459,7 +1459,7 @@
         "en": "Official ZCode image generation: create an image from text, or edit one reference image, and save it to the workspace.",
         "zh-CN": "ZCode 官方生图：用文字生成图片，或按一张参考图改图，结果保存到工作区。"
       },
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
