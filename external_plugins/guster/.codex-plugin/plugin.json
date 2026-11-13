@@ -1,0 +1,34 @@
+{
+  "name": "guster",
+  "version": "0.7.4",
+  "description": "Discover, audit, plan and evolve agent context across projects, skills, tools, knowledge and credentials; optionally scaffold a lightweight Guster Hub for durable knowledge and project state.",
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/guster",
+  "repository": "https://github.com/Lumos-789/guster",
+  "license": "MIT",
+  "keywords": [
+    "agent",
+    "context",
+    "governance",
+    "skills",
+    "mcp",
+    "codex",
+    "zcode",
+    "dsh"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Guster",
+    "shortDescription": "Audit and evolve agent context",
+    "longDescription": "Guster discovers agent projects, instruction files, skills, tools, knowledge, state, evidence and credential references. It diagnoses drift, computes a context health score, produces reviewable migration plans, and can scaffold a lightweight hub for durable knowledge and project state.",
+    "developerName": "Lumos-789",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write with confirmation"
+    ]
+  }
+}
