@@ -60,7 +60,7 @@ Full protocol: `references/loop-protocol.md` → Harness editing.
 
 ## Dashboard
 
-Run `export_dashboard` (or `/autoresearch:export`) to start a **live** local dashboard at a `127.0.0.1` URL (auto-refreshes via SSE after every experiment); it also writes `autoresearch-dashboard.html` as a static fallback. Open the URL with a browser (e.g. `open <url>`) to watch progress. Reset the session with `clear_experiments` (or `/autoresearch:clear`); when experiments are done, `/autoresearch:finalize` splits kept work into clean PR-able branches.
+Run `export_dashboard` (or `/autoresearch:export`) to start a **live** local dashboard at a `127.0.0.1` URL (auto-refreshes via SSE after every experiment); it also writes `autoresearch-dashboard.html` as a static **snapshot** — rewritten only on the next export, never per round; the live page is the real-time view. **Open the URL once for the user** right after the first successful export (`open <url>` on macOS, `xdg-open <url>` on Linux, `cmd /c start <url>` on Windows) — once, not per round; SSE keeps the page current. Skip the open command when running headless (SSH / CI / remote executor — the browser would open where the user cannot see it) or when the user declined watching; hand over the URL in text instead. At the loop's final export, do not open the browser out of nowhere if it was never opened this session — report the URL and the static path. Reset the session with `clear_experiments` (or `/autoresearch:clear`); when experiments are done, `/autoresearch:finalize` splits kept work into clean PR-able branches.
 
 ## Working directory
 

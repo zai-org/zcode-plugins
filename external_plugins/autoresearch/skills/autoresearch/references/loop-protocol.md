@@ -56,7 +56,7 @@ The prefixes are an advisory convention: the tools never validate them, and unta
 - User interrupts → complete the current run+log cycle first, then summarize.
 - **Do not** run experiments that change `.auto/measure.sh` or `.auto/checks.sh`; if the target changes, call `init_experiment` again (new segment) instead.
 - Clear the ledger with `clear_experiments` (`/autoresearch:clear`; the other `.auto/` files are kept).
-- When done, run `export_dashboard` for a live URL + static report, then `/autoresearch:finalize` to split kept experiments into topic branches.
+- When done, run `export_dashboard` for a live URL + static report — the final export is the report archive: if the browser was never opened this session, do not pop it open now; hand over the URL and the static `autoresearch-dashboard.html` path in text. Then `/autoresearch:finalize` splits kept experiments into topic branches.
 
 ## Harness editing (second-order loop)
 

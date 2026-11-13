@@ -230,6 +230,7 @@ export interface SessionHistory {
   runs: LedgerRun[];
   totalRuns: number;
   kept: number;
+  segmentCount: number;
   firstMetric: number | null;
   bestMetric: number | null;
   lastRunAt: string | null;
@@ -251,7 +252,14 @@ export function rebuildHistory(entries: LedgerEntry[]): SessionHistory {
     if (e.type === "config") {
       config = e;
     } else if (e.type === "run") {
-      runs.push(e);
+      // Hand-written ledgers may omit a run's segment: attribute it to the
+      // latest config row seen so far (projection-only normalization; the
+      // ledger itself is never rewritten).
+      runs.push(
+        e.segment === undefined && config
+          ? { ...e, segment: config.segment }
+          : e,
+      );
       // Crash rows measure nothing (see rebuildState): a legacy 0-placeholder
       // must not become the dashboard's global baseline.
       if (
@@ -292,6 +300,9 @@ export function rebuildHistory(entries: LedgerEntry[]): SessionHistory {
     runs,
     totalRuns: runs.length,
     kept: runs.filter((r) => r.status === "keep").length,
+    // Distinct segments among actual runs (config-only segments have no
+    // trajectory to bound); drives the trend chart's boundary annotations.
+    segmentCount: new Set(runs.map((r) => r.segment)).size,
     firstMetric,
     bestMetric,
     lastRunAt,

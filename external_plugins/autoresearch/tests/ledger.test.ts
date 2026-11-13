@@ -419,3 +419,26 @@ test("rebuildState suppresses confidence for a deterministic benchmark", () => {
   const exact = rebuildState(cwd, { deterministic: true });
   assert.equal(exact.confidence, null);
 });
+
+test("rebuildHistory attributes segment-less runs to the latest config (projection-only)", () => {
+  const history = rebuildHistory([
+    // Before any config row there is nothing to attribute to: the run keeps
+    // its absent segment instead of being pinned to a guessed one.
+    { type: "run", run: 1, status: "keep", metric: 100, description: "" },
+    {
+      type: "config",
+      segment: 1,
+      name: "a",
+      metricName: "m",
+      direction: "lower",
+    },
+    // Hand-written rows may omit segment: attributed to the latest config.
+    { type: "run", run: 1, status: "keep", metric: 90, description: "" },
+    { type: "run", run: 2, status: "keep", metric: 85, description: "" },
+  ]);
+  assert.equal(history.runs[0].segment, undefined);
+  assert.equal(history.runs[1].segment, 1);
+  assert.equal(history.runs[2].segment, 1);
+  // Projection-scope only: the normalization never rewrites the ledger file
+  // (see the attribution comment in rebuildHistory).
+});
