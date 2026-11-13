@@ -1137,12 +1137,12 @@
     {
       "name": "kicad",
       "source": "./external_plugins/kicad",
-      "description": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
+      "description": "Automatically connects to installed official or Huaqiu KiCad 10. Both design, check, render, and export boards; Huaqiu also adds safe public-part search and model comparison without starting DSH.",
       "description_i18n": {
-        "en": "KiCad 10 inside the conversation: agents design 2-layer boards from a circuit spec (real KiCad libraries, auto-route, DRC, Gerber/BOM/CPL); the side panel shows the 3D render and DRC verdict; one click opens the board in the real KiCad PCB Editor and every save syncs back.",
-        "zh-CN": "把 KiCad 10 嵌入对话：Agent 用电路 spec 设计双层板（真实 KiCad 库、自动布线、DRC、Gerber/BOM/贴片坐标），侧栏面板显示 3D 渲染和 DRC 结论；一键在真实的 KiCad PCB Editor 里继续编辑，保存后自动同步回对话。"
+        "en": "Automatically connects to installed official or Huaqiu KiCad 10. Both design, check, render, and export boards; Huaqiu also adds safe public-part search and model comparison without starting DSH.",
+        "zh-CN": "自动识别并连接已安装的标准或华秋 KiCad 10：两者均可设计、检查、渲染和导出电路板；华秋版还提供安全的公共器件搜索与模型比较，全程不启动 DSH。"
       },
-      "version": "0.6.1",
+      "version": "0.12.3",
       "author": {
         "name": "冯小平",
         "url": "https://github.com/fxp"

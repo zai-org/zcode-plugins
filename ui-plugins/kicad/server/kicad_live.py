@@ -181,7 +181,8 @@ def _status_for(editors: list[dict], stale: int, cooling: int, session_pcb: str 
             reason = f'No KiCad editor answers on the API. If it is off, tick "{SETTING}" in KiCad Preferences, then open the board in the PCB Editor.'
         return {**base, "reason": reason}, None, None
     ed, entry = _pick(editors, session_pcb)
-    base.update(reachable=True, kicad_version=editors[0]["version"], api_version=editors[0]["api_version"], editors=len(editors), boards_open=[Path(b[0]).name for e in editors for b in e["boards"]])
+    reported = ed or editors[0]  # with Standard and Huaqiu open together, report the edition that actually owns the selected/session board
+    base.update(reachable=True, kicad_version=reported["version"], api_version=reported["api_version"], editors=len(editors), boards_open=[Path(b[0]).name for e in editors for b in e["boards"]])
     if entry is None:
         return {**base, "reason": "KiCad answers on the API, but no PCB Editor has a board open (a schematic editor or the project manager alone serves no boards)."}, None, None
     matches = _same_file(entry[0], session_pcb) if session_pcb else None

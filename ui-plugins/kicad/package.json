@@ -1,8 +1,8 @@
 {
   "name": "@zcode/plugin-kicad",
-  "version": "0.6.1",
+  "version": "0.12.3",
   "private": true,
-  "description": "ZCode KiCad plugin: agents design 2-layer boards from a circuit spec with real KiCad 10 libraries, auto-route, DRC and fab export; the side panel shows the 3D render and DRC verdict, and the board opens in the real KiCad PCB Editor for further editing.",
+  "description": "ZCode KiCad plugin: automatically connects to installed official or Huaqiu KiCad 10 for 2-layer PCB design, DRC, rendering, fabrication export and real-editor handoff.",
   "license": "MIT",
   "type": "module",
   "engines": {

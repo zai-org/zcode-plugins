@@ -1,30 +1,41 @@
-"""Start the KiCad PCB Editor on macOS and say honestly whether it is running afterwards.
+"""Start one exact KiCad PCB Editor process and verify its live-API socket.
 
-`open -a` exits 0 as soon as Launch Services has accepted the request, even if the program dies a moment later. The case that motivated this module: a KiCad
-copied into /Applications with the download quarantine flag is "translocated" by Launch Services (only the nested pcbnew.app is run from a random read-only
-copy), dyld cannot find @rpath/libkicommon.*.dylib there and pcbnew aborts before any window appears, while `open` reports success.
+Do not use ``open -a`` here.  Launch Services is allowed to reuse an already running
+standalone PCB Editor, which means the requested board can open in a process that has
+no KiCad 10 API server.  Executing the selected distribution's pcbnew binary creates a
+fresh process and, when "Enable KiCad API" is on, a matching ``api-<pid>.sock`` (or the
+first ``api.sock``).  This is what lets ZCode and that exact editor communicate live.
 
-So after `open` we wait for a `pcbnew` process that stays alive; if it never shows up, or dies again, we look for the crash report macOS wrote
-(~/Library/Logs/DiagnosticReports/pcbnew-*.ips), put the reason into the note and, for the quarantine case, name the command the *user* must run. This code never
-changes an attribute itself.
+We still watch the child long enough to catch the quarantined/App-Translocation crash
+that motivated the old launcher.  Crash reports are diagnosed read-only and any xattr
+command is merely shown to the user; this module never changes an attribute itself.
 
-Standard library only: test/test_launch.py tests it with fake `open`, `pgrep` and `xattr` programs on PATH and a fixture crash report.
+Standard library only; test/test_launch.py uses a fake pcbnew executable.
 """
 from __future__ import annotations
 
 import json
 import os
 import shlex
+import stat
 import subprocess
 import time
 from pathlib import Path
+from typing import Any, Callable
 
-PROCESS = "pcbnew"
-APPEAR_S = 8.0  # how long pcbnew may take to show up after `open`
 STABLE_S = 2.0  # how long it must then stay alive
 REPORT_S = 4.0  # how long to wait for the crash reporter once pcbnew is gone
 POLL_S = 0.25
+SOCKET_S = 8.0  # the window may be visible shortly before the API server is listening
+BOARD_S = 8.0  # the socket can exist before pcbnew has opened the requested board (or while a lock dialog is showing)
+SOCKET_DIR = Path("/tmp/kicad")
 QUARANTINE = "com.apple.quarantine"
+_children: list[subprocess.Popen] = []  # keep detached GUI Popen objects alive; otherwise Python warns while the intentional child is still running
+
+
+def reap_children() -> None:
+    """Forget GUI children that have exited; live ones remain deliberately detached."""
+    _children[:] = [child for child in _children if child.poll() is None]
 
 
 def reports_dir() -> Path:
@@ -43,14 +54,6 @@ def _run(cmd: list[str], timeout: float) -> subprocess.CompletedProcess | None:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except (OSError, subprocess.TimeoutExpired):
         return None
-
-
-def _running() -> bool | None:
-    """Is a process named pcbnew alive? None when pgrep itself cannot tell (missing, blocked, failing)."""
-    r = _run(["pgrep", "-x", PROCESS], 5)
-    if r is None or r.returncode not in (0, 1):
-        return None
-    return r.returncode == 0
 
 
 def newest_report(report_dir: Path, since: float) -> Path | None:
@@ -109,40 +112,107 @@ def _quarantine_hint(app_dir: Path, translocated: bool) -> str:
     return f" {cause} Fix it yourself in Terminal, then open the board again: xattr -dr {QUARANTINE} {shlex.quote(str(fix_dir(app_dir)))}"
 
 
-def launch_editor(editor: Path, pcb: Path, app_dir: Path, *, report_dir: Path | None = None, appear_s: float = APPEAR_S, stable_s: float = STABLE_S,
-                  report_s: float = REPORT_S, poll_s: float = POLL_S) -> tuple[bool, str]:
-    """`open -a editor pcb`, then check that pcbnew really runs. Returns (launched, note); launched is False when it never appeared or died again.
-    Takes up to appear_s + stable_s seconds (about 10 s with the defaults), a bit more when it has to wait for a crash report."""
+def pcbnew_executable(editor: Path) -> Path:
+    """The canonical executable inside either ``PCB Editor.app`` or nested ``pcbnew.app``.
+
+    KiCad's macOS installer makes ``PCB Editor.app`` a symlink.  Executing pcbnew
+    through that outer spelling opens the GUI but does not start its API server;
+    resolving it to the nested app before ``exec`` is therefore functional, not cosmetic.
+    """
+    return (editor / "Contents" / "MacOS" / "pcbnew").resolve()
+
+
+def _socket_ready(path: Path) -> bool:
+    try:
+        return stat.S_ISSOCK(path.stat().st_mode)
+    except OSError:
+        return False
+
+
+def wait_for_live_board(pcb: Path, status: Callable[[str, Path | None], dict[str, Any]], workspace: Path | None = None, *,
+                        board_s: float = BOARD_S, poll_s: float = POLL_S) -> tuple[bool, dict[str, Any]]:
+    """Wait until the live API reports that *pcb* is the open session board.
+
+    A KiCad API socket only proves that an editor process is alive.  The board can
+    still be unopened because pcbnew is starting or is displaying a project-lock
+    dialog.  Keep this distinction explicit so callers never report a false live
+    connection.  ``status`` is injected to keep this helper hermetic in tests.
+    """
+    deadline = time.monotonic() + max(0.0, board_s)
+    last: dict[str, Any] = {}
+    while True:
+        try:
+            last = status(str(pcb), workspace)
+        except Exception as error:  # noqa: BLE001 - a diagnostic callback must not turn a successful GUI launch into an exception
+            last = {"available": False, "reason": f"live board verification failed: {error}"}
+        if last.get("available"):
+            return True, last
+        # These states cannot become ready merely by waiting for this process.
+        if last.get("kipy") is False or last.get("api_enabled_in_preferences") is False:
+            return False, last
+        if time.monotonic() >= deadline:
+            return False, last
+        time.sleep(max(0.001, poll_s))
+
+
+def launch_editor(editor: Path, pcb: Path, app_dir: Path, *, report_dir: Path | None = None, socket_dir: Path = SOCKET_DIR, stable_s: float = STABLE_S,
+                  socket_s: float = SOCKET_S, report_s: float = REPORT_S, poll_s: float = POLL_S, env: dict[str, str] | None = None,
+                  api_expected: bool | None = None) -> tuple[bool, str]:
+    """Execute this distribution's pcbnew with ``pcb`` and watch that exact child.
+
+    Returns ``(launched, note)``.  ``launched`` means the GUI process survived the
+    stability window; the note separately says whether its live API socket appeared.
+    No socket is treated as a usable file-round-trip editor, not as a failed launch.
+    """
     reports = report_dir if report_dir is not None else reports_dir()
+    reap_children()
+    exe = pcbnew_executable(editor)
+    if not exe.is_file() or not os.access(exe, os.X_OK):
+        return False, f"KiCad PCB Editor executable not found or not executable: {exe}"
+    try:
+        socket_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        default_socket = socket_dir / "api.sock"
+        default_existed = default_socket.exists()
+    except OSError as e:
+        return False, f"could not prepare the KiCad live API directory: {e}"
     started = time.time()
     try:
-        r = subprocess.run(["open", "-a", str(editor), str(pcb)], capture_output=True, text=True, timeout=30)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return False, f"could not start KiCad: {e}"
-    if r.returncode != 0:
-        return False, f"open failed: {r.stderr.strip()[:200]}"
+        child = subprocess.Popen(
+            [str(exe), str(pcb)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env=env,
+        )
+        _children.append(child)
+    except OSError as e:
+        note = f"could not start KiCad: {e}"
+        if _quarantined(app_dir):
+            note += _quarantine_hint(app_dir, False)
+        return False, note
 
-    t0 = time.monotonic()
-    seen: float | None = None
-    died = False
-    while True:
-        alive = _running()
-        now = time.monotonic()
-        if alive is None:
-            return True, f"opened in {editor.name} (could not check that it stays running: pgrep is unavailable)"
-        if alive:
-            seen = now if seen is None else seen
-            if now - seen >= stable_s:
-                return True, f"opened in {editor.name}"
-        elif seen is not None:
-            died = True
-            break
-        elif newest_report(reports, started) is not None or now - t0 >= appear_s:  # crashed before we ever saw it, or never started
+    pid_socket = socket_dir / f"api-{child.pid}.sock"
+
+    stable_at = time.monotonic() + stable_s
+    while time.monotonic() < stable_at:
+        if child.poll() is not None:
             break
         time.sleep(poll_s)
+    if child.poll() is None:
+        deadline = time.monotonic() + socket_s
+        while time.monotonic() < deadline and child.poll() is None:
+            if _socket_ready(pid_socket) or (not default_existed and _socket_ready(default_socket)):
+                return True, f"opened in {editor.name}; live KiCad API socket ready"
+            time.sleep(poll_s)
+        if child.poll() is None:
+            if api_expected is True:
+                return True, (f'opened in {editor.name}, but its live API socket did not appear even though "Enable KiCad API" is on; '
+                              "close any older PCB Editor window or project-lock dialog for this board, then try again (file save/sync still works)")
+            return True, f'opened in {editor.name}, but its live API did not appear; enable "Enable KiCad API" in KiCad Preferences for real-time access (file save/sync still works)'
 
     report = newest_report(reports, started)
-    if report is None and died:  # the crash reporter writes its file a moment after the process is gone
+    if report is None:
         deadline = time.monotonic() + report_s
         while report is None and time.monotonic() < deadline:
             time.sleep(poll_s)
@@ -150,10 +220,9 @@ def launch_editor(editor: Path, pcb: Path, app_dir: Path, *, report_dir: Path | 
     reason, translocated = crash_reason(report) if report else ("", False)
     if report is not None:
         what = f"PCB Editor crashed right after it was opened ({reason or report.name})."
-    elif died:
-        what = f"PCB Editor started but quit again within {stable_s:g} s (no crash report found)."
     else:
-        what = f"PCB Editor did not start within {appear_s:g} s (no pcbnew process and no crash report found)."
+        code = child.returncode
+        what = f"PCB Editor quit right after it was opened (exit {code}; no crash report found)."
     if translocated or _quarantined(app_dir):
         what += _quarantine_hint(app_dir, translocated)
     return False, what

@@ -6,7 +6,7 @@ Gerber/BOM/CPL export) is the Python package `kicad` next to this file, and its 
 Locations
   workspace      ZCODE_WORKSPACE_ROOT   files the agent can see; `kicad_export_files` writes to ./kicad/out here
   plugin data    ZCODE_PLUGIN_DATA      per-workspace artifact store (specs, boards, renders, fab files) and KiCad's private config
-  KiCad          ZCODE_KICAD_APP        default /Applications/KiCad/KiCad.app (kicad-cli, its bundled Python and the libraries are used from there)
+  KiCad          ZCODE_KICAD_APP        optional exact KiCad.app; otherwise the installed official/Huaqiu distribution is discovered automatically
 
 Tools: the worker's pcb_* tools (project_id bound here), kicad_* helpers, kicad_board_view (opens the panel), pcb_export_glb / kicad_checks, the app-only tools behind the panel tabs
 (layers, 3D views, schematic, library drawings: kicad-cli, see kicad_views.py), the KiCad GUI round trip and the live link to the running PCB Editor (kicad_live_*, see kicad_live.py). skills/kicad-board/SKILL.md is the
@@ -32,6 +32,7 @@ from typing import Any
 WORKSPACE = Path(os.environ.get("ZCODE_WORKSPACE_ROOT") or os.getcwd()).resolve()
 PLUGIN_DATA = Path(os.environ.get("ZCODE_PLUGIN_DATA") or (WORKSPACE / ".kicad-plugin")).resolve()
 ROOT = PLUGIN_DATA / f"ws-{hashlib.sha1(str(WORKSPACE).encode()).hexdigest()[:10]}"
+GUI_ENV = os.environ.copy()  # captured before the worker's private KiCad config overrides below; the real GUI must use the user's settings (including Enable KiCad API)
 os.environ.setdefault("ZCODE_KICAD_DATA_DIR", str(PLUGIN_DATA / "kicad-env"))
 # Every KiCad program rewrites the settings it loads, even `kicad-cli version` (it stores the current directory as the working directory in kicad_common.json). So all
 # KiCad subprocesses of this server run on a private config and documents folder (the worker's own default, set early so no call can bypass it) and never touch the
@@ -47,9 +48,13 @@ from mcp.types import ImageContent, TextContent  # noqa: E402
 
 import kicad_live as live  # noqa: E402
 import kicad_views as kv  # noqa: E402
-from kicad_launch import launch_editor  # noqa: E402
+import kicad_capabilities as capabilities  # noqa: E402
+import huaqiu_part_search as hq_parts  # noqa: E402
+import huaqiu_kicad_resolver as hq_resolver  # noqa: E402
+import huaqiu_model_inspector as hq_models  # noqa: E402
+from kicad_launch import launch_editor, wait_for_live_board  # noqa: E402
 from kicad.store import ArtifactStore  # noqa: E402
-from kicad import examples, paths, verify  # noqa: E402
+from kicad import examples, library as kicad_library, paths, verify  # noqa: E402
 from kicad import mcp_server as worker  # noqa: E402
 from kicad.pipeline import ORIGIN_MM  # noqa: E402
 from kicad.service import PcbService  # noqa: E402
@@ -136,10 +141,11 @@ mcp = FastMCP(
     "kicad",
     version=PLUGIN_VERSION,
     instructions=(
-        "KiCad 10 inside ZCode. Design a 2-layer board from a JSON circuit spec: pcb_search_parts / pcb_part_info (never guess pin numbers or library ids) -> "
+        "KiCad 10 inside ZCode, automatically connected to an installed official or Huaqiu distribution. Design a 2-layer board from a JSON circuit spec: pcb_search_parts / pcb_part_info (never guess pin numbers or library ids) -> "
         "kicad_check_spec_file or pcb_check_spec -> pcb_build (place hints, auto-route, DRC) -> pcb_render -> pcb_export_fab -> kicad_export_files; kicad_checks gives DRC (and ERC) details, pcb_export_glb a 3D model with a part table. Coordinates are mm, "
         "origin top-left, +y down. A board is manufacturable only when pcb_build returns ok=true (DRC 0 errors, 0 unconnected). Start from pcb_spec_example (default: a 555 LED "
-        "blinker). kicad_board_view opens the board panel for the human; you cannot see pictures, so judge by the DRC and routing numbers."
+        "blinker). kicad_board_view opens the board panel for the human; you cannot see pictures, so judge by the DRC and routing numbers. "
+        "When kicad_capabilities reports resolved_edition=huaqiu and edition_ready=true, search_hqsch_parts and the get_hqsch_* tools provide Huaqiu's public part data; resolve_hqsch_part_for_kicad maps a chosen result to checked local KiCad candidates, and compare_hqsch_models_with_kicad safely compares Huaqiu's public text models with one candidate. DSH is never started."
     ),
 )
 
@@ -167,6 +173,136 @@ def kicad_info() -> dict:
     """KiCad version, workspace, and every artifact stored so far (specs, boards, renders, fab files) with their ids."""
     arts = store.list(PID)
     return _ok(kicad_version=paths.kicad_version(), workspace=str(WORKSPACE), store=str(store.root), artifacts=[_art(a) for a in arts[-MAX_LISTED_ARTIFACTS:]], artifacts_total=len(arts))
+
+
+@mcp.tool(annotations={"title": "KiCad capabilities", "readOnlyHint": True, "openWorldHint": False})
+def kicad_capabilities() -> dict:
+    """Diagnose KiCad without changing it: automatic/explicit app selection, requested and resolved edition (standard/Huaqiu), detected distribution, edition readiness, CLI, libraries, bundled
+    pcbnew Python, live IPC, bundled DSH runtime, tools that can run, and structured missing dependencies. Bundled DSH is reported but never started: ZCode remains the only agent harness."""
+    return {
+        **capabilities.detect(paths, live.status(_session_pcb(), WORKSPACE)),
+        "plugin_version": PLUGIN_VERSION,
+    }
+
+
+def _run_huaqiu_part_search(operation: str, arguments: dict[str, Any]) -> dict:
+    return hq_parts.execute(
+        operation,
+        arguments,
+        app=paths.app_dir(),
+        edition=os.environ.get("ZCODE_KICAD_EDITION"),
+    )
+
+
+@mcp.tool(annotations={"title": "Search Huaqiu parts", "readOnlyHint": True, "openWorldHint": True})
+def search_hqsch_parts(
+    query: str,
+    page: int = 1,
+    page_size: int = 10,
+    require_eda_model: bool = True,
+    requirements: dict[str, bool] | None = None,
+    language: str = "zh",
+) -> dict:
+    """Search Huaqiu's public component database in the Huaqiu edition. Returns normalized part summaries and pagination. query is an MPN, manufacturer, category, or keyword (max 200 chars); page_size is 1..50. requirements may set symbol, footprint, model3d, simulation, or supplier booleans. Data is sent to kiapi.eda.cn; no Huaqiu login is used and DSH is not started."""
+    try:
+        arguments = hq_parts.search_arguments(
+            query,
+            page=page,
+            page_size=page_size,
+            require_eda_model=require_eda_model,
+            requirements=requirements,
+            language=language,
+        )
+    except ValueError as error:
+        return _err(str(error), code="invalid_arguments")
+    return _run_huaqiu_part_search("search", arguments)
+
+
+@mcp.tool(annotations={"title": "Get a Huaqiu part", "readOnlyHint": True, "openWorldHint": True})
+def get_hqsch_part(manufacturer_id: str, mpn: str, language: str = "zh") -> dict:
+    """Get normalized Huaqiu component details: manufacturer, description, package, lifecycle, categories, attributes, documents, images, models, and tags. Use manufacturer_id and mpn from search_hqsch_parts. Huaqiu edition only; sends those identifiers to kiapi.eda.cn without login and never starts DSH."""
+    try:
+        arguments = hq_parts.part_arguments(manufacturer_id, mpn, language=language)
+    except ValueError as error:
+        return _err(str(error), code="invalid_arguments")
+    return _run_huaqiu_part_search("detail", arguments)
+
+
+@mcp.tool(annotations={"title": "Get Huaqiu EDA models", "readOnlyHint": True, "openWorldHint": True})
+def get_hqsch_part_models(manufacturer_id: str, mpn: str, language: str = "zh") -> dict:
+    """Get Huaqiu metadata for a part's symbol, footprint, 3D, and simulation models. This returns metadata and URLs; it does not download or install models. Use identifiers from search_hqsch_parts. Huaqiu edition only; no login or DSH harness."""
+    try:
+        arguments = hq_parts.part_arguments(manufacturer_id, mpn, language=language)
+    except ValueError as error:
+        return _err(str(error), code="invalid_arguments")
+    return _run_huaqiu_part_search("models", arguments)
+
+
+@mcp.tool(annotations={"title": "Get Huaqiu supply-chain offers", "readOnlyHint": True, "openWorldHint": True})
+def get_hqsch_supply_chain(parts: list[dict[str, str]]) -> dict:
+    """Get normalized Huaqiu supply-chain offers for 1..50 components. Each item must contain manufacturer_id and mpn from search_hqsch_parts. Results can include stock, MOQ, lead time, distributor URL, currency, and price breaks. Huaqiu edition only; sends identifiers to kiapi.eda.cn without login and never starts DSH."""
+    try:
+        arguments = hq_parts.supply_arguments(parts)
+    except ValueError as error:
+        return _err(str(error), code="invalid_arguments")
+    return _run_huaqiu_part_search("supply", arguments)
+
+
+@mcp.tool(annotations={"title": "Resolve a Huaqiu part for KiCad", "readOnlyHint": True, "openWorldHint": True})
+def resolve_hqsch_part_for_kicad(
+    manufacturer_id: str,
+    mpn: str,
+    language: str = "zh",
+    max_candidates: int = 5,
+) -> dict:
+    """Resolve one Huaqiu part to ranked symbol/footprint pairs from the configured KiCad installation. It fetches normalized Huaqiu detail, searches only local KiCad libraries, and returns pairs only after checking the symbol's footprint filters and same-numbered pin/pad mapping. The result includes spec_part_fields when a candidate exists, but deliberately leaves electrical pinout and exact physical package confirmation to datasheet review. It does not download Huaqiu model files, modify libraries, write a project, or start DSH."""
+    if not paths.libraries_available():
+        return _err("KiCad symbol and footprint libraries are unavailable", code="kicad_libraries_unavailable")
+    try:
+        arguments = hq_parts.part_arguments(manufacturer_id, mpn, language=language)
+        if isinstance(max_candidates, bool) or not 1 <= int(max_candidates) <= 10:
+            raise ValueError("max_candidates must be an integer from 1 to 10")
+    except (TypeError, ValueError) as error:
+        return _err(str(error), code="invalid_arguments")
+    detail = _run_huaqiu_part_search("detail", arguments)
+    if not detail.get("ok"):
+        return detail
+    resolved = hq_resolver.resolve_part(detail.get("result") or {}, limit=int(max_candidates))
+    return {
+        **resolved,
+        "edition": "huaqiu",
+        "source": "Huaqiu public part database + local KiCad libraries",
+    }
+
+
+@mcp.tool(annotations={"title": "Compare Huaqiu and local KiCad models", "readOnlyHint": True, "openWorldHint": True})
+def compare_hqsch_models_with_kicad(
+    manufacturer_id: str,
+    mpn: str,
+    symbol: str,
+    footprint: str,
+    language: str = "zh",
+) -> dict:
+    """Compare one explicit local KiCad symbol/footprint candidate with Huaqiu's public .kicad_sym and .kicad_mod text models. Use identifiers from search_hqsch_parts and a pair from resolve_hqsch_part_for_kicad. The files are accepted only from allowlisted Huaqiu HTTPS file hosts, limited to 2 MiB each, held in memory, parsed as untrusted data, and never installed or written. Pin names/numbers, numbered-pad geometry and sizes, and courtyard dimensions are compared; a match still does not replace manufacturer-datasheet review or confirm electrical/physical compatibility. Huaqiu edition only; never starts DSH."""
+    if not paths.libraries_available():
+        return _err("KiCad symbol and footprint libraries are unavailable", code="kicad_libraries_unavailable")
+    try:
+        arguments = hq_parts.part_arguments(manufacturer_id, mpn, language=language)
+        # Validate library-id shape before any network call. Actual existence is
+        # checked by the inspector after normalized Huaqiu detail is returned.
+        kicad_library.split_lib_id(symbol)
+        kicad_library.split_lib_id(footprint)
+    except (KeyError, TypeError, ValueError) as error:
+        return _err(str(error), code="invalid_arguments")
+    detail = _run_huaqiu_part_search("detail", arguments)
+    if not detail.get("ok"):
+        return detail
+    compared = hq_models.inspect_part_models(detail.get("result") or {}, symbol, footprint)
+    return {
+        **compared,
+        "edition": "huaqiu",
+        "source": "Huaqiu public KiCad text models + local KiCad libraries",
+    }
 
 
 @mcp.tool(annotations={"title": "Write an example circuit spec", "readOnlyHint": False, "destructiveHint": True, "idempotentHint": True, "openWorldHint": False})
@@ -292,16 +428,27 @@ def _editor_app() -> Path | None:
     return None
 
 
-def _launch(pcb: Path) -> tuple[bool, str]:
+def _launch(pcb: Path) -> tuple[bool, bool, str]:
     if NO_LAUNCH:
-        return False, "launch disabled (KICAD_PLUGIN_NO_LAUNCH=1)"
+        return False, False, "launch disabled (KICAD_PLUGIN_NO_LAUNCH=1)"
     if sys.platform != "darwin":
-        return False, "automatic launch is implemented for macOS only: open the file in KiCad yourself"
+        return False, False, "automatic launch is implemented for macOS only: open the file in KiCad yourself"
+    current = live.status(str(pcb), WORKSPACE)
+    if current.get("available"):
+        return True, True, "already open in PCB Editor; live KiCad API ready"
     editor = _editor_app()
     if editor is None:
-        return False, f"KiCad PCB Editor not found next to {paths.app_dir()}"
-    # `open` exits 0 even when pcbnew dies right away (quarantined KiCad -> App Translocation -> dyld error): launch_editor checks that it stays up and explains why not
-    return launch_editor(editor, pcb, paths.app_dir())
+        return False, False, f"KiCad PCB Editor not found next to {paths.app_dir()}"
+    # Execute this distribution's exact pcbnew instead of `open -a`: Launch Services may reuse a standalone editor that has no live API. The helper watches this child and its socket.
+    launched, note = launch_editor(editor, pcb, paths.app_dir(), env=GUI_ENV, api_expected=live.preferences_enable_api())
+    if not launched or "live KiCad API socket ready" not in note:
+        return launched, False, note
+    ready, status = wait_for_live_board(pcb, live.status, WORKSPACE)
+    if ready:
+        return True, True, note.replace("live KiCad API socket ready", "live KiCad API ready")
+    reason = status.get("reason") or "the requested board was not reported by the live API"
+    return True, False, (f"{note}, but the requested board did not open: {reason} "
+                         "Check KiCad for a project-lock or recovery dialog; the file save/sync round trip still works after the board is open.")
 
 
 def _sync_locked() -> dict:
@@ -369,8 +516,8 @@ def kicad_open_in_kicad(artifact_id: str = "") -> dict:
             verify.write_project_file(pcb, Rules.model_validate(art.meta.get("rules") or {}), art.meta.get("power_nets") or [])
             sess = {"pcb": str(pcb), "head_artifact_id": art.artifact_id, "imported_sha": _sha(pcb), "imports": [], "opened_at": _now()}
             _save_session(sess)
-    launched, note = _launch(pcb)  # outside the lock: it can take ~10 s while the panel keeps polling
-    return _ok(pcb=str(pcb), project=str(pcb.with_suffix(".kicad_pro")), launched=launched, launch_note=note, board_artifact_id=art.artifact_id,
+    launched, live_ready, note = _launch(pcb)  # outside the lock: it can take ~10 s while the panel keeps polling
+    return _ok(pcb=str(pcb), project=str(pcb.with_suffix(".kicad_pro")), launched=launched, live_ready=live_ready, launch_note=note, board_artifact_id=art.artifact_id,
                imported_pending_edits=bool(pending and pending.get("changed")),
                how_to="Edit in KiCad and press Cmd+S. The KiCad board panel syncs automatically; or call kicad_sync_edits.")
 
@@ -681,10 +828,11 @@ def kicad_live_status() -> dict:
     return live.status(_session_pcb(), WORKSPACE)
 
 
-@mcp.tool(app={"visibility": ["app"]})
+@mcp.tool(app={"visibility": ["app", "model"]}, annotations={"title": "Read the live KiCad board", "readOnlyHint": True, "openWorldHint": False})
 def kicad_live_snapshot(since: str = "") -> dict:
-    """(panel only) The live board in the running PCB Editor, read through KiCad's API while the user edits (no ⌘S needed): parts, nets, selection, counts, a signature. Only when
-    the live editor has exactly this session's board open; otherwise live=false with the reason. since = the last signature: an unchanged board answers with just that."""
+    """Read-only snapshot of the live board in the running PCB Editor (no ⌘S needed): parts, nets, selection, counts, and a signature. Use it before and after a requested live
+    move instead of making a no-op move just to read a position. Only works when the live editor has exactly this session's board open; otherwise live=false with the reason.
+    since = the last signature: an unchanged board answers with just that."""
     return live.snapshot(_session_pcb(), ORIGIN_MM, WORKSPACE, since)
 
 

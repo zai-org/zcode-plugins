@@ -1,0 +1,1094 @@
+{
+ "type": "pcb_report",
+ "title": "shift_register_leds",
+ "generated_at": "2026-11-03T09:51:48+00:00",
+ "ready_to_order": true,
+ "blocking_problems": [],
+ "board": {
+  "width_mm": 48.0,
+  "height_mm": 32.0,
+  "layers": 2,
+  "corner_radius_mm": 1.5,
+  "mounting_holes": 0
+ },
+ "design_rules": {
+  "signal_width_mm": 0.25,
+  "power_width_mm": 0.5,
+  "clearance_mm": 0.2,
+  "via_diameter_mm": 0.6,
+  "via_drill_mm": 0.3,
+  "edge_clearance_mm": 0.3
+ },
+ "checks": {
+  "spec": {
+   "ok": true,
+   "n_errors": 0,
+   "n_warnings": 0,
+   "issues": []
+  },
+  "drc": {
+   "passed": true,
+   "errors": 0,
+   "warnings": 36,
+   "unconnected": 0,
+   "by_type": {
+    "silk_overlap": 12,
+    "silk_over_copper": 24
+   },
+   "violations": [
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Reference field of R5",
+       "x_mm": 13.5,
+       "y_mm": 13.17
+      },
+      {
+       "what": "Segment of R4 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 12.722
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of D5 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 15.335
+      },
+      {
+       "what": "Reference field of D6",
+       "x_mm": 8.0,
+       "y_mm": 15.57
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of D4 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 12.935
+      },
+      {
+       "what": "Reference field of D5",
+       "x_mm": 8.0,
+       "y_mm": 13.17
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of R6 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 17.522
+      },
+      {
+       "what": "Reference field of R7",
+       "x_mm": 13.5,
+       "y_mm": 17.97
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of D6 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 17.735
+      },
+      {
+       "what": "Reference field of D7",
+       "x_mm": 8.0,
+       "y_mm": 17.97
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of R5 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 15.122
+      },
+      {
+       "what": "Reference field of R6",
+       "x_mm": 13.5,
+       "y_mm": 15.57
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of D2 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 8.135
+      },
+      {
+       "what": "Reference field of D3",
+       "x_mm": 8.0,
+       "y_mm": 8.37
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Reference field of R3",
+       "x_mm": 13.5,
+       "y_mm": 8.37
+      },
+      {
+       "what": "Segment of R2 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 7.922
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of R3 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 10.322
+      },
+      {
+       "what": "Reference field of R4",
+       "x_mm": 13.5,
+       "y_mm": 10.77
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of D1 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 5.735
+      },
+      {
+       "what": "Reference field of D2",
+       "x_mm": 8.0,
+       "y_mm": 5.97
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Segment of R1 on F.Silkscreen",
+       "x_mm": 13.263,
+       "y_mm": 5.523
+      },
+      {
+       "what": "Reference field of R2",
+       "x_mm": 13.5,
+       "y_mm": 5.97
+      }
+     ]
+    },
+    {
+     "type": "silk_overlap",
+     "severity": "warning",
+     "description": "Silkscreen clearance",
+     "items": [
+      {
+       "what": "Reference field of D4",
+       "x_mm": 8.0,
+       "y_mm": 10.77
+      },
+      {
+       "what": "Segment of D3 on F.Silkscreen",
+       "x_mm": 6.515,
+       "y_mm": 10.535
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R5",
+       "x_mm": 13.5,
+       "y_mm": 13.17
+      },
+      {
+       "what": "Pad 2 [QE] of R4 on F.Cu",
+       "x_mm": 14.325,
+       "y_mm": 12.2
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R5",
+       "x_mm": 13.5,
+       "y_mm": 13.17
+      },
+      {
+       "what": "Pad 1 [L4] of R4 on F.Cu",
+       "x_mm": 12.675,
+       "y_mm": 12.2
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D5",
+       "x_mm": 8.0,
+       "y_mm": 13.17
+      },
+      {
+       "what": "Pad 1 [GND] of D4 on F.Cu",
+       "x_mm": 7.212,
+       "y_mm": 12.2
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D6",
+       "x_mm": 8.0,
+       "y_mm": 15.57
+      },
+      {
+       "what": "Pad 2 [L5] of D5 on F.Cu",
+       "x_mm": 8.788,
+       "y_mm": 14.6
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D5",
+       "x_mm": 8.0,
+       "y_mm": 13.17
+      },
+      {
+       "what": "Pad 2 [L4] of D4 on F.Cu",
+       "x_mm": 8.788,
+       "y_mm": 12.2
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D6",
+       "x_mm": 8.0,
+       "y_mm": 15.57
+      },
+      {
+       "what": "Pad 1 [GND] of D5 on F.Cu",
+       "x_mm": 7.212,
+       "y_mm": 14.6
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R7",
+       "x_mm": 13.5,
+       "y_mm": 17.97
+      },
+      {
+       "what": "Pad 1 [L6] of R6 on F.Cu",
+       "x_mm": 12.675,
+       "y_mm": 17.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D7",
+       "x_mm": 8.0,
+       "y_mm": 17.97
+      },
+      {
+       "what": "Pad 2 [L6] of D6 on F.Cu",
+       "x_mm": 8.788,
+       "y_mm": 17.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D7",
+       "x_mm": 8.0,
+       "y_mm": 17.97
+      },
+      {
+       "what": "Pad 1 [GND] of D6 on F.Cu",
+       "x_mm": 7.212,
+       "y_mm": 17.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R6",
+       "x_mm": 13.5,
+       "y_mm": 15.57
+      },
+      {
+       "what": "Pad 1 [L5] of R5 on F.Cu",
+       "x_mm": 12.675,
+       "y_mm": 14.6
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R7",
+       "x_mm": 13.5,
+       "y_mm": 17.97
+      },
+      {
+       "what": "Pad 2 [QG] of R6 on F.Cu",
+       "x_mm": 14.325,
+       "y_mm": 17.0
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of R6",
+       "x_mm": 13.5,
+       "y_mm": 15.57
+      },
+      {
+       "what": "Pad 2 [QF] of R5 on F.Cu",
+       "x_mm": 14.325,
+       "y_mm": 14.6
+      }
+     ]
+    },
+    {
+     "type": "silk_over_copper",
+     "severity": "warning",
+     "description": "Silkscreen clipped by solder mask",
+     "items": [
+      {
+       "what": "Reference field of D3",
+       "x_mm": 8.0,
+       "y_mm": 8.37
+      },
+      {
+       "what": "Pad 1 [GND] of D2 on F.Cu",
+       "x_mm": 7.212,
+       "y_mm": 7.4
+      }
+     ]
+    }
+   ],
+   "unconnected_items": [],
+   "kicad_version": "10.0.6"
+  },
+  "routing": {
+   "complete": true,
+   "unrouted": [],
+   "warnings": [],
+   "stats": {
+    "passes": 2,
+    "nets_routed": 21,
+    "vias": 14,
+    "segments": 88,
+    "unrouted_connections": 0,
+    "length_mm": 216.99,
+    "seconds": 3.98,
+    "grid_mm": 0.1,
+    "expansions": 1297148,
+    "searches": 65
+   },
+   "tracks": 88,
+   "vias": 14
+  }
+ },
+ "pin_table": [
+  {
+   "ref": "C1",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "VCC"
+  },
+  {
+   "ref": "C1",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D1",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D1",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L1"
+  },
+  {
+   "ref": "D2",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D2",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L2"
+  },
+  {
+   "ref": "D3",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D3",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L3"
+  },
+  {
+   "ref": "D4",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D4",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L4"
+  },
+  {
+   "ref": "D5",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D5",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L5"
+  },
+  {
+   "ref": "D6",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D6",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L6"
+  },
+  {
+   "ref": "D7",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D7",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L7"
+  },
+  {
+   "ref": "D8",
+   "pin": "1",
+   "name": "K",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "D8",
+   "pin": "2",
+   "name": "A",
+   "type": "passive",
+   "net": "L8"
+  },
+  {
+   "ref": "J1",
+   "pin": "1",
+   "name": "Pin_1",
+   "type": "passive",
+   "net": "VCC"
+  },
+  {
+   "ref": "J1",
+   "pin": "2",
+   "name": "Pin_2",
+   "type": "passive",
+   "net": "GND"
+  },
+  {
+   "ref": "J1",
+   "pin": "3",
+   "name": "Pin_3",
+   "type": "passive",
+   "net": "SER"
+  },
+  {
+   "ref": "J1",
+   "pin": "4",
+   "name": "Pin_4",
+   "type": "passive",
+   "net": "SRCLK"
+  },
+  {
+   "ref": "J1",
+   "pin": "5",
+   "name": "Pin_5",
+   "type": "passive",
+   "net": "RCLK"
+  },
+  {
+   "ref": "J1",
+   "pin": "6",
+   "name": "Pin_6",
+   "type": "passive",
+   "net": "QHP"
+  },
+  {
+   "ref": "R1",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L1"
+  },
+  {
+   "ref": "R1",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QB"
+  },
+  {
+   "ref": "R2",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L2"
+  },
+  {
+   "ref": "R2",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QC"
+  },
+  {
+   "ref": "R3",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L3"
+  },
+  {
+   "ref": "R3",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QD"
+  },
+  {
+   "ref": "R4",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L4"
+  },
+  {
+   "ref": "R4",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QE"
+  },
+  {
+   "ref": "R5",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L5"
+  },
+  {
+   "ref": "R5",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QF"
+  },
+  {
+   "ref": "R6",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L6"
+  },
+  {
+   "ref": "R6",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QG"
+  },
+  {
+   "ref": "R7",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "L7"
+  },
+  {
+   "ref": "R7",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "QH"
+  },
+  {
+   "ref": "R8",
+   "pin": "1",
+   "name": "~",
+   "type": "passive",
+   "net": "QA"
+  },
+  {
+   "ref": "R8",
+   "pin": "2",
+   "name": "~",
+   "type": "passive",
+   "net": "L8"
+  },
+  {
+   "ref": "U1",
+   "pin": "1",
+   "name": "QB",
+   "type": "tri_state",
+   "net": "QB"
+  },
+  {
+   "ref": "U1",
+   "pin": "2",
+   "name": "QC",
+   "type": "tri_state",
+   "net": "QC"
+  },
+  {
+   "ref": "U1",
+   "pin": "3",
+   "name": "QD",
+   "type": "tri_state",
+   "net": "QD"
+  },
+  {
+   "ref": "U1",
+   "pin": "4",
+   "name": "QE",
+   "type": "tri_state",
+   "net": "QE"
+  },
+  {
+   "ref": "U1",
+   "pin": "5",
+   "name": "QF",
+   "type": "tri_state",
+   "net": "QF"
+  },
+  {
+   "ref": "U1",
+   "pin": "6",
+   "name": "QG",
+   "type": "tri_state",
+   "net": "QG"
+  },
+  {
+   "ref": "U1",
+   "pin": "7",
+   "name": "QH",
+   "type": "tri_state",
+   "net": "QH"
+  },
+  {
+   "ref": "U1",
+   "pin": "8",
+   "name": "GND",
+   "type": "power_in",
+   "net": "GND"
+  },
+  {
+   "ref": "U1",
+   "pin": "9",
+   "name": "QH'",
+   "type": "output",
+   "net": "QHP"
+  },
+  {
+   "ref": "U1",
+   "pin": "10",
+   "name": "SRCLR",
+   "type": "input",
+   "net": "VCC"
+  },
+  {
+   "ref": "U1",
+   "pin": "11",
+   "name": "SRCLK",
+   "type": "input",
+   "net": "SRCLK"
+  },
+  {
+   "ref": "U1",
+   "pin": "12",
+   "name": "RCLK",
+   "type": "input",
+   "net": "RCLK"
+  },
+  {
+   "ref": "U1",
+   "pin": "13",
+   "name": "OE",
+   "type": "input",
+   "net": "GND"
+  },
+  {
+   "ref": "U1",
+   "pin": "14",
+   "name": "SER",
+   "type": "input",
+   "net": "SER"
+  },
+  {
+   "ref": "U1",
+   "pin": "15",
+   "name": "QA",
+   "type": "tri_state",
+   "net": "QA"
+  },
+  {
+   "ref": "U1",
+   "pin": "16",
+   "name": "VCC",
+   "type": "power_in",
+   "net": "VCC"
+  }
+ ],
+ "pin_table_text": "Ref  Pin  Name   Type       Net\n---  ---  -----  ---------  -----\nC1   1    ~      passive    VCC\nC1   2    ~      passive    GND\nD1   1    K      passive    GND\nD1   2    A      passive    L1\nD2   1    K      passive    GND\nD2   2    A      passive    L2\nD3   1    K      passive    GND\nD3   2    A      passive    L3\nD4   1    K      passive    GND\nD4   2    A      passive    L4\nD5   1    K      passive    GND\nD5   2    A      passive    L5\nD6   1    K      passive    GND\nD6   2    A      passive    L6\nD7   1    K      passive    GND\nD7   2    A      passive    L7\nD8   1    K      passive    GND\nD8   2    A      passive    L8\nJ1   1    Pin_1  passive    VCC\nJ1   2    Pin_2  passive    GND\nJ1   3    Pin_3  passive    SER\nJ1   4    Pin_4  passive    SRCLK\nJ1   5    Pin_5  passive    RCLK\nJ1   6    Pin_6  passive    QHP\nR1   1    ~      passive    L1\nR1   2    ~      passive    QB\nR2   1    ~      passive    L2\nR2   2    ~      passive    QC\nR3   1    ~      passive    L3\nR3   2    ~      passive    QD\nR4   1    ~      passive    L4\nR4   2    ~      passive    QE\nR5   1    ~      passive    L5\nR5   2    ~      passive    QF\nR6   1    ~      passive    L6\nR6   2    ~      passive    QG\nR7   1    ~      passive    L7\nR7   2    ~      passive    QH\nR8   1    ~      passive    QA\nR8   2    ~      passive    L8\nU1   1    QB     tri_state  QB\nU1   2    QC     tri_state  QC\nU1   3    QD     tri_state  QD\nU1   4    QE     tri_state  QE\nU1   5    QF     tri_state  QF\nU1   6    QG     tri_state  QG\nU1   7    QH     tri_state  QH\nU1   8    GND    power_in   GND\nU1   9    QH'    output     QHP\nU1   10   SRCLR  input      VCC\nU1   11   SRCLK  input      SRCLK\nU1   12   RCLK   input      RCLK\nU1   13   OE     input      GND\nU1   14   SER    input      SER\nU1   15   QA     tri_state  QA\nU1   16   VCC    power_in   VCC",
+ "bom": [
+  {
+   "comment": "100nF",
+   "designators": "C1",
+   "refs": [
+    "C1"
+   ],
+   "footprint": "C_0603_1608Metric",
+   "footprint_id": "Capacitor_SMD:C_0603_1608Metric",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Device:C"
+  },
+  {
+   "comment": "green",
+   "designators": "D1,D2,D3,D4,D5,D6,D7,D8",
+   "refs": [
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "D5",
+    "D6",
+    "D7",
+    "D8"
+   ],
+   "footprint": "LED_0603_1608Metric",
+   "footprint_id": "LED_SMD:LED_0603_1608Metric",
+   "quantity": 8,
+   "lcsc": "",
+   "symbol": "Device:LED"
+  },
+  {
+   "comment": "VCC GND SER SRCLK RCLK QH'",
+   "designators": "J1",
+   "refs": [
+    "J1"
+   ],
+   "footprint": "PinHeader_1x06_P2.54mm_Vertical",
+   "footprint_id": "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "Connector_Generic:Conn_01x06"
+  },
+  {
+   "comment": "470",
+   "designators": "R1,R2,R3,R4,R5,R6,R7,R8",
+   "refs": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7",
+    "R8"
+   ],
+   "footprint": "R_0603_1608Metric",
+   "footprint_id": "Resistor_SMD:R_0603_1608Metric",
+   "quantity": 8,
+   "lcsc": "",
+   "symbol": "Device:R"
+  },
+  {
+   "comment": "74HC595",
+   "designators": "U1",
+   "refs": [
+    "U1"
+   ],
+   "footprint": "SOIC-16_3.9x9.9mm_P1.27mm",
+   "footprint_id": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "quantity": 1,
+   "lcsc": "",
+   "symbol": "74xx:74HC595"
+  }
+ ],
+ "nets": {
+  "VCC": [
+   "J1.1",
+   "U1.16",
+   "U1.10",
+   "C1.1"
+  ],
+  "GND": [
+   "J1.2",
+   "U1.8",
+   "U1.13",
+   "C1.2",
+   "D1.1",
+   "D2.1",
+   "D3.1",
+   "D4.1",
+   "D5.1",
+   "D6.1",
+   "D7.1",
+   "D8.1"
+  ],
+  "SER": [
+   "J1.3",
+   "U1.14"
+  ],
+  "SRCLK": [
+   "J1.4",
+   "U1.11"
+  ],
+  "RCLK": [
+   "J1.5",
+   "U1.12"
+  ],
+  "QHP": [
+   "J1.6",
+   "U1.9"
+  ],
+  "QB": [
+   "U1.1",
+   "R1.2"
+  ],
+  "L1": [
+   "R1.1",
+   "D1.2"
+  ],
+  "QC": [
+   "U1.2",
+   "R2.2"
+  ],
+  "L2": [
+   "R2.1",
+   "D2.2"
+  ],
+  "QD": [
+   "U1.3",
+   "R3.2"
+  ],
+  "L3": [
+   "R3.1",
+   "D3.2"
+  ],
+  "QE": [
+   "U1.4",
+   "R4.2"
+  ],
+  "L4": [
+   "R4.1",
+   "D4.2"
+  ],
+  "QF": [
+   "U1.5",
+   "R5.2"
+  ],
+  "L5": [
+   "R5.1",
+   "D5.2"
+  ],
+  "QG": [
+   "U1.6",
+   "R6.2"
+  ],
+  "L6": [
+   "R6.1",
+   "D6.2"
+  ],
+  "QH": [
+   "U1.7",
+   "R7.2"
+  ],
+  "L7": [
+   "R7.1",
+   "D7.2"
+  ],
+  "QA": [
+   "U1.15",
+   "R8.1"
+  ],
+  "L8": [
+   "R8.2",
+   "D8.2"
+  ]
+ },
+ "fab": {
+  "gerber_files": [
+   "shift_register_leds-B_Cu.gbl",
+   "shift_register_leds-B_Mask.gbs",
+   "shift_register_leds-B_Paste.gbp",
+   "shift_register_leds-B_Silkscreen.gbo",
+   "shift_register_leds-Edge_Cuts.gm1",
+   "shift_register_leds-F_Cu.gtl",
+   "shift_register_leds-F_Mask.gts",
+   "shift_register_leds-F_Paste.gtp",
+   "shift_register_leds-F_Silkscreen.gto",
+   "shift_register_leds-PTH.drl",
+   "shift_register_leds-job.gbrjob"
+  ],
+  "gerber_zip_sha256": "ce3c23923117479f092d971937264845e2f8a13e73f8d82b176d7d8d847881a2"
+ },
+ "sources": {
+  "spec_artifact_id": "a_fd7bda4d",
+  "pcb_artifact_id": "a_16215bd2",
+  "kicad_version": "10.0.6"
+ },
+ "limitations": [
+  "2-layer boards only; no RF/microwave, high-voltage/creepage, HDI/microvias, impedance control, differential pairs or length matching.",
+  "Automatic placement is NOT done: part positions come from the spec. Routing is a simple grid router (45-degree tracks, through vias).",
+  "Pin names/numbers come from the official KiCad libraries; they were NOT cross-checked against datasheets. Verify critical pins (power, polarity) yourself.",
+  "No schematic is produced; the spec checker replaces ERC. DRC does not check electrical correctness, only manufacturability rules.",
+  "BOM/pos files are bare-board helpers: part availability, LCSC numbers and pick-and-place rotation offsets are NOT verified (no PCBA support yet)."
+ ],
+ "human_signoff_checklist": [
+  "I checked the pin table: every power/ground/polarity pin goes to the net I intend.",
+  "I reviewed the top and bottom renders and the board outline/size.",
+  "I understand custom boards are not refundable if the design is wrong."
+ ]
+}

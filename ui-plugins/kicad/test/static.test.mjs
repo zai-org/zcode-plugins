@@ -15,11 +15,30 @@ const read = (...p) => readFile(join(...p), "utf8");
 const walk = async (d) => (await Promise.all((await readdir(d, { withFileTypes: true })).map((e) => (e.isDirectory() ? walk(join(d, e.name)) : [join(d, e.name)])))).flat();
 
 test("build output exists and matches what the manifest points at", async () => {
-  for (const f of ["panel.html", "server.mjs", "py/kicad_server.py", "py/kicad_launch.py", "py/kicad_views.py", "py/kicad_live.py", "py/kicad/config.py", "py/kicad/service.py", "THIRD_PARTY_NOTICES.txt"])
+  for (const f of ["panel.html", "server.mjs", "py/kicad_server.py", "py/kicad_capabilities.py", "py/kicad_installation.py", "py/huaqiu_part_search.py", "py/huaqiu_part_search_bridge.mjs", "py/huaqiu_kicad_resolver.py", "py/huaqiu_model_inspector.py", "py/kicad_launch.py", "py/kicad_views.py", "py/kicad_live.py", "py/kicad/config.py", "py/kicad/service.py", "THIRD_PARTY_NOTICES.txt"])
     assert.ok((await stat(join(DIST, f))).isFile(), `dist/${f} missing: run pnpm build`);
   for (const server of Object.values(manifest.mcpServers)) for (const arg of server.args) if (arg.includes("${ZCODE_PLUGIN_ROOT}/dist/"))
     assert.ok((await stat(join(DIST, arg.split("${ZCODE_PLUGIN_ROOT}/dist/")[1]))).isFile(), arg);
   assert.ok((await stat(join(DIST, "panel.html"))).size < 4 * 1024 * 1024, "HTML resource limit of the host is 4 MiB");
+});
+
+test("the KiCad MCP tools are available on the first model request", () => {
+  const server = manifest.mcpServers.kicad;
+  assert.ok(server, "manifest must declare the KiCad MCP server");
+  assert.equal(
+    server.alwaysLoad,
+    true,
+    "KiCad skills require kicad_capabilities on the first turn, including for models without ToolSearch",
+  );
+});
+
+test("capabilities report the installed plugin version", async () => {
+  const server = await read(DIST, "py/kicad_server.py");
+  assert.match(
+    server,
+    /"plugin_version": PLUGIN_VERSION/,
+    "the first-turn diagnosis must distinguish plugin and KiCad application versions",
+  );
 });
 
 test("manifest, server source and page agree on the surface", async () => {
@@ -38,12 +57,18 @@ test("manifest, server source and page agree on the surface", async () => {
   for (const tool of ["pcb_search_parts", "pcb_part_info"]) assert.ok(page.includes(tool) && (await read(DIST, "py/kicad/mcp_server.py")).includes(`def ${tool}(`), `the Library tab calls the worker tool ${tool}`);
 });
 
+test("the panel refreshes when another tool replaces the KiCad edit session", async () => {
+  const source = await read(ROOT, "ui/src/main.js");
+  assert.match(source, /const active = !!state\.info\?\.ok;/, "poll even before the first edit session exists");
+  assert.match(source, /st\?\.session \? st\.pcb !== shownPcb : !!shownPcb;/, "refresh when the edit-session board changes or closes");
+});
+
 test("page tools exist in the server and are visible to the app", async () => {
   const server = await read(DIST, "py/kicad_server.py");
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_board_image/);
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_edit_status/);
   for (const tool of ["kicad_layers", "kicad_layer_svg", "kicad_3d_image", "kicad_schematic", "kicad_library_preview"]) assert.match(server, new RegExp(`@mcp\\.tool\\(app=\\{"visibility": \\["app"\\]\\}\\)\\s+def ${tool}\\(`), `${tool} must be app-only`);
-  assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app"\]\}\)\s+def kicad_live_snapshot\(/, "the live snapshot is for the panel");
+  assert.match(server, /@mcp\.tool\(app=\{"visibility": \["app", "model"\]\}, annotations=\{"title": "Read the live KiCad board", "readOnlyHint": True,[^)]*\)\s+def kicad_live_snapshot\(/, "the read-only live snapshot is available to both panel and model");
   assert.match(server, /@mcp\.tool\(app=\{"visibility": \["model"\]\}[^)]*\)\s+def kicad_live_move_footprint\(/, "the only write tool is for the model, never for the page");
   assert.ok(!/kicad_live_move_footprint/.test(await read(DIST, "panel.html")), "the panel page must never call the write tool");
   for (const tool of ["pcb_export_glb", "kicad_checks"]) assert.match(server, new RegExp(`@mcp\\.tool\\s+def ${tool}\\(`), `${tool} must be visible to the model`);
@@ -76,27 +101,33 @@ test("the vendored worker never reads .env files and the repo has no machine-spe
   }
 });
 
-test("a failed GUI launch is reported as one: pcbnew must stay up, the quarantine fix is named but never run", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+test("the exact GUI child and its API socket are checked; the quarantine fix is named but never run", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
   const server = await read(DIST, "py/kicad_server.py");
   const launch = server.slice(server.indexOf("def _launch("), server.indexOf("def _sync_locked("));
-  assert.match(launch, /if NO_LAUNCH:\s+return False, "launch disabled \(KICAD_PLUGIN_NO_LAUNCH=1\)"/, "KICAD_PLUGIN_NO_LAUNCH must still short-circuit before anything is started");
+  assert.match(launch, /if NO_LAUNCH:\s+return False, False, "launch disabled \(KICAD_PLUGIN_NO_LAUNCH=1\)"/, "KICAD_PLUGIN_NO_LAUNCH must still short-circuit before anything is started");
   assert.match(launch, /sys\.platform != "darwin"/);
-  assert.match(launch, /return launch_editor\(/, "_launch must delegate to the checked launch");
+  assert.match(launch, /launch_editor\(/, "_launch must delegate to the checked launch");
+  assert.match(launch, /wait_for_live_board\(/, "a socket is not enough: the requested board must also be verified");
   assert.ok(!/subprocess|xattr/.test(launch), "_launch itself starts and changes nothing");
   const helper = await read(DIST, "py/kicad_launch.py");
+  assert.match(helper, /subprocess\.Popen\(/, "launch the selected distribution's exact child");
+  assert.match(helper, /api-\{child\.pid\}\.sock/, "the live socket must belong to that exact child");
+  assert.ok(!/\[\s*["']open["']|pgrep/.test(helper), "Launch Services/process-name checks can reuse or mistake another standalone editor");
   const xattrCalls = helper.match(/\["xattr"[^\]]*\]/g) ?? [];
   assert.ok(xattrCalls.length > 0 && xattrCalls.every((c) => c.startsWith('["xattr", "-p",')), `the plugin may only read the quarantine attribute (xattr -p), found ${xattrCalls}`);
   const r = spawnSync("python3", [join(ROOT, "test/test_launch.py")], { encoding: "utf8", env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" } });
   assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
 });
 
-test("KiCad runs on a private config: the plugin never lets any KiCad program rewrite the user's ~/Library/Preferences/kicad", async () => {
+test("headless KiCad runs on a private config while the GUI keeps the captured user environment", async () => {
   const server = await read(DIST, "py/kicad_server.py");
   const set = server.indexOf('"KICAD_CONFIG_HOME"');
   assert.ok(set > 0 && set < server.indexOf("from fastmcp import"), "KICAD_CONFIG_HOME must be set before anything can start a KiCad program");
   assert.ok(server.includes('"KICAD_DOCUMENTS_HOME"'));
   assert.ok(!/KICAD_CONFIG_HOME["']\]\s*=\s*["']?[^\n]*Preferences/.test(server), "no path into the user's preferences");
   assert.ok(/os\.environ\[_var\] = /.test(server) && !/os\.environ\.setdefault\(_var/.test(server), "assigned unconditionally: a KICAD_CONFIG_HOME exported by the user must not win");
+  assert.ok(server.indexOf("GUI_ENV = os.environ.copy()") < set, "capture the user's GUI settings before installing the headless overrides");
+  assert.match(server, /launch_editor\([^\n]+env=GUI_ENV/, "the real GUI must use the captured user environment so Enable KiCad API is honored");
   const launcher = await read(DIST, "server.mjs");
   assert.ok(launcher.includes('UV_NO_CONFIG: "1"'), "uv must not read a uv.toml / pyproject.toml from the workspace");
 });
@@ -109,6 +140,35 @@ test("the GLB tool and the panel tabs are documented the same way in both README
 test("the views module: GLB part table, board text helpers, id validation", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
   const r = spawnSync("python3", [join(ROOT, "test/test_views.py")], { encoding: "utf8", env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" } });
   assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("capabilities distinguish official, Huaqiu and missing KiCad installations", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const selection = spawnSync("python3", [join(ROOT, "test/test_installation.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(selection.status, 0, `${selection.stdout}\n${selection.stderr}`);
+  const r = spawnSync("python3", [join(ROOT, "test/test_capabilities.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("the Huaqiu part adapter validates arguments, gates the edition and uses only fixed local paths", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_part_search.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  const bridge = await read(DIST, "py/huaqiu_part_search_bridge.mjs");
+  assert.ok(!/(eval|exec|spawn|child_process)/.test(bridge), "the bridge cannot execute caller-supplied code or commands");
+  for (const operation of ["search", "detail", "models", "supply"]) assert.ok(bridge.includes(`"${operation}"`));
+});
+
+test("the Huaqiu-to-KiCad resolver ranks only locally checked symbol/footprint pairs", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_kicad_resolver.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+});
+
+test("Huaqiu KiCad text models are allowlisted, bounded, parsed in memory and compared geometrically", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {
+  const r = spawnSync("python3", [join(ROOT, "test/test_huaqiu_model_inspector.py")], { encoding: "utf8", env: { ...process.env, PYTHONPATH: join(DIST, "py"), PYTHONDONTWRITEBYTECODE: "1" } });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  const source = await read(DIST, "py/huaqiu_model_inspector.py");
+  assert.match(source, /ALLOWED_MODEL_HOSTS = frozenset\(\{"file\.eda\.cn", "file1\.eda\.cn"\}\)/);
+  assert.match(source, /MAX_MODEL_BYTES = 2 \* 1024 \* 1024/);
+  assert.ok(!/write_text|write_bytes|NamedTemporaryFile|mkstemp/.test(source), "public model files must remain in memory");
 });
 
 test("the live link: stub-kipy tests, and the module can only read the board plus open/push/drop one commit", { skip: spawnSync("python3", ["--version"]).status !== 0 && "python3 not available" }, async () => {

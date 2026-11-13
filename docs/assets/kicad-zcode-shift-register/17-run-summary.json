@@ -1,0 +1,92 @@
+{
+  "run": {
+    "date": "2026-11-03",
+    "task": "shift_register_leds end-to-end long-running acceptance",
+    "zcode_model": "GLM-5.3 Max",
+    "successful_run_duration": "4m37s",
+    "first_attempt": {
+      "result": "blocked",
+      "duration": "5m23s",
+      "reason": "KiCad skills were visible in a new chat, but the KiCad MCP tools were not injected into that chat's tool list"
+    }
+  },
+  "capabilities": {
+    "requested_edition": "auto",
+    "resolved_edition": "standard",
+    "distribution": "official",
+    "kicad_version": "10.0.6",
+    "core_ready": true,
+    "edition_ready": true,
+    "live_ipc_before_open": false,
+    "live_ipc_after_open": true
+  },
+  "design": {
+    "name": "shift_register_leds",
+    "board_width_mm": 48.0,
+    "board_height_mm": 32.0,
+    "layers": 2,
+    "components": 19,
+    "spec_nets": 22,
+    "routed_nets": 21,
+    "live_snapshot_nets": 22,
+    "pin_net_mappings": 58,
+    "tracks": 88,
+    "vias": 14,
+    "zones": 2,
+    "pads": 56,
+    "trace_length_mm": 216.99,
+    "build_seconds": 3.983
+  },
+  "checks": {
+    "spec_errors": 0,
+    "spec_warnings": 0,
+    "drc_errors": 0,
+    "drc_unconnected": 0,
+    "drc_warnings": 36,
+    "drc_warning_types": {
+      "silk_overlap": 12,
+      "silk_over_copper": 24
+    },
+    "erc": "not applicable: no .kicad_sch was generated"
+  },
+  "live_ipc": {
+    "launched": true,
+    "live_ready": true,
+    "matches_session": true,
+    "footprint": "C1",
+    "original_position_mm": [29.0, 6.0],
+    "moved_position_mm": [29.25, 6.0],
+    "baseline_signature": "a48d6c7accf43673",
+    "moved_signature": "4a2a371ef4da6164",
+    "restored_signature": "a48d6c7accf43673",
+    "incremental_snapshot_unchanged": true,
+    "saved": false,
+    "source_and_edit_sha256": "52606e69c7a3ad30e4a7fe146276c999f4a23a8622e0d886f2d7ec620d375739"
+  },
+  "3d": {
+    "include_copper": true,
+    "parts_with_model": 19,
+    "parts_without_model": 0,
+    "size_bytes": 2225900,
+    "mesh_classes": ["copper", "pads", "vias", "silkscreen", "solder-mask", "components"]
+  },
+  "manufacturing": {
+    "ready_to_order": true,
+    "blocking_problems": [],
+    "exported_files": 9,
+    "export_directory": "kicad/out/shift_register_acceptance/"
+  },
+  "artifacts": [
+    {"type": "spec", "id": "a_fd7bda4d", "size_bytes": 6686},
+    {"type": "pcb", "id": "a_16215bd2", "size_bytes": 159435},
+    {"type": "top_render", "id": "a_d98bb6da", "size_bytes": 56901},
+    {"type": "bottom_render", "id": "a_81f56144", "size_bytes": 25088},
+    {"type": "glb", "id": "a_751b5dac", "size_bytes": 2225900},
+    {"type": "gerber_and_drill", "id": "a_6d068556", "size_bytes": 29625},
+    {"type": "kicad_project", "id": "a_cd0944ae", "size_bytes": 35004},
+    {"type": "bom", "id": "a_212ae0fc", "size_bytes": 369},
+    {"type": "position_csv", "id": "a_df5a7bf0", "size_bytes": 1068},
+    {"type": "step", "id": "a_4ded4c8d", "size_bytes": 930047},
+    {"type": "pcb_report", "id": "a_11892238", "size_bytes": 21184}
+  ]
+}

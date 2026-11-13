@@ -1,8 +1,11 @@
-"""Where the worker finds its data and KiCad. Reads no file at all: both locations come from the environment the plugin server was started with."""
+"""Where the worker finds its data and KiCad."""
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from pathlib import Path
+
+from kicad_installation import select_installation
 
 
 def data_dir() -> Path:
@@ -11,5 +14,13 @@ def data_dir() -> Path:
     return d
 
 
+@lru_cache(maxsize=1)
+def kicad_installation() -> dict[str, object]:
+    return select_installation(
+        os.environ.get("ZCODE_KICAD_APP"),
+        os.environ.get("ZCODE_KICAD_EDITION"),
+    )
+
+
 def kicad_app_dir() -> Path:
-    return Path(os.environ.get("ZCODE_KICAD_APP") or "/Applications/KiCad/KiCad.app")
+    return Path(str(kicad_installation()["selected"]["path"]))

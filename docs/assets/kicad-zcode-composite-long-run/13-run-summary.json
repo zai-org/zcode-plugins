@@ -1,0 +1,144 @@
+{
+  "date": "2026-11-04",
+  "plugin_version": "0.12.3",
+  "host": "ZCode Dev",
+  "model": {
+    "id": "GLM-5.3",
+    "successful_effort": "low",
+    "successful_wall_time_seconds": 506,
+    "max_effort_attempts": [
+      {
+        "duration_ms": 148253,
+        "tool_calls": 0,
+        "result": "preempted after planning without calling the required first tool"
+      },
+      {
+        "duration_ms": 138802,
+        "tool_calls": 0,
+        "result": "stopped after planning without calling the required first tool"
+      }
+    ]
+  },
+  "fresh_chat_registration": {
+    "before_fix": {
+      "all_tools": 68,
+      "kicad_tools": 0,
+      "tool_search_available": false
+    },
+    "after_fix": {
+      "all_tools": 94,
+      "kicad_tools": 25,
+      "first_tool": "kicad_capabilities",
+      "plugin_version_reported": "0.12.3"
+    }
+  },
+  "environment": {
+    "requested_edition": "auto",
+    "resolved_edition": "standard",
+    "distribution": "official",
+    "kicad_version": "10.0.6",
+    "edition_ready": true
+  },
+  "task": {
+    "name": "power_clock_shift_led_controller",
+    "description": "5 V input, AP2112K 3.3 V branch, NE555 astable clock, 74HC595, eight resistor-driven LEDs, serial and parallel headers, four mounting holes",
+    "board_width_mm": 70,
+    "board_height_mm": 48,
+    "layers": 2,
+    "parts": 31,
+    "footprints_including_holes": 35,
+    "mounting_holes": 4,
+    "nets": 27,
+    "pads": 98,
+    "tracks": 269,
+    "vias": 49,
+    "zones": 2,
+    "trace_length_mm": 875.51
+  },
+  "iterations": {
+    "spec_checks": [
+      { "errors": 10, "warnings": 0, "action": "separate power, LED and mounting-hole keepout regions" },
+      { "errors": 1, "warnings": 0, "action": "move C1 away from J2" },
+      { "errors": 0, "warnings": 0, "ok": true }
+    ],
+    "builds": [
+      { "drc_errors": 0, "unconnected": 0, "unrouted": 2, "action": "move C1, U3 and C6 to make room for GND stitching vias" },
+      { "drc_errors": 0, "unconnected": 0, "unrouted": 1, "action": "move U3 upward by 2 mm" },
+      { "drc_errors": 0, "unconnected": 0, "unrouted": 0, "ok": true }
+    ],
+    "final_build_seconds": {
+      "placement": 1.78,
+      "routing": 7.63,
+      "finish": 0.42,
+      "drc": 1.62,
+      "total": 11.45
+    }
+  },
+  "checks": {
+    "spec_errors": 0,
+    "spec_warnings": 0,
+    "drc_errors": 0,
+    "drc_unconnected": 0,
+    "drc_warnings": 4,
+    "warning_types": {
+      "silk_over_copper": 4
+    },
+    "routing_complete": true,
+    "ready_to_order": true,
+    "blocking_problems": []
+  },
+  "glb": {
+    "include_copper": true,
+    "size_bytes": 4990772,
+    "part_count": 31,
+    "parts_without_model": ["H1", "H2", "H3", "H4"]
+  },
+  "ipc": {
+    "available": true,
+    "matches_session": true,
+    "reference": "R3",
+    "baseline_position_mm": [14.0, 22.0],
+    "baseline_signature": "207049d2b67d25d0",
+    "moved_position_mm": [14.25, 22.0],
+    "moved_signature": "a1f69e2d1d8ef1c8",
+    "restored_position_mm": [14.0, 22.0],
+    "restored_signature": "207049d2b67d25d0",
+    "saved_during_test": false,
+    "source_and_edit_sha256": "60acd5b4764c9610fe9a079e640987e6047aaad69db053b0491349672d75b288"
+  },
+  "tool_calls": {
+    "total": 30,
+    "by_name": {
+      "kicad_capabilities": 1,
+      "pcb_spec_example": 4,
+      "pcb_part_info": 3,
+      "pcb_check_spec": 5,
+      "pcb_build": 3,
+      "pcb_render": 2,
+      "kicad_checks": 1,
+      "pcb_export_glb": 1,
+      "pcb_export_fab": 1,
+      "kicad_export_files": 1,
+      "kicad_board_view": 1,
+      "kicad_open_in_kicad": 1,
+      "kicad_live_status": 1,
+      "kicad_live_snapshot": 3,
+      "kicad_live_move_footprint": 2
+    }
+  },
+  "artifacts": {
+    "final_spec": "a_96931266",
+    "board": "a_a8d0d129",
+    "gerber_zip": "a_f94b4c78",
+    "bom": "a_d2885ad0",
+    "position_csv": "a_a5bcd9cc",
+    "step": "a_83084fe6",
+    "report": "a_2d4f3df9",
+    "top_png": "a_9ddf8ce6",
+    "bottom_png": "a_24522023",
+    "glb": "a_37e86ce1",
+    "project_zip": "a_f3f11006"
+  },
+  "workspace_export": "kicad/out/composite-acceptance",
+  "result": "PASS"
+}

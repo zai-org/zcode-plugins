@@ -1,6 +1,6 @@
 """Single place that knows where KiCad lives.
 
-Override with env ``ZCODE_KICAD_APP`` (path to ``KiCad.app``; default ``/Applications/KiCad/KiCad.app``).
+Override with env ``ZCODE_KICAD_APP`` (path to ``KiCad.app``); otherwise discover the newest installed app matching ``ZCODE_KICAD_EDITION``.
 On Linux (Docker) fall back to ``kicad-cli`` on PATH and ``/usr/share/kicad``.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
-from .config import kicad_app_dir
+from .config import kicad_app_dir, kicad_installation
 
 
 class KiCadMissing(RuntimeError):
@@ -27,6 +27,10 @@ def _first_existing(*cands: Path | str | None) -> Path | None:
 
 def app_dir() -> Path:
     return kicad_app_dir()
+
+
+def installation_selection() -> dict[str, object]:
+    return kicad_installation()
 
 
 def kicad_cli() -> Path:
