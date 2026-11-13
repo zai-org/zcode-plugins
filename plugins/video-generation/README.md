@@ -25,6 +25,8 @@ Ask in plain language, for example "make a video of a cartoon bird flying across
 | Parameter | Required | Description |
 | --- | --- | --- |
 | `prompt` | Yes | What the video shows. |
+| `duration` | No | Length in seconds: an integer from 4 to 30, or -1 to let the model decide. Defaults to 4 seconds. |
+| `ratio` | No | Aspect ratio: `16:9`, `4:3`, `1:1`, `3:4`, `9:16`, `21:9`, or `adaptive`. Defaults to `16:9`. With `first_frame` the video follows the frame, so leave it out or pass `adaptive`. |
 | `images` | No | Up to 9 reference images: workspace paths, `https://` / `asset://` URLs, or `data:image/...;base64` URLs. Local files (png, jpeg, webp, up to 10 MiB) are uploaded to ZCode first. |
 | `videos` | No | Up to 3 reference videos, `https://` or `asset://` URLs only. |
 | `audios` | No | Up to 3 reference audio clips (wav / mp3): URLs, `data:audio/...;base64`, or workspace paths up to 2 MiB. |
@@ -37,6 +39,6 @@ Ask in plain language, for example "make a video of a cartoon bird flying across
 - Generation usually takes several minutes. One tool call waits up to about four minutes; if the video is not ready it returns a `task_id`, and `get_video_result` continues waiting.
 - Every `generate_video` call consumes quota. Retries of the same submission reuse one `Idempotency-Key`, so network errors and timeouts never submit twice.
 - While a submission is unconfirmed, its request body (prompt, material URLs, inlined local audio; no identity) is kept in the plugin data directory, readable only by the current user, so a `request_id` replay sends exactly the same request. It is deleted once the submission is confirmed, or after 24 hours.
-- Duration, aspect ratio, model, and watermark are fixed by the service.
+- Model, resolution, and watermark are fixed by the service. Longer videos take longer and consume more quota.
 - API requests go only to the ZCode API origin that the host provides in `ZCODE_BASE_URL`, and redirects are refused. The finished file is downloaded from the temporary URL the service returns, which can be on another host.
 - Local input files and `output_path` must be inside the workspace. An existing file is never overwritten.
