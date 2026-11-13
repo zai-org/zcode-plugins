@@ -1,0 +1,25 @@
+{
+  "name": "make-it-a-bit-better",
+  "version": "0.2.5",
+  "description": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
+  "description_i18n": {
+    "en": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
+    "zh-CN": "自主产品打磨循环：每轮强制开一场新头脑风暴（3 个视角子代理），择一个小角度实现、验证并提交，落账到项目级 ledger；超格好想法进 icebox。一轮好一点点，轮次积累成产品进步。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/make-it-a-bit-better",
+  "repository": "https://github.com/Lumos-789/make-it-a-bit-better",
+  "license": "MIT",
+  "keywords": [
+    "polish",
+    "iteration",
+    "continuous-improvement",
+    "product",
+    "brainstorm",
+    "ux"
+  ],
+  "skills": "skills"
+}
