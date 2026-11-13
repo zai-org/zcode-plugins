@@ -1,0 +1,35 @@
+# Feature index
+
+`spec/INDEX.md` is the living index of {{PROJECT}}'s user-goal-level feature
+points. It is not a task list and not a roadmap: a row exists only for a
+feature point that has a behaviour contract in `spec/domains/` and a testable
+acceptance criterion.
+
+## Rules
+
+- One row per user-goal-level feature point. A refactor, chore, bug fix, file
+  move, or internal abstraction is not a feature point.
+- ID format: `F-<DOMAIN>-01`, where `<DOMAIN>` is the domain slug in upper case
+  and the number is two digits starting at `01`. An ID never changes once it is
+  used.
+- `GATE` records how reversible the change is: `1w` is a one-way door — a
+  decision that is expensive or impossible to undo — so it needs an explicit
+  review before implementation; `2w` is a two-way door and the default for a
+  reversible change.
+- `主落点` points at the files that implement the feature point. It is a
+  pointer, not a guess: if the implementing files cannot be named, the feature
+  point is not ready for the index.
+- A feature point must exist in `spec/domains/<domain>.md` and in this index
+  before implementation starts. Add both in the same change.
+- Never add example, placeholder, or hypothetical rows.
+
+## Domain tables
+
+This index starts with no domains, so it starts with no rows. For each domain
+file in `spec/domains/`, copy the header stub below once, replace `<domain>`
+with the domain slug, and keep the four columns exactly as written.
+
+### <domain>
+
+| ID | Feature point | GATE | 主落点 |
+|---|---|---|---|

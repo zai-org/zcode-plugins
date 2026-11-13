@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createApp, health } from "../server/index.js";
+
+test("health payload names the project", () => {
+  assert.deepEqual(health(), {
+    ok: true,
+    project: "{{PROJECT}}",
+    version: "0.1.0",
+  });
+});
+
+test("GET /health.json returns 200 JSON", async () => {
+  const server = createApp();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const { port } = server.address();
+    const response = await fetch(`http://127.0.0.1:${port}/health.json`);
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.project, "{{PROJECT}}");
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

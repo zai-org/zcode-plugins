@@ -1,0 +1,49 @@
+# {{PROJECT}} constitution
+
+One page of hard rules. They outrank speed, convenience, and a green check that
+only proves the tests still run.
+
+## Never change silently
+
+A change is silent when the diff does not say why and no artifact records the
+new contract. Never change any of these without an explicit, reviewed change to
+the matching `spec/` file:
+
+- A public contract: API shape, CLI flags and output, configuration keys, file
+  formats, environment variable names, storage schema, or error codes.
+- A feature point's observable behaviour, acceptance criteria, or `GATE`
+  weight.
+- A test that proves a feature point, `spec/TESTING.md`, or the check commands
+  in `galadon.yaml`.
+- Deployment topology, release procedure, secret handling, or data retention.
+- This constitution, `spec/INDEX.md`, or a domain file.
+
+## Requires review
+
+Review means a different person or agent reads the diff against the domain
+file; a passing check is not a review.
+
+- Every `1w` row in `spec/INDEX.md`.
+- A database or storage migration that can lose or rewrite data.
+- Authentication, authorization, secrets, or personal data.
+- A change that removes or weakens a test, or makes a check easier to pass.
+- A new external dependency, a major upgrade, or a new deploy target.
+- Deleting or renaming a feature point, domain file, or public path.
+- Any change to this constitution.
+
+## Feature points
+
+A feature point without a testable acceptance criterion is not a feature point.
+It is a wish: do not implement it, do not add it to `spec/INDEX.md`, and do not
+count it as done. Testable means another person can run one named check or
+observe one result and get an unambiguous pass or fail.
+
+## Precedence
+
+1. This constitution.
+2. The domain file in `spec/domains/`.
+3. `spec/INDEX.md`.
+4. The code.
+
+When code and spec disagree, code is the bug until a reviewed spec change says
+otherwise.

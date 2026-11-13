@@ -1,0 +1,31 @@
+"""Command line entry point for {{PROJECT}}."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from typing import Sequence
+
+from . import __version__
+
+PLUGIN = "{{NPM_NAME}}"
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=PLUGIN, description="{{PROJECT}} agent plugin.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    sub = parser.add_subparsers(dest="command")
+    ping = sub.add_parser("ping", help="Print a liveness payload.")
+    ping.add_argument("--json", action="store_true")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.command == "ping":
+        payload = {"ok": True, "plugin": PLUGIN, "version": __version__}
+        print(json.dumps(payload) if args.json else f"{PLUGIN} ok")
+        return 0
+    parser.print_help()
+    return 2

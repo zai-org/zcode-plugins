@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+import process from "node:process";
+import { pathToFileURL } from "node:url";
+
+export const name = "{{NPM_NAME}}";
+export const version = "0.1.0";
+
+export function ping() {
+  return { ok: true, plugin: name, version };
+}
+
+function usage() {
+  console.log(`${name} ${version}`);
+  console.log(`usage: ${name} ping [--json]`);
+}
+
+export function main(argv = process.argv.slice(2)) {
+  if (argv[0] === "--version" || argv[0] === "-v") {
+    console.log(`${name} ${version}`);
+    return 0;
+  }
+  if (argv[0] === "ping") {
+    console.log(argv.includes("--json") ? JSON.stringify(ping()) : `${name} ok`);
+    return 0;
+  }
+  usage();
+  return 2;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  process.exitCode = main();
+}
