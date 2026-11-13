@@ -1,0 +1,27 @@
+{
+  "name": "guster",
+  "version": "0.7.4",
+  "description": "Discover, audit, plan and evolve agent context across projects, skills, tools, knowledge and credentials; optionally scaffold a lightweight Guster Hub for durable knowledge and project state.",
+  "description_i18n": {
+    "en": "Discover, audit, plan and evolve agent context across projects, skills, tools, knowledge and credentials; optionally scaffold a lightweight Guster Hub for durable knowledge and project state.",
+    "zh-CN": "发现、诊断、规划和演进全机 agent 上下文：项目、指令、Skill、工具、知识、状态与凭据引用；可初始化一个轻量 Guster Hub，承载长期知识与项目状态。"
+  },
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/guster",
+  "repository": "https://github.com/Lumos-789/guster",
+  "license": "MIT",
+  "keywords": [
+    "agent",
+    "context",
+    "governance",
+    "skills",
+    "mcp",
+    "codex",
+    "zcode",
+    "dsh"
+  ],
+  "skills": "skills"
+}
