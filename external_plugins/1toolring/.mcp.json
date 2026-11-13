@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "1toolring": {
+      "type": "http",
+      "url": "https://mcp.1toolring.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${user_config.api_key}"
+      },
+      "enabled": true,
+      "timeoutMs": 60000
+    }
+  }
+}

@@ -1499,6 +1499,62 @@
         "image-to-video",
         "mcp"
       ]
+    },
+    {
+      "name": "1toolring",
+      "displayName": "1ToolRing",
+      "source": "./external_plugins/1toolring",
+      "icon": "https://raw.githubusercontent.com/khmuhtadin/1toolring-mcp/main/assets/logo-400.png",
+      "description": "Pay-per-call access to thousands of tools from third-party providers through a single 1ToolRing key: web search, maps and places, shopping and prices, market data, web pages, images, weather, jobs and more. The price is shown before every call and failed calls are never charged.",
+      "description_i18n": {
+        "en": "Pay-per-call access to thousands of tools from third-party providers through a single 1ToolRing key: web search, maps and places, shopping and prices, market data, web pages, images, weather, jobs and more. The price is shown before every call and failed calls are never charged.",
+        "zh-CN": "通过一个 1ToolRing 密钥按次调用第三方供应商提供的数千个工具：网页搜索、地图与地点、购物与价格、行情数据、网页抓取、图片、天气、招聘等。每次调用前显示价格，失败的调用不计费。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Khaisa Studio",
+        "url": "https://1toolring.com"
+      },
+      "category": "productivity",
+      "keywords": [
+        "search",
+        "maps",
+        "web-search",
+        "shopping",
+        "market-data",
+        "scraping",
+        "mcp",
+        "pay-per-call",
+        "tools"
+      ]
+    },
+    {
+      "name": "api-indonesia",
+      "displayName": "API Indonesia",
+      "source": "./external_plugins/api-indonesia",
+      "icon": "https://raw.githubusercontent.com/khmuhtadin/api-indonesia-examples/main/assets/icon.svg",
+      "description": "Indonesian public data from official sources through one MCP server: administrative regions down to villages and postal codes, region boundaries, public holidays, prayer times, Hijri dates, schools, universities, hospitals, earthquakes, weather, air quality, exchange rates, minimum wage, QRIS parsing, rupiah formatting and more.",
+      "description_i18n": {
+        "en": "Indonesian public data from official sources through one MCP server: administrative regions down to villages and postal codes, region boundaries, public holidays, prayer times, Hijri dates, schools, universities, hospitals, earthquakes, weather, air quality, exchange rates, minimum wage, QRIS parsing, rupiah formatting and more.",
+        "zh-CN": "通过一个 MCP 服务器访问来自官方来源的印尼公共数据：从省到村和邮政编码的行政区划、区域边界、公共假期、礼拜时间、伊斯兰历日期、学校、大学、医院、地震、天气、空气质量、汇率、最低工资、QRIS 解析、印尼盾金额格式化等。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Khaisa Studio",
+        "url": "https://apiindonesia.id"
+      },
+      "category": "other",
+      "keywords": [
+        "indonesia",
+        "government-data",
+        "regions",
+        "holidays",
+        "prayer-times",
+        "schools",
+        "earthquakes",
+        "exchange-rates",
+        "mcp"
+      ]
     }
   ]
 }
