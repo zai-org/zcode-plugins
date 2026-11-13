@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -827,7 +830,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -850,7 +855,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -877,7 +884,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -904,7 +913,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -931,7 +942,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -958,7 +971,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -985,7 +1000,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -1012,7 +1029,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1039,7 +1058,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1066,7 +1087,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1149,7 +1172,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1499,6 +1524,36 @@
         "image-to-video",
         "mcp"
       ]
+    },
+    {
+      "name": "make-it-a-bit-better",
+      "source": "./external_plugins/make-it-a-bit-better",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/make-it-a-bit-better/icon.png",
+      "description": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
+      "description_i18n": {
+        "en": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
+        "zh-CN": "自主产品打磨循环：每轮强制开一场新头脑风暴（3 个视角子代理），择一个小角度实现、验证并提交，落账到项目级 ledger；超格好想法进 icebox。一轮好一点点，轮次积累成产品进步。"
+      },
+      "version": "0.2.5",
+      "author": {
+        "name": "Lumos-789",
+        "url": "https://github.com/Lumos-789"
+      },
+      "category": "productivity",
+      "keywords": [
+        "polish",
+        "iteration",
+        "continuous-improvement",
+        "product",
+        "brainstorm",
+        "ux"
+      ],
+      "examplePrompts": [],
+      "examplePrompts_i18n": {},
+      "displayName": "Make It a Bit Better",
+      "displayName_i18n": {
+        "zh-CN": "好一点点"
+      }
     }
   ]
 }
