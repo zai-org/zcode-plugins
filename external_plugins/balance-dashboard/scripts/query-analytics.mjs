@@ -178,6 +178,7 @@ async function main() {
     const providerMap = new Map();
     const modelMap = new Map();
     const taskMap = new Map();
+    const projectCostMap = new Map();
     const uniqueRequests = new Set();
     // Requests are only unique per (session, logical_request_id); group rows do
     // not carry the id, so the exact distinct count comes from a separate query
@@ -255,6 +256,13 @@ async function main() {
         task.cost += cost;
         task.requests += row.requests;
         taskMap.set(row.sessionId, task);
+
+        const projectKey = `${row.projectId}\u0000${row.directory}`;
+        const projectCostEntry = projectCostMap.get(projectKey) || { tokens: 0, cost: 0, requests: 0 };
+        projectCostEntry.tokens += row.totalTokens;
+        projectCostEntry.cost += cost;
+        projectCostEntry.requests += row.requests;
+        projectCostMap.set(projectKey, projectCostEntry);
       }
     }
 
@@ -275,13 +283,18 @@ async function main() {
       )
       .all(start, end);
 
-    const projects = projectRows.map((row) => ({
-      id: String(row.project_id || ""),
-      directory: String(row.directory || ""),
-      label: String(row.directory || row.project_id || "").split(/[\\/]/).filter(Boolean).pop() || String(row.project_id || ""),
-      sessions: num(row.sessions),
-      tokens: num(row.computed_total_tokens) || num(row.plain_tokens),
-    }));
+    const projects = projectRows.map((row) => {
+      const projectKey = `${String(row.project_id || "")}\u0000${String(row.directory || "")}`;
+      const costEntry = projectCostMap.get(projectKey);
+      return {
+        id: String(row.project_id || ""),
+        directory: String(row.directory || ""),
+        label: String(row.directory || row.project_id || "").split(/[\\/]/).filter(Boolean).pop() || String(row.project_id || ""),
+        sessions: num(row.sessions),
+        tokens: num(row.computed_total_tokens) || num(row.plain_tokens),
+        cost: round2(costEntry ? costEntry.cost : 0),
+      };
+    });
 
     const taskRows = db
       .prepare(
@@ -308,14 +321,19 @@ async function main() {
         ...(directory ? [directory] : []),
       );
 
-    const tasks = taskRows.map((row) => ({
-      id: String(row.id || ""),
-      title: String(row.title || row.id || ""),
-      projectId: String(row.project_id || ""),
-      directory: String(row.directory || ""),
-      tokens: num(row.computed_total_tokens) || num(row.plain_tokens),
-      attempts: num(row.attempts),
-    }));
+    const tasks = taskRows.map((row) => {
+      const task = taskMap.get(String(row.id || ""));
+      return {
+        id: String(row.id || ""),
+        title: String(row.title || row.id || ""),
+        projectId: String(row.project_id || ""),
+        directory: String(row.directory || ""),
+        tokens: num(row.computed_total_tokens) || num(row.plain_tokens),
+        cost: round2(task ? task.cost : 0),
+        requests: task ? task.requests : 0,
+        attempts: num(row.attempts),
+      };
+    });
 
     const series = Array.from(seriesMap.values())
       .map((entry) => ({ ...entry, cost: round2(entry.cost) }))

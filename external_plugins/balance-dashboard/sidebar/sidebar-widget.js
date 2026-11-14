@@ -1558,43 +1558,59 @@
     const metric = a.metric;
     const svg = chartSvg(rows, metric, t.chart);
 
-    const providerBars = (data.providers || [])
+    const isCost = metric === "cost";
+    const metricValue = (item) =>
+      isCost ? moneyCny(item.cost) : tokens(item.tokens);
+    const byMetric = (x, y) =>
+      isCost ? (Number(y.cost) || 0) - (Number(x.cost) || 0) : (Number(y.tokens) || 0) - (Number(x.tokens) || 0);
+
+    const providerList = [...(data.providers || [])].sort(byMetric);
+    const providerBars = providerList
       .map((p) => {
-        const share = Math.max(0, Math.min(1, Number(p.share) || 0));
+        let share;
+        if (isCost) {
+          const maxCost = Math.max(...providerList.map((x) => Number(x.cost) || 0), 0);
+          share = maxCost > 0 ? (Number(p.cost) || 0) / maxCost : 0;
+        } else {
+          share = Math.max(0, Math.min(1, Number(p.share) || 0));
+        }
         return `<div class="share-row">
           <span class="share-name" title="${esc(p.label || p.id)}">${esc(p.label || p.id)}</span>
-          <span class="share-track"><i style="width:${(share * 100).toFixed(1)}%;background:${providerColor(p.id, t)}"></i></span>
-          <span class="share-val">${tokens(p.tokens)}</span>
+          <span class="share-track"><i style="width:${(Math.max(0, Math.min(1, share)) * 100).toFixed(1)}%;background:${providerColor(p.id, t)}"></i></span>
+          <span class="share-val">${metricValue(p)}</span>
         </div>`;
       })
       .join("");
 
-    const modelRows = (data.models || [])
+    const modelRows = [...(data.models || [])]
+      .sort(byMetric)
       .slice(0, 8)
       .map(
         (m) => `<div class="list-row">
           <span class="lr-main" title="${esc(m.modelId)}">${esc(m.modelId)}<span class="lr-sub"> · ${esc(PROVIDER_LABEL[m.bucket] || m.bucket)}</span></span>
-          <span class="lr-val">${tokens(m.tokens)}</span>
+          <span class="lr-val">${metricValue(m)}</span>
         </div>`,
       )
       .join("");
 
-    const projectRows = (data.projects || [])
+    const projectRows = [...(data.projects || [])]
+      .sort(byMetric)
       .slice(0, 6)
       .map(
         (p) => `<div class="list-row">
           <span class="lr-main" title="${esc(p.directory)}">${esc(p.label || p.directory)}<span class="lr-sub"> · ${p.sessions} 个会话</span></span>
-          <span class="lr-val">${tokens(p.tokens)}</span>
+          <span class="lr-val">${metricValue(p)}</span>
         </div>`,
       )
       .join("");
 
-    const taskRows = (data.tasks || [])
+    const taskRows = [...(data.tasks || [])]
+      .sort(byMetric)
       .slice(0, 6)
       .map(
         (task) => `<div class="list-row">
           <span class="lr-main" title="${esc(task.title)}">${esc(task.title)}</span>
-          <span class="lr-val">${tokens(task.tokens)}</span>
+          <span class="lr-val">${metricValue(task)}</span>
         </div>`,
       )
       .join("");
