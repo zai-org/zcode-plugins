@@ -2491,14 +2491,14 @@
     var pick = mostRecentSession();
     var title = pick ? String(pick.title || "").trim() : "";
     var scanInfo = { s1: false, s2: false, title: title };
-    if (title.length > 6) {
+    if (title.length >= 4) {
       try {
         var candidates = document.querySelectorAll("div,span,h1,h2,h3,p");
         for (var i = 0; i < candidates.length; i++) {
           var el = candidates[i];
           if (el.closest(".zci-overlay") || el.closest(".zci-sbar")) continue;
           var txt = (el.textContent || "").trim();
-          if (!(txt === title || (txt.length >= 6 && (title.indexOf(txt) === 0 || txt.indexOf(title.slice(0, 8)) === 0)))) continue;
+          if (!(txt === title || (txt.length >= 4 && (title.indexOf(txt) === 0 || txt.indexOf(title.slice(0, 8)) === 0)))) continue;
           if (el.children.length > 0 && el.children.length < 2) { /* allow single wrapper */ }
           var node = el;
           for (var d = 0; d < 6 && node; d++) {
@@ -2534,8 +2534,8 @@
         var el2 = all[j];
         var rect2;
         try { rect2 = el2.getBoundingClientRect(); } catch { continue; }
-        if (!rect2 || rect2.height < 30 || rect2.height > 88 || rect2.width < 320) continue;
-        if (rect2.top > 70 || rect2.top < -10) continue;
+        if (!rect2 || rect2.height < 24 || rect2.height > 96 || rect2.width < 280) continue;
+        if (rect2.top > 90 || rect2.top < -10) continue;
         if (rect2.left < sidebarW - 10) continue;
         if (el2.querySelector(".zci-sbar")) continue;
         if (el2.closest(".zci-overlay")) continue;
@@ -2553,8 +2553,9 @@
   }
 
   function mountSessionBar() {
-    var bar = document.getElementById("zci-sbar");
-    if (bar && bar.isConnected) return;
+    var existing = document.getElementById("zci-sbar");
+    if (existing && existing.isConnected && existing.className.indexOf("zci-fallback") < 0) return; // already inline
+    var bar = existing;
     bar = document.createElement("div");
     bar.className = "zci-sbar";
     bar.id = "zci-sbar";
@@ -2591,6 +2592,8 @@
     var header = findSessionHeader();
     if (header) {
       bar.classList.remove("zci-fallback");
+      bar.style.left = "";
+      bar.style.right = "";
       // 插到头部里标题元素之后（而不是整个头部的末尾，避免压到右侧控件）
       var anchor = null;
       try {
@@ -2629,14 +2632,19 @@
       }
       bar.style.left = (fw + 14) + "px";
       bar.style.right = "auto";
-      document.body.appendChild(bar);
+      if (!bar.isConnected) document.body.appendChild(bar);
     }
   }
 
   setInterval(function () {
     if (window.__zciLive !== BOOT_ID) return;
-    if (!document.getElementById("zci-sbar")) mountSessionBar();
-  }, 1500);
+    var bar = document.getElementById("zci-sbar");
+    if (!bar || bar.className.indexOf("zci-fallback") >= 0) {
+      // retry: upgrade fallback to inline once the app header exists, or
+      // recompute the fallback position now that the sidebar is measurable
+      try { mountSessionBar(); } catch (e) { /* keep the pill where it is */ }
+    }
+  }, 2000);
 
   function tryMount(attempt) {
     mountSessionBar();
