@@ -198,11 +198,13 @@ function cacheKeyArgs(op, args) {
   return out;
 }
 
+const CACHE_VERSION = "v2";
+
 function cacheFile(op, args) {
   const key = JSON.stringify(cacheKeyArgs(op, args));
   let h = 0;
   for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
-  return path.join(CACHE_DIR, op + "-" + (h >>> 0).toString(36) + ".json");
+  return path.join(CACHE_DIR, op + "-" + CACHE_VERSION + "-" + (h >>> 0).toString(36) + ".json");
 }
 
 function readCache(file) {

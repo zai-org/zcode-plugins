@@ -19,7 +19,12 @@ const RUNTIME =
   (process.env.ZCONTEXT_RUNTIME_DIR && process.env.ZCONTEXT_RUNTIME_DIR.trim()) ||
   path.join(os.homedir(), ".zcode", "zcode-context", "runtime");
 const STATUS_PATH = path.join(RUNTIME, "status.json");
-const VERSION = "0.1.0";
+let VERSION = "0.2.2";
+try {
+  VERSION = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, ".zcode-plugin", "plugin.json"), "utf8")).version || VERSION;
+} catch {
+  // keep fallback
+}
 
 const FILES = [
   ["scripts/asar-patch.mjs", "scripts/asar-patch.mjs"],

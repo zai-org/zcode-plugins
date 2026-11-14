@@ -657,7 +657,9 @@
 
   /** tall usage chart with y-axis labels and thin paired bars */
   function usageChart(series) {
+    series = series || [];
     if (!series.length) return '<div class="zci-empty">暂无数据</div>';
+    series = series.map(function (x) { return { key: x.key || "-", tokens: x.tokens || 0, cost: x.cost || 0, requests: x.requests || 0 }; });
     var w = 300;
     var h = 240;
     var padL = 40;
@@ -691,6 +693,7 @@
   }
 
   function heatmap(days, metric) {
+    days = days || [];
     metric = metric || "tokens";
     var map = {};
     days.forEach(function (d) { map[d.day] = d; });
@@ -898,6 +901,9 @@
   }
 
   function timeDonutParts(ts) {
+    ts = ts || {};
+    var g = function (v) { return Number(v) || 0; };
+    ts = { modelWaitMs: g(ts.modelWaitMs), thinkMs: g(ts.thinkMs), replyMs: g(ts.replyMs), toolMs: g(ts.toolMs), otherMs: g(ts.otherMs), spanMs: g(ts.spanMs) };
     return [
       { label: "模型等待", value: ts.modelWaitMs, valueText: fmtDuration(ts.modelWaitMs), color: C.amber, tip: "<b>模型等待</b> " + fmtDuration(ts.modelWaitMs) + "<div class='dim'>Σ 各请求首字延迟（ttft）</div>" },
       { label: "模型思考", value: ts.thinkMs || 0, valueText: fmtDuration(ts.thinkMs || 0), color: C.purple, tip: "<b>模型思考</b> " + fmtDuration(ts.thinkMs || 0) + "<div class='dim'>生成时长 × reasoning token 占比</div>" },
@@ -926,8 +932,8 @@
   function renderOverview(body) {
     var o = state.overview;
     if (!o) return;
-    var s = o.summary;
-    var ts = o.timeStats || { modelWaitMs: s.activeMs, toolMs: 0, otherMs: 0, outputSpeed: s.outputSpeed };
+    var s = o.summary || {};
+    var ts = o.timeStats || { modelWaitMs: s.activeMs || 0, toolMs: 0, thinkMs: 0, replyMs: 0, otherMs: 0, spanMs: 0, outputSpeed: s.outputSpeed || 0 };
     var usageParts = usageDonutParts(o);
     var timeParts = timeDonutParts(ts);
 
@@ -937,9 +943,9 @@
       kpi("预估费用", fmtCost(s.cost), "按公开牌价估算", { tip: "按<b>内置牌价表</b>估算：输入/输出/缓存读写分别计价<div class='dim'>实际账单以模型服务商为准</div>" }) +
       kpi("缓存命中", fmtPct(s.cacheHitRate), "cacheRead / input", { tip: "<b>cache_read / input</b>（dsh 口径）<div class='dim'>越高说明缓存复用越好、费用越低</div>" }) +
       kpi("工具调用", fmtTokens(s.toolCalls), "命令执行 " + s.commandExec + " 次" + ((o.commandStats && o.commandStats.failed) ? " · 失败 " + o.commandStats.failed : ""), { kpiId: "tools", tip: "点击滚动到<b>工具调用</b>排行" }) +
-      kpi("活跃时长", fmtDuration(ts.modelWaitMs + (ts.thinkMs || 0) + (ts.replyMs || 0)), "模型等待 · " + s.outputSpeed + " tok/s", { tip: "模型等待=Σ首字延迟；生成按思考/回复 token 占比拆分<div class='dim'>工具执行按请求间隙估算</div>" });
+      kpi("活跃时长", fmtDuration(ts.modelWaitMs + (ts.thinkMs || 0) + (ts.replyMs || 0)), "模型等待 · " + (s.outputSpeed || 0) + " tok/s", { tip: "模型等待=Σ首字延迟；生成按思考/回复 token 占比拆分<div class='dim'>工具执行按请求间隙估算</div>" });
 
-    var usageCard = sectionCard("近 7 天用量", "", "", '<div class="zci-usage">' + usageChart(o.series.slice(-14)) +
+    var usageCard = sectionCard("近 7 天用量", "", "", '<div class="zci-usage">' + usageChart((o.series || []).slice(-14)) +
       '<div class="zci-chartlegend" style="display:flex;gap:14px;font-size:10px;color:#6d7484;justify-content:center"><span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#4b7bff;margin-right:4px"></span>Token</span><span><span class="dot" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#2bd576;margin-right:4px"></span>费用</span></div></div>');
 
     var tokenCard = sectionCard("Token 统计", C.blue, "", '<div class="zci-donut-wrap">' +
@@ -955,7 +961,7 @@
     var heatCard = sectionCard("活跃", C.green, "", '<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><div class="zci-seg">' +
       '<button class="zci-pill ' + (state.heatMetric === "tokens" ? "zci-on" : "") + '" data-heat="tokens">Token 消耗</button>' +
       '<button class="zci-pill ' + (state.heatMetric === "sessions" ? "zci-on" : "") + '" data-heat="sessions">会话</button></div></div>' +
-      '<div class="zci-heat">' + heatmap(o.heatmap, state.heatMetric) + "</div>");
+      '<div class="zci-heat">' + heatmap(o.heatmap || [], state.heatMetric) + "</div>");
 
     var toolItems = (o.tools || []).slice(0, 10).map(function (t, i) {
       return { name: t.tool, calls: t.calls };
@@ -1059,7 +1065,17 @@
   }
 
   function compositionParts(detail) {
-    var c = detail.composition;
+    var c = detail.composition || {};
+    var zero = function (g) { return { tokens: (g && g.tokens) || 0, items: (g && g.items) || 0 }; };
+    c = {
+      systemPrompt: zero(c.systemPrompt),
+      toolDefs: zero(c.toolDefs),
+      userMessages: zero(c.userMessages),
+      assistantText: zero(c.assistantText),
+      reasoning: zero(c.reasoning),
+      toolResults: zero(c.toolResults),
+    };
+    detail.composition = c;
     return [
       { label: "系统提示词", value: c.systemPrompt.tokens, color: C.purple },
       { label: "工具定义", value: c.toolDefs.tokens, color: C.amber },
@@ -1071,7 +1087,7 @@
   }
 
   function usageDonutParts(overview) {
-    var s = overview.summary;
+    var s = overview.summary || {};
     return [
       { label: "缓存读取", value: s.cacheReadTokens, color: C.cyan },
       { label: "模型思考", value: s.reasoningTokens, color: C.purple },
@@ -1195,12 +1211,12 @@
   function renderSessionDetail(body) {
     var d = state.sessionDetail;
     if (!d) return;
-    var st = d.stats;
+    var st = d.stats || {};
     var io = d.ioCounts || { user: 0, read: 0, write: 0, edit: 0, search: 0, bash: 0, tools: 0 };
     var compParts = compositionParts(d);
     var compTotal = compParts.reduce(function (a, p) { return a + p.value; }, 0) || 1;
     var win = st.contextWindow || 1;
-    var usedPct = Math.min(1, st.currentContextTokens / win);
+    var usedPct = Math.min(1, (st.currentContextTokens || 0) / win);
 
     // context bar segments with hatched reserve; hover tip + click -> browser group
     var segs = compParts
