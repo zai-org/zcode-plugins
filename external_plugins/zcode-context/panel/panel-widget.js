@@ -357,6 +357,12 @@
 .zci-insp .detail b{color:#f2f5fb}
 .zci-insp .detail .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:6px}
 .zci-empty-sm{padding:18px;text-align:center;color:#5f6675;font-size:11px}
+.zci-sbar{display:inline-flex;align-items:center;gap:5px;margin-left:10px;vertical-align:middle}
+.zci-sbar .b{border:none;background:rgba(255,255,255,.07);color:#aeb4c0;border-radius:999px;padding:3px 12px;cursor:pointer;font-size:11px;transition:all .15s;white-space:nowrap;font-family:inherit}
+.zci-sbar .b:hover{background:rgba(255,255,255,.16);color:#fff}
+.zci-sbar .b.zci-acc{background:linear-gradient(135deg,#5b8cff,#3b6dff);color:#fff}
+.zci-sbar .b.zci-acc:hover{filter:brightness(1.1)}
+.zci-sbar.zci-fallback{position:fixed;top:8px;right:14px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
 .zci-press-ok{background:rgba(43,213,118,.7)}
 .zci-press-warn{background:rgba(245,158,66,.85)}
 .zci-press-hot{background:rgba(255,107,129,.9)}
@@ -2252,13 +2258,119 @@
     return true;
   }
 
+  /* ---------------------------------------------------------------- */
+  /* In-session tabs: 上下文洞察 / 编队, mounted into the session header */
+  /* ---------------------------------------------------------------- */
+
+  function mostRecentSession() {
+    var pool = (state.sessions && state.sessions.length ? state.sessions : null) ||
+      (state.overview && state.overview.sessions) || [];
+    var pick = null;
+    pool.forEach(function (s) {
+      if (!pick || (s.lastActiveAt || 0) > (pick.lastActiveAt || 0)) pick = s;
+    });
+    return pick;
+  }
+
+  function findSessionHeader() {
+    // The session header sits at the top of the main area: high up, wide, and
+    // to the right of the sidebar. Pick the topmost-leftmost candidate.
+    var sidebarW = 0;
+    try {
+      var aside = findAside();
+      if (aside) {
+        var r = aside.getBoundingClientRect();
+        if (r && r.width > 80) sidebarW = r.right;
+      }
+    } catch {
+      // keep 0
+    }
+    var best = null;
+    var bestTop = 90;
+    try {
+      var all = document.querySelectorAll("div,header");
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i];
+        var rect;
+        try { rect = el.getBoundingClientRect(); } catch { continue; }
+        if (!rect || rect.height < 30 || rect.height > 80 || rect.width < 320) continue;
+        if (rect.top > 70 || rect.top < -10) continue;
+        if (rect.left < sidebarW - 10) continue;
+        if (el.querySelector(".zci-sbar")) continue;
+        if (el.closest(".zci-overlay")) continue;
+        // must contain some text (the session title) and be a flex/row container
+        if (!(el.textContent || "").trim()) continue;
+        var cs = getComputedStyle(el);
+        if (cs.display.indexOf("flex") < 0 && cs.position !== "relative") continue;
+        if (rect.top < bestTop) { bestTop = rect.top; best = el; }
+      }
+    } catch {
+      // fall through to fixed fallback
+    }
+    return best;
+  }
+
+  function mountSessionBar() {
+    var bar = document.getElementById("zci-sbar");
+    if (bar && bar.isConnected) return;
+    bar = document.createElement("div");
+    bar.className = "zci-sbar";
+    bar.id = "zci-sbar";
+    var pick = mostRecentSession();
+    var tip = pick
+      ? "<b>" + esc(String(pick.title || "")) + "</b><div class='dim'>最近活跃会话 · 点击直接查看该会话</div>"
+      : "打开上下文洞察面板";
+    bar.innerHTML =
+      '<button class="b zci-acc" data-sb="session" data-tip="' + tip + '">上下文洞察</button>' +
+      '<button class="b" data-sb="agents" data-tip="' + tip + '">编队</button>';
+    bar.querySelectorAll("[data-sb]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var target = btn.getAttribute("data-sb");
+        if (!state.overlayEl || state.overlayEl.style.display === "none") {
+          if (state.overlayEl) state.overlayEl.style.display = "flex";
+          else buildOverlay();
+        }
+        var pick = mostRecentSession();
+        if (pick && pick.id) openSession(pick.id, target);
+        else { state.tab = "sessions"; loadSessions(true); }
+      });
+    });
+    // silent prefetch so the tooltip can show the real current session title
+    if (!state.sessions && !state.overview && !state.barPrefetched) {
+      state.barPrefetched = true;
+      query("sessions", { start: rangeStartMs(), end: Date.now(), order: "recent", limit: 20 })
+        .then(function (data) {
+          if (data && data.sessions && data.sessions.length) state.sessions = data.sessions;
+        })
+        .catch(function () {
+          // tooltip keeps the generic label
+        });
+    }
+    var header = findSessionHeader();
+    if (header) {
+      bar.classList.remove("zci-fallback");
+      header.appendChild(bar);
+    } else {
+      // fallback: float at the top-right of the viewport
+      bar.classList.add("zci-fallback");
+      document.body.appendChild(bar);
+    }
+  }
+
+  setInterval(function () {
+    if (window.__zciLive !== BOOT_ID) return;
+    if (!document.getElementById("zci-sbar")) mountSessionBar();
+  }, 1500);
+
   function tryMount(attempt) {
+    mountSessionBar();
     ensureStyle();
     if (mountEntry()) {
       if (state.observer) return;
       state.observer = new MutationObserver(function () {
         if (window.__zciLive !== BOOT_ID) return;
         if (!document.getElementById("zci-entry")) mountEntry();
+        if (!document.getElementById("zci-sbar")) mountSessionBar();
       });
       window.__zciObserver = state.observer;
       window.__zciLive = BOOT_ID;
@@ -2285,6 +2397,8 @@
       var style = document.getElementById("zci-style");
       if (style) style.remove();
       if (state.overlayEl) state.overlayEl.remove();
+      var sbar = document.getElementById("zci-sbar");
+      if (sbar) sbar.remove();
       document.removeEventListener("keydown", state.onKey, true);
       window.__zcodeContextPanelBooted = false;
     } catch (e) {
