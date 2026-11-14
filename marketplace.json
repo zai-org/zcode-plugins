@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -827,7 +830,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -850,7 +855,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -877,7 +884,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -904,7 +913,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -931,7 +942,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -958,7 +971,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -985,7 +1000,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -1012,7 +1029,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1039,7 +1058,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1066,7 +1087,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1149,7 +1172,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1498,6 +1523,39 @@
         "text-to-video",
         "image-to-video",
         "mcp"
+      ]
+    },
+    {
+      "name": "balance-dashboard",
+      "displayName": "Balance Dashboard",
+      "displayName_i18n": {
+        "en": "Balance Dashboard",
+        "zh-CN": "余额面板"
+      },
+      "source": "./external_plugins/balance-dashboard",
+      "description": "Left-sidebar balance widget for DeepSeek, Volcengine (account + Coding Plan) and ZCode. Click a row for consumption analytics with time/project/task filters and charts; the gear configures API keys. The widget is injected into ZCode via app.asar and requires a restart.",
+      "description_i18n": {
+        "en": "Left-sidebar balance widget for DeepSeek, Volcengine (account + Coding Plan) and ZCode. Click a row for consumption analytics with time/project/task filters and charts; the gear configures API keys. The widget is injected into ZCode via app.asar and requires a restart.",
+        "zh-CN": "左侧边栏余额组件：DeepSeek、火山引擎账户与 Coding Plan、ZCode 套餐与今日消耗。点击任意余额行打开多维度消耗分析（今天/昨天/本周/本月/自定义 + 项目/任务过滤 + 图表），齿轮打开设置弹框。组件通过 app.asar 注入，安装/更新后需重启 ZCode。"
+      },
+      "version": "0.3.0",
+      "author": {
+        "name": "AwenJackson",
+        "url": "https://github.com/AwenJackson"
+      },
+      "homepage": "https://github.com/AwenJackson/balance-dashboard",
+      "repository": "https://github.com/AwenJackson/balance-dashboard",
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "balance",
+        "usage",
+        "deepseek",
+        "volcengine",
+        "coding-plan",
+        "analytics",
+        "sidebar",
+        "tokens"
       ]
     }
   ]

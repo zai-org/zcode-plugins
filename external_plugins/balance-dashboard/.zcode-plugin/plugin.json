@@ -1,0 +1,66 @@
+{
+  "name": "balance-dashboard",
+  "version": "0.3.0",
+  "description": "Left-sidebar balance widget for DeepSeek, Volcengine (account + Coding Plan) and ZCode. Click a row for consumption analytics with time/project/task filters and charts; the gear configures API keys. The widget is injected into ZCode via app.asar and requires a restart.",
+  "description_i18n": {
+    "en": "Left-sidebar balance widget for DeepSeek, Volcengine (account + Coding Plan) and ZCode. Click a row for consumption analytics with time/project/task filters and charts; the gear configures API keys. The widget is injected into ZCode via app.asar and requires a restart.",
+    "zh-CN": "左侧边栏余额组件：DeepSeek、火山引擎账户与 Coding Plan、ZCode 套餐与今日消耗。点击任意余额行打开多维度消耗分析（今天/昨天/本周/本月/自定义 + 项目/任务过滤 + 图表），齿轮打开设置弹框。组件通过 app.asar 注入，安装/更新后需重启 ZCode。"
+  },
+  "author": {
+    "name": "AwenJackson",
+    "url": "https://github.com/AwenJackson"
+  },
+  "homepage": "https://github.com/AwenJackson/balance-dashboard",
+  "repository": "https://github.com/AwenJackson/balance-dashboard",
+  "license": "MIT",
+  "keywords": [
+    "balance",
+    "usage",
+    "deepseek",
+    "volcengine",
+    "coding-plan",
+    "analytics",
+    "sidebar"
+  ],
+  "commands": "commands",
+  "userConfig": {
+    "deepseek_api_key": {
+      "type": "string",
+      "default": "",
+      "sensitive": true,
+      "description": "DeepSeek 平台 API Key（余额查询）。留空时自动从 ZCode 的 DeepSeek 供应商配置读取。"
+    },
+    "volc_access_key_id": {
+      "type": "string",
+      "default": "",
+      "description": "火山引擎 Access Key ID（查询账户余额与 Coding Plan 额度）。也可用环境变量 VOLCENGINE_ACCESS_KEY_ID。"
+    },
+    "volc_secret_access_key": {
+      "type": "string",
+      "default": "",
+      "sensitive": true,
+      "description": "火山引擎 Secret Access Key。也可用环境变量 VOLCENGINE_SECRET_ACCESS_KEY。"
+    },
+    "volc_region": {
+      "type": "string",
+      "default": "",
+      "description": "火山引擎区域。留空时 Coding Plan 使用 cn-beijing、账单使用 cn-north-1。"
+    },
+    "zcode_usage_db": {
+      "type": "string",
+      "default": "",
+      "description": "ZCode 本地用量数据库路径。留空时自动使用 ~/.zcode/cli/db/db.sqlite。"
+    },
+    "zcode_jwt_token": {
+      "type": "string",
+      "default": "",
+      "sensitive": true,
+      "description": "可选：覆盖 ZCode OAuth 令牌（读取 Start Plan 余额）。留空时自动从 ~/.zcode/v2/credentials.json 解密。"
+    },
+    "zcode_device_mid": {
+      "type": "string",
+      "default": "",
+      "description": "可选：ZCode 设备号（Start Plan 余额接口需要）。留空时自动读取 telemetry-state.json。"
+    }
+  }
+}
