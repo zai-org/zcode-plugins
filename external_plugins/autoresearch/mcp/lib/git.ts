@@ -177,40 +177,33 @@ export function undoCommitTo(cwd: string, sha: string): void {
 }
 
 /**
- * Commit all tracked+untracked changes as one experiment, excluding session
- * state (`.auto/`, `.zcode/` and the generated dashboard): a keep with only
- * session-file changes must hit the "nothing to commit" path.
- * Returns the short hash, or null when there is nothing to commit.
+ * Shared staging discipline for every loop commit (keep and founding alike):
+ * index reset, stage the research dir, then unstage session state again.
+ * Returns whether anything is staged afterwards. Two constraints meet here:
+ * - No exclude pathspec: an exclude that covers a gitignored path makes add
+ *   exit 1 ("paths are ignored"), which aborted every keep in repos with
+ *   gitignored session state (evidence 2026-11-01: ml-auto; reproduced on
+ *   git 2.55.0 with the exact quoted argv). Plain `-- .` skips ignored
+ *   files instead of failing on them.
+ * - Keep the pathspec: it scopes the commit to the research dir. A bare
+ *   `git add -A` is repo-wide, so under `workingDir: work/` it also staged
+ *   the project's own `.auto/` (the post-add reset is cwd-relative and
+ *   cannot reach it) and unrelated files elsewhere in the repo.
+ * The post-add reset removes session paths even when they are tracked or
+ * pre-staged. `.zcode` is the host's session-state dir (plans, session
+ * files) and often NOT gitignored — left in, `add -A -- .` sweeps it into
+ * the commit (evidence 2026-11-05, ml-auto: .zcode/plans/plan-sess_*.md
+ * landed in an experiment commit). Non-existent pathspecs here are a silent
+ * no-op (git reset exit 0).
  */
-export function commitExperiment(
-  cwd: string,
-  { description, result }: { description: string; result: unknown },
-): string | null {
+function stageResearchTree(cwd: string): boolean {
   // Unstage the whole index first (working tree untouched): the commit below
-  // must describe this experiment and nothing else. Excluding paths from add
+  // must describe its own purpose and nothing else. Excluding paths from add
   // does not remove files already in the index, so pre-staged state from
-  // outside the research dir would otherwise ride into the commit — and, when
-  // the research dir itself has no changes, would fake a non-empty experiment
-  // (a keep whose commit contains none of the experiment).
+  // outside the research dir would otherwise ride into the commit — and,
+  // when the research dir itself has no changes, would fake a non-empty
+  // experiment (a keep whose commit contains none of the experiment).
   git(cwd, ["reset", "-q", "HEAD"]);
-  // Stage with `-- .`, then unstage session paths again. Two constraints meet
-  // here:
-  // - No exclude pathspec: an exclude that covers a gitignored path makes add
-  //   exit 1 ("paths are ignored"), which aborted every keep in repos with
-  //   gitignored session state (evidence 2026-11-01: ml-auto; reproduced on
-  //   git 2.55.0 with the exact quoted argv). Plain `-- .` skips ignored
-  //   files instead of failing on them.
-  // - Keep the pathspec: it scopes the commit to the research dir. A bare
-  //   `git add -A` is repo-wide, so under `workingDir: work/` it also staged
-  //   the project's own `.auto/` (the post-add reset is cwd-relative and
-  //   cannot reach it) and unrelated files elsewhere in the repo.
-  // The post-add reset removes session paths even when they are tracked or
-  // pre-staged; with the index cleared above, the cached diff below answers
-  // exactly "did this experiment change anything". `.zcode` is the host's
-  // session-state dir (plans, session files) and often NOT gitignored — left
-  // in, `add -A -- .` sweeps it into the keep commit (evidence 2026-11-05,
-  // ml-auto: .zcode/plans/plan-sess_*.md landed in an experiment commit).
-  // Non-existent pathspecs here are a silent no-op (git reset exit 0).
   git(cwd, ["add", "-A", "--", "."]);
   git(cwd, [
     "reset",
@@ -221,17 +214,28 @@ export function commitExperiment(
     DASHBOARD_FILE,
   ]);
   // git diff --cached --quiet exits 0 when there are no staged changes.
-  const hasStaged = (() => {
-    try {
-      execFileSync(resolveGit(), ["diff", "--cached", "--quiet"], {
-        cwd,
-        stdio: "ignore",
-      });
-      return false;
-    } catch {
-      return true;
-    }
-  })();
+  try {
+    execFileSync(resolveGit(), ["diff", "--cached", "--quiet"], {
+      cwd,
+      stdio: "ignore",
+    });
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Commit all tracked+untracked changes as one experiment, excluding session
+ * state (`.auto/`, `.zcode/` and the generated dashboard): a keep with only
+ * session-file changes must hit the "nothing to commit" path.
+ * Returns the short hash, or null when there is nothing to commit.
+ */
+export function commitExperiment(
+  cwd: string,
+  { description, result }: { description: string; result: unknown },
+): string | null {
+  const hasStaged = stageResearchTree(cwd);
   if (!hasStaged) return null;
   const body = `experiment: ${description}\n\nResult: ${JSON.stringify(result)}`;
   // --no-verify isolates the experiment commit from the target repo's own git
@@ -254,6 +258,43 @@ export function commitExperiment(
         : "";
     throw new Error(
       `git commit failed: ${stderr || (err instanceof Error ? err.message : String(err))}. The experiment changes remain staged in the index (pre-staged entries elsewhere were unstaged while attempting the keep).`,
+    );
+  }
+  return shortHash(cwd);
+}
+
+/**
+ * Segment founding commit (opt-in via init_experiment foundingCommit): fold
+ * pre-existing uncommitted work into HEAD before the loop starts. keep and
+ * discard git semantics both assume "after init, tree == HEAD" — keep's
+ * staging sweeps the whole research dir (a founding config left uncommitted
+ * rides into the keep commit under an experiment-only message) and discard's
+ * `checkout HEAD -- .` restores it away (a baseline row attesting the
+ * founding state becomes unreproducible). Committing at init re-establishes
+ * the invariant at the only moment it can be established, so neither
+ * downstream needs its own guard. Shares stageResearchTree with keeps —
+ * one code path owns "what counts as session state". --no-verify for the
+ * same hook-isolation reason as keeps. Empty staging (all dirty content
+ * gitignored) means nothing to fold: return null instead of failing on an
+ * empty commit.
+ */
+export function commitFoundingState(cwd: string, name: string): string | null {
+  const hasStaged = stageResearchTree(cwd);
+  if (!hasStaged) return null;
+  const body = `segment: ${name} founding state (pre-existing uncommitted work folded in before the loop starts)`;
+  try {
+    execFileSync(resolveGit(), ["commit", "--no-verify", "-m", body], {
+      cwd,
+      stdio: ["ignore", "ignore", "pipe"],
+      encoding: "utf8",
+    });
+  } catch (err) {
+    const stderr =
+      err && typeof err === "object" && "stderr" in err
+        ? String((err as { stderr?: unknown }).stderr).trim()
+        : "";
+    throw new Error(
+      `git commit failed: ${stderr || (err instanceof Error ? err.message : String(err))}. The founding changes remain staged in the index.`,
     );
   }
   return shortHash(cwd);

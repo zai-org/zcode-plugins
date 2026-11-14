@@ -208,6 +208,7 @@ export function rebuildState(
       window: options.plateauWindow ?? 5,
       minImprovement: options.plateauMinImprovement ?? 0.01,
       direction: state.config.direction ?? "lower",
+      deterministic: options.deterministic === true,
     });
   } else {
     state.plateau = false;

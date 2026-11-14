@@ -306,28 +306,56 @@ export function detectPlateau(
     window = 5,
     minImprovement = 0.01,
     direction = "lower",
+    deterministic = false,
   }: {
     window?: number;
     minImprovement?: number;
     direction?: Direction;
+    deterministic?: boolean;
   } = {},
 ): boolean {
-  const valid = runs
-    .filter(
-      (r) =>
-        // Crash rows measure nothing (ADR-10; legacy rows carry a 0
-        // placeholder) — they are not data points for the plateau window.
-        // Noop rows DO count: a noop re-measures the metric on unchanged
-        // code, so it is a legitimate trend data point (the repeat:3
-        // confirmation flow relies on it keeping the window flat).
-        r.status !== "crash" && r.metric != null && Number.isFinite(r.metric),
-    )
-    .slice(-window);
+  const valid = runs.filter(
+    (r) =>
+      // Crash rows measure nothing (ADR-10; legacy rows carry a 0
+      // placeholder) — they are not data points for the plateau window.
+      // Noop rows DO count: a noop re-measures the metric on unchanged
+      // code, so it is a legitimate trend data point (the repeat:3
+      // confirmation flow relies on it keeping the window flat).
+      r.status !== "crash" && r.metric != null && Number.isFinite(r.metric),
+  );
   if (valid.length < window) return false;
-  const first = valid[0].metric;
+  // Deterministic benchmarks (bitwise reproducible) switch to no-progress
+  // counting instead of a magnitude threshold: every metric change is a real
+  // signal, so the notion of "too small to matter" does not exist and a
+  // relative threshold only misfires on fine-grained metrics. The counting
+  // semantics are scale-free: an improvement event is a run strictly better
+  // than the best of every valid run before it (pre-window best included),
+  // and the window is a plateau when it contains no such event. This covers
+  // the entering keep (a window whose first element already beats the
+  // pre-window best — why the event scan runs over the full history and only
+  // the event lookup is windowed) as well as improvements deeper inside the
+  // window, and it degrades correctly for a flat first window (nothing beats
+  // the seed → plateau).
+  if (deterministic) {
+    let bestSoFar: number | null = null;
+    const improved = valid.map((r) => {
+      const m = r.metric as number;
+      const hit =
+        bestSoFar != null &&
+        (direction === "higher" ? m > bestSoFar : m < bestSoFar);
+      if (
+        bestSoFar == null ||
+        (direction === "higher" ? m > bestSoFar : m < bestSoFar)
+      )
+        bestSoFar = m;
+      return hit;
+    });
+    return !improved.slice(-window).some(Boolean);
+  }
+  const first = valid[valid.length - window].metric;
   if (first == null) return false;
   let best = first;
-  for (const r of valid) {
+  for (const r of valid.slice(-window)) {
     if (r.metric == null) continue;
     if (direction === "higher" ? r.metric > best : r.metric < best)
       best = r.metric;

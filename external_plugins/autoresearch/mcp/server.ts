@@ -46,6 +46,7 @@ import {
 } from "./lib/ledger.ts";
 import {
   commitExperiment,
+  commitFoundingState,
   rollbackWorkingTree,
   dirtyFiles,
   isGitRepo,
@@ -121,6 +122,8 @@ interface InitToolArgs {
   plateau_window?: unknown;
   plateauWindow?: unknown;
   deterministic?: unknown;
+  founding_commit?: unknown;
+  foundingCommit?: unknown;
 }
 
 interface RunToolArgs {
@@ -238,16 +241,19 @@ function plateauOpts() {
 /**
  * Plateau hint wording reflecting the configured window/threshold. A
  * deterministic benchmark (bitwise reproducible) cannot be confirmed by
- * re-measurement, so the repeat suggestion is dropped for it.
+ * re-measurement, so the repeat suggestion is dropped for it — and its
+ * plateau is no-progress counting, not a magnitude threshold, so the
+ * wording reflects that instead of a percentage.
  */
 function plateauHintText(): string {
   const cal = plateauCalibration(projectCwd);
   const window = cal.window ?? 5;
+  if (cal.deterministic) {
+    return `plateau detected (no run beat the current best in the last ${window} runs), opening a new segment, or stopping`;
+  }
   const min = cal.minImprovement ?? 0.01;
   const pct = `${(min * 100).toFixed(2).replace(/\.?0+$/, "")}%`;
-  const confirm = cal.deterministic
-    ? ""
-    : "; consider rerunning with repeat:3 to confirm";
+  const confirm = "; consider rerunning with repeat:3 to confirm";
   return `plateau detected (last ${window} runs improved < ${pct})${confirm}, opening a new segment, or stopping`;
 }
 
@@ -990,6 +996,12 @@ async function toolInitExperiment(
   }
   const calibDet =
     args.deterministic == null ? undefined : args.deterministic === true;
+  // Opt-in folding of pre-existing uncommitted work into a founding commit
+  // (see the dirtyNote branch below): commit is an outward action, so the
+  // host's "no commit without explicit approval" discipline maps to an
+  // explicit init argument rather than a default.
+  const foundingRaw = args.founding_commit ?? args.foundingCommit;
+  const foundingArg = foundingRaw == null ? undefined : foundingRaw === true;
   // The loop's keep/discard semantics (commit + rollback) need git; a non-git
   // research dir would only fail later at log time, in a half-initialized state.
   let repo = false;
@@ -1022,6 +1034,21 @@ async function toolInitExperiment(
   // enumerated in git.ts either way — this is recurrence prevention, and a
   // failed declaration must not block initialization).
   ensureSessionStateIgnored(cwd);
+  // Founding commit (opt-in): re-establish "after init, tree == HEAD" before
+  // anything else in the segment runs. Must precede the config write — a git
+  // failure here returns before a config row lands (no half-initialized
+  // session), mirroring the corrupt-config ordering above.
+  let foundingHash: string | null = null;
+  if (foundingArg === true) {
+    try {
+      foundingHash = commitFoundingState(cwd, name);
+    } catch (err) {
+      return {
+        ok: false,
+        error: `foundingCommit failed before the session was initialized: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
   const state = sessionState();
   const segment = (state.segment ?? 0) + 1;
   // Config write precedes the ledger row: a corrupt config.json fails init
@@ -1059,13 +1086,19 @@ async function toolInitExperiment(
   // ADR-11 (help-first): a discard reverts the whole working tree (git.ts
   // rollbackWorkingTree), and work that was already uncommitted at session
   // start is indistinguishable from experiment changes later on — the only
-  // observable moment is init. Warn once here so the agent can commit or
-  // stash unrelated work before the first discard can dispose of it.
+  // observable moment is init. With foundingCommit opted in, the warning's
+  // advice has already been executed mechanically (founding commit above), so
+  // the warning is replaced by the fold report; the default path keeps the
+  // warning verbatim so existing flows see exactly the same message.
   const preDirty = dirtyFiles(cwd);
-  const dirtyNote =
-    preDirty.length > 0
-      ? `\nwarning: working tree is dirty (${preDirty.length} files: ${preDirty.slice(0, 5).join(", ")}${preDirty.length > 5 ? " …" : ""}); these pre-existing changes are outside the experiment's control — a discard before the first keep will revert or delete them too, and uncommitted content is unrecoverable. Commit or stash unrelated work first`
-      : "";
+  let dirtyNote = "";
+  if (foundingArg === true) {
+    dirtyNote = foundingHash
+      ? `\nfounding commit ${foundingHash}: pre-existing uncommitted work folded in before the loop starts (keeps no longer ride along, discards restore it)`
+      : "\nfoundingCommit: nothing to fold (tree clean or only gitignored content)";
+  } else if (preDirty.length > 0) {
+    dirtyNote = `\nwarning: working tree is dirty (${preDirty.length} files: ${preDirty.slice(0, 5).join(", ")}${preDirty.length > 5 ? " …" : ""}); these pre-existing changes are outside the experiment's control — a discard before the first keep will revert or delete them too, and uncommitted content is unrecoverable. Commit or stash unrelated work first`;
+  }
   const calibrationEcho =
     calibMin !== undefined ||
     calibWindow !== undefined ||
@@ -1085,6 +1118,7 @@ async function toolInitExperiment(
       `experiment session "${name}" initialized (segment ${segment}). metric=${metricName} direction=${direction}` +
       branchNote +
       dirtyNote,
+    ...(foundingArg === true ? { foundingCommit: foundingHash } : {}),
     ...(calibrationEcho ? { calibration: calibrationEcho } : {}),
   };
 }
@@ -1925,7 +1959,12 @@ const TOOLS = [
         deterministic: {
           type: "boolean",
           description:
-            "benchmark is deterministic (bitwise reproducible); plateau hints will not suggest repeat re-measurement",
+            "benchmark is deterministic (bitwise reproducible); plateau switches to no-progress counting (a window with no run beating the current best) and hints will not suggest repeat re-measurement",
+        },
+        founding_commit: {
+          type: "boolean",
+          description:
+            "when true and the working tree is dirty, commit pre-existing uncommitted work as a segment founding commit (segment: prefix) before the loop starts; keeps then cannot ride along and discards restore it. Default false: dirty tree only warns (advisory)",
         },
       },
       required: ["metric_name"],

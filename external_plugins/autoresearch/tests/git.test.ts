@@ -14,6 +14,7 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import {
   commitExperiment,
+  commitFoundingState,
   rollbackWorkingTree,
   isDirty,
   dirtyFiles,
@@ -69,6 +70,65 @@ test("commitExperiment returns null when nothing changed", () => {
   const cwd = tempRepo();
   const hash = commitExperiment(cwd, { description: "noop", result: {} });
   assert.equal(hash, null);
+});
+
+test("commitFoundingState folds pre-existing dirty work into a segment commit", () => {
+  const cwd = tempRepo();
+  writeFileSync(join(cwd, "founding.toml"), "founding\n");
+  const hash = commitFoundingState(cwd, "adult-auprc");
+  assert.ok(hash && hash.length === 7);
+  const msg = git(cwd, ["log", "-1", "--format=%s"]);
+  assert.ok(msg.startsWith("segment: adult-auprc founding state"));
+  assert.equal(isDirty(cwd), false);
+  // tracked content survives verbatim (rollback now restores to a HEAD that
+  // contains it)
+  assert.equal(readFileSync(join(cwd, "founding.toml"), "utf8"), "founding\n");
+});
+
+test("commitFoundingState returns null on a clean tree", () => {
+  const cwd = tempRepo();
+  assert.equal(commitFoundingState(cwd, "t"), null);
+});
+
+test("commitFoundingState skips gitignored-only dirtiness", () => {
+  const cwd = tempRepo();
+  writeFileSync(join(cwd, ".gitignore"), "ignored.log\n");
+  execFileSync(
+    "git",
+    ["add", ".gitignore", "&&", "git", "commit", "-qm", "gitignore"],
+    { cwd, shell: true, stdio: "ignore" },
+  );
+  // untracked AND gitignored → invisible to add -A -- . → nothing to fold
+  writeFileSync(join(cwd, "ignored.log"), "noise\n");
+  assert.equal(commitFoundingState(cwd, "t"), null);
+});
+
+test("founding commit: keeps no longer ride along and discards spare it", () => {
+  // The full invariant (worth-fix repro, real-world evidence: a keep commit
+  // carried 8 lines under a 1-line message; a discard orphaned the baseline
+  // row attesting the founding state).
+  const cwd = tempRepo();
+  writeFileSync(join(cwd, "founding.toml"), "founding\n");
+  assert.ok(commitFoundingState(cwd, "seg"));
+  writeFileSync(join(cwd, "main.js"), "v2\n");
+  const keep = commitExperiment(cwd, {
+    description: "experiment change only",
+    result: { metric: 42 },
+  });
+  assert.ok(keep);
+  const files = git(cwd, ["show", "--name-only", "--format=", "HEAD"]);
+  assert.ok(files.includes("main.js"));
+  assert.ok(
+    !files.includes("founding.toml"),
+    `keep commit must not contain founding files, got: ${files}`,
+  );
+  rollbackWorkingTree(cwd);
+  assert.equal(readFileSync(join(cwd, "main.js"), "utf8"), "v2\n");
+  assert.equal(
+    readFileSync(join(cwd, "founding.toml"), "utf8"),
+    "founding\n",
+    "founding content must survive the discard (HEAD contains it)",
+  );
 });
 
 test("commitExperiment excludes the .auto session dir from staging", () => {

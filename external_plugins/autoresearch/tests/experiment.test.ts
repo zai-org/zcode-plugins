@@ -343,6 +343,89 @@ test("detectPlateau respects direction and short windows", () => {
   );
 });
 
+test("detectPlateau deterministic: no-progress counting, not magnitude", () => {
+  // Real-world evidence (ml-auto adult-auprc seg2): a 5-run window holding a
+  // keep (+0.00095 ≈ 0.11% relative) was flagged as a plateau by the 1%
+  // magnitude threshold. Counting semantics: the window's keep beats the
+  // pre-window best → progress → not a plateau, at any metric scale.
+  const seg2 = [
+    { status: "noop", metric: 0.82922 },
+    { status: "discard", metric: 0.828402 },
+    { status: "discard", metric: 0.824887 },
+    { status: "keep", metric: 0.83017 },
+    { status: "discard", metric: 0.826868 },
+  ];
+  assert.equal(
+    detectPlateau(seg2, {
+      window: 5,
+      minImprovement: 0.01,
+      direction: "higher",
+      deterministic: true,
+    }),
+    false,
+  );
+  // an event at the window's first element counts too: it beats the
+  // pre-window best (why the event scan runs over the full history while
+  // only the event lookup is windowed)
+  const enteringKeep = [
+    { status: "noop", metric: 0.82922 },
+    { status: "discard", metric: 0.828402 },
+    { status: "keep", metric: 0.83017 },
+    { status: "discard", metric: 0.8298 },
+    { status: "discard", metric: 0.8295 },
+    { status: "discard", metric: 0.8294 },
+  ];
+  assert.equal(
+    detectPlateau(enteringKeep, {
+      window: 5,
+      minImprovement: 0.01,
+      direction: "higher",
+      deterministic: true,
+    }),
+    false,
+  );
+  // five consecutive runs without beating the best → plateau, whatever the
+  // magnitude differences are
+  const stalled = [
+    { status: "noop", metric: 0.83017 },
+    { status: "discard", metric: 0.828402 },
+    { status: "discard", metric: 0.824887 },
+    { status: "discard", metric: 0.827859 },
+    { status: "discard", metric: 0.829342 },
+  ];
+  assert.equal(
+    detectPlateau(stalled, {
+      window: 5,
+      minImprovement: 0.01,
+      direction: "higher",
+      deterministic: true,
+    }),
+    true,
+  );
+  // crash rows stay excluded from the window even when they sit inside it:
+  // a crash between flat runs neither creates an event nor extends the wait
+  const withCrash = [
+    { status: "noop", metric: 50.1 },
+    { status: "discard", metric: 50 },
+    { status: "crash", metric: null },
+    { status: "discard", metric: 50 },
+    { status: "discard", metric: 50 },
+    { status: "discard", metric: 50 },
+    { status: "discard", metric: 50 },
+    { status: "discard", metric: 50 },
+  ];
+  assert.equal(
+    detectPlateau(withCrash, {
+      window: 5,
+      minImprovement: 0.01,
+      direction: "lower",
+      deterministic: true,
+    }),
+    true,
+    "crash excluded → the last 5 valid runs are all non-improving → plateau",
+  );
+});
+
 test("median returns the middle value", () => {
   assert.equal(median([42, 44, 41]), 42);
   assert.equal(median([5, 1, 3, 2, 4]), 3);

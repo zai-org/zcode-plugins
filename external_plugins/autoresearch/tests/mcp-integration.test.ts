@@ -1524,7 +1524,7 @@ test("revisit_nudge: fires when a discard/checks_failed lands and a reasoned dis
   });
 });
 
-test("plateau calibration: config threshold and deterministic flag shape detection and hint", async () => {
+test("plateau calibration: config threshold shapes detection and hint", async () => {
   const cwd = tempRepo();
   useControlledMeasure(cwd);
   await withServer(cwd, async (s) => {
@@ -1532,13 +1532,9 @@ test("plateau calibration: config threshold and deterministic flag shape detecti
       name: "t",
       metric_name: "time_ms",
       plateau_min_improvement: 0.0002,
-      deterministic: true,
     });
     assert.equal(init.ok, true);
-    assert.deepEqual(init.calibration, {
-      plateau_min_improvement: 0.0002,
-      deterministic: true,
-    });
+    assert.deepEqual(init.calibration, { plateau_min_improvement: 0.0002 });
     // five near-flat runs: best improvement vs the window's first run is
     // ~0.2% — above the calibrated 0.02% (a plateau at the default 1%).
     // noop rows between discards keep the failure streak below the gate.
@@ -1560,7 +1556,8 @@ test("plateau calibration: config threshold and deterministic flag shape detecti
     setMetricValue(cwd, 50.03);
     await runBenchmark(s);
     // the window turns flat (best 50 = first 50) → plateau fires, but the
-    // wording carries the calibrated 0.02% and no repeat suggestion
+    // wording carries the calibrated 0.02% and keeps the repeat suggestion
+    // (non-deterministic benchmark)
     const sixth = await s.tool("log_experiment", {
       status: "noop",
       metric: 50.03,
@@ -1571,7 +1568,7 @@ test("plateau calibration: config threshold and deterministic flag shape detecti
       String(sixth.next_action_hint),
       /last 5 runs improved < 0\.02%/,
     );
-    assert.doesNotMatch(String(sixth.next_action_hint), /repeat:3/);
+    assert.match(String(sixth.next_action_hint), /repeat:3/);
     // a re-init without calibration params keeps the stored value
     const reinit = await s.tool("init_experiment", {
       name: "t2",
@@ -1580,6 +1577,50 @@ test("plateau calibration: config threshold and deterministic flag shape detecti
     assert.equal(reinit.ok, true);
     const cfg = readFileSync(join(cwd, ".auto", "config.json"), "utf8");
     assert.match(cfg, /"plateauMinImprovement":\s*0\.0002/);
+  });
+});
+
+test("deterministic plateau: no-progress counting detection and hint", async () => {
+  const cwd = tempRepo();
+  useControlledMeasure(cwd);
+  await withServer(cwd, async (s) => {
+    await s.tool("init_experiment", {
+      name: "t",
+      metric_name: "time_ms",
+      deterministic: true,
+    });
+    // run 1 seeds the best; run 2 is a real improvement event (50 < 50.1,
+    // bitwise-reproducible benchmark → every change is a signal); runs 3-6
+    // are flat. The 5-run window over runs 2-6 still contains the event, so
+    // no plateau yet; one more flat run slides the event out of the window.
+    const metrics = [50.1, 50, 50.05, 50, 50.02, 50.03];
+    const words = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta"];
+    let last: Record<string, unknown> = {};
+    for (let i = 0; i < metrics.length; i++) {
+      setMetricValue(cwd, metrics[i]);
+      await runBenchmark(s);
+      last = await s.tool("log_experiment", {
+        status: i % 2 === 0 ? "discard" : "noop",
+        metric: metrics[i],
+        description: `flat ${words[i]}`,
+      });
+    }
+    assert.equal(last.plateau, false); // window still holds the run-2 event
+    setMetricValue(cwd, 50.03);
+    await runBenchmark(s);
+    const seventh = await s.tool("log_experiment", {
+      status: "noop",
+      metric: 50.03,
+      description: "flat eta",
+    });
+    assert.equal(seventh.plateau, true);
+    // counting wording: no percentage, no repeat suggestion
+    assert.match(
+      String(seventh.next_action_hint),
+      /no run beat the current best in the last 5 runs/,
+    );
+    assert.doesNotMatch(String(seventh.next_action_hint), /improved < /);
+    assert.doesNotMatch(String(seventh.next_action_hint), /repeat:3/);
   });
 });
 
@@ -1606,7 +1647,13 @@ test("default plateau wording and the deterministic repeat-suggestion drop", asy
       });
     }
     assert.equal(last.plateau, true);
-    assert.match(String(last.next_action_hint), /last 5 runs improved < 1%/);
+    // deterministic plateau wording: no-progress counting, no percentage and
+    // no repeat suggestion
+    assert.match(
+      String(last.next_action_hint),
+      /no run beat the current best in the last 5 runs/,
+    );
+    assert.doesNotMatch(String(last.next_action_hint), /improved < /);
     assert.doesNotMatch(String(last.next_action_hint), /repeat:3/);
   });
 });
@@ -1894,6 +1941,82 @@ test("init_experiment rejects a repo without commits", async () => {
     assert.equal(res.ok, false);
     assert.match(String(res.error), /commit|baseline/i);
     assert.ok(!existsSync(join(cwd, ".auto", "log.jsonl")));
+  });
+});
+
+test("init_experiment foundingCommit folds dirty work and reports the hash", async () => {
+  const cwd = tempRepo();
+  writeFileSync(join(cwd, "founding.toml"), "founding\n");
+  await withServer(cwd, async (s) => {
+    const init = await s.tool("init_experiment", {
+      name: "t",
+      metric_name: "time_ms",
+      foundingCommit: true,
+    });
+    assert.equal(init.ok, true);
+    assert.ok(
+      typeof init.foundingCommit === "string" &&
+        init.foundingCommit.length === 7,
+      `expected a founding commit hash, got: ${JSON.stringify(init.foundingCommit)}`,
+    );
+    assert.match(String(init.message), /founding commit/);
+    assert.doesNotMatch(String(init.message), /warning: working tree is dirty/);
+    // the founding commit exists with the segment prefix and holds the file
+    const subject = execFileSync("git", ["log", "--format=%s", "-1"], {
+      cwd,
+      encoding: "utf8",
+    }).trim();
+    assert.match(subject, /^segment: t founding state/);
+    const files = execFileSync(
+      "git",
+      ["show", "--name-only", "--format=", "HEAD"],
+      { cwd, encoding: "utf8" },
+    ).trim();
+    assert.ok(files.includes("founding.toml"));
+  });
+});
+
+test("init_experiment foundingCommit is a no-op on a clean tree", async () => {
+  const cwd = tempRepo();
+  const headBefore = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd,
+    encoding: "utf8",
+  }).trim();
+  await withServer(cwd, async (s) => {
+    const init = await s.tool("init_experiment", {
+      name: "t",
+      metric_name: "time_ms",
+      foundingCommit: true,
+    });
+    assert.equal(init.ok, true);
+    assert.equal(init.foundingCommit, null);
+    assert.match(String(init.message), /nothing to fold/);
+    const headAfter = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+    }).trim();
+    assert.equal(headAfter, headBefore);
+  });
+});
+
+test("init_experiment default keeps the verbatim dirty-tree warning", async () => {
+  const cwd = tempRepo();
+  writeFileSync(join(cwd, "founding.toml"), "founding\n");
+  await withServer(cwd, async (s) => {
+    const init = await s.tool("init_experiment", {
+      name: "t",
+      metric_name: "time_ms",
+    });
+    assert.equal(init.ok, true);
+    assert.equal(init.foundingCommit, undefined);
+    assert.match(String(init.message), /warning: working tree is dirty/);
+    assert.match(String(init.message), /Commit or stash unrelated work first/);
+    // no commit was created
+    const count = execFileSync("git", ["rev-list", "--count", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+    }).trim();
+    assert.equal(count, "1");
   });
 });
 
