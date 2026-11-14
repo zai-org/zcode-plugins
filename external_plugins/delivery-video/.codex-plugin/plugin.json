@@ -1,0 +1,33 @@
+{
+  "name": "delivery-video",
+  "version": "1.2.2",
+  "description": "Turn a feature that actually runs into a trustworthy delivery demo video, or a defect into a traceable feedback video: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/delivery-video-plugin",
+  "repository": "https://github.com/Lumos-789/delivery-video-plugin",
+  "license": "MIT",
+  "keywords": [
+    "delivery",
+    "demo-video",
+    "bug-report",
+    "screen-recording",
+    "quality-gate",
+    "pi",
+    "dsh"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Delivery Video",
+    "shortDescription": "Record and gate delivery demo videos",
+    "longDescription": "Records real screen sessions of working software, renders narration and word-synced subtitles, and runs a deterministic quality gate before the video is delivered. The same pipeline produces defect/feedback videos with severity and repro/actual chips plus a hashed issue report. No static screenshots, mocks or stale footage.",
+    "developerName": "Lumos-789",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write with confirmation"
+    ]
+  }
+}
