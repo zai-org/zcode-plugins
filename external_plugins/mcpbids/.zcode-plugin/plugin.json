@@ -1,0 +1,21 @@
+{
+  "name": "mcpbids",
+  "version": "1.0.0",
+  "description": "Research public US federal procurement opportunities and TED notices with source-linked documents.",
+  "description_i18n": {
+    "en": "Research public US federal procurement opportunities and TED notices with source-linked documents.",
+    "zh-CN": "查询美国联邦公开采购机会、TED 公告及带有来源引用的采购文件。"
+  },
+  "author": {
+    "name": "Aleks Tartik"
+  },
+  "homepage": "https://mcpbids.com",
+  "repository": "https://github.com/pixelligue/mcpbids-plugins",
+  "license": "MIT",
+  "keywords": [
+    "procurement",
+    "mcp",
+    "documents"
+  ],
+  "skills": "./skills/"
+}
