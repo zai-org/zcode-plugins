@@ -161,6 +161,26 @@ async function main() {
       )
       .all(sessionId);
 
+    // 每个请求的时间窗（用于把消息/命令归属到第 N 步）。
+    const requestWindows = usage.map((r) => {
+      const st = num(r.started_at);
+      const en = num(r.completed_at) || st + num(r.duration_ms);
+      return { start: st, end: en };
+    });
+    const requestIndexOf = (ts) => {
+      for (let i = 0; i < requestWindows.length; i++) {
+        if (ts >= requestWindows[i].start - 5 && ts <= requestWindows[i].end + 1500) return i;
+      }
+      // fall back: latest window that has started before ts
+      let idx = -1;
+      for (let i = 0; i < requestWindows.length; i++) {
+        if (requestWindows[i].start <= ts) idx = i;
+      }
+      return idx;
+    };
+    const reqMsgs = usage.map(() => ({ userText: "", replyText: "", toolCmd: "" }));
+    const commands = [];
+
     const composition = {
       systemPrompt: { tokens: systemTokens, items: systemTokens > 0 ? 1 : 0, estimate: true },
       toolDefs: { tokens: toolDefTokens, items: 0, estimate: true },
@@ -186,6 +206,12 @@ async function main() {
       const type = String(part.type || "");
       if (type === "text") {
         const tokens = tokensOfBytes(sizeOf(part.text));
+        const rq = requestIndexOf(num(row.time_created));
+        if (rq >= 0) {
+          const slot = reqMsgs[rq];
+          if (!slot.userText) slot.userText = clampText(part.text, 220);
+          else slot.replyText = (slot.replyText ? slot.replyText + "\n" : "") + clampText(part.text, 300);
+        }
         // assistant text parts appear after a reasoning/tool part; user text
         // parts come directly after a step-start following a user turn — the
         // split below uses the part sequence heuristics from the local store.
@@ -208,6 +234,19 @@ async function main() {
           ioCounts.bash += 1;
           commandStats.exec += 1;
           if (String(part.state?.status || "") === "error") commandStats.failed += 1;
+          const cmd = String(input.command || "");
+          const first = cmd.trim().split(/\s+/)[0]?.replace(/^["']|["']$/g, "") || "?";
+          const rq = requestIndexOf(num(row.time_created));
+          if (commands.length < 400) {
+            commands.push({
+              at: num(row.time_created),
+              tool,
+              program: first,
+              cmd: clampText(cmd, 300),
+              error: String(part.state?.status || "") === "error",
+              step: rq + 1,
+            });
+          }
         }
         if (["WebFetch", "WebSearch", "Grep", "Glob"].includes(tool)) ioCounts.search += 1;
         if (["Read", "Write", "Edit", "NotebookEdit"].includes(tool)) {
@@ -239,6 +278,14 @@ async function main() {
       } else if (type === "step-start" && !toolDefsSeen) {
         // nothing; tool defs are taken from the message snapshot above
       }
+    }
+
+    // 将每步的用户消息 / 回复 / 命令挂到趋势行上（dsh RequestDetail 风格）。
+    for (let i = 0; i < trend.length; i++) {
+      const m = reqMsgs[i * step] || {};
+      trend[i].userText = m.userText || "";
+      trend[i].replyText = m.replyText || "";
+      trend[i].toolCmd = m.toolCmd || "";
     }
 
     // Distinguish user vs assistant text: message roles from the message table.
@@ -398,6 +445,34 @@ async function main() {
     const outputTokens = outputTokensAll;
     const modelMs = usage.reduce((acc, r) => acc + num(r.duration_ms), 0);
 
+    // 最近一次调用 · 用量计费（dsh costMeter 风格）。
+    let lastCall = null;
+    if (lastUsage) {
+      const parts_ = {
+        input: costOfUsage({ modelId: lastModelId, input: num(lastUsage.input_tokens), output: 0, cacheRead: 0, cacheWrite: 0 }),
+        cacheRead: costOfUsage({ modelId: lastModelId, input: 0, output: 0, cacheRead: num(lastUsage.cache_read_input_tokens), cacheWrite: 0 }),
+        cacheWrite: costOfUsage({ modelId: lastModelId, input: 0, output: 0, cacheRead: 0, cacheWrite: num(lastUsage.cache_creation_input_tokens) }),
+        output: costOfUsage({ modelId: lastModelId, input: 0, output: num(lastUsage.output_tokens), cacheRead: 0, cacheWrite: 0 }),
+      };
+      const total_ = parts_.input + parts_.cacheRead + parts_.cacheWrite + parts_.output;
+      lastCall = {
+        at: num(lastUsage.started_at),
+        modelId: lastModelId,
+        inputTokens: num(lastUsage.input_tokens),
+        cacheReadTokens: num(lastUsage.cache_read_input_tokens),
+        cacheWriteTokens: num(lastUsage.cache_creation_input_tokens),
+        outputTokens: num(lastUsage.output_tokens),
+        reasoningTokens: num(lastUsage.reasoning_tokens),
+        cost: {
+          input: parts_.input,
+          cacheRead: parts_.cacheRead,
+          cacheWrite: parts_.cacheWrite,
+          output: parts_.output,
+        },
+        totalCost: total_,
+      };
+    }
+
     const cacheReadTotal = usage.reduce((acc, r) => acc + num(r.cache_read_input_tokens), 0);
     const cacheWriteTotal = usage.reduce((acc, r) => acc + num(r.cache_creation_input_tokens), 0);
     const inputTotal = usage.reduce((acc, r) => acc + num(r.input_tokens), 0);
@@ -450,6 +525,8 @@ async function main() {
         costComposition,
         ioCounts,
         toolTop,
+        commands,
+        lastCall,
         events: events.slice(-MAX_EVENTS),
         files,
         stats: {

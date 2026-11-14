@@ -357,6 +357,35 @@
 .zci-insp .detail b{color:#f2f5fb}
 .zci-insp .detail .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:6px}
 .zci-empty-sm{padding:18px;text-align:center;color:#5f6675;font-size:11px}
+.zci-cmd{display:flex;gap:8px;padding:4px 8px;border-radius:6px;align-items:center;font-size:11px;border-bottom:1px dashed rgba(255,255,255,.05)}
+.zci-cmd:hover{background:rgba(255,255,255,.05)}
+.zci-cmd .st{flex:0 0 14px;font-weight:700}
+.zci-cmd .st.ok{color:#2bd576}
+.zci-cmd .st.fail{color:#ff6b81}
+.zci-cmd .prog{flex:0 0 66px;font-size:10px;padding:1px 6px;border-radius:5px;background:rgba(91,140,255,.14);color:#9db9ff;text-align:center;font-family:ui-monospace,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zci-cmd .c{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#b8bfcc;font-family:ui-monospace,Consolas,monospace;font-size:11px}
+.zci-cmd .c.open{white-space:normal;word-break:break-all}
+.zci-cmd .meta{flex:0 0 auto;color:#5f6675;font-size:10px;font-variant-numeric:tabular-nums}
+.zci-cmdlist{max-height:420px;overflow:auto;padding-right:4px}
+.zci-cmd-summary{display:flex;gap:18px;margin-bottom:8px}
+.zci-cmd-summary .item .v{font-size:16px;font-weight:700;color:#f2f5fb;font-variant-numeric:tabular-nums}
+.zci-cmd-summary .item .l{font-size:10px;color:#8b93a3}
+.zci-cmd-note{font-size:10px;color:#8b93a3}
+.zci-cmd-note .row{display:flex;gap:8px;align-items:baseline;padding:1px 0}
+.zci-cmd-note .row .k{flex:0 0 64px}
+.zci-cmd-progs{margin-top:8px}
+.zci-cost-extra{margin-top:10px;border-top:1px dashed rgba(255,255,255,.08);padding-top:8px}
+.zci-cost-extra .head{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:#cdd3de}
+.zci-cost-extra .head:hover{color:#fff}
+.zci-cost-extra .body{display:none;margin-top:8px;font-size:11px}
+.zci-cost-extra.open .body{display:block}
+.zci-cost-extra .row{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;padding:2px 4px;font-variant-numeric:tabular-nums}
+.zci-cost-extra .row .pct{color:#757d8c}
+.zci-reqmsg{margin-top:8px;border:1px dashed rgba(255,255,255,.1);border-radius:8px;padding:6px 10px;font-size:11px}
+.zci-reqmsg .row{display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
+.zci-reqmsg .row:last-child{border-bottom:none}
+.zci-reqmsg .k{flex:0 0 40px;color:#5f6675}
+.zci-reqmsg .v{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;color:#b8bfcc;font-family:ui-monospace,Consolas,monospace;font-size:11px}
 .zci-sbar{display:inline-flex;align-items:center;gap:5px;margin-left:10px;vertical-align:middle}
 .zci-sbar .b{border:none;background:rgba(255,255,255,.07);color:#aeb4c0;border-radius:999px;padding:3px 12px;cursor:pointer;font-size:11px;transition:all .15s;white-space:nowrap;font-family:inherit}
 .zci-sbar .b:hover{background:rgba(255,255,255,.16);color:#fff}
@@ -913,6 +942,13 @@
     agEvFilter: "",
     agEvSearch: "",
     agSelected: null,
+    cmdFilter: "",
+    cmdSearch: "",
+    cmdSort: "latest",
+    cmdOpen: {},
+    costOpen: false,
+    lastCallOpen: false,
+    fileSort: "ops",
     fileFilter: "",
     fileSearch: "",
     fileOpen: {},
@@ -1257,6 +1293,81 @@
     return '<span class="zci-chip zci-plain" data-iofilter="' + op + '" data-tip="<b>' + esc(label) + ' ' + value + '</b><div class=\'dim\'>点击筛选文件活动</div>" style="padding:1px 8px">' + esc(label) + ' <span class="n">' + value + "</span></span>";
   }
 
+  /** dsh costMeter 风格：最近一次调用 · 用量计费。 */
+  function lastCallHtml() {
+    var lc = state.lastCallData;
+    if (!lc) return "";
+    var parts = [
+      { label: "非缓存输入", tokens: Math.max(0, lc.inputTokens - lc.cacheReadTokens - lc.cacheWriteTokens), cost: lc.cost.input, color: C.blue },
+      { label: "缓存读取", tokens: lc.cacheReadTokens, cost: lc.cost.cacheRead + lc.cost.cacheWrite, color: C.cyan },
+      { label: "输出（含推理 Token）", tokens: lc.outputTokens, cost: lc.cost.output, color: C.green },
+    ];
+    var total = parts.reduce(function (a, x) { return a + x.cost; }, 0) || 1;
+    var donutParts = parts.map(function (x) { return { label: x.label, value: Math.max(0.5, (x.cost / total) * 100), valueText: "¥" + x.cost.toFixed(6), color: x.color }; });
+    var open = state.lastCallOpen ? " open" : "";
+    return (
+      '<div class="zci-cost-extra' + open + '"><div class="head" data-lastcall>▾ 最近一次调用 · 用量计费</div>' +
+      '<div class="body"><div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">' +
+      '<div class="zci-donut-100">' + donut(donutParts, 96, 11, "100%", "费用占比") + "</div>" +
+      '<div style="flex:1;min-width:220px">' +
+      parts.map(function (x) {
+        return '<div class="row" style="display:flex;gap:8px;padding:2px 0"><span class="dot" style="width:8px;height:8px;border-radius:2px;background:' + x.color + ';margin-top:5px"></span><span style="flex:1">' + esc(x.label) + ' <span style="color:#5f6675">≈' + fmtTokens(x.tokens) + "</span></span><span>≈ ¥" + x.cost.toFixed(6) + '</span><span style="color:#757d8c;width:44px;text-align:right">' + ((x.cost / total) * 100).toFixed(1) + "%</span></div>";
+      }).join("") +
+      '<div style="margin-top:6px;color:#757d8c">合计 ≈ ¥' + total.toFixed(6) + " · " + esc(lc.modelId || "") + " · " + esc(fmtTime(lc.at)) + "</div>" +
+      '<div style="margin-top:4px;color:#5f6675;font-size:10px">按最近模型牌价折算；缓存写入计入缓存读取一项。</div></div></div></div></div>'
+    );
+  }
+
+  /** dsh commandPanel 风格：命令执行。 */
+  function cmdCardHtml(d) {
+    var cmds = d.commands || [];
+    if (!cmds.length) return "";
+    var progMap = new Map();
+    cmds.forEach(function (c) {
+      var e = progMap.get(c.program) || { program: c.program, count: 0, fail: 0 };
+      e.count += 1;
+      if (c.error) e.fail += 1;
+      progMap.set(c.program, e);
+    });
+    var progs = Array.from(progMap.values()).sort(function (a, b) { return b.count - a.count; });
+    var failed = cmds.filter(function (c) { return c.error; }).length;
+    var failProg = progs.filter(function (x) { return x.fail > 0; }).sort(function (a, b) { return b.fail - a.fail; })[0];
+    var dupProg = progs[0];
+    var kw = (state.cmdSearch || "").toLowerCase();
+    var rows = cmds.filter(function (c) {
+      if (state.cmdFilter && c.program !== state.cmdFilter) return false;
+      if (kw && String(c.cmd).toLowerCase().indexOf(kw) < 0) return false;
+      return true;
+    });
+    rows.sort(function (a, b) { return state.cmdSort === "oldest" ? a.at - b.at : b.at - a.at; });
+    var rowsHtml = rows.slice(0, 120).map(function (c) {
+      var id = c.at + "|" + c.step;
+      var open = state.cmdOpen[id] ? " open" : "";
+      return '<div class="zci-cmd' + open + '" data-cmd="' + esc(id) + '" data-tip="<b>' + esc(c.program) + "</b> 第 " + c.step + " 步 · " + esc(fmtTime(c.at)) + (c.error ? "<br><span style='color:#ff8fa0'>执行失败</span>" : "") + "<div class='dim'>点击展开完整命令</div>\">" +
+        '<span class="st ' + (c.error ? "fail" : "ok") + '">' + (c.error ? "✗" : "✓") + '</span><span class="prog">' + esc(c.program) + '</span>' +
+        '<span class="c">' + esc(c.cmd) + '</span><span class="meta">T' + c.step + " · " + esc(fmtTime(c.at)) + "</span></div>";
+    }).join("");
+    return (
+      '<div class="zci-card" style="margin-top:10px"><h3><span class="zci-ico" style="background:' + C.red + '"></span>命令执行<span class="zci-cnt">' + cmds.length + " 条记录</span></h3>" +
+      '<div style="display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start">' +
+      '<div><div class="zci-cmd-summary"><div class="item"><div class="v">' + cmds.length + '</div><div class="l">运行记录</div></div>' +
+      '<div class="item"><div class="v" style="color:' + (failed ? C.red : "#f2f5fb") + '">' + failed + '</div><div class="l">失败 · ' + (cmds.length ? Math.round((failed / cmds.length) * 100) : 0) + '%</div></div>' +
+      '<div class="item"><div class="v">' + progs.length + '</div><div class="l">程序</div></div></div>' +
+      '<div class="zci-cmd-note"><div class="row"><span class="k">失败最多</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(failProg ? failProg.program : "—") + "</span>" + (failProg ? "<span>×" + failProg.fail + "</span>" : "") + "</div>" +
+      '<div class="row"><span class="k">重复最多</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(dupProg ? dupProg.program : "—") + "</span>" + (dupProg ? "<span>×" + dupProg.count + "</span>" : "") + "</div></div>" +
+      '<div class="zci-cmd-progs zci-rank">' + rankRows(progs.slice(0, 8).map(function (x) {
+        return { name: x.program + (x.fail ? " · " + x.fail + " 失败" : ""), calls: x.count, tip: "<b>" + esc(x.program) + "</b> ×" + x.count + (x.fail ? " · " + x.fail + " 失败" : "") + "<div class='dim'>点击过滤右侧命令</div>" };
+      }), function (it, i) { return RANK_COLORS[i % RANK_COLORS.length]; }, { filterType: "cmdprog" }) + "</div>" +
+      '<div class="zci-note" style="margin-top:6px">点击程序名过滤右侧命令；再次点击取消。</div></div>' +
+      '<div><div style="display:flex;gap:8px;margin-bottom:6px;align-items:center">' +
+      '<input class="zci-filesearch" placeholder="过滤命令…" value="' + esc(state.cmdSearch) + '" data-cmdsearch style="flex:1"/>' +
+      '<div class="zci-trend-toggle" style="margin:0"><button class="zci-pill ' + (state.cmdSort === "latest" ? "zci-on" : "") + '" data-cmdsort="latest">最新</button>' +
+      '<button class="zci-pill ' + (state.cmdSort === "oldest" ? "zci-on" : "") + '" data-cmdsort="oldest">最早</button></div>' +
+      (state.cmdFilter ? '<span class="zci-chip zci-on" data-cmdclear="1">' + esc(state.cmdFilter) + " ✕</span>" : "") + "</div>" +
+      '<div class="zci-cmdlist">' + (rowsHtml || '<div class="zci-empty-sm">没有匹配的命令</div>') + "</div></div></div></div>"
+    );
+  }
+
   function renderSessionDetail(body) {
     var d = state.sessionDetail;
     if (!d) return;
@@ -1305,6 +1416,7 @@
         .join("") +
       '<span class="tot">合计 ' + io.tools + "</span></div>";
 
+    state.lastCallData = d.lastCall || state.lastCallData;
     var ts = (st && st.timing) || d.timeStats || { modelWaitMs: st.modelMs, toolMs: 0, otherMs: 0, outputSpeed: st.outputSpeed };
     var timeParts = timeDonutParts(ts);
     var sUsageParts = sessionUsageParts(d);
@@ -1394,14 +1506,21 @@
       var model = row.modelId || row.model_id || "";
       var prev = (dd.trend || [])[state.pinnedStep - 1];
       var delta = prev ? input - prev.inputTokens : input;
+      var msgRows = "";
+      if (t) {
+        if (t.userText) msgRows += '<div class="row"><span class="k">用户</span><span class="v">' + esc(t.userText) + "</span></div>";
+        if (t.toolCmd) msgRows += '<div class="row"><span class="k">输入</span><span class="v">' + esc(t.toolCmd) + "</span></div>";
+        if (t.replyText) msgRows += '<div class="row"><span class="k">回复</span><span class="v">' + esc(t.replyText) + "</span></div>";
+      }
       return (
-        '<div class="zci-reqdetail" id="zci-reqdetail"><b>' + (t && t.turn != null ? "第 " + t.turn + " 轮 · " : "") + "第 " + (state.pinnedStep + 1) + " 步</b>" +
+        '<div id="zci-reqdetail"><div class="zci-reqdetail"><b>' + (t && t.turn != null ? "第 " + t.turn + " 轮 · " : "") + "第 " + (state.pinnedStep + 1) + " 步</b>" +
         "<span>输入 <b>" + fmtTokens(input) + "</b></span><span>输出 <b>" + fmtTokens(output) + "</b></span>" +
         "<span>缓存命中 <b>" + fmtPct(t && t.cacheRate) + "</b></span>" +
         "<span>Δ输入 <b>" + (delta >= 0 ? "+" : "") + fmtTokens(delta) + "</b></span>" +
         "<span>耗时 <b>" + fmtDuration(row.durationMs) + "</b></span>" +
         (model ? "<span class='dim'>" + esc(String(model).slice(0, 40)) + "</span>" : "") +
-        '<span class="x" data-unpin>✕ 取消固定</span></div>'
+        '<span class="x" data-unpin>✕ 取消固定</span></div>' +
+        (msgRows ? '<div class="zci-reqmsg">' + msgRows + "</div>" : "") + "</div>"
       );
     }
 
@@ -1444,6 +1563,13 @@
       }
       return true;
     });
+    var fileSortFn = {
+      ops: function (a, b) { return (b.read + b.write + b.edit) - (a.read + a.write + a.edit); },
+      latest: function (a, b) { return (b.at || 0) - (a.at || 0); },
+      path: function (a, b) { return String(a.full).localeCompare(String(b.full)); },
+      name: function (a, b) { return String(a.file).localeCompare(String(b.file)); },
+    }[state.fileSort] || null;
+    if (fileSortFn) filesFiltered = filesFiltered.slice().sort(fileSortFn);
     var filesHtml =
       filesFiltered
         .slice(0, 60)
@@ -1493,7 +1619,13 @@
         '<div class="zci-cost-donut">' +
         '<div class="zci-donut-100">' + donut(costParts, 104, 12, "", "") +
         '<div class="c"><span class="v">100%</span><span class="l">参考费用占比</span></div></div>' +
-        legendGrid(costParts, { cols: 2 }) + "</div></div>",
+        legendGrid(costParts, { cols: 2 }) + "</div>" +
+        '<div class="zci-cost-extra' + (state.costOpen ? " open" : "") + '"><div class="head" data-costopen>▾ 各部分计费</div>' +
+        '<div class="body">' +
+        (costComp.parts || []).map(function (pp) {
+          return '<div class="row"><span>' + esc(pp.label) + ' <span class="dim" style="color:#5f6675">≈' + fmtTokens(pp.pct * costComp.totalTokens) + "</span></span><span>≈ ¥" + Number(pp.cost).toFixed(6) + '</span><span class="pct">' + (pp.pct * 100).toFixed(1) + "%</span></div>";
+        }).join("") + "</div></div>" +
+        lastCallHtml() + "</div></div>",
         "</div>",
 
       '<div class="zci-card" style="margin-top:10px"><h3><span class="zci-ico" style="background:' + C.blue + '"></span>上下文趋势<span class="zci-cnt">' + d.requests + " 步 · " + d.turns + " 轮</span></h3>" +
@@ -1525,6 +1657,12 @@
         '<span class="zci-chip ' + (state.fileFilter === "write" ? "zci-on" : "zci-plain") + '" data-fop="write">写入 ' + fileTotalWrite + "</span>" +
         '<span class="zci-chip ' + (state.fileFilter === "edit" ? "zci-on" : "zci-plain") + '" data-fop="edit">编辑 ' + fileTotalEdit + "</span>" +
         '<input class="zci-filesearch" placeholder="搜索路径…" value="' + esc(state.fileSearch) + '" data-filesearch/></div>' +
+        '<div class="fhead" style="margin-top:-2px">' +
+        '<span class="zci-note" style="align-self:center">排序</span>' +
+        '<span class="zci-chip ' + (state.fileSort === "ops" ? "zci-on" : "zci-plain") + '" data-fsort="ops">按次数</span>' +
+        '<span class="zci-chip ' + (state.fileSort === "latest" ? "zci-on" : "zci-plain") + '" data-fsort="latest">按最新</span>' +
+        '<span class="zci-chip ' + (state.fileSort === "path" ? "zci-on" : "zci-plain") + '" data-fsort="path">按路径</span>' +
+        '<span class="zci-chip ' + (state.fileSort === "name" ? "zci-on" : "zci-plain") + '" data-fsort="name">按文件名</span></div>' +
         filesHtml + "</div></div></div>",
 
       '<div class="zci-row-2" style="margin-top:10px">' +
@@ -1534,6 +1672,7 @@
         '<div class="zci-io-line" style="margin-top:0;border-top:none;padding-top:0">' +
         '<span>本轮会话注入 <span class="n">' + (d.composition.systemPrompt.items || 0) + '</span> 项系统提示 · 工具定义 <span class="n">' + (d.composition.toolDefs.items || 0) + "</span> 项</span></div>" +
         '<div class="zci-note" style="margin-top:8px">上下文文件（注入/压缩/切换事件）与压缩历史暂由事件日志承载。</div></div></div>',
+      cmdCardHtml(d),
     ];
     body.innerHTML = parts.join("");
     body.querySelector("[data-back]").addEventListener("click", backToOverview);
@@ -1667,6 +1806,49 @@
         }
       });
     }
+    // 文件排序
+    body.querySelectorAll("[data-fsort]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        state.fileSort = el.getAttribute("data-fsort") || "ops";
+        render();
+      });
+    });
+    // 费用构成：各部分计费 / 最近一次调用 折叠
+    var co = body.querySelector("[data-costopen]");
+    if (co) co.addEventListener("click", function () { state.costOpen = !state.costOpen; render(); });
+    var lcBtn = body.querySelector("[data-lastcall]");
+    if (lcBtn) lcBtn.addEventListener("click", function () { state.lastCallOpen = !state.lastCallOpen; render(); });
+    // 命令执行
+    body.querySelectorAll("[data-cmdsort]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        state.cmdSort = el.getAttribute("data-cmdsort") || "latest";
+        render();
+      });
+    });
+    var cs = body.querySelector("[data-cmdsearch]");
+    if (cs) cs.addEventListener("input", function (e) {
+      state.cmdSearch = e.target.value;
+      render();
+      var again = state.bodyEl.querySelector("[data-cmdsearch]");
+      if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+    });
+    body.querySelectorAll("[data-cmd]").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var id = row.getAttribute("data-cmd");
+        state.cmdOpen[id] = !state.cmdOpen[id];
+        render();
+      });
+    });
+    // 程序排行 -> 过滤命令
+    body.querySelectorAll("[data-ft='cmdprog']").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var v = el.getAttribute("data-fv") || "";
+        state.cmdFilter = state.cmdFilter === v ? "" : v;
+        render();
+      });
+    });
+    var cc = body.querySelector("[data-cmdclear]");
+    if (cc) cc.addEventListener("click", function () { state.cmdFilter = ""; render(); });
     body.querySelectorAll("[data-file]").forEach(function (row) {
       row.addEventListener("click", function () {
         var id = row.getAttribute("data-file");
