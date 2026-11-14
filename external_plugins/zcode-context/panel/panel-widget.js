@@ -64,10 +64,11 @@
 .zci-iconbtn{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#c6ccd8;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s}
 .zci-iconbtn:hover{background:rgba(255,255,255,.12);color:#fff}
 .zci-iconbtn.zci-accent{background:linear-gradient(135deg,#5b8cff,#3b6dff);border-color:transparent;color:#fff}
-.zci-tabs{display:flex;gap:4px;padding:2px 20px 12px;flex:0 0 auto}
-.zci-tab{padding:6px 16px;cursor:pointer;border-radius:999px;color:#9aa1af;font-size:12px;transition:all .15s}
-.zci-tab:hover{color:#e6e9f0;background:rgba(255,255,255,.05)}
-.zci-tab.zci-on{color:#fff;background:linear-gradient(135deg,rgba(91,140,255,.85),rgba(59,109,255,.85))}
+.zci-tabs{display:flex;gap:22px;padding:2px 22px 0;flex:0 0 auto;border-bottom:1px solid rgba(255,255,255,.06)}
+.zci-tab{padding:6px 2px 9px;cursor:pointer;color:#8b93a3;font-size:13px;font-weight:600;transition:color .15s;position:relative}
+.zci-tab:hover{color:#e6e9f0}
+.zci-tab.zci-on{color:#2dd4bf}
+.zci-tab.zci-on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:1px;background:#2dd4bf}
 .zci-body{flex:1;overflow:auto;padding:2px 20px 44px}
 .zci-grid>*,.zci-row>*,.zci-row-2>*,.zci-row-3>*{min-width:0}
 
@@ -391,7 +392,7 @@
 .zci-sbar .b:hover{background:rgba(255,255,255,.16);color:#fff}
 .zci-sbar .b.zci-acc{background:linear-gradient(135deg,#5b8cff,#3b6dff);color:#fff}
 .zci-sbar .b.zci-acc:hover{filter:brightness(1.1)}
-.zci-sbar.zci-fallback{position:fixed;top:8px;right:14px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
+.zci-sbar.zci-fallback{position:fixed;top:46px;right:16px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
 .zci-press-ok{background:rgba(43,213,118,.7)}
 .zci-press-warn{background:rgba(245,158,66,.85)}
 .zci-press-hot{background:rgba(255,107,129,.9)}
@@ -2483,8 +2484,34 @@
   }
 
   function findSessionHeader() {
-    // The session header sits at the top of the main area: high up, wide, and
-    // to the right of the sidebar. Pick the topmost-leftmost candidate.
+    // S1: locate the element whose text matches the current session title,
+    // then walk up to the header row (30-80px tall, near the top).
+    var pick = mostRecentSession();
+    var title = pick ? String(pick.title || "").trim() : "";
+    if (title.length > 8) {
+      try {
+        var candidates = document.querySelectorAll("div,span,h1,h2,h3,p");
+        for (var i = 0; i < candidates.length; i++) {
+          var el = candidates[i];
+          if (el.closest(".zci-overlay") || el.closest(".zci-sbar")) continue;
+          if ((el.textContent || "").trim() !== title) continue;
+          if (el.children.length > 0 && el.children.length < 2) { /* allow single wrapper */ }
+          var node = el;
+          for (var d = 0; d < 6 && node; d++) {
+            var rect;
+            try { rect = node.getBoundingClientRect(); } catch { break; }
+            if (rect && rect.height >= 30 && rect.height <= 88 && rect.top >= -10 && rect.top <= 80 && rect.width > 320) {
+              if (!node.querySelector(".zci-sbar") && !node.closest(".zci-overlay")) return node;
+            }
+            if (node === document.body) break;
+            node = node.parentElement;
+          }
+        }
+      } catch {
+        // fall through
+      }
+    }
+    // S2: topmost wide row in the main area (top of window, right of sidebar).
     var sidebarW = 0;
     try {
       var aside = findAside();
@@ -2499,23 +2526,22 @@
     var bestTop = 90;
     try {
       var all = document.querySelectorAll("div,header");
-      for (var i = 0; i < all.length; i++) {
-        var el = all[i];
-        var rect;
-        try { rect = el.getBoundingClientRect(); } catch { continue; }
-        if (!rect || rect.height < 30 || rect.height > 80 || rect.width < 320) continue;
-        if (rect.top > 70 || rect.top < -10) continue;
-        if (rect.left < sidebarW - 10) continue;
-        if (el.querySelector(".zci-sbar")) continue;
-        if (el.closest(".zci-overlay")) continue;
-        // must contain some text (the session title) and be a flex/row container
-        if (!(el.textContent || "").trim()) continue;
-        var cs = getComputedStyle(el);
-        if (cs.display.indexOf("flex") < 0 && cs.position !== "relative") continue;
-        if (rect.top < bestTop) { bestTop = rect.top; best = el; }
+      for (var j = 0; j < all.length; j++) {
+        var el2 = all[j];
+        var rect2;
+        try { rect2 = el2.getBoundingClientRect(); } catch { continue; }
+        if (!rect2 || rect2.height < 30 || rect2.height > 88 || rect2.width < 320) continue;
+        if (rect2.top > 70 || rect2.top < -10) continue;
+        if (rect2.left < sidebarW - 10) continue;
+        if (el2.querySelector(".zci-sbar")) continue;
+        if (el2.closest(".zci-overlay")) continue;
+        if (!(el2.textContent || "").trim()) continue;
+        var childBtns = el2.querySelectorAll("button,[role='button']").length;
+        if (childBtns < 1 && el2.querySelectorAll("span").length < 2) continue;
+        if (rect2.top < bestTop) { bestTop = rect2.top; best = el2; }
       }
     } catch {
-      // fall through to fixed fallback
+      // fall through
     }
     return best;
   }
@@ -2559,9 +2585,31 @@
     var header = findSessionHeader();
     if (header) {
       bar.classList.remove("zci-fallback");
-      header.appendChild(bar);
+      // 插到头部里标题元素之后（而不是整个头部的末尾，避免压到右侧控件）
+      var anchor = null;
+      try {
+        var pick = mostRecentSession();
+        var title = pick ? String(pick.title || "").trim() : "";
+        if (title.length > 8) {
+          var kids = header.querySelectorAll("div,span,h1,h2,h3,p");
+          for (var k = 0; k < kids.length; k++) {
+            var t = (kids[k].textContent || "").trim();
+            if (t === title && !kids[k].contains(bar)) { anchor = kids[k]; break; }
+          }
+          // 标题可能是父容器；取其最外层文本节点所在父级
+          if (anchor && anchor.parentElement && anchor.parentElement !== header && header.contains(anchor.parentElement)) anchor = anchor.parentElement;
+        }
+      } catch {
+        anchor = null;
+      }
+      if (anchor && anchor.parentElement === header) {
+        if (anchor.nextSibling) header.insertBefore(bar, anchor.nextSibling);
+        else header.appendChild(bar);
+      } else {
+        header.appendChild(bar);
+      }
     } else {
-      // fallback: float at the top-right of the viewport
+      // fallback: header 下方悬浮，避让右上角窗口控制区
       bar.classList.add("zci-fallback");
       document.body.appendChild(bar);
     }
