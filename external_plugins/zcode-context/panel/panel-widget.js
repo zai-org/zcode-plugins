@@ -1001,7 +1001,7 @@
   function timeLegendRows(parts, counts) {
     var total = parts.reduce(function (a, p) { return a + p.value; }, 0) || 1;
     return parts
-      .filter(function (p) { return p.value > 0; })
+      .filter(function (p) { return p.value > 0 || (counts && counts[p.label] !== undefined); })
       .map(function (p) {
         var pct = ((p.value / total) * 100).toFixed(1) + "%";
         var extra = counts && counts[p.label] ? " · " + counts[p.label] : "";
@@ -1389,12 +1389,20 @@
       .join("");
     var reserve = Math.max(0, 100 - usedPct * 100);
 
+    var evC = d.evCounts || { inject: 0, compact: 0, prune: 0 };
+    var subAg = d.session.subAgents != null ? d.session.subAgents : null;
     var headerStats =
       '<div class="zci-dstat zci-ck" data-jump="trend"><div class="v">' + d.turns + '</div><div class="l">轮次</div><div class="s">点击查看趋势</div></div>' +
       '<div class="zci-dstat zci-ck" data-jump="trend"><div class="v">' + d.requests + '</div><div class="l">步骤</div><div class="s">点击查看趋势</div></div>' +
-      '<div class="zci-dstat"><div class="v">' + io.tools + '</div><div class="l">工具调用</div></div>' +
-      '<div class="zci-dstat"><div class="v">' + (d.composition.assistantText.items || 0) + '</div><div class="l">回复块</div></div>' +
+      '<div class="zci-dstat"><div class="v">0</div><div class="l">技能加载</div></div>' +
+      '<div class="zci-dstat"><div class="v">' + (d.composition.assistantText.items || 0) + '</div><div class="l">模型回复</div></div>' +
       '<div class="zci-dstat"><div class="v">' + fmtTokens(st.totalTokens) + '</div><div class="l">Token 总用量</div><div class="s">' + fmtCost(st.cost) + "</div></div>";
+    var evLine =
+      '<div class="zci-io-line"><span>上下文事件</span>' +
+      '<span class="zci-chip zci-plain" style="padding:1px 8px;color:#2bd576;border-color:rgba(43,213,118,.3)">注入 ' + evC.inject + "</span>" +
+      '<span class="zci-chip zci-plain" style="padding:1px 8px;color:#f7cd85;border-color:rgba(247,185,85,.3)">压缩 ' + evC.compact + "</span>" +
+      '<span class="zci-chip zci-plain" style="padding:1px 8px">剪枝 ' + evC.prune + "</span>" +
+      '<span class="tot">编队 当前 Agent ' + fmtTokens(st.totalTokens) + " · " + fmtCost(st.cost) + (subAg != null ? ' · 子 Agent ×' + subAg : "") + "</span></div>";
 
     var ioLine =
       '<div class="zci-io-line"><span>输入输出</span>' +
@@ -1406,6 +1414,19 @@
     var toolItems = (d.toolTop || []).map(function (t) {
       return { name: t.tool, calls: t.calls };
     });
+    var progMap = {};
+    (d.commands || []).forEach(function (c) {
+      progMap[c.program] = (progMap[c.program] || 0) + 1;
+    });
+    var progTop = Object.keys(progMap).map(function (k) { return { k: k, n: progMap[k] }; }).sort(function (a, b) { return b.n - a.n; });
+    var progOthers = Math.max(0, progTop.length - 6);
+    var progLine =
+      '<div class="zci-io-line"><span>命令执行</span>' +
+      progTop.slice(0, 6).map(function (x) {
+        return '<span class="zci-chip zci-plain" style="padding:1px 8px"><span class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + C.green + ';margin-right:4px"></span>' + esc(x.k) + ' <span class="n">' + x.n + "</span></span>";
+      }).join("") +
+      (progOthers > 0 ? '<span style="color:#5f6675">其他 +' + progOthers + "</span>" : "") +
+      '<span class="tot">' + (d.stats.commandStats ? d.stats.commandStats.exec : io.bash) + "</span></div>";
     var ioToolsLine =
       '<div class="zci-io-line"><span>工具调用</span>' +
       toolItems
@@ -1414,6 +1435,7 @@
           return '<span class="zci-chip zci-plain" data-evtool="' + esc(t.tool) + '" data-tip="<b>' + esc(t.tool) + '</b> ×' + t.calls + '<div class=\'dim\'>点击筛选事件日志到该工具</div>" style="padding:1px 8px">' + esc(t.tool) + ' <span class="n">' + t.calls + "</span></span>";
         })
         .join("") +
+      (toolItems.length > 8 ? '<span style="color:#5f6675">其他 +' + Math.max(0, io.tools - toolItems.slice(0, 8).reduce(function (a, t) { return a + t.calls; }, 0)) + "</span>" : "") +
       '<span class="tot">合计 ' + io.tools + "</span></div>";
 
     state.lastCallData = d.lastCall || state.lastCallData;
@@ -1591,14 +1613,20 @@
         '<span class="zci-note">' + esc(fmtTime(d.session.startedAt)) + "</span></div>",
 
       '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.blue + '"></span>上下文统计</h3>' +
-        '<div class="zci-dstats">' + headerStats + "</div>" + ioLine + ioToolsLine + "</div>",
+        '<div class="zci-dstats">' + headerStats + "</div>" + evLine + ioLine + progLine + ioToolsLine + "</div>",
 
       '<div class="zci-row">' +
         sectionCard("Token 统计", C.blue, "缓存命中 " + fmtPct(cacheRate),
-          '<div class="zci-donut-wrap">' + donut(sUsageParts, 110, 12, fmtTokens(st.totalTokens), "总用量") + legendGrid(sUsageParts, { cols: 2 }) + "</div>") +
+          '<div class="zci-donut-wrap">' + donut(compParts, 110, 12, fmtTokens(st.totalTokens), "总用量") + legendGrid(compParts, { cols: 2 }) + "</div>") +
         sectionCard("耗时统计", C.amber, "输出速度 " + st.outputSpeed + " tok/s",
-          '<div class="zci-donut-wrap">' + donut(timeParts, 110, 12, fmtDuration(ts.modelWaitMs), "总时长") +
-          '<div class="zci-legend zci-2col">' + timeLegendRows(timeParts, { 模型等待: d.requests + " 次" }) + "</div></div>" +
+          '<div class="zci-donut-wrap">' + donut(timeParts, 110, 12, fmtDuration(ts.modelWaitMs + (ts.thinkMs || 0) + (ts.replyMs || 0) + ts.toolMs + ts.otherMs), "活跃时长") +
+          '<div class="zci-legend zci-2col">' + timeLegendRows(timeParts, {
+            模型等待: d.requests + " 次",
+            模型思考: (d.composition.reasoning.items || 0) + " 个内容块",
+            模型回复: (d.composition.assistantText.items || 0) + " 个内容块",
+            工具执行: io.tools + " 次",
+            其他: "—",
+          }) + "</div></div>" +
           timelineStrip(timeParts, fmtDuration(ts.spanMs || ts.modelWaitMs))) +
         "</div>",
 

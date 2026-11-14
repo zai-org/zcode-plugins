@@ -31,6 +31,7 @@ export const DEFAULT_PRICE_USD = { input: 1.0, output: 5.0, cacheRead: 0.1, cach
 
 /** Context window sizes (input tokens). Longest-suffix match on model id. */
 export const MODEL_WINDOWS = [
+  { suffix: "glm-5.3-flash", window: 1048576 },
   { suffix: "deepseek-v4.1", window: 1048576 },
   { suffix: "deepseek-v4", window: 1048576 },
   { suffix: "glm-5.3", window: 204800 },

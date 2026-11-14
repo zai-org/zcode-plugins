@@ -300,6 +300,10 @@ async function main() {
       }
     }).length;
 
+    const subAgents = num(
+      (db.prepare("select count(*) as c from session where parent_id = ?").get(sessionId) || {}).c,
+    );
+
     const turnCount = msgRows.filter((m) => {
       try {
         const d = JSON.parse(m.data);
@@ -499,9 +503,16 @@ async function main() {
           additions: num(session.summary_additions),
           deletions: num(session.summary_deletions),
           compacted: Boolean(session.time_compacting),
+          subAgents,
         },
         turns: turnCount,
         requests: usage.length,
+        subAgents,
+        evCounts: {
+          inject: turnCount,
+          compact: usage.filter((r) => String(r.query_source || "") === "compact").length,
+          prune: 0,
+        },
         steps: usage.length,
         usage: usage.map((row) => ({
           startedAt: num(row.started_at),
