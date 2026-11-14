@@ -29,6 +29,7 @@ const FILES = [
   ["scripts/query-session.mjs", "scripts/query-session.mjs"],
   ["scripts/query-agents.mjs", "scripts/query-agents.mjs"],
   ["scripts/lib/common.mjs", "scripts/lib/common.mjs"],
+  ["scripts/status.mjs", "scripts/status.mjs"],
   ["scripts/lib/pricing.mjs", "scripts/lib/pricing.mjs"],
   ["panel/inject-main.cjs", "panel/inject-main.cjs"],
   ["panel/panel-widget.js", "panel/panel-widget.js"],

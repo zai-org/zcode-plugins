@@ -118,6 +118,8 @@ https://github.com/AwenJackson/zcode-context
 ```
 
 > 安装/更新后需要重启 ZCode：插件通过 `app.asar` 注入侧边栏入口与面板（带完整性校验与自动备份，可用 `/remove-panel` 一键卸载）。
+>
+> **安装后没有看到入口？** 这是 asar 注入的正常流程：插件已备好补丁，等 ZCode 完全退出后自动完成替换。请**完全退出 ZCode（含托盘进程）再重开**；若重开后仍没有入口，再重启一次。运行 `/context-status` 可随时查看当前状态（已注入 / 等待重启 / 需管理员 / 出错）与下一步建议。
 
 ## 🧰 原理与隐私 / How it works & Privacy
 
