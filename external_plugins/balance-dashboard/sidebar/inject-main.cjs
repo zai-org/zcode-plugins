@@ -76,12 +76,29 @@ function readJson(file, fallback) {
 }
 
 function pluginAvailable() {
-  const root = CONFIG.pluginRoot;
+  // Re-read on every check: the SessionStart hook may rewrite config.json
+  // (e.g. fix pluginRoot) after this loader has already been imported.
+  const root = readJson(path.join(RUNTIME, "config.json"), CONFIG).pluginRoot ?? CONFIG.pluginRoot;
   if (!root) return true; // older runtime config: do not disable
   try {
     return fs.statSync(root).isDirectory();
   } catch {
     return false;
+  }
+}
+
+let selfHealed = false;
+
+function maybeSelfHeal() {
+  if (selfHealed || !pluginAvailable()) return;
+  selfHealed = true;
+  log("plugin root became available; injecting widget into open windows");
+  for (const wc of webContents.getAllWebContents()) {
+    try {
+      inject(wc, true);
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -219,6 +236,7 @@ async function refresh() {
   if (collecting || !pluginAvailable()) return;
   collecting = true;
   try {
+    maybeSelfHeal();
     const result = await runCollector();
     if (result.ok) {
       latest = result.data;
