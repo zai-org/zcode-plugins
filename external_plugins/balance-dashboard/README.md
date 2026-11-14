@@ -18,6 +18,26 @@ Data sources:
 
 > 中文：ZCode Desktop 左侧边栏余额组件，支持 DeepSeek / 火山引擎（账户与 Coding Plan）/ ZCode 套餐余额与今日消耗；点击余额行打开多维度消耗分析，齿轮打开设置弹框。
 
+## Screenshots
+
+**Sidebar widget** (left: collapsed; right: expanded)
+
+| Collapsed | Expanded |
+| --- | --- |
+| ![Collapsed: balance and today's usage per row](docs/images/sidebar-collapsed.png) | ![Expanded: balance details and plan quota windows](docs/images/sidebar-expanded.png) |
+
+**Settings modal** (display switches + API keys)
+
+![Settings modal](docs/images/settings.png)
+
+**Consumption analytics**
+
+| Today · tokens | This month · tokens |
+| --- | --- |
+| ![Today: hourly stacked bars](docs/images/analytics-today.png) | ![This month: daily stacked bars](docs/images/analytics-month-tokens.png) |
+| **This month · cost** | |
+| ![This month: cost stacked bars per provider](docs/images/analytics-month-cost.png) | |
+
 ## Side effects (please read)
 
 All side effects of this plugin, disclosed for transparency:

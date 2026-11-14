@@ -18,6 +18,26 @@
 
 > English: a ZCode Desktop sidebar widget that shows DeepSeek / Volcengine (Ark & Coding Plan) / ZCode plan balances and today's token usage. Clicking any row opens a consumption analytics modal (time ranges, project/task/provider filters, stacked charts); the gear opens a settings modal for API keys.
 
+## 截图
+
+**侧边栏组件**（左：折叠状态；右：展开状态）
+
+| 折叠状态 | 展开状态 |
+| --- | --- |
+| ![折叠状态：每行显示余额与今日消耗](docs/images/sidebar-collapsed.png) | ![展开状态：显示余额明细与额度窗口](docs/images/sidebar-expanded.png) |
+
+**设置弹框**（显示开关 + API 密钥配置）
+
+![设置弹框](docs/images/settings.png)
+
+**消耗分析弹框**
+
+| 今日 · Token 视图 | 本月 · Token 视图 |
+| --- | --- |
+| ![今日消耗分析：按小时堆叠柱状图](docs/images/analytics-today.png) | ![本月消耗分析：按天堆叠柱状图](docs/images/analytics-month-tokens.png) |
+| **本月 · 费用视图** | |
+| ![本月费用视图：按供应商堆叠的费用柱状图](docs/images/analytics-month-cost.png) | |
+
 ## 副作用披露（必读）
 
 为透明起见，本插件的所有副作用如下：
