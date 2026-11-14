@@ -1,0 +1,111 @@
+{
+  "name": "usage-detail",
+  "version": "0.30.5",
+  "description": "Per-request usage analytics for ZCode: live dashboard & side-panel with token/cost/cache breakdown, 5h windows, budget alerts, vendor quotas. Read-only, zero model overhead, zh/en.",
+  "author": {
+    "name": "axdlee",
+    "url": "https://github.com/axdlee"
+  },
+  "commands": "./commands",
+  "skills": "./skills",
+  "userConfig": {
+    "dbPath": {
+      "type": "string",
+      "title": "用量数据库路径",
+      "description": "本地 SQLite 路径，留空使用 ~/.zcode/cli/db/db.sqlite",
+      "default": ""
+    },
+    "panelLimit": {
+      "type": "string",
+      "title": "面板聚合条数",
+      "description": "侧栏与仪表盘默认聚合的最近请求条数（1-20000，-1 表示全部）",
+      "default": "-1"
+    },
+    "quotaToken": {
+      "type": "string",
+      "title": "官方配额 API Key（可选）",
+      "description": "智谱开放平台 API Key（bigmodel.cn 创建）。配置后 MCP 工具 usage_quota 可查官方 coding-plan 配额（5小时/周池）；不配置则该工具提示如何配置",
+      "default": ""
+    },
+    "quotaBase": {
+      "type": "string",
+      "title": "官方配额接口地址（可选）",
+      "description": "默认 https://open.bigmodel.cn，一般无需修改",
+      "default": ""
+    },
+    "deepseekKey": {
+      "type": "string",
+      "title": "DeepSeek API Key（可选）",
+      "description": "配置后配额卡与 usage_quota 显示 DeepSeek 官方余额。Key 仅发送到 api.deepseek.com，只读查询",
+      "default": ""
+    },
+    "kimiKey": {
+      "type": "string",
+      "title": "Kimi API Key（可选）",
+      "description": "配置后配额卡与 usage_quota 显示 Kimi Code 的 5 小时/周窗口用量。Key 仅发送到 api.kimi.com，只读查询",
+      "default": ""
+    },
+    "openrouterKey": {
+      "type": "string",
+      "title": "OpenRouter API Key（可选）",
+      "description": "配置后配额卡与 usage_quota 显示 OpenRouter 预付额度使用情况。Key 仅发送到 openrouter.ai，只读查询",
+      "default": ""
+    },
+    "minimaxKey": {
+      "type": "string",
+      "title": "MiniMax API Key（可选）",
+      "description": "配置后配额卡与 usage_quota 显示 MiniMax Token Plan 窗口用量。Key 仅发送到 api.minimaxi.com，只读查询",
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "panel": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/scripts/mcp/panel-server.mjs"
+      ],
+      "env": {
+        "ZCODE_USAGE_DB": "${user_config.dbPath}",
+        "ZCODE_USAGE_LIMIT": "${user_config.panelLimit}",
+        "ZCODE_USAGE_QUOTA_TOKEN": "${user_config.quotaToken}",
+        "ZCODE_USAGE_QUOTA_BASE": "${user_config.quotaBase}",
+        "ZCODE_USAGE_DEEPSEEK_KEY": "${user_config.deepseekKey}",
+        "ZCODE_USAGE_KIMI_KEY": "${user_config.kimiKey}",
+        "ZCODE_USAGE_OPENROUTER_KEY": "${user_config.openrouterKey}",
+        "ZCODE_USAGE_MINIMAX_KEY": "${user_config.minimaxKey}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "usage",
+        "title": {
+          "zh-CN": "用量",
+          "en-US": "Usage"
+        },
+        "icon": "chart-column",
+        "server": "panel",
+        "resourceUri": "ui://usage-detail/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "hooks": "./hooks",
+  "description_i18n": {
+    "en": "Per-request usage analytics for ZCode: live dashboard & side-panel with token/cost/cache breakdown, 5h windows, budget alerts, vendor quotas. Read-only, zero model overhead, zh/en.",
+    "zh-CN": "逐条用量分析：实时仪表盘与会话侧栏，token 构成、折算成本、缓存率与 5h 计费窗口；预算燃烧告警与多厂商配额。只读本地数据、零模型开销、中英双语。"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/axdlee/zcode-usage-detail",
+  "homepage": "https://github.com/axdlee/zcode-usage-detail",
+  "keywords": [
+    "usage",
+    "tokens",
+    "cost",
+    "dashboard",
+    "quota",
+    "analytics"
+  ]
+}
