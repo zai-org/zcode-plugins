@@ -392,7 +392,7 @@
 .zci-sbar .b:hover{background:rgba(255,255,255,.16);color:#fff}
 .zci-sbar .b.zci-acc{background:linear-gradient(135deg,#5b8cff,#3b6dff);color:#fff}
 .zci-sbar .b.zci-acc:hover{filter:brightness(1.1)}
-.zci-sbar.zci-fallback{position:fixed;top:46px;right:16px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
+.zci-sbar.zci-fallback{position:fixed;top:48px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
 .zci-press-ok{background:rgba(43,213,118,.7)}
 .zci-press-warn{background:rgba(245,158,66,.85)}
 .zci-press-hot{background:rgba(255,107,129,.9)}
@@ -447,6 +447,8 @@
       delivered: window.__zciDeliveredLog.slice(-8),
       orphans: (window.__zciOrphans || []).slice(-5),
       overlayShown: state.overlayEl ? state.overlayEl.style.display !== "none" : false,
+      headerScan: (function () { try { return window.__zciHeaderScan || null; } catch (e) { return null; } })(),
+      sbarMode: (function () { var b = document.getElementById("zci-sbar"); return b ? (b.className.indexOf("zci-fallback") >= 0 ? "fallback" : "inline") : "none"; })(),
     };
   };
 
@@ -2488,20 +2490,22 @@
     // then walk up to the header row (30-80px tall, near the top).
     var pick = mostRecentSession();
     var title = pick ? String(pick.title || "").trim() : "";
-    if (title.length > 8) {
+    var scanInfo = { s1: false, s2: false, title: title };
+    if (title.length > 6) {
       try {
         var candidates = document.querySelectorAll("div,span,h1,h2,h3,p");
         for (var i = 0; i < candidates.length; i++) {
           var el = candidates[i];
           if (el.closest(".zci-overlay") || el.closest(".zci-sbar")) continue;
-          if ((el.textContent || "").trim() !== title) continue;
+          var txt = (el.textContent || "").trim();
+          if (!(txt === title || (txt.length >= 6 && (title.indexOf(txt) === 0 || txt.indexOf(title.slice(0, 8)) === 0)))) continue;
           if (el.children.length > 0 && el.children.length < 2) { /* allow single wrapper */ }
           var node = el;
           for (var d = 0; d < 6 && node; d++) {
             var rect;
             try { rect = node.getBoundingClientRect(); } catch { break; }
             if (rect && rect.height >= 30 && rect.height <= 88 && rect.top >= -10 && rect.top <= 80 && rect.width > 320) {
-              if (!node.querySelector(".zci-sbar") && !node.closest(".zci-overlay")) return node;
+              if (!node.querySelector(".zci-sbar") && !node.closest(".zci-overlay")) { scanInfo.s1 = true; return node; }
             }
             if (node === document.body) break;
             node = node.parentElement;
@@ -2540,9 +2544,11 @@
         if (childBtns < 1 && el2.querySelectorAll("span").length < 2) continue;
         if (rect2.top < bestTop) { bestTop = rect2.top; best = el2; }
       }
+      if (best) scanInfo.s2 = true;
     } catch {
       // fall through
     }
+    try { window.__zciHeaderScan = scanInfo; } catch { /* ignore */ }
     return best;
   }
 
@@ -2609,8 +2615,20 @@
         header.appendChild(bar);
       }
     } else {
-      // fallback: header 下方悬浮，避让右上角窗口控制区
+      // fallback: 主区域左上（会话标题正下方），dsh tab 的视觉位置
       bar.classList.add("zci-fallback");
+      var fw = 0;
+      try {
+        var fa = findAside();
+        if (fa) {
+          var fr = fa.getBoundingClientRect();
+          if (fr && fr.width > 80) fw = fr.right;
+        }
+      } catch {
+        // keep 0
+      }
+      bar.style.left = (fw + 14) + "px";
+      bar.style.right = "auto";
       document.body.appendChild(bar);
     }
   }
