@@ -12,7 +12,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { arg, num, openDb, clampText, finish } from "./lib/common.mjs";
-import { round2 } from "./lib/pricing.mjs";
+import { costOfUsage, round2, windowOfModel } from "./lib/pricing.mjs";
 
 function agentsDirOf(sessionId) {
   return path.join(os.homedir(), ".zcode", "cli", "agents", sessionId);
@@ -23,6 +23,39 @@ function readAgentMetadata(dir) {
     return JSON.parse(fs.readFileSync(path.join(dir, "metadata.json"), "utf8"));
   } catch {
     return null;
+  }
+}
+
+/** Last assistant text part of a session — the agent's most recent reply. */
+function lastReplyOf(db, sessionId, max = 1600) {
+  try {
+    const row = db
+      .prepare(
+        `select p.data, p.time_created from part p
+           join message m on m.id = p.message_id and m.session_id = p.session_id
+          where p.session_id = ? and json_extract(p.data, '$.type') = 'text'
+            and json_extract(m.data, '$.role') = 'assistant'
+          order by p.time_created desc limit 1`,
+      )
+      .get(sessionId);
+    if (!row) return "";
+    const text = String(JSON.parse(row.data).text || "");
+    return text.length > max ? text.slice(0, max) + "…" : text;
+  } catch {
+    // fall back to the newest text part regardless of role
+    try {
+      const row = db
+        .prepare(
+          `select data from part where session_id = ? and json_extract(data, '$.type') = 'text'
+           order by time_created desc limit 1`,
+        )
+        .get(sessionId);
+      if (!row) return "";
+      const text = String(JSON.parse(row.data).text || "");
+      return text.length > max ? text.slice(0, max) + "…" : text;
+    } catch {
+      return "";
+    }
   }
 }
 
@@ -66,17 +99,39 @@ async function main() {
         const meta = readAgentMetadata(dir);
         if (!meta) continue;
         const childId = String(meta.childSessionId || "");
-        const usage = childId
-          ? db
-              .prepare(
-                `select coalesce(sum(computed_total_tokens),0) as tokens,
-                        coalesce(sum(duration_ms),0) as active_ms,
-                        count(*) as requests,
-                        max(started_at) as last_at
-                   from model_usage where session_id = ? and status = 'completed'`,
-              )
-              .get(childId)
-          : { tokens: 0, active_ms: 0, requests: 0, last_at: 0 };
+        let usage = { tokens: 0, active_ms: 0, requests: 0, last_at: 0, cost: 0, context_pct: 0, last_model: "" };
+        if (childId) {
+          const rows = db
+            .prepare(
+              `select started_at, duration_ms, input_tokens, output_tokens, cache_read_input_tokens,
+                      cache_creation_input_tokens, computed_total_tokens, model_id
+                 from model_usage where session_id = ? and status = 'completed'
+                order by started_at asc`,
+            )
+            .all(childId);
+          let cost = 0;
+          for (const r of rows) {
+            cost += costOfUsage({
+              modelId: r.model_id,
+              input: num(r.input_tokens),
+              output: num(r.output_tokens),
+              cacheRead: num(r.cache_read_input_tokens),
+              cacheWrite: num(r.cache_creation_input_tokens),
+            });
+          }
+          const last = rows[rows.length - 1];
+          const lastModel = last ? String(last.model_id || "") : "";
+          const win = windowOfModel(lastModel);
+          usage = {
+            tokens: rows.reduce((a, r) => a + num(r.computed_total_tokens), 0),
+            active_ms: rows.reduce((a, r) => a + num(r.duration_ms), 0),
+            requests: rows.length,
+            last_at: last ? num(last.started_at) : 0,
+            cost: round2(cost),
+            context_pct: last && win > 0 ? Math.min(1, num(last.input_tokens) / win) : 0,
+            last_model: lastModel,
+          };
+        }
         agents.push({
           agentId: String(meta.agentId || name),
           childSessionId: childId,
@@ -86,14 +141,53 @@ async function main() {
           createdAt: num(Date.parse(meta.createdAt || "") || 0),
           parentToolUseId: String(meta.parentToolUseId || ""),
           tokens: num(usage.tokens),
+          cost: num(usage.cost),
+          contextPct: num(usage.context_pct),
+          lastModel: usage.last_model,
           activeMs: num(usage.active_ms),
           requests: num(usage.requests),
           lastAt: num(usage.last_at),
+          steps: num(usage.requests),
           output: readAgentOutput(dir),
+          lastReply: childId ? lastReplyOf(db, childId) : "",
         });
       }
     }
     agents.sort((a, b) => a.createdAt - b.createdAt);
+
+    // 主会话：Token / 费用 / 上下文占比 / 最近回复（用于泳道与"当前"节点卡）。
+    const mainRows = db
+      .prepare(
+        `select started_at, input_tokens, output_tokens, cache_read_input_tokens,
+                cache_creation_input_tokens, computed_total_tokens, duration_ms, model_id
+           from model_usage where session_id = ? and status = 'completed'
+          order by started_at asc`,
+      )
+      .all(sessionId);
+    let mainCost = 0;
+    for (const r of mainRows) {
+      mainCost += costOfUsage({
+        modelId: r.model_id,
+        input: num(r.input_tokens),
+        output: num(r.output_tokens),
+        cacheRead: num(r.cache_read_input_tokens),
+        cacheWrite: num(r.cache_creation_input_tokens),
+      });
+    }
+    const lastMain = mainRows[mainRows.length - 1];
+    const mainWin = lastMain ? windowOfModel(String(lastMain.model_id || "")) : 0;
+    const main = {
+      sessionId,
+      title: session.title,
+      tokens: mainRows.reduce((a, r) => a + num(r.computed_total_tokens), 0),
+      cost: round2(mainCost),
+      contextPct: lastMain && mainWin > 0 ? Math.min(1, num(lastMain.input_tokens) / mainWin) : 0,
+      lastModel: lastMain ? String(lastMain.model_id || "") : "",
+      steps: mainRows.length,
+      activeMs: mainRows.reduce((a, r) => a + num(r.duration_ms), 0),
+      lastReply: lastReplyOf(db, sessionId),
+      lastAt: lastMain ? num(lastMain.started_at) : 0,
+    };
 
     // Cross-agent events: model_usage rows tagged with an agent column or the
     // child sessions' activity, capped for large formations.
@@ -125,6 +219,7 @@ async function main() {
         ok: true,
         sessionId,
         sessionTitle: session.title,
+        main,
         agents,
         events,
       },

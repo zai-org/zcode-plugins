@@ -322,6 +322,41 @@
 .zci-node .pbar{position:relative}
 .zci-net.zci-dimnet .zci-node{opacity:.25;transition:opacity .15s}
 .zci-net.zci-dimnet .zci-node.zci-chain{opacity:1}
+.zci-fleet-chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:#8b93a3;align-items:center}
+.zci-fleet-chips .fc{display:flex;align-items:center;gap:5px}
+.zci-fleet-chips .fc .dot{width:8px;height:8px;border-radius:2.5px;display:inline-block}
+.zci-net-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.zci-net-head .hint{margin-left:auto;color:#5f6675;font-size:10px}
+.zci-node .pbar-row{display:flex;align-items:center;gap:8px}
+.zci-node .pbar-row .pbar{flex:1}
+.zci-node .pbar-row .pct{font-size:10px;color:#2bd576;font-variant-numeric:tabular-nums}
+.zci-lanes{display:flex;flex-direction:column;gap:8px;max-height:520px;overflow:auto;padding-right:4px}
+.zci-lane{border:1px solid rgba(255,255,255,.08);border-radius:8px;overflow:hidden}
+.zci-lane .lhead{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(255,255,255,.05);font-size:11px;color:#cdd3de}
+.zci-lane .lhead .badge{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.zci-lane .lhead .lmeta{margin-left:auto;color:#757d8c;font-size:10px;font-variant-numeric:tabular-nums}
+.zci-lane .lbody{max-height:180px;overflow:auto}
+.zci-task{border:1px solid rgba(255,255,255,.08);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.zci-task .thead{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;font-size:11px;color:#cdd3de}
+.zci-task .thead:hover{background:rgba(255,255,255,.05)}
+.zci-task .thead .badge{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.zci-task .thead .sub{color:#5f6675;font-size:10px}
+.zci-task .thead .right{margin-left:auto;display:flex;gap:8px;align-items:center;color:#757d8c;font-size:10px}
+.zci-task .tbody{display:none;border-top:1px dashed rgba(255,255,255,.08);padding:8px 12px}
+.zci-task.open .tbody{display:block}
+.zci-task .tbody .rp-head{display:flex;align-items:center;gap:8px;font-size:10px;color:#757d8c;margin-bottom:6px}
+.zci-task .tbody .rp-head .r{margin-left:auto;display:flex;gap:2px}
+.zci-task .tbody pre{margin:0;white-space:pre-wrap;word-break:break-word;font-size:11px;color:#b8bfcc;font-family:ui-monospace,Consolas,monospace;max-height:260px;overflow:auto}
+.zci-task .tbody .md{font-size:12px;color:#cdd3de;line-height:1.65;max-height:260px;overflow:auto}
+.zci-task .tbody .md h1,.zci-task .tbody .md h2,.zci-task .tbody .md h3{font-size:13px;margin:8px 0 4px;color:#f2f5fb}
+.zci-task .tbody .md code{background:rgba(255,255,255,.08);border-radius:4px;padding:0 5px;font-family:ui-monospace,Consolas,monospace;font-size:11px}
+.zci-task .tbody .md li{margin-left:16px;list-style:disc}
+.zci-insp{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
+.zci-insp .tl{max-height:420px;overflow:auto;font-size:11px}
+.zci-insp .detail{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;font-size:11px;color:#a6adba;overflow:auto;max-height:420px}
+.zci-insp .detail b{color:#f2f5fb}
+.zci-insp .detail .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin-top:6px}
+.zci-empty-sm{padding:18px;text-align:center;color:#5f6675;font-size:11px}
 .zci-press-ok{background:rgba(43,213,118,.7)}
 .zci-press-warn{background:rgba(245,158,66,.85)}
 .zci-press-hot{background:rgba(255,107,129,.9)}
@@ -864,6 +899,14 @@
     filter: null,
     evFilter: null,
     evOpen: {},
+    agOrder: "earliest",
+    agTaskFilter: "",
+    agTaskSearch: "",
+    agTaskOpen: {},
+    agTaskView: {},
+    agEvFilter: "",
+    agEvSearch: "",
+    agSelected: null,
     fileFilter: "",
     fileSearch: "",
     fileOpen: {},
@@ -1646,137 +1689,257 @@
   function renderAgents(body) {
     var data = state.agentsData;
     if (!data) return;
-    var maxTokens = Math.max.apply(
-      null,
-      [1].concat(
-        data.agents.map(function (a) { return a.tokens; }),
-      ),
-    );
-    var main = { name: data.sessionTitle, tokens: 0, requests: 0, activeMs: 0 };
-    var usageMain = data.events.filter(function (e) { return e.sessionId === data.sessionId; });
-    if (usageMain.length) {
-      main.tokens = usageMain.reduce(function (a, e) { return a + e.inputTokens + e.outputTokens; }, 0);
-      main.requests = usageMain.length;
-    }
-    var running = data.agents.filter(function (a) { return a.lastAt > Date.now() - 3600000; }).length;
-    var msgs = data.events.length;
-
+    var q = function (sel) { return body.querySelectorAll(sel); };
+    var agents = data.agents || [];
+    var main = data.main || { tokens: 0, cost: 0, contextPct: 0, steps: 0, activeMs: 0, lastReply: "", title: data.sessionTitle };
+    var now = Date.now();
+    var running = agents.filter(function (a) { return (a.lastAt || 0) > now - 10 * 60000; }).length;
+    var totalTokens = (main.tokens || 0) + agents.reduce(function (a, x) { return a + (x.tokens || 0); }, 0);
     var agentColors = [C.blue, C.purple, C.cyan, C.green, C.amber, C.red];
-    function pressCls(pct) {
-      return pct >= 90 ? "zci-press-hot" : pct >= 70 ? "zci-press-warn" : "zci-press-ok";
-    }
-    function nodeCard(a, color, badge, child) {
-      var pct = Math.max(2, Math.min(100, (a.tokens / maxTokens) * 100));
-      var ctxPct = a.contextPct != null ? a.contextPct * 100 : null;
-      var tip =
-        "<b>" + esc(a.name) + "</b>" +
-        "<br>Token " + fmtTokens(a.tokens) + " · " + (a.requests || 0) + " 请求" +
-        "<br>活跃 " + fmtDuration(a.activeMs || 0) +
-        (child && child.childSessionId ? "<br>子会话 " + esc(child.childSessionId.slice(0, 24)) + "…<div class='dim'>点击打开该子会话详情</div>" : "<div class='dim'>主会话节点</div>");
+    var badgeOf = function (txt) { return String(txt || "AG").slice(0, 2).toUpperCase(); };
+
+    // dsh 风格七色构成图例（横幅下方）
+    var legend = [["系统提示词", C.purple], ["工具定义", C.amber], ["用户消息", C.blue], ["注入内容", C.magenta], ["技能注入", C.amber], ["助手消息", C.green], ["工具结果", C.red]];
+    var legendHtml = '<div class="zci-fleet-chips">' + legend.map(function (x) {
+      return '<span class="fc"><span class="dot" style="background:' + x[1] + '"></span>' + esc(x[0]) + "</span>";
+    }).join("") + '<span class="fc" style="color:#5f6675">-- 运行中</span><span style="margin-left:auto;color:#8b93a3">上下文合计 <b style="color:#dfe3ec">' + fmtTokens(totalTokens) + "</b></span></div>";
+
+    var banner =
+      '<div class="zci-banner"><div><div class="t">多 Agent 编队</div><div class="d">在同一时间线上，观察 Agent 间的通讯、活跃状态与委派工作。</div>' +
+      legendHtml + "</div>" +
+      '<div class="stats"><div class="stat"><div class="v">' + (agents.length + 1) + '</div><div class="l">Agent</div></div>' +
+      '<div class="stat"><div class="v">' + running + '</div><div class="l">运行中</div></div>' +
+      '<div class="stat"><div class="v">' + agents.length + '</div><div class="l">工作项</div></div>' +
+      '<div class="stat"><div class="v">' + (data.events || []).length + '</div><div class="l">消息</div></div></div></div>';
+
+    // ---------- Agent 网络 ----------
+    function nodeCard(a, color, badge, isMain, childId) {
+      var pct = Math.round((a.contextPct || 0) * 100);
+      var press = pct >= 90 ? "zci-press-hot" : pct >= 70 ? "zci-press-warn" : "zci-press-ok";
+      var tip = "<b>" + esc(a.name || a.title || "") + "</b><br>Token " + fmtTokens(a.tokens) + " · 费用 " + fmtCost(a.cost || 0) +
+        "<br>" + (a.steps || 0) + " 步 · " + fmtDuration(a.activeMs || 0) +
+        "<br>上下文占用 " + pct + "%" +
+        (childId ? "<div class='dim'>点击打开该子会话详情</div>" : "<div class='dim'>当前主会话</div>");
       return (
-        '<div class="zci-card zci-hover zci-node' + (child && child.childSessionId ? " zci-ck" : "") + '"' +
-        (child && child.childSessionId ? ' data-open="' + esc(child.childSessionId) + '"' : "") +
-        (child ? ' data-agent="' + esc(String(a.name)) + '"' : "") +
-        ' data-tip="' + tip + '" style="max-width:340px">' +
+        '<div class="zci-card zci-hover zci-node' + (childId ? " zci-ck" : "") + '"' +
+        (childId ? ' data-open="' + esc(childId) + '"' : "") +
+        (childId ? ' data-agent="1"' : "") +
+        ' data-tip="' + tip + '">' +
         '<div class="zci-ahead"><span class="zci-badge" style="background:' + color + '">' + esc(badge) + "</span>" +
-        '<div><div class="name">' + esc(a.name) + '</div><div class="val">' + fmtTokens(a.tokens) + " · " + fmtCost(a.cost || 0) + "</div></div>" +
-        (ctxPct != null ? '<span class="zci-chip zci-plain" style="margin-left:auto">' + Math.round(ctxPct) + "%</span>" : "") + "</div>" +
-        '<div class="pbar"><i class="' + (child ? pressCls(ctxPct != null ? ctxPct : pct) : pressCls(pct)) + '" style="width:' + pct + "%;background:" + color + '"></i></div>' +
-        '<div class="meta"><span>' + esc(fmtDuration(a.activeMs || 0)) + "</span><span>" + (a.requests || 0) + " 请求</span>" +
-        (a.desc ? "<span>" + esc(String(a.desc).slice(0, 40)) + "</span>" : "") + "</div></div>"
+        '<div><div class="name">' + esc(a.name || a.title || "") + (isMain ? ' <span class="zci-chip zci-plain" style="margin-left:4px">当前</span>' : "") + '</div>' +
+        '<div class="val">' + fmtTokens(a.tokens) + " · " + fmtCost(a.cost || 0) + (a.lastModel ? ' <span style="color:#5f6675">' + esc(String(a.lastModel).slice(0, 22)) + "</span>" : "") + "</div></div></div>" +
+        '<div class="pbar-row"><div class="pbar"><i class="' + press + '" style="width:' + Math.max(2, Math.min(100, pct)) + '%;background:' + color + '"></i></div>' +
+        '<span class="pct">' + pct + "%</span></div>" +
+        '<div class="meta"><span>' + fmtDuration(a.activeMs || 0) + "</span><span>" + (a.steps || 0) + " 步</span>" +
+        (a.description ? "<span>" + esc(String(a.description).slice(0, 36)) + "</span>" : "") + "</div></div>"
       );
     }
+    var mainCard = nodeCard(main, C.blue, "主", true, "");
+    var childCards = agents.map(function (a, i) {
+      return nodeCard({ name: a.profileName || a.profileId || "agent", tokens: a.tokens, cost: a.cost, contextPct: a.contextPct, steps: a.steps, activeMs: a.activeMs, description: a.description, lastModel: a.lastModel }, agentColors[i % agentColors.length], badgeOf(a.profileName || a.profileId), false, a.childSessionId);
+    }).join("");
+    var netCard =
+      '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.blue + '"></span>Agent 网络<span class="zci-cnt">' + (agents.length + 1) + " 个节点</span></h3>" +
+      '<div class="zci-net-head"><span class="hint">当前 Agent 与子 Agent 的实时上下文 · 点击节点高亮联动</span></div>' +
+      '<div class="zci-net">' + mainCard + (agents.length ? '<div class="zci-net-children">' + childCards + "</div>" : "") + "</div></div>";
 
-    var childRows = (data.agents || [])
-      .map(function (a, i) {
-        var col = agentColors[i % agentColors.length];
-        var badge = String(a.profileName || a.profileId || "AG").slice(0, 2).toUpperCase();
-        return nodeCard(
-          {
-            name: a.profileName || a.profileId || "agent",
-            tokens: a.tokens,
-            cost: 0,
-            activeMs: a.activeMs,
-            requests: a.requests,
-            desc: a.description,
-            contextPct: a.contextPct,
-          },
-          col,
-          badge,
-          a,
-        );
-      })
-      .join("");
+    // ---------- 跨 Agent 协作（泳道） ----------
+    var kw = (state.agEvSearch || "").toLowerCase();
+    var lanes = [{ id: data.sessionId, name: main.title, badge: "主", color: C.blue, model: main.lastModel, tokens: main.tokens, events: [] }].concat(
+      agents.map(function (a, i) {
+        return { id: a.childSessionId, name: a.profileName || a.profileId || "agent", badge: badgeOf(a.profileName || a.profileId), color: agentColors[i % agentColors.length], model: a.lastModel, tokens: a.tokens, events: [] };
+      }),
+    );
+    var laneById = {};
+    lanes.forEach(function (l) { laneById[l.id] = l; });
+    (data.events || []).forEach(function (ev) {
+      var lane = laneById[ev.sessionId];
+      if (lane) lane.events.push(ev);
+    });
+    var visibleLanes = lanes.filter(function (l) {
+      if (!kw) return true;
+      return String(l.name || "").toLowerCase().indexOf(kw) >= 0 || String(l.model || "").toLowerCase().indexOf(kw) >= 0;
+    });
+    var lanesHtml = visibleLanes.map(function (l) {
+      var evs = l.events.slice();
+      evs.sort(function (a, b) { return state.agOrder === "latest" ? b.at - a.at : a.at - b.at; });
+      var rows = evs.slice(0, 40).map(function (ev) {
+        return '<div class="zci-ev" data-tip="<b>' + esc(fmtTime(ev.at)) + "</b> " + esc(ev.modelId) + "<br>输入 " + fmtTokens(ev.inputTokens) + " → 输出 " + fmtTokens(ev.outputTokens) + (ev.status === "error" ? "<br><span style='color:#ff8fa0'>失败</span>" : "") + '">' +
+          '<span class="k">' + esc(fmtTime(ev.at)) + '</span><span class="txt">' + esc(ev.modelId) + " · " + fmtTokens(ev.inputTokens) + " → " + fmtTokens(ev.outputTokens) + "</span></div>";
+      }).join("");
+      return '<div class="zci-lane"><div class="lhead"><span class="badge" style="background:' + l.color + '">' + esc(l.badge) + "</span>" +
+        '<span class="name">' + esc(String(l.name || "").slice(0, 22)) + '</span><span class="lmeta">' + esc(String(l.model || "").slice(0, 20)) + " · " + fmtTokens(l.tokens) + " · " + evs.length + " 条</span></div>" +
+        '<div class="lbody">' + (rows || '<div class="zci-empty-sm">该泳道暂无记录</div>') + "</div></div>";
+    }).join("");
+    var collabCard =
+      '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.purple + '"></span>跨 Agent 协作<span class="zci-cnt">' + (data.events || []).length + " 条消息 · " + visibleLanes.length + " 条泳道</span></h3>" +
+      '<div class="zci-net-head"><input class="zci-filesearch" placeholder="搜索 Agent…" value="' + esc(state.agEvSearch) + '" data-agsearch style="flex:1"/>' +
+      '<div class="zci-trend-toggle" style="margin:0"><button class="zci-pill ' + (state.agOrder === "earliest" ? "zci-on" : "") + '" data-agorder="earliest">最早</button>' +
+      '<button class="zci-pill ' + (state.agOrder === "latest" ? "zci-on" : "") + '" data-agorder="latest">最新</button></div></div>' +
+      '<div class="zci-lanes">' + (lanesHtml || '<div class="zci-empty-sm">当前视图中没有匹配的记录</div>') + "</div></div>";
 
-    var evRows = (data.events || [])
-      .slice(-100)
-      .reverse()
-      .map(function (ev, i) {
-        var who = ev.sessionId === data.sessionId ? "主" : "子";
-        var id = "ag" + i;
-        var open = state.evOpen[id] ? " open" : "";
-        return (
-          '<div class="zci-ev' + open + '" data-agev="' + id + '" data-tip="<b>[' + esc(who) + ']</b> ' + esc(ev.modelId) + "<div class='dim'>点击展开</div>\"><span class=\"k\">" + esc(fmtTime(ev.at)) + '</span><span class="tag zci-t-msg">[' + esc(who) + ']</span>' +
-          '<span class="txt">' + esc(ev.modelId) + " · " + fmtTokens(ev.inputTokens) + " → " + fmtTokens(ev.outputTokens) + '</span><span class="more">' + (open ? "收起" : "展开") + "</span></div>"
-        );
-      })
-      .join("");
+    // ---------- 协作任务（工作项） ----------
+    var tFilter = state.agTaskFilter || "";
+    var tKw = (state.agTaskSearch || "").toLowerCase();
+    function taskStatus(a) { return (a.lastAt || 0) > now - 10 * 60000 ? "running" : "done"; }
+    var tasks = agents.filter(function (a) {
+      var st = taskStatus(a);
+      if (tFilter && tFilter !== st) return false;
+      if (tKw) {
+        var hay = String(a.profileName || "") + " " + String(a.description || "") + " " + String(a.lastModel || "");
+        if (hay.toLowerCase().indexOf(tKw) < 0) return false;
+      }
+      return true;
+    });
+    var statusCount = { all: agents.length, running: agents.filter(function (a) { return taskStatus(a) === "running"; }).length, pending: 0, done: agents.filter(function (a) { return taskStatus(a) === "done"; }).length };
+    var taskRows = tasks.map(function (a, i) {
+      var st = taskStatus(a);
+      var open = state.agTaskOpen[a.agentId] ? " open" : "";
+      var view = state.agTaskView[a.agentId] || "raw";
+      var reply = a.lastReply || a.output || "";
+      var bodyHtml = "";
+      if (reply) {
+        var inner = view === "md" ? miniMarkdown(reply) : "<pre>" + esc(reply) + "</pre>";
+        bodyHtml = '<div class="tbody"><div class="rp-head"><b style="color:#cdd3de">最近回报</b><span>' + esc(fmtTime(a.lastAt)) + '</span><span class="r">' +
+          '<button class="zci-pill ' + (view === "raw" ? "zci-on" : "") + '" data-tview="' + esc(a.agentId) + '|raw">原文</button>' +
+          '<button class="zci-pill ' + (view === "md" ? "zci-on" : "") + '" data-tview="' + esc(a.agentId) + '|md">Markdown</button></span></div>' + inner + "</div>";
+      } else {
+        bodyHtml = '<div class="tbody"><div class="zci-empty-sm">该 Agent 还没有产出回报</div></div>';
+      }
+      return '<div class="zci-task' + open + '" data-task="' + esc(a.agentId) + '">' +
+        '<div class="thead"><span style="color:#5f6675;font-size:9px">' + (open ? "▼" : "▶") + "</span>" +
+        '<span class="badge" style="background:' + agentColors[i % agentColors.length] + '">' + esc(badgeOf(a.profileName || a.profileId)) + "</span>" +
+        '<div><div class="name">' + esc(a.profileName || a.profileId || "agent") + '</div><div class="sub">子 Agent · ' + (st === "running" ? "运行中" : "空闲") + " · " + esc(String(a.lastModel || "").slice(0, 24)) + "</div></div>" +
+        '<div class="right"><span>' + fmtTokens(a.tokens) + " · " + fmtCost(a.cost || 0) + "</span><span>" + (a.steps || 0) + " 步</span></div></div>" + bodyHtml + "</div>";
+    }).join("");
+    var taskCard =
+      '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.cyan + '"></span>协作任务<span class="zci-cnt">' + tasks.length + "/" + agents.length + ' 个工作项</span></h3>' +
+      '<div class="zci-net-head"><div class="zci-chips" style="margin:0">' +
+      '<span class="zci-chip ' + (!tFilter ? "zci-on" : "zci-plain") + '" data-tf="">全部 ' + statusCount.all + "</span>" +
+      '<span class="zci-chip ' + (tFilter === "running" ? "zci-on" : "zci-plain") + '" data-tf="running">进行中 ' + statusCount.running + "</span>" +
+      '<span class="zci-chip ' + (tFilter === "pending" ? "zci-on" : "zci-plain") + '" data-tf="pending">待处理 ' + statusCount.pending + "</span>" +
+      '<span class="zci-chip ' + (tFilter === "done" ? "zci-on" : "zci-plain") + '" data-tf="done">已完成 ' + statusCount.done + "</span></div>" +
+      '<input class="zci-filesearch" placeholder="搜索工作项…" value="' + esc(state.agTaskSearch) + '" data-tasksearch style="margin-left:auto"/></div>' +
+      (taskRows || '<div class="zci-empty-sm">没有匹配的工作项</div>') + "</div>";
 
-    var parts = [
-      '<div class="zci-back"><button class="zci-btn" data-back>← 返回</button><span class="t">编队视图</span></div>',
-      '<div class="zci-banner"><div><div class="t">多 Agent 编队</div><div class="d">在同一时间线上，观察 Agent 间的通讯、活跃状态与委派工作。</div></div>' +
-        '<div class="stats"><div class="stat"><div class="v">' + ((data.agents || []).length + 1) + '</div><div class="l">Agent</div></div>' +
-        '<div class="stat"><div class="v">' + running + '</div><div class="l">运行中</div></div>' +
-        '<div class="stat"><div class="v">' + (data.agents || []).length + '</div><div class="l">工作项</div></div>' +
-        '<div class="stat"><div class="v">' + msgs + '</div><div class="l">消息</div></div></div></div>',
-      '<div class="zci-row-2">' +
-        '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.blue + '"></span>Agent 网络<span class="zci-cnt">' + ((data.agents || []).length + 1) + " 个节点</span></h3>" +
-        '<div class="zci-net">' + nodeCard({ name: main.name, tokens: main.tokens, requests: main.requests, activeMs: 0, cost: 0 }, C.blue, "主") +
-        ((data.agents || []).length ? '<div class="zci-net-children">' + childRows + "</div>" : "") +
-        "</div></div>" +
-        '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.purple + '"></span>跨 Agent 协作<span class="zci-cnt">' + msgs + " 条消息</span></h3>" +
-        '<div class="zci-events">' + (evRows || '<div class="zci-empty">这个编队还没有跨 Agent 事件</div>') + "</div></div></div>",
-    ];
-    body.innerHTML = parts.join("");
+    // ---------- 事件检查 ----------
+    var evAll = [];
+    agents.forEach(function (a) {
+      evAll.push({ kind: "delegate", at: a.createdAt || 0, title: "委派 " + (a.profileName || a.profileId || "agent"), detail: a.description || "", agentId: a.agentId, sessionId: a.childSessionId });
+    });
+    agents.forEach(function (a) {
+      if (a.lastReply) evAll.push({ kind: "report", at: a.lastAt || 0, title: "回报：" + (a.profileName || a.profileId || "agent"), detail: a.lastReply, agentId: a.agentId, sessionId: a.childSessionId });
+    });
+    (data.events || []).forEach(function (ev) {
+      evAll.push({ kind: "message", at: ev.at, title: ev.modelId, detail: "输入 " + fmtTokens(ev.inputTokens) + " → 输出 " + fmtTokens(ev.outputTokens) + (ev.status === "error" ? " · 失败" : ""), sessionId: ev.sessionId, modelId: ev.modelId, inputTokens: ev.inputTokens, outputTokens: ev.outputTokens, status: ev.status });
+    });
+    evAll.sort(function (a, b) { return b.at - a.at; });
+    var evCounts = { all: evAll.length, message: 0, report: 0, delegate: 0 };
+    evAll.forEach(function (e) { evCounts[e.kind] += 1; });
+    var evKw = (state.agEvSearch || "").toLowerCase();
+    var evShown = evAll.filter(function (e) {
+      if (state.agEvFilter && e.kind !== state.agEvFilter) return false;
+      if (evKw) {
+        var hay = String(e.title || "") + " " + String(e.detail || "");
+        if (hay.toLowerCase().indexOf(evKw) < 0) return false;
+      }
+      return true;
+    });
+    var KIND_LABEL = { message: "消息", report: "回报", delegate: "委派" };
+    var evList = evShown.slice(0, 120).map(function (e, i) {
+      var sel = state.agSelected != null && state.agSelected === e.at + "-" + e.kind ? " zci-sel" : "";
+      return '<div class="zci-ev zci-ck' + sel + '" data-evpick="' + i + '" data-tip="<b>' + esc(KIND_LABEL[e.kind]) + "</b> " + esc(fmtTime(e.at)) + "<div class='dim'>点击查看完整记录</div>\">" +
+        '<span class="k">' + esc(fmtTime(e.at)) + '</span><span class="tag ' + (e.kind === "delegate" ? "zci-t-compact" : e.kind === "report" ? "zci-t-tool" : "zci-t-msg") + '">' + esc(KIND_LABEL[e.kind]) + '</span><span class="txt">' + esc(String(e.title).slice(0, 40)) + " · " + esc(String(e.detail || "").slice(0, 60)) + "</span></div>";
+    }).join("");
+    var selIdx = state.agSelected != null ? evShown.findIndex(function (e) { return state.agSelected === e.at + "-" + e.kind; }) : -1;
+    var sel = selIdx >= 0 ? evShown[selIdx] : null;
+    var detailHtml;
+    if (sel) {
+      detailHtml = '<div class="detail"><b>' + esc(KIND_LABEL[sel.kind]) + " · " + esc(sel.title) + "</b>" +
+        '<div class="kv"><span style="color:#5f6675">时间</span><span>' + esc(fmtTime(sel.at)) + "</span>" +
+        '<span style="color:#5f6675">会话</span><span>' + esc(String(sel.sessionId || "").slice(0, 40)) + "</span>" +
+        (sel.modelId ? '<span style="color:#5f6675">模型</span><span>' + esc(sel.modelId) + "</span>" : "") +
+        (sel.inputTokens != null ? '<span style="color:#5f6675">Token</span><span>输入 ' + fmtTokens(sel.inputTokens) + " → 输出 " + fmtTokens(sel.outputTokens) + "</span>" : "") +
+        (sel.status ? '<span style="color:#5f6675">状态</span><span>' + esc(sel.status) + "</span>" : "") + "</div>" +
+        (sel.detail ? '<div style="margin-top:8px;white-space:pre-wrap;color:#b8bfcc;max-height:200px;overflow:auto">' + esc(sel.detail) + "</div>" : "") + "</div>";
+    } else {
+      detailHtml = '<div class="detail zci-empty-sm">选择时间线节点或事件，查看完整记录。</div>';
+    }
+    var inspCard =
+      '<div class="zci-card"><h3><span class="zci-ico" style="background:' + C.green + '"></span>事件检查<span class="zci-cnt">显示 ' + Math.min(120, evShown.length) + "/" + evAll.length + "</span></h3>" +
+      '<div class="zci-net-head"><div class="zci-chips" style="margin:0">' +
+      '<span class="zci-chip ' + (!state.agEvFilter ? "zci-on" : "zci-plain") + '" data-ef="">全部 ' + evCounts.all + "</span>" +
+      '<span class="zci-chip ' + (state.agEvFilter === "message" ? "zci-on" : "zci-plain") + '" data-ef="message">消息 ' + evCounts.message + "</span>" +
+      '<span class="zci-chip ' + (state.agEvFilter === "report" ? "zci-on" : "zci-plain") + '" data-ef="report">回报 ' + evCounts.report + "</span>" +
+      '<span class="zci-chip ' + (state.agEvFilter === "delegate" ? "zci-on" : "zci-plain") + '" data-ef="delegate">委派 ' + evCounts.delegate + "</span></div>" +
+      '<input class="zci-filesearch" placeholder="搜索事件…" value="' + esc(state.agEvSearch) + '" data-evsearch style="margin-left:auto"/></div>' +
+      '<div class="zci-insp"><div class="tl">' + (evList || '<div class="zci-empty-sm">这个编队还没有跨 Agent 事件</div>') + "</div>" + detailHtml + "</div></div>";
+
+    body.innerHTML =
+      '<div class="zci-back"><button class="zci-btn" data-back>← 返回</button><span class="t">编队视图</span><span class="zci-note">' + esc(data.sessionTitle || "") + "</span></div>" +
+      banner +
+      '<div class="zci-row-2" style="margin-top:10px">' + netCard + collabCard + "</div>" +
+      '<div style="margin-top:10px">' + taskCard + "</div>" +
+      '<div style="margin-top:10px">' + inspCard + "</div>";
+
     body.querySelector("[data-back]").addEventListener("click", backToOverview);
-    // 点击子 Agent 节点 -> 打开该子会话详情
-    body.querySelectorAll("[data-open]").forEach(function (el) {
-      el.addEventListener("click", function () {
-        openSession(el.getAttribute("data-open"), "session");
+    // 子 Agent 节点点击 -> 子会话详情
+    q("[data-open]").forEach(function (el) {
+      el.addEventListener("click", function () { openSession(el.getAttribute("data-open"), "session"); });
+    });
+    // 泳道搜索 / 排序
+    var ags = body.querySelector("[data-agsearch]");
+    if (ags) ags.addEventListener("input", function (e) { state.agEvSearch = e.target.value; render(); var f = state.bodyEl.querySelector("[data-agsearch]"); if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } });
+    q("[data-agorder]").forEach(function (b) { b.addEventListener("click", function () { state.agOrder = b.getAttribute("data-agorder"); render(); }); });
+    // 任务筛选 / 搜索 / 展开 / 原文-Markdown
+    q("[data-tf]").forEach(function (el) { el.addEventListener("click", function () { state.agTaskFilter = el.getAttribute("data-tf") || ""; render(); }); });
+    var ts = body.querySelector("[data-tasksearch]");
+    if (ts) ts.addEventListener("input", function (e) { state.agTaskSearch = e.target.value; render(); var f = state.bodyEl.querySelector("[data-tasksearch]"); if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } });
+    q("[data-task]").forEach(function (row) {
+      row.querySelector(".thead").addEventListener("click", function () {
+        var id = row.getAttribute("data-task");
+        state.agTaskOpen[id] = !state.agTaskOpen[id];
+        render();
       });
     });
-    // hover 子节点 -> 点亮自身与主节点（父链），其余降透明
-    var net = body.querySelector(".zci-net");
-    if (net) {
-      net.addEventListener("mouseover", function (e) {
-        var node = e.target.closest("[data-agent]");
-        net.classList.toggle("zci-dimnet", Boolean(node));
-        var mainCard = net.querySelector(".zci-node");
-        body.querySelectorAll("[data-agent]").forEach(function (n) {
-          n.classList.toggle("zci-chain", n === node);
-        });
-        if (mainCard) mainCard.classList.toggle("zci-chain", Boolean(node));
+    q("[data-tview]").forEach(function (b) {
+      b.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var parts = b.getAttribute("data-tview").split("|");
+        state.agTaskView[parts[0]] = parts[1];
+        state.agTaskOpen[parts[0]] = true;
+        render();
       });
-      net.addEventListener("mouseleave", function () {
-        net.classList.remove("zci-dimnet");
-        body.querySelectorAll("[data-agent]").forEach(function (n) {
-          n.classList.remove("zci-chain");
-        });
-        var mainCard = net.querySelector(".zci-node");
-        if (mainCard) mainCard.classList.remove("zci-chain");
-      });
-    }
-    // 协作事件行点击展开
-    body.querySelectorAll("[data-agev]").forEach(function (row) {
+    });
+    // 事件检查筛选 / 搜索 / 选择
+    q("[data-ef]").forEach(function (el) { el.addEventListener("click", function () { state.agEvFilter = el.getAttribute("data-ef") || ""; render(); }); });
+    var es = body.querySelector("[data-evsearch]");
+    if (es) es.addEventListener("input", function (e) { state.agEvSearch = e.target.value; render(); var f = state.bodyEl.querySelector("[data-evsearch]"); if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } });
+    q("[data-evpick]").forEach(function (row) {
       row.addEventListener("click", function () {
-        var id = row.getAttribute("data-agev");
-        state.evOpen[id] = !state.evOpen[id];
+        var i = Number(row.getAttribute("data-evpick"));
+        var e = evShown[i];
+        state.agSelected = e ? e.at + "-" + e.kind : null;
         render();
       });
     });
     bindAll(body);
   }
 
+  /** Minimal markdown: headings, bold, inline code, list items. */
+  function miniMarkdown(text) {
+    var lines = String(text || "").split("\n");
+    var out = [];
+    lines.forEach(function (line) {
+      var l = esc(line);
+      l = l.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+      if (/^#{1,3} /.test(l)) out.push("<h3>" + l.replace(/^#{1,3} /, "") + "</h3>");
+      else if (/^[-*] /.test(l)) out.push("<li>" + l.replace(/^[-*] /, "") + "</li>");
+      else if (!l.trim()) out.push("");
+      else out.push("<div>" + l + "</div>");
+    });
+    return '<div class="md">' + out.join("") + "</div>";
+  }
   function render() {
     var body = state.bodyEl;
     if (!body) return;
