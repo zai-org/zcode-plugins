@@ -36,7 +36,10 @@ export interface LedgerRun {
   description?: string;
   commit?: string | null;
   checksFailed?: boolean;
-  failedGuard?: boolean;
+  /** Mechanical fact: the tree (session state excluded) at log time. */
+  treeDirty?: boolean;
+  /** Working-tree residue a rollback could not restore (absent = clean). */
+  residual?: string[];
   /** confidence snapshot at record time (log_experiment); absent on legacy
    *  rows and whenever the computation had too little data to judge. */
   confidence?: ConfidenceSnapshot | null;
@@ -56,7 +59,45 @@ export interface LedgerHook {
   timed_out: boolean;
 }
 
-export type LedgerEntry = LedgerConfig | LedgerRun | LedgerHook;
+/** `harness_edit` row written by the mandatory harness trace (server-side). */
+export interface LedgerHarnessEdit {
+  type: "harness_edit";
+  ts: string;
+  segment: number;
+  file: string;
+  digest_before: string | null;
+  digest_after: string | null;
+}
+
+/** `frozen_attempt` row written by guard-frozen on a denied frozen rewrite. */
+export interface LedgerFrozenAttempt {
+  type: "frozen_attempt";
+  ts: string;
+  file: string;
+  tool: string | null;
+}
+
+export type LedgerEntry =
+  | LedgerConfig
+  | LedgerRun
+  | LedgerHook
+  | LedgerHarnessEdit
+  | LedgerFrozenAttempt;
+
+/**
+ * Observation snapshot persisted by run_experiment (config.json
+ * `pendingObservation`) and consumed by log_experiment: run_experiment is the
+ * loop's only observer, and this snapshot is what makes every quantitative
+ * claim in the ledger a transcription of a measured fact instead of a free
+ * declaration. Overwritten by the next run; consumed by each successful log.
+ */
+export interface PendingObservation {
+  metric: number | null;
+  metrics: Record<string, number>;
+  exit_code: number | null;
+  timed_out: boolean;
+  at: string;
+}
 
 /**
  * Loose run shape consumed by analysis functions (isStopReached,
@@ -92,9 +133,14 @@ export interface SessionState {
   runs: LedgerRun[];
   baseline: number | null;
   best: number | null;
-  lastRunChecksFailed: boolean;
+  /** Segment-scoped: reset by config rows (before-hook payload, checks marker). */
   lastRun: LedgerRun | null;
-  totalExperiments: number;
+  /**
+   * Ledger-wide last run row, NOT reset at segment boundaries: the
+   * crash+dirty-tree audit gate reads this, because an unrolled-back working
+   * tree is physical state that init_experiment must not launder.
+   */
+  lastRunEver: LedgerRun | null;
   consecutiveFailures: number;
   confidence: Confidence | null;
   plateau: boolean;
@@ -110,7 +156,28 @@ export interface SessionConfig {
   auditBypass?: boolean;
   autoresearchOff?: boolean;
   benchmarkHashes?: { measure: string | null; checks: string | null } | null;
+  /** Server-managed: editable-surface digests baseline for the harness trace. */
+  harnessHashes?: Record<string, string | null> | null;
+  /**
+   * `pending` prefix convention: keys named `pending…` are server cross-call
+   * mechanism state, cleared wholesale at segment boundaries (init_experiment
+   * / clear_experiments — resetPendingState). Never store user intent or a
+   * session baseline under this prefix; future keys are covered by the
+   * boundary reset automatically.
+   */
   /** Server-managed: checks outcome of the latest run_experiment (keep gate). */
   pendingChecksFailed?: boolean;
+  /** Server-managed: observation snapshot consumed by log_experiment's binding gates. */
+  pendingObservation?: PendingObservation | null;
+  /**
+   * Loop calibration: plateau window in runs (integer ≥2, default 5) and the
+   * minimum relative improvement over that window (≥0, default 0.01). Set
+   * near the metric's real step size — the default 1% misfires on metrics
+   * that move in the 4th decimal (e.g. AUC).
+   */
+  plateauWindow?: number;
+  plateauMinImprovement?: number;
+  /** Benchmark is deterministic (bitwise reproducible): hints skip repeat re-measurement suggestions. */
+  deterministic?: boolean;
   [key: string]: unknown;
 }

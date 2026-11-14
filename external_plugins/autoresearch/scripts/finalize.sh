@@ -20,6 +20,16 @@ set -euo pipefail
 PROJECT="${1:?projectCwd required}"
 GJSON="${2:?groups.json required}"
 
+# Resolve Node through the plugin's launcher (cross-platform contract, see
+# openspec autoresearch/runtime): a desktop app does not always inherit a
+# login PATH, and this script would die under set -e the moment bare `node`
+# is missing. Running the launcher itself needs a bare `node` on the caller's
+# PATH (finalize runs in the agent shell, which has it); a failed resolution
+# is a loud 127 with launcher.mjs's diagnostic on stderr. SCRIPT_DIR must be
+# captured before cd.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NODE_BIN="$(node "$SCRIPT_DIR/launcher.mjs" --resolve | sed -n 's/^node=//p')"
+
 # Normalize groups.json to an absolute path BEFORE cd: relative paths resolve
 # against the caller's cwd, not the project dir.
 case "$GJSON" in
@@ -31,12 +41,21 @@ cd "$PROJECT"
 
 # Pass GJSON via argv (never string-interpolated): readFileSync+JSON.parse has
 # no require() relative-path rules, no quote injection, no extension dispatch.
-jq_or_node() { node -e "$1" "$GJSON"; }
+jq_or_node() { "$NODE_BIN" -e "$1" "$GJSON"; }
 GJSON_READ='const g=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));'
 
 ORIG_BRANCH="$(git branch --show-current)"
 if [[ -z "$ORIG_BRANCH" || "$ORIG_BRANCH" == "HEAD" ]]; then
   echo "FATAL: must be on a feature branch (not detached)" >&2; exit 2
+fi
+
+# The rollback path uses `git checkout -f`, which discards uncommitted
+# content. Refuse to start from a dirty tree instead of gambling it away:
+# finalize is meant to split already-kept commits, not to sweep up work in
+# progress. (Untracked files are untouched by both paths.)
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "FATAL: working tree has uncommitted changes; commit or stash them before finalize (the rollback path would discard them)" >&2
+  exit 2
 fi
 
 BASE="$(jq_or_node "${GJSON_READ}process.stdout.write(g.base||'main')")"
@@ -117,10 +136,13 @@ while [[ $i -lt $GROUP_COUNT ]]; do
     fi
   done <<< "${GROUPS_FILES[$i]}"
   if ! git diff --cached --quiet; then
+    # --no-verify: finalize replays kept experiments as curated commits; the
+    # target repo's own hooks (husky/lint-staged class) must not rewrite or
+    # reject the replayed content (same isolation as commitExperiment).
     if [[ -n "${GROUPS_BODIES[$i]}" ]]; then
-      git commit -q -m "${GROUPS_TITLES[$i]}" -m "${GROUPS_BODIES[$i]}"
+      git commit -q --no-verify -m "${GROUPS_TITLES[$i]}" -m "${GROUPS_BODIES[$i]}"
     else
-      git commit -q -m "${GROUPS_TITLES[$i]}"
+      git commit -q --no-verify -m "${GROUPS_TITLES[$i]}"
     fi
   fi
   i=$((i+1))
