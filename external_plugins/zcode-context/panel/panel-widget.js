@@ -387,12 +387,6 @@
 .zci-reqmsg .row:last-child{border-bottom:none}
 .zci-reqmsg .k{flex:0 0 40px;color:#5f6675}
 .zci-reqmsg .v{flex:1;min-width:0;white-space:pre-wrap;word-break:break-word;color:#b8bfcc;font-family:ui-monospace,Consolas,monospace;font-size:11px}
-.zci-sbar{display:inline-flex;align-items:center;gap:5px;margin-left:10px;vertical-align:middle}
-.zci-sbar .b{border:none;background:rgba(255,255,255,.07);color:#aeb4c0;border-radius:999px;padding:3px 12px;cursor:pointer;font-size:11px;transition:all .15s;white-space:nowrap;font-family:inherit}
-.zci-sbar .b:hover{background:rgba(255,255,255,.16);color:#fff}
-.zci-sbar .b.zci-acc{background:linear-gradient(135deg,#5b8cff,#3b6dff);color:#fff}
-.zci-sbar .b.zci-acc:hover{filter:brightness(1.1)}
-.zci-sbar.zci-fallback{position:fixed;top:48px;z-index:99980;background:rgba(13,15,19,.85);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 6px;backdrop-filter:blur(12px);box-shadow:0 4px 18px rgba(0,0,0,.35);margin:0}
 .zci-press-ok{background:rgba(43,213,118,.7)}
 .zci-press-warn{background:rgba(245,158,66,.85)}
 .zci-press-hot{background:rgba(255,107,129,.9)}
@@ -447,8 +441,6 @@
       delivered: window.__zciDeliveredLog.slice(-8),
       orphans: (window.__zciOrphans || []).slice(-5),
       overlayShown: state.overlayEl ? state.overlayEl.style.display !== "none" : false,
-      headerScan: (function () { try { return window.__zciHeaderScan || null; } catch (e) { return null; } })(),
-      sbarMode: (function () { var b = document.getElementById("zci-sbar"); return b ? (b.className.indexOf("zci-fallback") >= 0 ? "fallback" : "inline") : "none"; })(),
     };
   };
 
@@ -2471,190 +2463,13 @@
     return true;
   }
 
-  /* ---------------------------------------------------------------- */
-  /* In-session tabs: 上下文洞察 / 编队, mounted into the session header */
-  /* ---------------------------------------------------------------- */
-
-  function mostRecentSession() {
-    var pool = (state.sessions && state.sessions.length ? state.sessions : null) ||
-      (state.overview && state.overview.sessions) || [];
-    var pick = null;
-    pool.forEach(function (s) {
-      if (!pick || (s.lastActiveAt || 0) > (pick.lastActiveAt || 0)) pick = s;
-    });
-    return pick;
-  }
-
-  function findSessionHeader() {
-    // S1: locate the element whose text matches the current session title,
-    // then walk up to the header row (30-80px tall, near the top).
-    var pick = mostRecentSession();
-    var title = pick ? String(pick.title || "").trim() : "";
-    var scanInfo = { s1: false, s2: false, title: title };
-    if (title.length >= 4) {
-      try {
-        var candidates = document.querySelectorAll("div,span,h1,h2,h3,p");
-        for (var i = 0; i < candidates.length; i++) {
-          var el = candidates[i];
-          if (el.closest(".zci-overlay") || el.closest(".zci-sbar")) continue;
-          var txt = (el.textContent || "").trim();
-          if (!(txt === title || (txt.length >= 4 && (title.indexOf(txt) === 0 || txt.indexOf(title.slice(0, 8)) === 0)))) continue;
-          if (el.children.length > 0 && el.children.length < 2) { /* allow single wrapper */ }
-          var node = el;
-          for (var d = 0; d < 6 && node; d++) {
-            var rect;
-            try { rect = node.getBoundingClientRect(); } catch { break; }
-            if (rect && rect.height >= 30 && rect.height <= 88 && rect.top >= -10 && rect.top <= 80 && rect.width > 320) {
-              if (!node.querySelector(".zci-sbar") && !node.closest(".zci-overlay")) { scanInfo.s1 = true; return node; }
-            }
-            if (node === document.body) break;
-            node = node.parentElement;
-          }
-        }
-      } catch {
-        // fall through
-      }
-    }
-    // S2: topmost wide row in the main area (top of window, right of sidebar).
-    var sidebarW = 0;
-    try {
-      var aside = findAside();
-      if (aside) {
-        var r = aside.getBoundingClientRect();
-        if (r && r.width > 80) sidebarW = r.right;
-      }
-    } catch {
-      // keep 0
-    }
-    var best = null;
-    var bestTop = 90;
-    try {
-      var all = document.querySelectorAll("div,header");
-      for (var j = 0; j < all.length; j++) {
-        var el2 = all[j];
-        var rect2;
-        try { rect2 = el2.getBoundingClientRect(); } catch { continue; }
-        if (!rect2 || rect2.height < 24 || rect2.height > 96 || rect2.width < 280) continue;
-        if (rect2.top > 90 || rect2.top < -10) continue;
-        if (rect2.left < sidebarW - 10) continue;
-        if (el2.querySelector(".zci-sbar")) continue;
-        if (el2.closest(".zci-overlay")) continue;
-        if (!(el2.textContent || "").trim()) continue;
-        var childBtns = el2.querySelectorAll("button,[role='button']").length;
-        if (childBtns < 1 && el2.querySelectorAll("span").length < 2) continue;
-        if (rect2.top < bestTop) { bestTop = rect2.top; best = el2; }
-      }
-      if (best) scanInfo.s2 = true;
-    } catch {
-      // fall through
-    }
-    try { window.__zciHeaderScan = scanInfo; } catch { /* ignore */ }
-    return best;
-  }
-
-  function mountSessionBar() {
-    var existing = document.getElementById("zci-sbar");
-    if (existing && existing.isConnected && existing.className.indexOf("zci-fallback") < 0) return; // already inline
-    var bar = existing;
-    bar = document.createElement("div");
-    bar.className = "zci-sbar";
-    bar.id = "zci-sbar";
-    var pick = mostRecentSession();
-    var tip = pick
-      ? "<b>" + esc(String(pick.title || "")) + "</b><div class='dim'>最近活跃会话 · 点击直接查看该会话</div>"
-      : "打开上下文洞察面板";
-    bar.innerHTML =
-      '<button class="b zci-acc" data-sb="session" data-tip="' + tip + '">上下文洞察</button>' +
-      '<button class="b" data-sb="agents" data-tip="' + tip + '">编队</button>';
-    bar.querySelectorAll("[data-sb]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var target = btn.getAttribute("data-sb");
-        if (!state.overlayEl || state.overlayEl.style.display === "none") {
-          if (state.overlayEl) state.overlayEl.style.display = "flex";
-          else buildOverlay();
-        }
-        var pick = mostRecentSession();
-        if (pick && pick.id) openSession(pick.id, target);
-        else { state.tab = "sessions"; loadSessions(true); }
-      });
-    });
-    // silent prefetch so the tooltip can show the real current session title
-    if (!state.sessions && !state.overview && !state.barPrefetched) {
-      state.barPrefetched = true;
-      query("sessions", { start: rangeStartMs(), end: Date.now(), order: "recent", limit: 20 })
-        .then(function (data) {
-          if (data && data.sessions && data.sessions.length) state.sessions = data.sessions;
-        })
-        .catch(function () {
-          // tooltip keeps the generic label
-        });
-    }
-    var header = findSessionHeader();
-    if (header) {
-      bar.classList.remove("zci-fallback");
-      bar.style.left = "";
-      bar.style.right = "";
-      // 插到头部里标题元素之后（而不是整个头部的末尾，避免压到右侧控件）
-      var anchor = null;
-      try {
-        var pick = mostRecentSession();
-        var title = pick ? String(pick.title || "").trim() : "";
-        if (title.length > 8) {
-          var kids = header.querySelectorAll("div,span,h1,h2,h3,p");
-          for (var k = 0; k < kids.length; k++) {
-            var t = (kids[k].textContent || "").trim();
-            if (t === title && !kids[k].contains(bar)) { anchor = kids[k]; break; }
-          }
-          // 标题可能是父容器；取其最外层文本节点所在父级
-          if (anchor && anchor.parentElement && anchor.parentElement !== header && header.contains(anchor.parentElement)) anchor = anchor.parentElement;
-        }
-      } catch {
-        anchor = null;
-      }
-      if (anchor && anchor.parentElement === header) {
-        if (anchor.nextSibling) header.insertBefore(bar, anchor.nextSibling);
-        else header.appendChild(bar);
-      } else {
-        header.appendChild(bar);
-      }
-    } else {
-      // fallback: 主区域左上（会话标题正下方），dsh tab 的视觉位置
-      bar.classList.add("zci-fallback");
-      var fw = 0;
-      try {
-        var fa = findAside();
-        if (fa) {
-          var fr = fa.getBoundingClientRect();
-          if (fr && fr.width > 80) fw = fr.right;
-        }
-      } catch {
-        // keep 0
-      }
-      bar.style.left = (fw + 14) + "px";
-      bar.style.right = "auto";
-      if (!bar.isConnected) document.body.appendChild(bar);
-    }
-  }
-
-  setInterval(function () {
-    if (window.__zciLive !== BOOT_ID) return;
-    var bar = document.getElementById("zci-sbar");
-    if (!bar || bar.className.indexOf("zci-fallback") >= 0) {
-      // retry: upgrade fallback to inline once the app header exists, or
-      // recompute the fallback position now that the sidebar is measurable
-      try { mountSessionBar(); } catch (e) { /* keep the pill where it is */ }
-    }
-  }, 2000);
-
   function tryMount(attempt) {
-    mountSessionBar();
     ensureStyle();
     if (mountEntry()) {
       if (state.observer) return;
       state.observer = new MutationObserver(function () {
         if (window.__zciLive !== BOOT_ID) return;
         if (!document.getElementById("zci-entry")) mountEntry();
-        if (!document.getElementById("zci-sbar")) mountSessionBar();
       });
       window.__zciObserver = state.observer;
       window.__zciLive = BOOT_ID;
@@ -2681,8 +2496,6 @@
       var style = document.getElementById("zci-style");
       if (style) style.remove();
       if (state.overlayEl) state.overlayEl.remove();
-      var sbar = document.getElementById("zci-sbar");
-      if (sbar) sbar.remove();
       document.removeEventListener("keydown", state.onKey, true);
       window.__zcodeContextPanelBooted = false;
     } catch (e) {
