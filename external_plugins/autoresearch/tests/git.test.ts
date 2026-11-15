@@ -631,3 +631,37 @@ test("commitExperiment surfaces git stderr when the commit fails", () => {
     }
   }
 });
+
+// Regression (2026-11-15): a hand-written exclude file without a final
+// newline was spliced — "node_modules.zcode" broke the existing rule AND the
+// declaration. Same trailing-newline healing as the ledger append.
+test("ensureSessionStateIgnored heals a missing trailing newline in exclude", () => {
+  const cwd = tempRepo();
+  const excludePath = join(cwd, ".git", "info", "exclude");
+  writeFileSync(excludePath, "node_modules"); // no trailing \n
+  assert.equal(ensureSessionStateIgnored(cwd), true);
+  assert.equal(readFileSync(excludePath, "utf8"), "node_modules\n.zcode\n");
+});
+
+// Regression (2026-11-15): reset/clean failures used to throw and swallow the
+// residual audit entirely (Windows file locks are the known offender). The
+// cleanup failure must instead surface as a named fact on the result.
+// Injection here: an untracked dir whose parent lost write permission, so
+// `git clean -fd` cannot unlink its contents (POSIX, non-root).
+test("rollbackWorkingTree surfaces cleanup failure as cleanupError", (t) => {
+  if (process.platform === "win32") return t.skip("posix chmod shim");
+  if (process.getuid?.() === 0) return t.skip("root ignores permissions");
+  const cwd = tempRepo();
+  const stuck = join(cwd, "stuck");
+  mkdirSync(join(stuck, "inner"), { recursive: true });
+  writeFileSync(join(stuck, "inner", "leaf.txt"), "x\n");
+  chmodSync(stuck, 0o500);
+  const r = rollbackWorkingTree(cwd);
+  chmodSync(stuck, 0o700);
+  assert.match(r.cleanupError ?? "", /git clean failed/);
+  // clean deleted the leaf before failing on the locked dir: the residue is
+  // an empty untracked dir (invisible to git status) — what matters is that
+  // the failure surfaced by name instead of throwing past the audit.
+  assert.ok(existsSync(stuck), "incomplete cleanup leaves the dir behind");
+  assert.ok(Array.isArray(r.residual), "residual audit still ran");
+});

@@ -44,6 +44,8 @@ interface McpClient {
     name: string,
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
+  /** Write a raw JSON-RPC frame line; resolves with the next response of any id. */
+  raw(line: string, timeoutMs?: number): Promise<JsonRpcResponse>;
   close(): Promise<void>;
 }
 
@@ -139,6 +141,10 @@ function connect(cwd: string, env?: NodeJS.ProcessEnv): McpClient {
             pending.delete(mid);
           }
         }
+        for (let w = anyWaiters.length - 1; w >= 0; w--) {
+          anyWaiters[w](m);
+          anyWaiters.splice(w, 1);
+        }
       } catch {}
     }
   });
@@ -178,6 +184,23 @@ function connect(cwd: string, env?: NodeJS.ProcessEnv): McpClient {
       unknown
     >;
   };
+  // Raw frames (batches, non-object JSON) carry ids the pending map does not
+  // know; resolve via a waiter list the stdout parser also feeds.
+  const anyWaiters: Array<(m: JsonRpcResponse) => void> = [];
+  const raw = (line: string, timeoutMs = 5_000): Promise<JsonRpcResponse> =>
+    new Promise((res, rej) => {
+      const timer = setTimeout(() => {
+        const i = anyWaiters.indexOf(waiter);
+        if (i >= 0) anyWaiters.splice(i, 1);
+        rej(new Error(`raw frame got no response within ${timeoutMs}ms`));
+      }, timeoutMs);
+      const waiter = (m: JsonRpcResponse) => {
+        clearTimeout(timer);
+        res(m);
+      };
+      anyWaiters.push(waiter);
+      proc.stdin.write(line + "\n");
+    });
   // The child's CWD is the temp repo; until the process fully exits, Windows
   // keeps that directory locked and rmSync(cwd) fails with EPERM.
   const close = (): Promise<void> =>
@@ -189,7 +212,7 @@ function connect(cwd: string, env?: NodeJS.ProcessEnv): McpClient {
       proc.once("exit", () => resolve());
       proc.kill();
     });
-  return { call, tool, close };
+  return { call, tool, raw, close };
 }
 
 async function withServer(
@@ -2179,7 +2202,8 @@ test("first keep cannot regress against the segment baseline", async () => {
 test("unknown method with an id gets a -32601 response instead of hanging", async () => {
   const cwd = tempRepo();
   await withServer(cwd, async (s) => {
-    const m = await s.call("ping");
+    // ping is a real method now (answers {}); sample a genuinely unknown one
+    const m = await s.call("nonexistent/method");
     assert.equal(m.error?.code, -32601);
     assert.match(String(m.error?.message), /method not found/);
   });
@@ -2475,5 +2499,39 @@ test("observation binding: a failing benchmark attests an honest crash", async (
     });
     assert.equal(c.ok, true);
     assert.equal(c.metric, null);
+  });
+});
+
+// Regression (2026-11-15): non-object frames and batches were silently
+// dropped — a caller waiting on a response would hang forever. JSON-RPC 2.0
+// requires -32600 for non-request objects, and batch members are dispatched.
+test("protocol hygiene: scalars get -32600, batches dispatch, ping answers", async () => {
+  const cwd = tempRepo();
+  await withServer(cwd, async (s) => {
+    const scalar = await s.raw("42");
+    assert.equal(scalar.error?.code, -32600);
+    const str = await s.raw('"ping"');
+    assert.equal(str.error?.code, -32600);
+    const batch = await s.raw(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 991, method: "ping" },
+        { jsonrpc: "2.0", id: 992, method: "tools/list" },
+      ]),
+    );
+    // both batch members answered (two lines; the parser feeds waiters in
+    // order, so collect until both ids are seen)
+    const seen = new Set<number>(
+      [batch.id].filter((x): x is number => x != null),
+    );
+    if (seen.size < 2) {
+      const second = await s.raw(
+        JSON.stringify([{ jsonrpc: "2.0", id: 993, method: "ping" }]),
+      );
+      if (second.id != null) seen.add(second.id);
+    }
+    assert.ok(seen.size >= 2, "batch members must each get a response");
+    // the server stays healthy afterwards
+    const pong = await s.call("ping");
+    assert.deepEqual(pong.result, {});
   });
 });

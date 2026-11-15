@@ -750,3 +750,13 @@ test("niceTicks decimals hold at any magnitude (sub-micro spans)", () => {
   // span 6.3e-7 → step 2.5e-7 → 8 decimals (7 collapsed it to 0.0000002)
   assert.equal(niceTicks(0, 6.3e-7)[0].decimals, 8);
 });
+
+// Regression (2026-11-15): segment flows straight from the hand-editable
+// ledger into HTML/SVG text — it was the one field that skipped escapeHtml.
+test("renderer: ledger-sourced segment label is escaped", () => {
+  const entries = entriesWithRuns([["keep", 10]]);
+  (entries[0] as { segment?: unknown }).segment = '<img src=x onerror="bad()">';
+  const html = renderDashboard(rebuildHistory(entries));
+  assert.doesNotMatch(html, /<img src=x/);
+  assert.match(html, /&lt;img src=x onerror=&quot;bad\(\)&quot;&gt;/);
+});

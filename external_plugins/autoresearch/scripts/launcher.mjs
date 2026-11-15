@@ -149,6 +149,10 @@ function fixedCandidates() {
   } else {
     push("/opt/homebrew/bin/node");
     push("/usr/local/bin/node");
+    // apt/dnf/official deb installs land here; a desktop app launched from a
+    // GUI does not inherit the login PATH that would otherwise expose it
+    push("/usr/bin/node");
+    push("/usr/bin/nodejs");
   }
   return out;
 }
@@ -187,7 +191,7 @@ function chooseNode() {
 const searched =
   process.platform === "win32"
     ? "Searched: PATH, nvm (%NVM_HOME% or %APPDATA%\\nvm), %ProgramFiles%\\nodejs."
-    : "Searched: PATH, nvm (${NVM_DIR:-$HOME/.nvm}), /opt/homebrew/bin, /usr/local/bin.";
+    : "Searched: PATH, nvm (${NVM_DIR:-$HOME/.nvm}), /opt/homebrew/bin, /usr/local/bin, /usr/bin.";
 
 let NODE_BIN;
 const args = process.argv.slice(2);

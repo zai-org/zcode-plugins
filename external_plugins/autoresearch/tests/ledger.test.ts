@@ -15,6 +15,7 @@ import {
   rebuildHistory,
   rebuildState,
   readSessionConfig,
+  plateauCalibration,
   LOG_FILE,
 } from "../mcp/lib/ledger.ts";
 import { validateLedger } from "../mcp/lib/validate.ts";
@@ -441,4 +442,63 @@ test("rebuildHistory attributes segment-less runs to the latest config (projecti
   assert.equal(history.runs[2].segment, 1);
   // Projection-scope only: the normalization never rewrites the ledger file
   // (see the attribution comment in rebuildHistory).
+});
+
+// Regression (2026-11-15): JSONL is hand-editable and a string metric ("12.5")
+// passed the old `!= null` guard — baseline became a string, best-vs-baseline
+// arithmetic turned NaN and flowed into the hook payload. rebuildHistory and
+// validateLedger already required a finite number; rebuildState now matches.
+test("rebuildState: a hand-edited string metric is not a measurement", () => {
+  const cwd = tempCwd();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  writeFileSync(
+    join(cwd, LOG_FILE),
+    JSON.stringify({
+      type: "config",
+      segment: 1,
+      name: "s",
+      metricName: "m",
+      direction: "lower",
+    }) +
+      "\n" +
+      JSON.stringify({
+        type: "run",
+        ts: "2026-01-01T00:00:00.000Z",
+        run: 1,
+        status: "keep",
+        metric: "12.5",
+        description: "hand-edited",
+      }) +
+      "\n",
+  );
+  const state = rebuildState(cwd);
+  assert.equal(state.baseline, null, "a string is not a measurement");
+  assert.equal(state.best, null);
+  // values filter excludes the non-finite metric → no NaN confidence
+  assert.equal(state.confidence, null);
+});
+
+// Regression (2026-11-15): Number(null)/Number("")/Number(false) are all 0,
+// and minImprovement 0 means `improvement < 0` never fires — plateau
+// detection was silently disabled while the caller believed a calibration
+// was in effect. Only a positive number is a threshold.
+test("plateauCalibration: null/empty/zero minImprovement is not a threshold", () => {
+  const cwd = tempCwd();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  for (const bad of [null, "", false, 0]) {
+    writeFileSync(
+      join(cwd, ".auto", "config.json"),
+      JSON.stringify({ plateauMinImprovement: bad }),
+    );
+    assert.equal(
+      plateauCalibration(cwd).minImprovement,
+      undefined,
+      `plateauMinImprovement=${String(bad)} must fall back to the default`,
+    );
+  }
+  writeFileSync(
+    join(cwd, ".auto", "config.json"),
+    JSON.stringify({ plateauMinImprovement: 0.02 }),
+  );
+  assert.equal(plateauCalibration(cwd).minImprovement, 0.02);
 });

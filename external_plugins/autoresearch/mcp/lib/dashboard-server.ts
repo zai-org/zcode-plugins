@@ -64,6 +64,17 @@ function start(workCwd: string): Promise<{ port: number; url: string }> {
     // event; swallow it — a dead connection is eviction (req 'close'), never
     // a reason for the hosting MCP process to die.
     res.on("error", () => {});
+    // 127.0.0.1 binding keeps the LAN out, but not the browser: a malicious
+    // page can reach this port via DNS rebinding (Host: attacker-domain).
+    // Only the loopback hostnames the live page itself uses may pass —
+    // cheap, and it closes the "ledger endpoint answers anyone" gap
+    // (regression 2026-11-15).
+    const host = String(req.headers.host ?? "");
+    if (!/^127\.0\.0\.1:\d+$/.test(host) && !/^localhost:\d+$/i.test(host)) {
+      res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("forbidden (loopback host expected)");
+      return;
+    }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (url.pathname === "/events") {
       res.writeHead(200, {

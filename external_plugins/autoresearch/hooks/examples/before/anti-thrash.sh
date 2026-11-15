@@ -9,8 +9,9 @@ readonly STREAK_THRESHOLD=3
 
 payload="$(cat)"
 
-node - "$payload" <<'NODE'
+node - "$payload" "$STREAK_THRESHOLD" <<'NODE'
 const p = JSON.parse(process.argv[2]);
+const threshold = Number(process.argv[3]) || 3;
 const fs = require('fs');
 const log = `${p.cwd}/.auto/log.jsonl`;
 if (!fs.existsSync(log)) process.exit(0);
@@ -27,7 +28,7 @@ for (const r of [...tail].reverse()) {
   if (r.status === 'keep' || r.status === 'noop') break;
   streak += 1;
 }
-if (streak < 3) process.exit(0);
+if (streak < threshold) process.exit(0);
 
 console.log(`⚠️ ${streak} consecutive failed results. Consider:`);
 console.log('  - re-reading .auto/prompt.md and the benchmark script');

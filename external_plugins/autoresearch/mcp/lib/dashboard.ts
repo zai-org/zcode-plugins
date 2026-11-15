@@ -207,7 +207,9 @@ function renderTrendSvg(
         const bx = (x(p.ordinal) - halfGap).toFixed(1);
         segMarks.push(
           `<line class="seg-line" x1="${bx}" y1="${padT}" x2="${bx}" y2="${H - padB}"/>` +
-            `<text class="seg-t" x="${(Number(bx) + 4).toFixed(1)}" y="${padT - 6}" font-size="${tickFont}">分段 ${p.run.segment}</text>`,
+            // segment comes straight from the ledger (hand-editable): escape
+            // like every other free-text field (regression 2026-11-15)
+            `<text class="seg-t" x="${(Number(bx) + 4).toFixed(1)}" y="${padT - 6}" font-size="${tickFont}">分段 ${escapeHtml(String(p.run.segment))}</text>`,
         );
       }
     }
@@ -336,7 +338,7 @@ function renderBody(
       `<span class="conf-${conf.level}">${verdict}</span> ${conf.confidence.toFixed(2)}× 噪声`,
     );
   }
-  if (current) metaParts.push(`分段 ${current.segment}`);
+  if (current) metaParts.push(`分段 ${escapeHtml(String(current.segment))}`);
   const lastRunAt =
     typeof history.lastRunAt === "string" ? history.lastRunAt : null;
   if (lastRunAt) metaParts.push(`更新于 ${escapeHtml(lastRunAt.slice(0, 10))}`);

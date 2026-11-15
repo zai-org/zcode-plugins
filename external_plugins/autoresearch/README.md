@@ -13,14 +13,12 @@ This plugin executes code and operates on a git repository. Enabling it grants c
 - **Runs commands**: `run_experiment` executes the benchmark script you author (`.auto/measure.sh`) and, when present, the correctness gate (`.auto/checks.sh`);
 - **Runs git operations automatically**: `git commit` on keep, automatic rollback on discard/crash/checks_failed (noop changes nothing; session state: `.auto/`, the host session dir `.zcode/`, and `autoresearch-dashboard.html`, is exempt from commit/rollback);
 - **Installs ZCode hooks**: Stop (loop continuation), PreToolUse (frozen-file write protection), UserPromptSubmit (ledger memory injection), SessionStart (resume hint);
-- **Serves a local HTTP dashboard** on 127.0.0.1 via `export_dashboard` (editorial archive page: full experiment history, trend across segments, light/dark themes);
+- **Serves a local HTTP dashboard** on 127.0.0.1 via `export_dashboard` (console-style live page: full experiment history, trend across segments, light/dark themes);
 - **Writes session state** to `.auto/` files (`log.jsonl`, `config.json`) in the project directory.
 
 No third-party npm dependencies: the MCP server and hooks are Node-stdlib TypeScript scripts (Node ≥24, types stripped natively, no build step).
 
-Node ≥24 must exist on the machine, but it does not have to be on the host's PATH: the MCP server and hooks launch through `scripts/launcher.mjs` via plain `node` (the one command the host resolves on all platforms), which resolves Node from PATH, then nvm (POSIX `$NVM_DIR` / Windows `%NVM_HOME%` or `%APPDATA%
-vm`, newest-first), Homebrew or `/usr/local/bin` (POSIX) / `%ProgramFiles%
-odejs` (Windows), and honors `AUTORESEARCH_NODE_BIN` to pin one explicitly (run `node scripts/launcher.mjs --resolve` to see what it picks). The benchmark scripts (`.auto/measure.sh`, `.auto/checks.sh`) are still bash and need a POSIX shell (Git-Bash or WSL) on Windows.
+Node ≥24 must exist on the machine, but it does not have to be on the host's PATH: the MCP server and hooks launch through `scripts/launcher.mjs` via plain `node` (the one command the host resolves on all platforms), which resolves Node from PATH, then nvm (POSIX `$NVM_DIR` / Windows `%NVM_HOME%` or `%APPDATA%\nvm`, newest-first), Homebrew, `/usr/local/bin` or `/usr/bin` (POSIX) / `%ProgramFiles%\nodejs` (Windows), and honors `AUTORESEARCH_NODE_BIN` to pin one explicitly (run `node scripts/launcher.mjs --resolve` to see what it picks). The benchmark scripts (`.auto/measure.sh`, `.auto/checks.sh`) are still bash and need a POSIX shell (Git-Bash or WSL) on Windows.
 
 ## Install
 
@@ -62,7 +60,7 @@ Or let the skill trigger on its own (descriptions containing "autoresearch", "au
 - **Correctness backpressure**: when `.auto/checks.sh` exists, it runs automatically after a passing benchmark; a failing gate forbids keep and rolls back. A gate that never produces a verdict (not executable, killed by a signal, exits ≥126) is infrastructure, not failure — it does not veto keeps and is surfaced as `verdict: false`.
 - **Write protection**: a PreToolUse hook denies Write/Edit/ApplyPatch rewrites (ApplyPatch's per-file targets are parsed from the patch text) of `.auto/measure.sh` / `.auto/checks.sh` / `.auto/goal.md` (the deep-goal record: the root the loop serves stays immutable while the harness-edit step revises its surface representations) / `.auto/scope.md` (the user-agreed scope boundary: the loop works inside the fence, it never redraws it — widening or narrowing is the user's edit or a new segment). First creation during setup is the intended exception — frozen means immutable once recorded. A denied rewrite attempt is recorded to the ledger as a `frozen_attempt` row.
 - **Harness trace**: the editable surfaces (`prompt.md`, `ideas.md`, `experience.md`, `.auto/hooks/before.sh` / `after.sh`) are hashed at the accounting checkpoints (`run_experiment` / `log_experiment` / `export_dashboard`); anything that moved since the baseline gets a `harness_edit` row in the ledger — including hand edits, which no tool hook could see. The edit step's verdict discipline stays advisory; the fact of a change is mechanical.
-- **Pause switch**: `/autoresearch:off` sets `autoresearchOff: true`, which silences Stop continuation, memory injection and the SessionStart hint; `init_experiment`/`clear_experiments` and the resume command clear it.
+- **Pause switch**: `/autoresearch:off` sets `autoresearchOff: true`, which silences Stop continuation, memory injection and the SessionStart hint; `init_experiment` and the resume command clear it, and so does `clear_experiments` when an active session exists.
 - **Memory injection**: UserPromptSubmit injects an aggregated summary (progress + deduped tried directions + best trajectory + discard reasons with rollback rationale + ASI distillation) so progress survives compaction; SessionStart injects the resume hint. Both stay silent while `autoresearchOff` is set.
 - **Loop continuation**: the Stop hook blocks (`decision:block`) while a loop is unfinished and not paused (zcode platform limit: 3 consecutive windows).
 - **Iteration hooks**: `.auto/hooks/before.sh` (pre-benchmark) and `after.sh` (post-record) run on every experiment (fail-open, 30s timeout, stdout → `*_steer`).
@@ -80,7 +78,7 @@ plugin/
 ├── .mcp.json                   # MCP stdio server declaration
 ├── mcp/
 │   ├── server.ts              # JSON-RPC line protocol + tools
-│   └── lib/                    # pure logic: experiment / ledger / git / validate / dashboard / dashboard-server / html / paths / bash / frozen / harness / types
+│   └── lib/                    # pure logic: experiment / ledger / git / validate / dashboard / dashboard-server / html / paths / bash / frozen / harness / spill / types
 ├── hooks/
 │   ├── hooks.json              # Stop / PreToolUse / UserPromptSubmit / SessionStart
 │   ├── stop-continue.ts       # loop unfinished → block

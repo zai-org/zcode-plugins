@@ -336,7 +336,12 @@ export function ensureSessionStateIgnored(cwd: string): boolean {
     }
     if (current.split(/\r?\n/).includes(".zcode")) return false;
     mkdirSync(dirname(excludeFile), { recursive: true });
-    appendFileSync(excludeFile, ".zcode\n");
+    // Same trailing-newline discipline as the ledger append: a hand-written
+    // exclude file often lacks a final newline — appending blindly would
+    // splice ".zcode" onto the last rule, breaking that rule AND the new
+    // declaration (regression 2026-11-15).
+    const glue = current !== "" && !current.endsWith("\n") ? "\n" : "";
+    appendFileSync(excludeFile, `${glue}.zcode\n`);
     return true;
   } catch {
     return false;
@@ -367,6 +372,7 @@ export function rollbackWorkingTree(cwd: string): {
   rolledBack: string[];
   restoredTo: string | null;
   residual: string[];
+  cleanupError?: string;
 } {
   const rolledBack = dirtyFiles(cwd);
   const restore = () =>
@@ -395,23 +401,38 @@ export function rollbackWorkingTree(cwd: string): {
       throw new Error(`rollback restore failed twice: ${stderr.trim()}`);
     }
   }
-  // Unstage anything (e.g. accidentally staged .auto content) without touching files.
-  execFileSync(resolveGit(), ["reset", "-q"], { cwd, stdio: "ignore" });
-  execFileSync(
-    resolveGit(),
-    [
-      "clean",
-      "-fd",
-      ...SESSION_STATE_DIRS.flatMap((d) => ["-e", d, "-e", `${d}/`]),
-      "-e",
-      DASHBOARD_FILE,
-    ],
-    { cwd, stdio: "ignore" },
-  );
+  // Unstage anything (e.g. accidentally staged .auto content) without touching
+  // files, then drop untracked leftovers. Neither may skip the residual audit
+  // below: verification is root-cause-agnostic (see above), so a cleanup
+  // failure — Windows file locks are the known offender — must surface as a
+  // loud, named fact instead of an exception that hides `residual`
+  // (regression 2026-11-15).
+  let cleanupError: string | null = null;
+  try {
+    execFileSync(resolveGit(), ["reset", "-q"], { cwd, stdio: "ignore" });
+  } catch (err) {
+    cleanupError = `git reset failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  try {
+    execFileSync(
+      resolveGit(),
+      [
+        "clean",
+        "-fd",
+        ...SESSION_STATE_DIRS.flatMap((d) => ["-e", d, "-e", `${d}/`]),
+        "-e",
+        DASHBOARD_FILE,
+      ],
+      { cwd, stdio: "ignore" },
+    );
+  } catch (err) {
+    cleanupError = `git clean failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
   return {
     rolledBack,
     restoredTo: safeShortHash(cwd),
     residual: dirtyFiles(cwd),
+    ...(cleanupError ? { cleanupError } : {}),
   };
 }
 

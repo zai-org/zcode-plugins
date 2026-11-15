@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { get } from "node:http";
+import { get, request } from "node:http";
 import {
   ensureDashboardServer,
   broadcastDashboardUpdate,
@@ -111,6 +111,33 @@ test("a disconnecting SSE client cannot crash the host process", async () => {
     await new Promise((r) => setTimeout(r, 100));
     broadcastDashboardUpdate();
     assert.match(await fetchText(url), /alpha-disconnect/);
+  } finally {
+    stopDashboardServer();
+  }
+});
+
+// Regression (2026-11-15): the server answered any Host header. 127.0.0.1
+// binding keeps the LAN out but not the browser — DNS rebinding reaches the
+// ledger endpoint from a malicious page unless the Host is loopback.
+test("a foreign Host header is rejected (DNS rebinding guard)", async () => {
+  const a = sessionDir("alpha-host");
+  try {
+    const { port, url } = await ensureDashboardServer(a);
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = request(
+        `http://127.0.0.1:${port}/autoresearch.jsonl`,
+        { headers: { host: "evil.example:80" } },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+    assert.equal(status, 403);
+    // the live page itself keeps working over the loopback host
+    assert.match(await fetchText(url), /alpha-host/);
   } finally {
     stopDashboardServer();
   }

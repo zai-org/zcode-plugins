@@ -50,11 +50,33 @@ const ti = input.tool_input || input.toolInput || {};
 // through to "no candidates" and is allowed (fail-open discipline unchanged).
 function patchTargets(patchText: string): string[] {
   const out: string[] = [];
+  // Quoted targets are still targets: stripping a pair of symmetric quotes
+  // can only make a path look MORE like a frozen key, never less (fail-safe).
+  const push = (raw: string) => {
+    const t = raw
+      .trim()
+      .replace(/^"(.*)"$/, "$1")
+      .replace(/^'(.*)'$/, "$1");
+    if (t) out.push(t);
+  };
   for (const line of patchText.split(/\r?\n/)) {
     const m =
       /^\*\*\* (?:Update|Add|Delete|Move) File: (.+)$/.exec(line) ??
       /^\*\*\* Move to: (.+)$/.exec(line);
-    if (m) out.push(m[1].trim());
+    if (!m) continue;
+    // Codex's Move File header carries both endpoints on one line:
+    // `*** Move File: old → new`. The arrow separates two paths — treated as
+    // one string, resolve() sees a bogus path and a frozen source slips
+    // through the guard (regression 2026-11-15: exit 0, no deny, no
+    // frozen_attempt). Both endpoints are guarded: moving a frozen record
+    // away is as destructive as rewriting it in place.
+    const arrow = m[1].indexOf("→");
+    if (arrow >= 0) {
+      push(m[1].slice(0, arrow));
+      push(m[1].slice(arrow + "→".length));
+    } else {
+      push(m[1]);
+    }
   }
   return out;
 }

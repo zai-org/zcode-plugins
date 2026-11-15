@@ -24,16 +24,26 @@ export function resolveWorkCwd(projectCwd: string): string {
   } catch {
     return projectCwd; // no config → project dir
   }
-  let cfg: { workingDir?: unknown };
+  let cfg: unknown;
   try {
-    cfg = JSON.parse(raw) as { workingDir?: unknown };
+    cfg = JSON.parse(raw);
   } catch {
     process.stderr.write(
       "[autoresearch] warning: .auto/config.json is not valid JSON; falling back to the project directory\n",
     );
     return projectCwd;
   }
-  const wd = cfg.workingDir;
+  // JSON.parse can legally return null or a scalar: reading `.workingDir` off
+  // null would throw a bare TypeError that crashes the server at startup with
+  // no pointer at the file. Same handling as unparseable JSON (regression
+  // 2026-11-15).
+  if (cfg == null || typeof cfg !== "object") {
+    process.stderr.write(
+      "[autoresearch] warning: .auto/config.json is not a JSON object; falling back to the project directory\n",
+    );
+    return projectCwd;
+  }
+  const wd = (cfg as { workingDir?: unknown }).workingDir;
   if (typeof wd === "string" && wd.trim()) {
     const target = isAbsolute(wd) ? wd : resolve(projectCwd, wd);
     let isDir = false;

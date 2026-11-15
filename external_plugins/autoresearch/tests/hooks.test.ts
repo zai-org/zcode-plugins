@@ -175,6 +175,78 @@ test("guard-frozen denies ApplyPatch rewrites of frozen files via patch_text", (
   );
 });
 
+// Regression (reproduced 2026-11-15): codex's Move File header carries BOTH
+// endpoints on one line — `*** Move File: old → new`. The old parser captured
+// `old → new` as a single path, resolve() produced a bogus key, and moving a
+// frozen record away was silently allowed (exit 0, no deny, no frozen_attempt).
+test("guard-frozen denies Move File patches that relocate a frozen file", () => {
+  const cwd = tempCwd();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  writeFileSync(join(cwd, ".auto", "goal.md"), "original goal\n");
+
+  const move = [
+    "*** Begin Patch",
+    "*** Move File: .auto/goal.md → .auto/goal2.md",
+    "*** End Patch",
+  ].join("\n");
+  const deny = runHook(
+    "guard-frozen.ts",
+    cwd,
+    JSON.stringify({
+      hook_event_name: "PreToolUse",
+      tool_name: "ApplyPatch",
+      tool_input: { patch_text: move },
+    }),
+  );
+  const d = JSON.parse(deny);
+  assert.equal(d.hookSpecificOutput.permissionDecision, "deny");
+  assert.match(d.hookSpecificOutput.permissionDecisionReason, /goal\.md/);
+  const ledger = readFileSync(join(cwd, ".auto", "log.jsonl"), "utf8");
+  assert.match(ledger, /frozen_attempt/);
+
+  // moving a non-frozen file is still allowed
+  const benignMove = [
+    "*** Begin Patch",
+    "*** Move File: notes.md → notes2.md",
+    "*** End Patch",
+  ].join("\n");
+  assert.equal(
+    runHook(
+      "guard-frozen.ts",
+      cwd,
+      JSON.stringify({
+        hook_event_name: "PreToolUse",
+        tool_name: "ApplyPatch",
+        tool_input: { patch_text: benignMove },
+      }),
+    ),
+    "",
+  );
+
+  // quoted targets are still targets (dialects may quote paths)
+  const quoted = [
+    "*** Begin Patch",
+    `*** Update File: ".auto/goal.md"`,
+    "@@",
+    "-original goal",
+    "+moved goalpost",
+    "*** End Patch",
+  ].join("\n");
+  const denyQuoted = runHook(
+    "guard-frozen.ts",
+    cwd,
+    JSON.stringify({
+      hook_event_name: "PreToolUse",
+      tool_name: "ApplyPatch",
+      tool_input: { patch_text: quoted },
+    }),
+  );
+  assert.equal(
+    JSON.parse(denyQuoted).hookSpecificOutput.permissionDecision,
+    "deny",
+  );
+});
+
 // Frozen means "immutable once recorded", not "never written": setup creates
 // the goal/scope/script files before any segment exists. The regression this
 // pins: the guard used to deny even that first creation (deny-on-absent),
@@ -888,4 +960,43 @@ test("guard-frozen records a frozen_attempt row on deny, nothing on allow", () =
     }),
   );
   assert.equal(existsSync(join(fresh, ".auto", "log.jsonl")), false);
+});
+
+// Regression (2026-11-15): the recent-runs section pasted model-written asi
+// fields and descriptions unclipped — a long field rode into EVERY later
+// prompt until clear. Same 120-char budget as the discard-reason list.
+test("memory-inject clips recent-run descriptions and asi fields", () => {
+  const cwd = tempCwd();
+  const long = "x".repeat(200);
+  seedLedger(cwd, [
+    cfgLine,
+    {
+      type: "run",
+      run: 1,
+      segment: 1,
+      status: "keep",
+      metric: 10,
+      description: long,
+      asi: {
+        hypothesis: "y".repeat(200),
+        next_action_hint: "z".repeat(200),
+        rollback: long,
+      },
+    },
+  ]);
+  const out = JSON.parse(
+    runHook(
+      "memory-inject.ts",
+      cwd,
+      JSON.stringify({ hook_event_name: "UserPromptSubmit", prompt: "go" }),
+    ),
+  );
+  const ctx: string = out.hookSpecificOutput.additionalContext;
+  // no unclipped 150-char run survives into the injection
+  assert.doesNotMatch(ctx, /x{150}/);
+  assert.doesNotMatch(ctx, /y{150}/);
+  assert.doesNotMatch(ctx, /z{150}/);
+  // each field is present in clipped form (120 chars + ellipsis)
+  assert.match(ctx, /x{100,120}…/);
+  assert.match(ctx, /hyp: y{100,120}…/);
 });

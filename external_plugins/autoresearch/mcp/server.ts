@@ -518,7 +518,12 @@ async function runChecks(checksFile: string) {
   // gate never produced a judgment. Those are infra, not correctness
   // failures, and must not block keeps — a broken interpreter would
   // otherwise turn every checks run into a veto (evidence 2026-10-28).
-  const verdict = res.exitCode !== null && res.exitCode < 126;
+  // Windows fatal NTSTATUS values surface as LARGE NEGATIVE signed ints
+  // (0xC000013A → -1073741510), which pass a bare `< 126` test — the gate
+  // would read "never judged" as a deliberate failure and veto the keep
+  // (regression 2026-11-15). Negative exit codes are infra, never verdicts.
+  const verdict =
+    res.exitCode !== null && res.exitCode >= 0 && res.exitCode < 126;
   return {
     verdict,
     failed: verdict && res.exitCode !== 0,
@@ -804,6 +809,13 @@ function runHookRaw(
         stderrTail += d.toString("utf8").slice(0, 1024 - stderrTail.length);
     });
     let didTimeout = false;
+    // Bounded settle, same discipline as runCommand: `exit` arms a fallback
+    // in ALL cases (timeout-kill and normal exit alike). A hook that leaves
+    // pipe-held descendants alive (e.g. a background notifier) never gets a
+    // `close`; without the fallback the tool call stalls until the 30s
+    // timeout fires and the hook is misreported — and mis-killed — as
+    // timedOut (regression 2026-11-15).
+    let fallbackTimer: NodeJS.Timeout | undefined;
     const timer = setTimeout(() => {
       didTimeout = true;
       if (process.platform === "win32") {
@@ -828,6 +840,7 @@ function runHookRaw(
     }, HOOK_TIMEOUT_MS);
     const finalize = (code: number | null) => {
       clearTimeout(timer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       resolve({
         exitCode: code,
         timedOut: didTimeout,
@@ -838,8 +851,8 @@ function runHookRaw(
     };
     proc.on("close", (code) => finalize(code));
     proc.on("exit", (code) => {
-      if (!didTimeout) return;
-      setTimeout(() => finalize(code), 1_000);
+      if (fallbackTimer) return;
+      fallbackTimer = setTimeout(() => finalize(code), 1_000);
     });
     proc.on("error", (err) => {
       clearTimeout(timer);
@@ -1642,6 +1655,13 @@ async function toolLogExperiment(
     rolledBack = rb.rolledBack;
     restoredTo = rb.restoredTo;
     rollbackResidual = rb.residual;
+    // The residual audit above ran regardless (verification is root-cause-
+    // agnostic), but the cleanup failure itself must not be silent — stderr
+    // is the diagnostic channel (same discipline as harness-trace failures).
+    if (rb.cleanupError)
+      process.stderr.write(
+        `[autoresearch] rollback cleanup failed: ${rb.cleanupError}\n`,
+      );
   }
 
   const entry: LedgerRun = {
@@ -1885,6 +1905,10 @@ async function toolClearExperiments() {
   }
   const { rmSync } = await import("node:fs");
   rmSync(paths.log, { force: true });
+  // Live pages must not keep showing the cleared session until the next
+  // init/log: broadcast like the other ledger-mutating tools (regression
+  // 2026-11-15 — clear was the only writer that skipped the refresh).
+  broadcastDashboardUpdate();
   return {
     ok: true,
     message: "cleared .auto/log.jsonl; start fresh with init_experiment",
@@ -2102,7 +2126,25 @@ process.stdin.on("data", (chunk) => {
   }
 });
 
-async function dispatch(msg: JsonRpcRequest) {
+async function dispatch(raw: unknown) {
+  // JSON-RPC 2.0 §4.2: a batch is an array of requests — dispatch each
+  // member. Anything that is not a request object (scalars, null, arrays
+  // flattened away) is an Invalid Request and MUST be answered with -32600:
+  // silently dropping it would leave a caller waiting on a response that
+  // never comes (regression 2026-11-15).
+  if (Array.isArray(raw)) {
+    for (const m of raw) await dispatch(m);
+    return;
+  }
+  if (raw == null || typeof raw !== "object") {
+    send({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32600, message: "Invalid Request" },
+    });
+    return;
+  }
+  const msg = raw as JsonRpcRequest;
   if (msg.method === "initialize") {
     send({
       jsonrpc: "2.0",
@@ -2116,6 +2158,12 @@ async function dispatch(msg: JsonRpcRequest) {
     return;
   }
   if (msg.method === "notifications/initialized") return;
+  if (msg.method === "ping") {
+    // JSON-RPC/MCP liveness probe: an empty result, not a -32601 that some
+    // clients surface as a transport error.
+    result(msg.id, {});
+    return;
+  }
   if (msg.method === "tools/list") {
     result(msg.id, { tools: TOOLS });
     return;

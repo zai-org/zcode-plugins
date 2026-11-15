@@ -16,9 +16,7 @@
 
 > 无第三方 npm 依赖：MCP server 与 hooks 均为 Node 标准库 TypeScript 脚本（Node ≥24，类型由 Node 原生剥离，无构建步骤）。
 >
-> 运行要求：机器上需存在 Node ≥24，但不要求它在宿主 PATH 上。MCP server 与 hooks 经 `scripts/launcher.mjs` 以裸 `node` 启动（`node` 是宿主在三平台都能解析的唯一命令），解析顺序 PATH → nvm（POSIX `$NVM_DIR` / Windows `%NVM_HOME%` 或 `%APPDATA%
-vm`，最新优先）→ Homebrew 或 `/usr/local/bin`（POSIX）→ `%ProgramFiles%
-odejs`（Windows），可用 `AUTORESEARCH_NODE_BIN` 显式指定（`node scripts/launcher.mjs --resolve` 可查看解析结果）。基准脚本（`.auto/measure.sh`、`.auto/checks.sh`）仍是 bash，Windows 上需要 Git-Bash 或 WSL。
+> 运行要求：机器上需存在 Node ≥24，但不要求它在宿主 PATH 上。MCP server 与 hooks 经 `scripts/launcher.mjs` 以裸 `node` 启动（`node` 是宿主在三平台都能解析的唯一命令），解析顺序 PATH → nvm（POSIX `$NVM_DIR` / Windows `%NVM_HOME%` 或 `%APPDATA%\nvm`，最新优先）→ Homebrew、`/usr/local/bin` 或 `/usr/bin`（POSIX）→ `%ProgramFiles%\nodejs`（Windows），可用 `AUTORESEARCH_NODE_BIN` 显式指定（`node scripts/launcher.mjs --resolve` 可查看解析结果）。基准脚本（`.auto/measure.sh`、`.auto/checks.sh`）仍是 bash，Windows 上需要 Git-Bash 或 WSL。
 
 ## 安全与副作用
 
@@ -27,7 +25,7 @@ odejs`（Windows），可用 `AUTORESEARCH_NODE_BIN` 显式指定（`node script
 - **执行命令**：`run_experiment` 运行你编写的基准脚本 `.auto/measure.sh`，以及存在时的正确性门禁 `.auto/checks.sh`；
 - **自动执行 git 操作**：keep 时自动 `git commit`，discard/crash/checks_failed 时自动回滚（noop 无改动可回；会话状态 `.auto/`、宿主会话目录 `.zcode/` 与 `autoresearch-dashboard.html` 不参与 commit/回滚）；
 - **安装 ZCode hooks**：Stop（循环续跑）、PreToolUse（冻结文件写保护）、UserPromptSubmit（账本记忆注入）、SessionStart（续跑提示）；
-- **启动本地 HTTP dashboard**：`export_dashboard` 监听 127.0.0.1，编辑部式档案页呈现全部实验历史（跨 segment 趋势、亮暗双主题）；
+- **启动本地 HTTP dashboard**：`export_dashboard` 监听 127.0.0.1，以 Console 风格页面呈现全部实验历史（跨 segment 趋势、亮暗双主题）；
 - **写入会话状态**：项目目录下的 `.auto/`（`log.jsonl`、`config.json`）。
 
 ## 用法
@@ -62,7 +60,7 @@ odejs`（Windows），可用 `AUTORESEARCH_NODE_BIN` 显式指定（`node script
 - **正确性背压**：`.auto/checks.sh` 存在时 benchmark 通过后自动执行；失败禁 keep 并自动回滚。从未产生判定（不可执行、被信号杀死、退出码 ≥126）属基础设施故障而非失败——不否决 keep，以 `verdict: false` 如实呈现。
 - **写保护**：PreToolUse hook deny 对 `.auto/measure.sh` / `.auto/checks.sh` / `.auto/goal.md` / `.auto/scope.md` 的 Write/Edit/ApplyPatch 改写（ApplyPatch 的目标从 patch_text 解析）（setup 首次创建是预期例外，冻结指「记录后不可改写」；goal.md 是深层目标原文，循环所服务的根不可变，harness 编辑步只修订其表层表示；scope.md 是用户同意的范围边界，循环在栏内工作，扩围/收围由用户手改或新 segment）。被 deny 的改写企图以 `frozen_attempt` 行记入账本。
 - **harness 留痕**：可编辑面（`prompt.md`、`ideas.md`、`experience.md`、`.auto/hooks/before.sh` / `after.sh`）在记账时点（`run_experiment` / `log_experiment` / `export_dashboard`）做哈希对账，相对基线有变化的文件各记一条 `harness_edit` 行，连手改也逃不掉。编辑步的 verdict 纪律仍是 advisory，但「动过」这件事是机械保证。
-- **暂停开关**：`/autoresearch:off` 写入 `autoresearchOff: true`，同时静音 Stop 续跑、记忆注入与 SessionStart 提示；`init_experiment`/`clear_experiments` 与 resume 命令会清除标记。
+- **暂停开关**：`/autoresearch:off` 写入 `autoresearchOff: true`，同时静音 Stop 续跑、记忆注入与 SessionStart 提示；`init_experiment` 与 resume 命令会清除标记，存在会话时 `clear_experiments` 也会清除。
 - **记忆注入**：UserPromptSubmit 注入聚合摘要（进度 + 已尝试方向去重 + best 轨迹 + 弃用方向与理由 + ASI 提炼），compaction 后不丢进度；SessionStart 注入续跑提示；`autoresearchOff` 时两者都静默。
 - **循环续跑**：Stop hook 在循环未结束且未暂停时 `decision:block`（zcode 平台限制连续 3 次窗口）。
 - **迭代钩子**：`.auto/hooks/before.sh`（基准前）与 `after.sh`（记录后）每次实验自动执行（fail-open，30s 超时，stdout→`*_steer`）。
@@ -80,7 +78,7 @@ plugin/
 ├── .mcp.json                   # MCP stdio server 声明
 ├── mcp/
 │   ├── server.ts              # JSON-RPC 换行协议 + 5 个工具
-│   └── lib/                    # 纯逻辑：experiment / ledger / git / validate / dashboard / dashboard-server / html / paths / bash / frozen / harness / types
+│   └── lib/                    # 纯逻辑：experiment / ledger / git / validate / dashboard / dashboard-server / html / paths / bash / frozen / harness / spill / types
 ├── hooks/
 │   ├── hooks.json              # Stop / PreToolUse / UserPromptSubmit / SessionStart
 │   ├── stop-continue.ts       # 循环未结束 → block

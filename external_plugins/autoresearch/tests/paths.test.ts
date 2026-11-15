@@ -70,3 +70,13 @@ test("resolveWorkCwd: corrupt config.json → fallback + stderr diagnostic", () 
   assert.equal(value, proj);
   assert.match(stderr, /not valid JSON/);
 });
+
+// Regression (2026-11-15): JSON.parse accepts top-level scalars — `null`
+// crashed the server at startup with a bare TypeError pointing nowhere.
+test("resolveWorkCwd: config.json is a JSON null → fallback + stderr diagnostic", () => {
+  const proj = tempProject();
+  writeFileSync(join(proj, ".auto", "config.json"), "null");
+  const { value, stderr } = withCapturedStderr(() => resolveWorkCwd(proj));
+  assert.equal(value, proj);
+  assert.match(stderr, /not a JSON object/);
+});

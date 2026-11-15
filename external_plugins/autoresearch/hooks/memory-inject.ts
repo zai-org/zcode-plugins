@@ -100,16 +100,29 @@ const discardList = discardItems.slice(-8);
 if (discardList.length > 0)
   lines.push(`弃用方向与理由：${discardList.join("；")}。`);
 
+// Bounded injection: every model-written string is clipped at 120 chars —
+// same budget as the discard-reason list below. Unbounded asi fields would
+// ride into EVERY subsequent prompt until clear (regression 2026-11-15).
+const clip = (raw: unknown, max = 120): string => {
+  if (typeof raw !== "string" || raw === "") return "";
+  const s = raw.trim();
+  return s.length > max ? s.slice(0, max) + "…" : s;
+};
+
 // Recent runs with ASI extraction
 const recent = state.runs
   .slice(-3)
   .map((r) => {
-    let line = `#${r.run} ${r.status} metric=${r.metric ?? "—"} ${r.description ?? ""}`;
+    const desc = clip(r.description);
+    let line = `#${r.run} ${r.status} metric=${r.metric ?? "—"} ${desc}`;
     if (r.asi && typeof r.asi === "object") {
       const parts: string[] = [];
-      if (r.asi.hypothesis) parts.push(`hyp: ${r.asi.hypothesis}`);
-      if (r.asi.next_action_hint) parts.push(`next: ${r.asi.next_action_hint}`);
-      if (r.asi.rollback) parts.push(`rollback: ${r.asi.rollback}`);
+      const hyp = clip(r.asi.hypothesis);
+      const next = clip(r.asi.next_action_hint);
+      const rollback = clip(r.asi.rollback);
+      if (hyp) parts.push(`hyp: ${hyp}`);
+      if (next) parts.push(`next: ${next}`);
+      if (rollback) parts.push(`rollback: ${rollback}`);
       if (parts.length) line += "\n    " + parts.join("\n    ");
     }
     return line;

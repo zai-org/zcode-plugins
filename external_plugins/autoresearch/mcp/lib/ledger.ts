@@ -159,15 +159,23 @@ export function rebuildState(
       state.runs.push(run);
       // Crash rows measure nothing (ADR-10: metric null; pre-ADR-10 rows carry
       // a 0 placeholder) — they must not become the baseline, or a legacy
-      // ledger shows baseline 0 and absurd deltas. Matches validateLedger,
-      // which already skips crash rows here.
+      // ledger shows baseline 0 and absurd deltas. The guard is the same
+      // "what counts as a measurement" rule as rebuildHistory below and
+      // validateLedger: a finite NUMBER only — JSONL is hand-editable, and a
+      // string metric slipping through made `best - baseline` NaN and flowed
+      // into the hook payload (regression 2026-11-15).
       if (
         state.baseline == null &&
-        run.metric != null &&
+        typeof run.metric === "number" &&
+        Number.isFinite(run.metric) &&
         run.status !== "crash"
       )
         state.baseline = run.metric;
-      if (run.status === "keep" && run.metric != null) {
+      if (
+        run.status === "keep" &&
+        typeof run.metric === "number" &&
+        Number.isFinite(run.metric)
+      ) {
         const dir = state.config?.direction ?? "lower";
         if (state.best == null || isBetter(run.metric, state.best, dir))
           state.best = run.metric;
@@ -333,10 +341,20 @@ export function plateauCalibration(cwd: string): {
   deterministic: boolean;
 } {
   const cfg = readSessionConfig(cwd);
-  const minRaw = Number(cfg.plateauMinImprovement);
+  // Require an actual number: Number(null)/Number("")/Number(false) are all 0,
+  // and minImprovement 0 means `improvement < 0` never fires — plateau
+  // detection would be silently DISABLED while the caller believes a
+  // calibration is in effect. 0 is not a threshold, it is the signal turned
+  // off; both it and non-numbers fall back to the default (regression
+  // 2026-11-15). The window side already rejects the same inputs via
+  // isInteger >= 2.
+  const minRaw =
+    typeof cfg.plateauMinImprovement === "number"
+      ? cfg.plateauMinImprovement
+      : Number.NaN;
   const winRaw = Number(cfg.plateauWindow);
   return {
-    minImprovement: Number.isFinite(minRaw) && minRaw >= 0 ? minRaw : undefined,
+    minImprovement: Number.isFinite(minRaw) && minRaw > 0 ? minRaw : undefined,
     window: Number.isInteger(winRaw) && winRaw >= 2 ? winRaw : undefined,
     deterministic: cfg.deterministic === true,
   };
