@@ -1,0 +1,56 @@
+{
+  "name": "zcode-beautify",
+  "displayName": "ZCode Beautify",
+  "displayName_i18n": {
+    "en": "ZCode Beautify",
+    "zh-CN": "ZCode 美化"
+  },
+  "description": "Set an image, video, or Wallpaper Engine scene as the ZCode desktop background, adapt all UI colors with Material Design 3 (Monet) dynamic color, and tune chat layout, bubble styles, and more from a live in-app panel and the in-chat Bubble Studio page. The CDP injection layer is an explicit opt-in experimental capability (disabled by default).",
+  "description_i18n": {
+    "en": "Set an image, video, or Wallpaper Engine scene as the ZCode desktop background, adapt all UI colors with Material Design 3 (Monet) dynamic color, and tune chat layout, bubble styles, and more from a live in-app panel and the in-chat Bubble Studio page. The CDP injection layer is an explicit opt-in experimental capability (disabled by default).",
+    "zh-CN": "把图片、视频或 Wallpaper Engine 场景设为 ZCode 桌面背景，以 Material Design 3（Monet）动态取色适配全局界面配色，并可在应用内实时面板与对话内「气泡工坊」页面中调节聊天布局、气泡样式等。CDP 注入层为需显式开启的实验性能力（默认关闭）。"
+  },
+  "version": "6.3.0",
+  "author": {
+    "name": "Mc-GrowlR",
+    "url": "https://github.com/Mc-GrowlR"
+  },
+  "homepage": "https://github.com/Mc-GrowlR/zcode-beautify-for-wallpaper-engine",
+  "license": "MIT",
+  "keywords": [
+    "wallpaper",
+    "theme",
+    "monet",
+    "material-design-3",
+    "wallpaper-engine",
+    "panel",
+    "bubble-studio"
+  ],
+  "ui": {
+    "surfaces": [
+      {
+        "id": "bubble-studio",
+        "title": {
+          "en": "Bubble Studio",
+          "zh-CN": "气泡工坊"
+        },
+        "server": "zcode-beautify",
+        "resourceUri": "ui://zcode-beautify/bubble-studio.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "mcpServers": {
+    "zcode-beautify": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/bundle/mcp/server.js"
+      ],
+      "timeoutMs": 600000,
+      "env": {
+        "ZCODE_BEAUTIFY_DATA_DIR": "${ZCODE_PLUGIN_DATA}"
+      }
+    }
+  }
+}
