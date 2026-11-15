@@ -38,6 +38,8 @@ const FILES = [
   ["scripts/lib/pricing.mjs", "scripts/lib/pricing.mjs"],
   ["panel/inject-main.cjs", "panel/inject-main.cjs"],
   ["panel/panel-widget.js", "panel/panel-widget.js"],
+  ["panel/inject-main.cjs", "sidebar/inject-main.cjs"],
+  ["panel/panel-widget.js", "sidebar/panel-widget.js"],
   ["hooks/finalize.mjs", "hooks/finalize.mjs"],
   ["hooks/post-patch.mjs", "hooks/post-patch.mjs"],
 ];

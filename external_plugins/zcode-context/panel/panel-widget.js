@@ -47,10 +47,12 @@
 .zci-entry:hover{background:rgba(255,255,255,.08);color:#fff}
 .zci-entry svg{flex:0 0 auto}
 
-.zci-overlay{position:fixed;inset:0;z-index:99990;display:flex;flex-direction:column;color:#e6e9f0;font-size:12px;line-height:1.5;overflow:hidden;
+.zci-backdrop{position:fixed;inset:0;z-index:99989;background:rgba(5,7,10,.62);backdrop-filter:blur(4px);display:none}
+.zci-overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99990;width:min(1180px,calc(100vw - 80px));height:min(760px,calc(100vh - 90px));display:none;flex-direction:column;color:#e6e9f0;font-size:12px;line-height:1.5;overflow:hidden;
   font-family:-apple-system,'Segoe UI',system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
-  background:#0d0f13;background-image:radial-gradient(1000px 460px at 20% -10%,rgba(70,110,255,.12),transparent 60%),radial-gradient(800px 420px at 90% -8%,rgba(34,211,197,.06),transparent 60%)}
-.zci-head{display:flex;align-items:center;gap:12px;padding:14px 20px 8px;flex:0 0 auto}
+  background:#0d0f13;background-image:radial-gradient(1000px 460px at 20% -10%,rgba(70,110,255,.12),transparent 60%),radial-gradient(800px 420px at 90% -8%,rgba(34,211,197,.06),transparent 60%);
+  border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.zci-head{display:flex;align-items:center;gap:12px;padding:14px 18px 8px;flex:0 0 auto;border-bottom:1px solid rgba(255,255,255,.07)}
 .zci-title h1{font-size:16px;font-weight:700;margin:0}
 .zci-title .sub{font-size:11px;color:#757d8c}
 .zci-spacer{flex:1}
@@ -2322,22 +2324,14 @@
       '<button class="zci-iconbtn zci-accent" data-refresh title="刷新">⟳</button>' +
       '<button class="zci-iconbtn" data-close title="关闭">✕</button></div>' +
       '<div class="zci-tabs"></div><div class="zci-body"></div>';
+    var backdrop = document.createElement("div");
+    backdrop.className = "zci-backdrop";
+    document.body.appendChild(backdrop);
     document.body.appendChild(overlay);
-    function syncOffset() {
-      var aside = findAside();
-      var w = 262;
-      try {
-        if (aside) {
-          var rect = aside.getBoundingClientRect();
-          if (rect && rect.width > 80) w = rect.width;
-        }
-      } catch {
-        // keep default
-      }
-      overlay.style.left = w + 6 + "px";
-    }
-    syncOffset();
-    window.addEventListener("resize", syncOffset);
+    backdrop.addEventListener("click", closeOverlay);
+    backdrop.style.display = "block";
+    overlay.style.display = "flex";
+    state.backdropEl = backdrop;
     state.overlayEl = overlay;
     state.tabsEl = overlay.querySelector(".zci-tabs");
     state.bodyEl = overlay.querySelector(".zci-body");
@@ -2366,12 +2360,15 @@
     if (!state.overlayEl) buildOverlay();
     else {
       state.overlayEl.style.display = "flex";
+      if (state.backdropEl) state.backdropEl.style.display = "block";
+      if (state.onKey) document.addEventListener("keydown", state.onKey, true);
       load();
     }
   }
 
   function closeOverlay() {
     if (state.overlayEl) state.overlayEl.style.display = "none";
+    if (state.backdropEl) state.backdropEl.style.display = "none";
     if (state.onKey) document.removeEventListener("keydown", state.onKey, true);
   }
 
@@ -2496,6 +2493,7 @@
       var style = document.getElementById("zci-style");
       if (style) style.remove();
       if (state.overlayEl) state.overlayEl.remove();
+      if (state.backdropEl) state.backdropEl.remove();
       document.removeEventListener("keydown", state.onKey, true);
       window.__zcodeContextPanelBooted = false;
     } catch (e) {

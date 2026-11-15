@@ -4,7 +4,7 @@
     {
       "name": "zcode-context",
       "source": ".",
-      "version": "0.2.1",
+      "version": "0.3.8",
       "description": "Context-usage insight dashboard for ZCode: overview KPIs, 7-day token+cost chart, 8-week activity heatmap, click-to-filter tool/command/project rankings, per-session context composition bar, collapsible context browser, trend chart with pinned request detail, event log & file activity filters, cost composition, agent formation view. Purely local read-only SQLite; no other plugins or system Node.js required. Injected via app.asar; requires a restart.",
       "displayName": "Context Insight",
       "displayName_i18n": {
