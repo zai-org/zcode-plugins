@@ -1,0 +1,19 @@
+{
+  "description": "zcode-context: 会话启动时同步运行时文件，并检查/修复上下文洞察入口的 app.asar 注入（会修改 ZCode 的 app.asar，安装或更新后需完全退出并重开）。",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": true,
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.mjs\"",
+            "timeoutMs": 90000,
+            "statusMessage": "zcode-context: 检查上下文洞察入口…"
+          }
+        ]
+      }
+    ]
+  }
+}
