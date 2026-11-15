@@ -127,8 +127,9 @@ def main() -> None:
         allow()  # 三振/会话预算用尽/已顶回过 → 放行并已记录, 防死循环
     block_stop(
         "复刻契约未闭环, 不能收尾:\n- " + "\n- ".join(res["gaps"]) +
-        "\n先自己跑审计脚本对账: python3 <plugin_root>/skills/video2code/scripts/"
-        "contract_audit.py (plugin_root 见会话开头横幅, 兜底 cat .v2c/plugin_root), "
+        "\n先自己跑审计脚本对账: node \"<plugin_root>/hooks/run_python.mjs\" "
+        "\"<plugin_root>/skills/video2code/scripts/contract_audit.py\" "
+        "(plugin_root 见会话开头横幅, 兜底 cat .v2c/plugin_root), "
         "按缺口逐条补完 (D 项成对证据用 composite_view 的 beats 视频输入一轮即出), "
         "全绿后再收尾。\n"
         "若用户本轮要的其实不是这个复刻任务 (契约是本会话早前认领的, 但用户已经转去别的事, "

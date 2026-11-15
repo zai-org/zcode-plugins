@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/env_check.py\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs\" \"${CLAUDE_PLUGIN_ROOT}/hooks/env_check.py\"",
             "timeout": 30,
             "statusMessage": "video2code 环境检查…"
           }
@@ -18,12 +18,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_video_input.py\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs\" \"${CLAUDE_PLUGIN_ROOT}/hooks/check_video_input.py\"",
             "timeout": 15
           },
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_url_input.py\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs\" \"${CLAUDE_PLUGIN_ROOT}/hooks/check_url_input.py\"",
             "timeout": 10
           }
         ]
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_plan_first.py\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs\" \"${CLAUDE_PLUGIN_ROOT}/hooks/check_plan_first.py\"",
             "timeout": 10
           }
         ]
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_closeout.py\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/run_python.mjs\" \"${CLAUDE_PLUGIN_ROOT}/hooks/check_closeout.py\"",
             "timeout": 15
           }
         ]

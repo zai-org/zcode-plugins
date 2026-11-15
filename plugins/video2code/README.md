@@ -69,7 +69,13 @@ Two stdio MCP servers, declared in both [`.mcp.json`](./.mcp.json) and the plugi
 
 ## Hooks
 
-All four are `command` hooks running `python3` against scripts in [`hooks/`](./hooks).
+All four are `command` hooks. They and both MCP servers use the bundled
+[`run_python.mjs`](./hooks/run_python.mjs) launcher instead of assuming the host
+provides a `python3` executable. On Windows it tries `py -3`, `python`, then
+`python3`; on macOS and Linux it tries `python3`, then `python`. The launcher
+preserves the selected interpreter's exit status and defaults Python stdio to
+UTF-8 so localized Hook output is not limited by the Windows console code page.
+Existing `PYTHONUTF8` and `PYTHONIOENCODING` values are respected.
 
 | Event | Script | Behavior |
 | --- | --- | --- |
@@ -90,9 +96,11 @@ All four are `command` hooks running `python3` against scripts in [`hooks/`](./h
 Run the doctor rather than checking by hand:
 
 ```bash
-python3 skills/env-setup/scripts/env_doctor.py
-python3 skills/env-setup/scripts/env_doctor.py --fix
+node hooks/run_python.mjs skills/env-setup/scripts/env_doctor.py
+node hooks/run_python.mjs skills/env-setup/scripts/env_doctor.py --fix
 ```
+
+The launcher skips interpreters older than Python 3.10. Run the doctor in the same environment as ZCode: GUI and terminal `PATH` values may select different interpreters. Python repairs install into the selected virtual environment, or the selected interpreter's user site outside a virtual environment; externally managed installations such as Homebrew additionally require pip's `--break-system-packages` flag, applied only together with `--user`.
 
 ## Side effects, network access, and data
 
@@ -101,7 +109,7 @@ Enabling this plugin grants code-execution trust. Concretely, it will:
 - **Execute commands** — `ffmpeg`/`ffprobe` for transcoding and frame extraction, and `skills/web-replicate/scripts/init-webapp.sh`, which runs `npm install` to populate `node_modules`.
 - **Write files** — `recordings/` (WebM and MP4), `app/` (the scaffolded project), `out/` (`plan.md`, `verify.jsonl`, `report.md`, comparison images under `out/cmp/`), `.v2c/` (plugin root pointer and hook state, including `.v2c/hook_state/interceptions.jsonl`), and a `node_modules` cache under `/tmp/webapp-node-modules` (override with `NM_LOCAL_ROOT`).
 - **Bind a local port** — `deploy_website` starts a `http.server` on port 8765 or the next free port, bound locally, and stops it when the MCP server process exits.
-- **Access the network** — the npm registry when installing template dependencies, and whatever site you ask it to record.
+- **Access the network** — the configured Python package index when the doctor installs Python dependencies, the npm registry when installing template dependencies, and whatever site you ask it to record.
 - **Send no telemetry** and require no API key, token, or account. There are no credentials in this plugin and nothing is uploaded anywhere.
 
 ## User configuration
