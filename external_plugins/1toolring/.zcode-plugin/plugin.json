@@ -1,0 +1,35 @@
+{
+  "name": "1toolring",
+  "version": "0.1.0",
+  "description": "Pay-per-call access to thousands of tools from third-party providers through a single 1ToolRing key: web search, maps and places, shopping and prices, market data, web pages, images, weather, jobs and more. The price is shown before every call and failed calls are never charged.",
+  "description_i18n": {
+    "en": "Pay-per-call access to thousands of tools from third-party providers through a single 1ToolRing key: web search, maps and places, shopping and prices, market data, web pages, images, weather, jobs and more. The price is shown before every call and failed calls are never charged.",
+    "zh-CN": "通过一个 1ToolRing 密钥按次调用第三方供应商提供的数千个工具：网页搜索、地图与地点、购物与价格、行情数据、网页抓取、图片、天气、招聘等。每次调用前显示价格，失败的调用不计费。"
+  },
+  "author": {
+    "name": "Khaisa Studio",
+    "url": "https://1toolring.com"
+  },
+  "homepage": "https://1toolring.com",
+  "repository": "https://github.com/khmuhtadin/1toolring-mcp",
+  "license": "MIT",
+  "keywords": [
+    "search",
+    "maps",
+    "web-search",
+    "shopping",
+    "market-data",
+    "scraping",
+    "mcp",
+    "pay-per-call",
+    "tools"
+  ],
+  "userConfig": {
+    "api_key": {
+      "title": "1ToolRing API key",
+      "description": "Optional. Leave empty to use the OAuth sign-in prompt. Create a key at https://app.1toolring.com/keys.",
+      "type": "string",
+      "default": ""
+    }
+  }
+}
