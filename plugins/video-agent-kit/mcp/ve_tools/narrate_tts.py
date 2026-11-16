@@ -14,7 +14,7 @@ import json
 import re
 import shlex
 import subprocess
-from .ffproc import run_proc
+from .ffproc import run_proc, write_ffconcat_file
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -301,9 +301,7 @@ def _concat_audio(parts: list[str], out: str) -> None:
         _run(["ffmpeg", "-y", "-i", parts[0], *codec1, out])
         return
     lst = out + ".txt"
-    with open(lst, "w", encoding="utf-8") as f:
-        for p in parts:
-            f.write(f"file '{p}'\n")
+    write_ffconcat_file(lst, parts)
     codec = ["-c:a", "pcm_s16le"] if Path(out).suffix.lower() == ".wav" else \
             ["-c:a", "libmp3lame", "-b:a", "192k"]
     _run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst, *codec, out])

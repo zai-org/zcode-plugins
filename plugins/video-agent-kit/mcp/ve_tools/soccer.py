@@ -24,7 +24,7 @@ import hashlib
 import json
 import re
 import subprocess
-from .ffproc import run_proc, escape_text
+from .ffproc import escape_text, run_proc, write_ffconcat_file
 from pathlib import Path
 from urllib.parse import quote
 
@@ -546,7 +546,7 @@ def _render_segments(reel: dict, match: dict, outline: dict, work: Path) -> tupl
     if flash_files:
         # 快闪蒙太奇内部保持硬切: 先硬拼成 open.mp4 再进溶解链
         lst = work / "open_concat.txt"
-        lst.write_text("".join(f"file '{f.resolve()}'\n" for f in flash_files), encoding="utf-8")
+        write_ffconcat_file(lst, flash_files)
         open_mp4 = work / "open.mp4"
         r = _ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(open_mp4)])
         if r.returncode:
