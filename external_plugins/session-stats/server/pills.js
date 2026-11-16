@@ -37,8 +37,8 @@
 
   css = document.createElement("style");
   css.textContent =
-    ".__sspills-row{position:absolute;left:50%;transform:translateX(-50%);bottom:0;" +
-    "max-width:calc(100% - 24px);overflow:hidden;display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
+    ".__sspills-row{position:fixed;bottom:3px;max-width:calc(100vw - 24px);overflow:hidden;" +
+    "display:inline-flex;align-items:center;gap:6px;z-index:30;}" +
     ".__sspills-pill{display:inline-flex;align-items:center;gap:6px;height:20px;padding:1px 8px;" +
     "border-radius:6px;background:transparent;border:0;color:rgba(232,235,241,.55);" +
     "font:500 12px/20px 'Segoe UI','Microsoft YaHei',system-ui,sans-serif;font-variant-numeric:tabular-nums;" +
@@ -442,20 +442,33 @@
      同时把 dock 设为定位上下文，统计行用 left:50% 居中——拖拽侧栏时位置由浏览器
      随卡片一起重算，不再依赖 JS 逐帧改坐标（那会慢一帧，看起来就是「闪一下」）。 */
   var dockHost = null, dockOrigPad = "", dockOrigPos = "";
-  function ensureDockHost(dock) {
+  function ensureDockHost(dock, pad) {
+    pad = pad === undefined ? "24px" : pad;
     if (dockHost && dockHost !== dock) restoreDockHost();
     if (!dockHost) {
       dockOrigPad = dock.style.paddingBottom || "";
       dockOrigPos = dock.style.position || "";
       dockHost = dock;
     }
-    if (dock.style.paddingBottom !== "24px") dock.style.paddingBottom = "24px";
+    if (dock.style.paddingBottom !== pad) dock.style.paddingBottom = pad;
     if (dock.style.position !== "relative") dock.style.position = "relative";
+  }
+  /* 贴底策略：卡片下方到窗口底边的空隙放得下整行 → 行悬到卡片外、贴住窗口底边
+     （卡片不加高、统计行落在原来的空白带上）；放不下（小窗/贴底布局）→ 行退回
+     卡片内 24px 底带。进出带 2px/8px 滞回，临界尺寸不抖。 */
+  function applyBottomPlacement(dock) {
+    /* 贴客户端底边（fixed，bottom:3px）：行完全脱离宿主布局，不会把输入条撑高；
+       只水平跟随输入条卡片居中。 */
+    ensureDockHost(dock, "0px");
+    var dockRect = dock.getBoundingClientRect();
+    var w = rowEl.offsetWidth || 0;
+    var left = Math.round(dockRect.left + (dockRect.width - w) / 2);
+    rowEl.style.left = left + "px";
   }
   function restoreDockHost() {
     if (!dockHost) return;
     try {
-      if (dockHost.style.paddingBottom === "24px") dockHost.style.paddingBottom = dockOrigPad;
+      dockHost.style.paddingBottom = dockOrigPad;
       if (dockHost.style.position === "relative") dockHost.style.position = dockOrigPos;
     } catch (e) {}
     dockHost = null;
@@ -479,7 +492,7 @@
     if (!rowEl || !rowEl.isConnected) {
       if (!rowEl) rowEl = makeRow();
     }
-    if (rowEl.parentElement !== dock) dock.appendChild(rowEl); // 挂回 dock：位置/居中全交给 CSS
+    if (rowEl.parentElement !== document.body) document.body.appendChild(rowEl); // fixed 挂 body，脱离宿主布局
     ensureModeSpans();
     var avail = Math.round(dockRect.width - 24); // 左右各留 12px，与输入条左缘对齐
     var all = ["full", "mid", "mini", "micro"];
@@ -499,6 +512,7 @@
     pillMode = chosen;
     setModeSpans(chosen);
     rowEl.style.display = "";
+    applyBottomPlacement(dock);
   }
 
   var scheduled = false;
@@ -541,9 +555,10 @@
     var dock = visibleDock();
     if (!dock) return;
     ensureDockHost(dock);
-    if (rowEl.parentElement !== dock) dock.appendChild(rowEl);
+    if (rowEl.parentElement !== document.body) document.body.appendChild(rowEl);
     var dockRect = dock.getBoundingClientRect();
     if (!(dockRect.width > 0)) return;
+    if (rowEl.style.display !== "none") applyBottomPlacement(dock);
     var avail = Math.round(dockRect.width - 24);
     if (rowEl.style.display === "none" || rowEl.offsetWidth <= avail) return;
     /* 拖拽变窄：就地降档而不是先隐藏再显示（那会闪一下） */
