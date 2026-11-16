@@ -976,9 +976,17 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text="[ERROR] subtitles_path is required (out/subtitles.json from subtitle_build)")
     if not shutil.which("ffmpeg"):
         return ToolResult(text="[ERROR] ffmpeg not found on PATH")
-    # Fail fast: subtitle burn-in needs libass (subtitles/ass filter); minimal
-    # builds drop it and only fail after reading the whole video.
-    cap_err = require_ffmpeg(encoders=("libx264", "aac"), filters=("subtitles",))
+    mode = str(args.get("mode") or "burn").strip().lower()
+    if mode not in {"burn", "soft", "both"}:
+        return ToolResult(text="[ERROR] mode must be one of: burn, soft, both")
+
+    # Soft subtitles copy the source streams; only burn-in needs libass and
+    # a video encoder. Check the actual filters/codecs used by each command.
+    encoders = ("libx264",) if mode in {"burn", "both"} else ()
+    if mode in {"soft", "both"}:
+        encoders += ("mov_text",)
+    filters = ("ass",) if mode in {"burn", "both"} else ()
+    cap_err = require_ffmpeg(encoders=encoders, filters=filters)
     if cap_err:
         return ToolResult(text=cap_err)
     video_path = ctx.resolve(args["video_path"])
@@ -987,10 +995,6 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
     subtitles_path = ctx.resolve(args["subtitles_path"])
     if not subtitles_path.is_file():
         return ToolResult(text=f"[ERROR] subtitles not found: {subtitles_path}")
-
-    mode = str(args.get("mode") or "burn").strip().lower()
-    if mode not in {"burn", "soft", "both"}:
-        return ToolResult(text="[ERROR] mode must be one of: burn, soft, both")
 
     try:
         package = json.loads(subtitles_path.read_text(encoding="utf-8"))
