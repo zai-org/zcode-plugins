@@ -66,8 +66,12 @@ def fmt_dur(ms):
         return "%ds" % s
     return "%dm%02ds" % (s // 60, s % 60)
 
-def fmt_k(n):
-    return "%.1fk" % (n / 1000) if n >= 1000 else str(n)
+def fmt_n(n):
+    if n >= 1000000:
+        return ("%.2f" % (n / 1000000)).rstrip("0").rstrip(".") + "M"
+    if n >= 1000:
+        return ("%.1f" % (n / 1000)).rstrip("0").rstrip(".") + "k"
+    return str(n)
 
 def stats(rs, label):
     tin = sum(r["in"] for r in rs) + sum(r["cache"] for r in rs)
@@ -78,7 +82,7 @@ def stats(rs, label):
     t0 = (t0 - rs[0]["durationMs"] / 1000.0) if t0 else None
     t1 = ts(rs[-1]["completedAt"])
     span = (t1 - t0) * 1000 if (t0 and t1) else None
-    return "%s ↑%s ↓%s ⏱%s/%s" % (label, fmt_k(tin), fmt_k(tout),
+    return "%s ↑%s ↓%s ⏱%s/%s" % (label, fmt_n(tin), fmt_n(tout),
                                    fmt_dur(pure),
                                    fmt_dur(span) if span is not None else "?")
 
