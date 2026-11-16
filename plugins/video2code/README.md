@@ -99,7 +99,7 @@ python3 skills/env-setup/scripts/env_doctor.py --fix
 Enabling this plugin grants code-execution trust. Concretely, it will:
 
 - **Execute commands** — `ffmpeg`/`ffprobe` for transcoding and frame extraction, and `skills/web-replicate/scripts/init-webapp.sh`, which runs `npm install` to populate `node_modules`.
-- **Write files** — `recordings/` (WebM and MP4), `app/` (the scaffolded project), `out/` (`plan.md`, `verify.jsonl`, `report.md`, comparison images under `out/cmp/`), `.v2c/` (plugin root pointer and hook state, including `.v2c/hook_state/interceptions.jsonl`), and a `node_modules` cache under `/tmp/webapp-node-modules` (override with `NM_LOCAL_ROOT`).
+- **Write files** — `recordings/` (WebM and MP4), `app/` (the scaffolded project), `out/` (`plan.md`, `verify.jsonl`, `report.md`, comparison images under `out/cmp/`), `.v2c/` (plugin root pointer and hook state, including `.v2c/hook_state/interceptions.jsonl`), and a `node_modules` cache under `/tmp/webapp-node-modules` (override with `NM_LOCAL_ROOT`). Concurrent initializations share only complete cache entries; cache publication works with the standard macOS/BSD and GNU command-line tools.
 - **Bind a local port** — `deploy_website` starts a `http.server` on port 8765 or the next free port, bound locally, and stops it when the MCP server process exits.
 - **Access the network** — the npm registry when installing template dependencies, and whatever site you ask it to record.
 - **Send no telemetry** and require no API key, token, or account. There are no credentials in this plugin and nothing is uploaded anywhere.
