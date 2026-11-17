@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Lumos-789/guster/main/schemas/plan.schema.json",
+  "title": "Guster plan",
+  "description": "Format contract for the plan JSON produced by src/guster/planner.py (build_plan and the op_* constructors) and consumed by `guster apply` (src/guster/executor.py). mkdir/move/write run on apply; manual ops stay a skipped checklist.",
+  "type": "object",
+  "required": [
+    "version",
+    "id",
+    "created_at",
+    "title",
+    "notes",
+    "operations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Plan format version; the integer 1.",
+      "type": "integer",
+      "enum": [1]
+    },
+    "id": {
+      "description": "Unique plan id; also the plan file name stem.",
+      "type": "string",
+      "minLength": 1
+    },
+    "created_at": {
+      "description": "ISO timestamp of plan creation.",
+      "type": "string"
+    },
+    "title": {
+      "description": "One-line plan title.",
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "description": "What the plan does and how to apply it; may be empty.",
+      "type": "string"
+    },
+    "operations": {
+      "description": "Ordered operations applied one by one; a failure rolls back.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "path"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": ["mkdir"]
+              },
+              "path": {
+                "description": "Directory to create.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "src",
+              "dst"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": ["move"]
+              },
+              "src": {
+                "description": "Existing file or directory to move.",
+                "type": "string",
+                "minLength": 1
+              },
+              "dst": {
+                "description": "Destination path; must not exist yet.",
+                "type": "string",
+                "minLength": 1
+              },
+              "pointer": {
+                "description": "Optional note left at the old location; null when unused.",
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "content": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "path",
+              "content"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": ["write"]
+              },
+              "path": {
+                "description": "File to write.",
+                "type": "string",
+                "minLength": 1
+              },
+              "content": {
+                "description": "Full file content.",
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind",
+              "path",
+              "action",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": ["manual"]
+              },
+              "path": {
+                "description": "Path the action is about; may be empty.",
+                "type": "string"
+              },
+              "action": {
+                "description": "What a human should do.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Why; usually the finding rule and message.",
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

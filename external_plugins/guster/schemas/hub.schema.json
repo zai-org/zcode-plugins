@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Lumos-789/guster/main/schemas/hub.schema.json",
+  "title": "Guster hub manifest",
+  "description": "Format contract for hub.yaml, the Guster hub manifest. Field semantics follow src/guster/layout.py and src/guster/hub.py. Guster reads values in their string form, so quoted and unquoted spellings of schema_version are equivalent.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Manifest format major version; absent means 1.",
+      "enum": ["1", "2", 1, 2]
+    },
+    "profile": {
+      "description": "Hub profile; any other value draws a `hub validate` warning.",
+      "type": "string",
+      "enum": ["lite", "full"]
+    },
+    "hub_version": {
+      "description": "Version of the hub's own contract; informational, shown by `hub status`.",
+      "type": "string"
+    },
+    "min_guster": {
+      "description": "Minimum guster CLI version this hub needs; compared numerically by dotted segments.",
+      "type": "string"
+    },
+    "name": {
+      "description": "Human-readable hub name.",
+      "type": "string"
+    },
+    "created_at": {
+      "description": "ISO date the hub was created.",
+      "type": "string"
+    },
+    "paths": {
+      "description": "Declared hub sections. Relative values are hub-relative and must not contain '..'; a hub may also declare external sections with absolute or ~/ paths. Schema 2 must declare knowledge and projects.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "properties": {
+        "knowledge": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projects": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tools": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "doctor": {
+      "description": "Settings for `guster doctor`.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "waivers": {
+          "description": "Silence a finding; every waiver must carry a written reason.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "rule",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "rule": {
+                  "description": "Rule name of the waived finding, e.g. broken-pointer; the name a doctor finding reports, not the CTX spec id.",
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "description": "Optional scope; only findings for this path are waived.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "Written justification; a waiver without one fails loud.",
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["schema_version"],
+    "properties": {
+      "schema_version": {
+        "enum": ["2", 2]
+      }
+    }
+  },
+  "then": {
+    "required": ["paths"],
+    "properties": {
+      "paths": {
+        "required": ["knowledge", "projects"]
+      }
+    }
+  }
+}
