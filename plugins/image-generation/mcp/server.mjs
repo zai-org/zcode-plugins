@@ -13,14 +13,19 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "image-generation";
-const SERVER_VERSION = "0.1.1";
+const SERVER_VERSION = "0.1.2";
 const AUTH_META_KEY = "com.zcode/official-mcp-auth";
+// 计费场景：zcode-server 把这个头透传给 ToolHub，用来按插件归类用量、在 MaaS 账单里按插件展示。
+// 值是和服务端约定的计费场景名（白名单），改动前要先和服务端对齐。
+const USAGE_SCENARIO_HEADER = "X-Usage-Scenario";
+const USAGE_SCENARIO = "seedream-image";
 const TOOL_NAME = "generate_image";
 
 const INVOKE_PATH = "/api/v1/toolhub/tool/image_generate/invoke";
 const UPLOAD_PATH = "/api/v1/toolhub/files";
-// 文档要求同步生图的客户端超时不小于 130 秒。
-const INVOKE_TIMEOUT_MS = 150_000;
+// zcode-server 对同步生图的超时是 180 秒；客户端多等 5 秒，让服务端先超时并返回明确结果，
+// 而不是插件先断开、把一次可能已出图的调用当成网络错误。
+const INVOKE_TIMEOUT_MS = 185_000;
 const TRANSFER_TIMEOUT_MS = 60_000;
 const MAX_REFERENCE_BYTES = 10 * 1024 * 1024;
 // 接口 JSON 的读取上限（下载图片另有 MAX_DOWNLOAD_BYTES）。
@@ -307,7 +312,7 @@ async function apiRequest(call, path, { headers, body, timeoutMs }) {
   try {
     response = await fetch(call.origin + path, {
       method: "POST",
-      headers: { ...call.authHeaders, ...headers },
+      headers: { ...call.authHeaders, ...headers, [USAGE_SCENARIO_HEADER]: USAGE_SCENARIO },
       body,
       // 身份头只能发往 ZCode 自己的 origin，禁止跟随重定向。
       redirect: "manual",
