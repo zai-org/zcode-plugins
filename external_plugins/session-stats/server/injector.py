@@ -139,10 +139,13 @@ def inject_target(ws_url: str, loader_source: str) -> bool:
         ws = _WS(ws_url)
         _cdp_call(ws, "Page.enable", None, 1)
         _cdp_call(ws, "Page.addScriptToEvaluateOnNewDocument", {"source": loader_source}, 2)
-        _cdp_call(ws, "Runtime.evaluate", {"expression": loader_source}, 3)
+        # 实例已死（页面被宿主重置过）→ 清掉 loader 守卫，让下面的 loader 重新拉起 pills
+        _cdp_call(ws, "Runtime.evaluate",
+                  {"expression": "if(!window.__SSPILLS__){window.__SSPILLS_LOADER__=false;}"}, 3)
+        _cdp_call(ws, "Runtime.evaluate", {"expression": loader_source}, 4)
         deadline = time.time() + 8
         seen = set()
-        while len(seen) < 3 and time.time() < deadline:
+        while len(seen) < 4 and time.time() < deadline:
             data = json.loads(ws.recv_text())
             if "id" in data:
                 seen.add(data["id"])
@@ -179,11 +182,45 @@ def inject_once(port: int = CDP_PORT, only_file: bool = True) -> int:
     return ok
 
 
+def _maybe_repatch(log) -> None:
+    """ZCode 已退出且 asar 丢补丁 → 立即重打（带锁防并发）。
+
+    这是「不依赖启动入口」的主路：一旦重打成功，之后任何方式启动 ZCode 都有统计条。
+    更新器换包期间 ZCode 会完全退出 1~2 分钟，2 秒级轮询能直接抓到这个窗口。
+    """
+    try:
+        import watch_update as w
+    except Exception:
+        return
+    if w.zcode_running():
+        return
+    rd = w.resources_dir()
+    if not rd or w.asar_has_marker(rd / "app.asar"):
+        return
+    lock = HERE / "patch.lock"
+    try:
+        if lock.exists() and (time.time() - lock.stat().st_mtime) < 1200:
+            return  # 另一个重打进行中/刚失败，交给下一轮
+        lock.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
+        return
+    try:
+        log("检测到 asar 无补丁且 ZCode 已退出 → 立即重打")
+        w.run_patcher()
+    finally:
+        try:
+            lock.unlink()
+        except OSError:
+            pass
+
+
 def start_injector(log=lambda m: None) -> None:
-    """常驻线程：端口出现页面就注入（loader 幂等，重复注入无害）。"""
+    """常驻线程：端口出现页面就注入；ZCode 退出且丢补丁就立刻重打。"""
     global _log_fn
     _log_fn = log
     import threading
+
+    state = {"last_patch_check": 0.0}
 
     def loop():
         while True:
@@ -191,9 +228,12 @@ def start_injector(log=lambda m: None) -> None:
                 n = inject_once()
                 if n:
                     _log(f"CDP 注入 {n} 个页面")
-                    time.sleep(10)  # 已注入时降频，等新窗口
-                else:
-                    time.sleep(POLL_SECONDS)
+                now = time.time()
+                # 每 ~6 秒检查一次「退出且丢补丁」；重打本身要几十秒，不必更频
+                if now - state["last_patch_check"] >= 6:
+                    state["last_patch_check"] = now
+                    _maybe_repatch(_log)
+                time.sleep(10 if n else POLL_SECONDS)
             except BaseException as e:  # noqa: BLE001
                 _log(f"注入线程异常: {e!r}")
                 time.sleep(5)

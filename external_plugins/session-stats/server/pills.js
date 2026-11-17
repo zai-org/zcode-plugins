@@ -236,7 +236,12 @@
       })
       .catch(function () {
         fails++;
-        if (fails >= 3 && rowEl) rowEl.style.display = "none";
+        // 不再隐藏自己：保留最后一次数据并标记 stale（opacity 0.4），服务恢复后自动刷新。
+        // 之前“连续 3 次失败就 display:none”会在网络抖动/休眠唤醒后把统计条永久藏掉。
+        if (rowEl) {
+          rowEl.classList.toggle("stale", Date.now() - lastOk > 9000);
+          if (rowEl.style.display === "none" && data) rowEl.style.display = "";
+        }
       });
   }
 
