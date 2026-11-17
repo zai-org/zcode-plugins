@@ -1,0 +1,4 @@
+# Bytecode caches are build residue: never ship them (stale .pyc from a
+# different interpreter, absolute source paths baked in, 2x package weight).
+__pycache__/
+*.pyc
