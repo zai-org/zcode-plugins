@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "rfauto": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["${ZCODE_PLUGIN_ROOT}/scripts/serve_mcp.py"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "RFAUTO_PYTHON": "${user_config.pythonPath}",
+        "RFAUTO_SRC": "${user_config.rfautoSrc}",
+        "RFAUTO_PLUGIN_ROOT": "${ZCODE_PLUGIN_ROOT}",
+        "RFAUTO_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}"
+      },
+      "timeoutMs": 120000
+    }
+  }
+}
