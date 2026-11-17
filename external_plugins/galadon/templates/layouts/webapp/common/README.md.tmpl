@@ -1,0 +1,44 @@
+# {{PROJECT}}
+
+Created with Galadon on {{DATE}} using the `webapp` layout and the
+`{{STACK}}` stack.
+
+The engineering loop is:
+
+```text
+Spec -> Build -> Verify -> Ship -> Learn
+```
+
+Start with:
+
+```bash
+galadon next
+```
+
+## Layout
+
+```text
+server/            backend ({{STACK}})
+web/               frontend landing zone; pick the framework here
+e2e/               end-to-end tests
+tests/             unit tests
+openspec/          construction tickets
+spec/              product behaviour facts
+wiki/              knowledge / progress / runbook
+.agents/           agent runtime, gitignored
+scripts/dev.sh     run the backend locally (python/node stacks)
+config.md          environment and configuration notes
+```
+
+With the `python` or `node` stack, `galadon.yaml` already declares real checks,
+so `galadon check` is green on a fresh clone; `--stack none` ships no checks and
+no `scripts/dev.sh`, and fails the gate. Secrets belong in `.env` or the secret
+provider you configure, never in the YAML file.
+
+## Commands
+
+```bash
+scripts/dev.sh
+galadon next
+galadon check
+```

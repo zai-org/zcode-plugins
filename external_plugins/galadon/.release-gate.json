@@ -1,0 +1,9 @@
+{
+  "allow": [
+    {
+      "rule": "sensitive-file",
+      "path": "templates/base/.env.example",
+      "reason": "Scaffold placeholder emitted by `galadon init`; it declares variable names with empty values and carries no credentials."
+    }
+  ]
+}

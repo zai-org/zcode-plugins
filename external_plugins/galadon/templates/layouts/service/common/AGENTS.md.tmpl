@@ -1,0 +1,65 @@
+# {{PROJECT}}
+
+Entry point for humans and agents. Each layer below has one job; start at the
+top and open only what the current phase needs.
+
+## Start here
+
+1. Read `galadon.yaml` for checks, deploy settings and artifact paths.
+2. Run `galadon next`; do only the current phase.
+3. Run `galadon check` before `galadon ship`.
+
+## Where things live
+
+| Layer | Path | Holds | Committed |
+|---|---|---|---|
+| Entry | `AGENTS.md`, `README.md` | the index into every layer | yes |
+| Plan | `openspec/{config.yaml,changes/,specs/}` | construction tickets | yes |
+| Truth | `spec/` | product behaviour facts | yes |
+| Knowledge | `wiki/{knowledge,progress,runbook}/` | durable why, current state, operations | yes |
+| Context | `.agents/{plans,wiki,evidence,skills,tmp,archive}/` | agent runtime state | no |
+| Code | `server/` | the service | yes |
+| Run | `scripts/`, `deploy/`, `config.md` | scripts, deploy and environment | yes |
+| Verify | `tests/` | unit and integration tests | yes |
+| Output | `out/` | build output | no |
+
+## Knowledge ownership
+
+Project knowledge lives in `docs/` and `wiki/`; agent runtime state lives in
+`.agents/` and is never committed; reusable cross-project knowledge lives in a
+knowledge hub outside the repo — never keep a second copy here.
+
+## Current iteration
+
+<!-- galadon:begin -->
+- phase: spec
+- role: agent
+- next: Write spec/spec.md: problem, acceptance criteria and non-goals.
+<!-- galadon:end -->
+
+## Artifacts
+
+| Phase | Write | Gate |
+|---|---|---|
+| spec | `spec/spec.md` | acceptance is testable |
+| build | code and tests | build checks pass |
+| verify | `verify/evidence.md` | tests and review pass |
+| ship | `release/release.json` | probe matches |
+| learn | `wiki/progress/retro.md` | archived and docs updated |
+
+## Rules
+
+- Do not write business code before the spec gate passes.
+- Do not ship before verification passes.
+- Branch and deploy state changes touch `wiki/progress/` only; `wiki/knowledge/` does not move.
+- Never commit `.agents/` or `out/`.
+- Never put secret values in `galadon.yaml` or git.
+- Fail loud: no silent fallback, no partial-success claim.
+
+## Commands
+
+```bash
+galadon next
+galadon check
+galadon ship --env test --dry-run
+```

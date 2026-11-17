@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+import json
+import sys
+import threading
+import unittest
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from urllib.request import urlopen
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from {{PACKAGE}}.app import Handler, health  # noqa: E402
+
+
+class HealthTests(unittest.TestCase):
+    def test_health_payload_names_the_project(self) -> None:
+        payload = health()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["project"], "{{PROJECT}}")
+        self.assertEqual(payload["version"], "0.1.0")
+
+    def test_health_endpoint_returns_json(self) -> None:
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            url = f"http://127.0.0.1:{server.server_port}/health.json"
+            with urlopen(url, timeout=5) as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(response.headers["Content-Type"], "application/json")
+                payload = json.loads(response.read())
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertEqual(payload, health())
+
+
+if __name__ == "__main__":
+    unittest.main()
