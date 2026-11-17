@@ -1,0 +1,37 @@
+{
+  "voice": "zh-CN-YunxiNeural",
+  "rate": "+5%",
+  "title": "Order task list — delivery demo",
+  "segments": [
+    {
+      "id": "01-entry",
+      "case": "F-01",
+      "label": "入口",
+      "shot": "take-01.mp4",
+      "start": 0.5,
+      "end": 11.5,
+      "crop": [56, 159, 1512, 738],
+      "text": "从订单详情进入任务运营名单，当前负责人和保存入口都在页面上。"
+    },
+    {
+      "id": "02-save",
+      "case": "F-01",
+      "label": "保存",
+      "shot": "take-02.mp4",
+      "start": 0.3,
+      "end": 9.8,
+      "crop": [56, 159, 1512, 738],
+      "text": "修改负责人后点保存，页面提示已更新，没有报错。"
+    },
+    {
+      "id": "03-readback",
+      "case": "F-01",
+      "label": "回读",
+      "shot": "take-03.mp4",
+      "start": 0.4,
+      "end": 8.2,
+      "crop": [56, 159, 1512, 738],
+      "text": "刷新页面重新打开名单，刚才的修改仍然生效。"
+    }
+  ]
+}
