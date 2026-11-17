@@ -127,9 +127,9 @@ app_running() {
 
 session_start() {
     [ "$platform" != other ] || return 0
-    # Codex can load Claude-format plugins; it then sets PLUGIN_ROOT, which Claude Code does not. The Claude Code line
-    # stays out of Codex sessions (the Codex plugin in this repo has its own).
-    if [ "$agent" = claude ] && [ -n "${PLUGIN_ROOT:-}" ]; then return 0; fi
+    # Codex and ZCode can load Claude-format plugins; they then set PLUGIN_ROOT or ZCODE_PLUGIN_ROOT, which Claude Code
+    # does not. The Claude Code line stays out of their sessions.
+    if [ "$agent" = claude ] && { [ -n "${PLUGIN_ROOT:-}" ] || [ -n "${ZCODE_PLUGIN_ROOT:-}" ]; }; then return 0; fi
     [ -z "$(hook_marker)" ] || return 0
     # Agents the app follows without hooks: an installed app is a set-up app.
     if [ -n "$hooks_optional" ] && [ -n "$(app_path)" ]; then return 0; fi

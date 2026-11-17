@@ -5,7 +5,7 @@
     "en": "Checks whether the Orbtile app is installed and following your ZCode tasks, and tells you the one next step if not. Read-only; sends nothing.",
     "zh-CN": "检查 Orbtile 应用是否已安装并在跟踪你的 ZCode 任务；如果没有，告诉你下一步该做什么。只读取本机文件，不发送任何数据。"
   },
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": {
     "name": "Orbtile Team",
     "url": "https://orbtile.com"
