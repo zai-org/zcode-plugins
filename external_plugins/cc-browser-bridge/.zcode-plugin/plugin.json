@@ -1,0 +1,31 @@
+{
+  "name": "cc-browser-bridge",
+  "version": "0.6.0-rc.2",
+  "description": "Connect ZCode to your existing Chrome session for page reading, screenshots, and browser actions through a local MCP bridge.",
+  "description_i18n": {
+    "en": "Connect ZCode to your existing Chrome session for page reading, screenshots, and browser actions through a local MCP bridge.",
+    "zh-CN": "让 ZCode 通过本地 MCP 桥接连接日常 Chrome，保留登录态，读取网页、截图、点击和填写表单。"
+  },
+  "author": {
+    "name": "lihytaihe-lang",
+    "url": "https://github.com/lihytaihe-lang"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "browser",
+    "chrome",
+    "mcp",
+    "automation",
+    "local-first"
+  ],
+  "mcpServers": {
+    "cc-browser": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/server/mcp-stdio.js"
+      ]
+    }
+  },
+  "commands": "./commands"
+}

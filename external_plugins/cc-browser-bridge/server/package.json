@@ -1,0 +1,17 @@
+{
+  "name": "cc-browser-bridge",
+  "version": "0.1.0",
+  "description": "Browser Bridge 本地桥接服务：把 MCP/HTTP 工具调用转发给 Chrome 扩展（插件标识 cc-browser-bridge）",
+  "main": "bridge.js",
+  "scripts": {
+    "start": "node bridge.js",
+    "mcp-stdio": "node mcp-stdio.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
+  },
+  "license": "Apache-2.0"
+}

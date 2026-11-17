@@ -1531,6 +1531,46 @@
       "repository": "https://github.com/geer1895/rfauto",
       "license": "GPL-3.0-only",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/rfauto/icon.png"
+    },
+    {
+      "name": "cc-browser-bridge",
+      "source": "./external_plugins/cc-browser-bridge",
+      "icon": "https://www.ihongui.com/browser-bridge/icon.png",
+      "displayName": "Browser Bridge",
+      "displayName_i18n": {
+        "en": "Browser Bridge",
+        "zh-CN": "Browser Bridge"
+      },
+      "description": "Connect ZCode to your existing Chrome session for page reading, screenshots, and browser actions through a local MCP bridge.",
+      "description_i18n": {
+        "en": "Connect ZCode to your existing Chrome session for page reading, screenshots, and browser actions through a local MCP bridge.",
+        "zh-CN": "让 ZCode 通过本地 MCP 桥接连接日常 Chrome，保留登录态，读取网页、截图、点击和填写表单。"
+      },
+      "version": "0.6.0-rc.2",
+      "author": {
+        "name": "lihytaihe-lang",
+        "url": "https://github.com/lihytaihe-lang"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "browser",
+        "chrome",
+        "mcp",
+        "automation",
+        "local-first"
+      ],
+      "examplePrompts": [
+        "List the tabs in my Chrome browser.",
+        "Read the current page and summarize it.",
+        "Fill this form, then wait for me to approve submission."
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出我当前 Chrome 中的标签页。",
+          "读取当前网页并总结。",
+          "填写这个表单，提交前等我确认。"
+        ]
+      }
     }
   ]
 }
