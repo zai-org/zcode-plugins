@@ -1,0 +1,23 @@
+{
+  "name": "free-guide",
+  "description": "Complete community guide to running ZCode on a free stack: quota-safe fallback chain from the Z.ai plan through free cloud providers to an unlimited local GPU model, plus three companion skills (key setup, automatic model fallback, token/quota tracking). Read docs-guide.md first.",
+  "description_i18n": {
+    "en": "Complete community guide to running ZCode on a free stack: quota-safe fallback chain from the Z.ai plan through free cloud providers to an unlimited local GPU model, plus three companion skills (key setup, automatic model fallback, token/quota tracking). Read docs-guide.md first.",
+    "zh-CN": "完整的 ZCode 免费方案社区指南：从 Z.ai 套餐到免费云供应商再到本地 GPU 无限量模型的额度安全回退链，并附带三个配套技能（密钥接入、模型自动回退、用量/额度统计）。请先阅读 docs-guide.md。"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "Tejas Lowanshi",
+    "url": "https://github.com/Tejs2005"
+  },
+  "category": "guides",
+  "keywords": [
+    "free-tier",
+    "fallback-chain",
+    "openrouter",
+    "gemini",
+    "local-model",
+    "quota",
+    "guide"
+  ]
+}
