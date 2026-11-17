@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${ZCODE_PLUGIN_ROOT}/hooks/session-start.js\"",
+            "timeoutMs": 20000,
+            "statusMessage": "Browser Bridge：预热桥接服务（幂等；未预热时 MCP 激活也会自动准备）"
+          }
+        ]
+      }
+    ]
+  }
+}

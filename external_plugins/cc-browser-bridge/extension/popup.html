@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    /* 360 CSS px（border-box）· 系统中文字体 · 标题15/正文13 · 四区：标题状态/控制/地址/说明 */
+    :root { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+    * { box-sizing: border-box; }
+    body { width: 360px; margin: 0; padding: 14px 16px 12px; background: #fff; color: #24292f; font-size: 13px; line-height: 1.55; }
+    header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #e4e9e0; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; flex: none; }
+    .dot.on { background: #16a34a; }
+    .dot.warn { background: #d97706; }
+    h1 { font-size: 15px; font-weight: 600; margin: 0; min-width: 0; }
+    .section { margin-top: 12px; }
+    .row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: start; }
+    .k { color: #3f4743; font-weight: 500; white-space: nowrap; }
+    .v { color: #4c5550; min-width: 0; overflow-wrap: anywhere; }
+    .v.ok { color: #157347; }
+    .v.bad { color: #b42318; }
+    .v.warn { color: #8a5a00; }
+    label.pause { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; -webkit-user-select: none; user-select: none; }
+    input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: #2f7d5a; flex: none; }
+    label.field { display: block; margin-bottom: 6px; }
+    /* 地址行：grid minmax(0,1fr) auto —— 输入可收缩可横向滚动，按钮不收缩不换行 */
+    .addr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+    input[type="text"] {
+      height: 36px; min-width: 0; width: 100%; padding: 0 10px; overflow-x: auto;
+      border: 1px solid #c9d2c6; border-radius: 8px; background: #fff; color: #24292f; font: inherit;
+    }
+    input[type="text"]::placeholder { color: #6b7280; }
+    button {
+      height: 36px; min-width: 72px; flex: none; white-space: nowrap; padding: 0 14px;
+      border: 1px solid #2f6d4f; border-radius: 8px; background: #2f7d5a; color: #fff;
+      font: inherit; font-weight: 500; cursor: pointer;
+    }
+    button:hover { background: #286b4f; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    input[type="text"]:focus, input[type="checkbox"]:focus-visible, button:focus-visible {
+      outline: 2px solid #2f7d5a; outline-offset: 2px;
+    }
+    .hint { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e4e9e0; color: #5a6472; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+    .hint.err { color: #b42318; }
+  </style>
+</head>
+<body>
+  <header><span id="dot" class="dot" aria-hidden="true"></span><h1>Browser Bridge</h1></header>
+
+  <section class="section" aria-label="连接状态">
+    <div class="row">
+      <span class="k">连接</span>
+      <span id="state" class="v">检测中…</span>
+    </div>
+  </section>
+
+  <section class="section" aria-label="控制">
+    <label class="pause" for="pause">
+      <input type="checkbox" id="pause" />
+      <span>暂停 AI 对浏览器的控制</span>
+    </label>
+  </section>
+
+  <section class="section" aria-label="服务地址">
+    <label class="field k" for="serverUrl">服务地址（保存后自动重连）</label>
+    <div class="addr">
+      <input type="text" id="serverUrl" spellcheck="false" placeholder="ws://127.0.0.1:8765/ws" />
+      <button id="save">保存</button>
+    </div>
+  </section>
+
+  <p class="hint" id="hint" aria-live="polite">角标 ● 表示已连接。被控制时 Chrome 顶部出现「正在调试」横幅属正常现象。</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>
