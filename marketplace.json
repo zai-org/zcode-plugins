@@ -1690,6 +1690,46 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "cc-browser-bridge",
+      "source": "./external_plugins/cc-browser-bridge",
+      "icon": "https://www.ihongui.com/browser-bridge/icon.png",
+      "displayName": "Browser Bridge",
+      "displayName_i18n": {
+        "en": "Browser Bridge",
+        "zh-CN": "Browser Bridge"
+      },
+      "description": "Connect ZCode to your existing Chrome session to read, click, type, and take screenshots in a selected background tab, with visible activity status.",
+      "description_i18n": {
+        "en": "Connect ZCode to your existing Chrome session to read, click, type, and take screenshots in a selected background tab, with visible activity status.",
+        "zh-CN": "连接 ZCode 与日常 Chrome，在指定后台标签页读取网页、点击、输入和截图，并显示操作状态。"
+      },
+      "version": "0.6.0",
+      "author": {
+        "name": "lihytaihe-lang",
+        "url": "https://github.com/lihytaihe-lang"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "browser",
+        "chrome",
+        "mcp",
+        "automation",
+        "local-first"
+      ],
+      "examplePrompts": [
+        "List the tabs in my Chrome browser.",
+        "Keep working in the tab named A while I use another tab.",
+        "Fill this form, then wait for me to approve submission."
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出我当前 Chrome 中的标签页。",
+          "我会切到其他标签页，请继续操作标题为 A 的标签页。",
+          "填写这个表单，提交前等我确认。"
+        ]
+      }
     }
   ]
 }
