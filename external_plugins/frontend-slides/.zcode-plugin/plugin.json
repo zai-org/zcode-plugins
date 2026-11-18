@@ -1,0 +1,23 @@
+{
+  "name": "frontend-slides",
+  "description": "Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Zero dependencies, 12 curated style presets, 34 bold design systems, PPT conversion, PDF export, and Vercel deploy.",
+  "description_i18n": {
+    "en": "Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Zero dependencies, 12 curated style presets, 34 bold design systems, PPT conversion, PDF export, and Vercel deploy.",
+    "zh-CN": "从零创建或从 PowerPoint 转换生成精美、带动画的 HTML 演示文稿。零依赖，12 种精选样式预设、34 套大胆设计系统，支持 PPT 转换、PDF 导出与 Vercel 部署。"
+  },
+  "version": "2.1.0",
+  "author": {
+    "name": "Zara Zhang",
+    "url": "https://github.com/zarazhangrui"
+  },
+  "keywords": [
+    "presentations",
+    "slides",
+    "html",
+    "design",
+    "powerpoint",
+    "templates",
+    "deck"
+  ],
+  "skills": "./skills"
+}
