@@ -101,6 +101,37 @@ def resolve_hub_layout(hub: Path) -> Dict[str, Path]:
     return resolved
 
 
+def load_governance_docs(hub: Optional[Path]) -> Optional[List[str]]:
+    """Read the `governance_docs` file-name list from `<hub>/hub.yaml`.
+
+    None means the hub declares no list, so governance complexity is not
+    applicable (n/a) rather than measured at zero; the framework doc names are
+    per-hub facts, never shipped defaults.
+    """
+    if hub is None:
+        return None
+    manifest = Path(hub) / "hub.yaml"
+    if not manifest.is_file():
+        return None
+    docs: List[str] = []
+    in_block = False
+    for raw_line in read_text(manifest).splitlines():
+        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+            continue
+        indent = len(raw_line) - len(raw_line.lstrip(" "))
+        line = raw_line.strip()
+        if indent == 0:
+            in_block = line == "governance_docs:"
+            continue
+        if not in_block or not line.startswith("- "):
+            continue
+        name = line[2:].strip().strip("'\"")
+        if not name:
+            raise ValueError(f"governance_docs entry must name a file in {manifest}")
+        docs.append(name)
+    return docs or None
+
+
 def load_waivers(hub: Optional[Path]) -> List[Dict[str, str]]:
     """Read `doctor.waivers` from `<hub>/hub.yaml`.
 

@@ -239,10 +239,16 @@ def render_report(
             f"{raw.get('knowledge_unhashed')}._"
         )
         lines.append("")
-    lines.append(
-        f"_Not counted in CHI: Governance simplicity {metrics.get('gcr')} "
-        f"(score {scores.get('gcr')}, {raw.get('governance_docs', 0)} docs)._"
-    )
+    if metrics.get("gcr") is None:
+        lines.append(
+            "_Not counted in CHI: Governance simplicity n/a "
+            "(hub.yaml declares no governance_docs list)._"
+        )
+    else:
+        lines.append(
+            f"_Not counted in CHI: Governance simplicity {metrics.get('gcr')} "
+            f"({raw.get('governance_docs', 0)} framework docs / 8; target ≤0.5)._"
+        )
     lines.append("")
     lines.append("## Findings")
     lines.append("")

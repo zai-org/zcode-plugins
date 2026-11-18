@@ -164,6 +164,7 @@ def resolve_registry_row_path(raw: str, hub_root: Path, home: Path) -> Optional[
 
 def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
     findings: List[Dict[str, Any]] = []
+    governance = registry.get("governance_docs")
     stats: Dict[str, Any] = {
         "pointers_checked": 0,
         "pointers_valid": 0,
@@ -185,7 +186,7 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
         "state_docs_fresh_from_mtime": 0,
         "duplicate_knowledge": 0,
         "note_headers_total": 0,
-        "governance_docs": len(registry.get("governance_docs", [])),
+        "governance_docs": None if governance is None else len(governance),
         "misplaced_entries": 0,
         "resident_entries": 0,
         "secret_total": 0,
@@ -767,7 +768,7 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
             )
 
     # Governance document overlap
-    governance_docs = registry.get("governance_docs", [])
+    governance_docs = registry.get("governance_docs") or []
     if len(governance_docs) > 4:
         findings.append(
             finding(

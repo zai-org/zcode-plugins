@@ -1566,7 +1566,7 @@
         "en": "Discover, audit, plan and evolve agent context across projects, skills, tools, knowledge and credentials; optionally scaffold a lightweight Guster Hub for durable knowledge and project state.",
         "zh-CN": "发现、诊断、规划和演进全机 agent 上下文：项目、指令、Skill、工具、知识、状态与凭据引用；可初始化一个轻量 Guster Hub，承载长期知识与项目状态。"
       },
-      "version": "0.9.2",
+      "version": "0.9.3",
       "author": {
         "name": "Lumos-789",
         "url": "https://github.com/Lumos-789"

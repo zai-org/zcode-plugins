@@ -68,7 +68,7 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster link` | 检查上下文指针 |
 | `guster export` | 导出脱敏 Markdown/JSON 报告 |
 | `guster credentials` | 按范围（公司 / 个人）列出已登记凭据 |
-| `guster upgrade` | 检查 Codex/ZCode/package 版本一致性 |
+| `guster upgrade` | 检查 CLI 与 Codex/ZCode/package 版本一致 |
 
 ## 配置：roots 与 zones
 
@@ -157,6 +157,11 @@ CHI = 0.20 SSR + 0.15 RBR + 0.15 PCR + 0.15 ICR
 - **SIR** 敏感隔离率：凭据文件 + host 配置里的字面令牌。Guster 不扫描任意文件内容找
   token 形状 —— 那是发布闸的职责；SIR 只声称它确实看过的东西。
 
+**GCR**（治理复杂度比）只随分数一起展示，从不计入 CHI。它统计的是 hub
+`hub.yaml` 里 `governance_docs` 名单点到的框架文档（在 Hub `knowledge/general/`
+与 `~/.agents/wiki/` 下查找）；没声明名单的 Hub 没有可测的治理事实，GCR 记
+`n/a`，任何输出都不再从它派生分数。
+
 严重 finding 不改写 CHI：它让 `doctor` 以 3 退出（任意 `high` 退出 2），分数仍是上面的加权和。门禁看退出码，CHI 看趋势。
 
 某个维度没有证据时记为 `n/a` 并从加权和中剔除，而不是记 1.0：空分母表示「没测」，不是「满分」。某 scope 的所有维度都为空时，CHI 本身为 `n/a`。
@@ -221,7 +226,7 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 
 ## 安全边界
 
-- 默认不写工作区：只有 `apply --yes`、`init --yes`、`hub init --yes` 和 `hub attach` 会自行改动工作区文件或 Guster 配置；`export` 总会写报告文件——默认 `<state-dir>/context-health.md`，或 `--out` 指定的路径（`--format json` 时另加 `.json` 姊妹文件）。
+- 默认不写工作区：只有 `apply --yes`、`init --yes`、`hub init --yes` 和 `hub attach` 会自行改动工作区文件或 Guster 配置；`export` 总会写一个报告文件——默认 `<state-dir>/context-health.md`，或 `--out` 指定的路径；`--format json` 只写 `.json` 报告（不再同时写 Markdown）。
 - Guster 会在状态目录（`~/.agents/guster/` 或 `scoped/<hash>/`）维护五个文件：`config.json`（roots/zones/hub，由 `init`、`hub init`/`attach` 和 `zones` 写入）、所有扫描类命令都会重写的 `registry.json`（`status` 在没有 registry 时也会写）、`doctor` 的 `findings.json`、`score` 的 `metrics.jsonl`，以及串行化并发运行的临时 `.lock`。`--no-write` 只对 `scan`、`doctor`、`score`、`check` 关闭本命令的状态写入。（`plans/` 与 `backups/` 是目录，不算文件。）
 - 永不持久化或输出凭据值；扫描只保留路径和脱敏形态。
 - 不自动 `git add` / `commit` / `push` / 部署。
@@ -234,7 +239,7 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 |---|---|
 | `0` | 成功——干净运行，或 finding 严重度不高于 `medium` |
 | `1` | 工具/配置错误：plan 损坏或不可读、执行中失败且已回滚的 apply、工作区根不存在、`config.json` 无效（`roots` 非列表、root/zone/hub 路径坏、`roots` 为空、无可扫候选——跑 `guster init`）；已接入 hub 校验不过时 `hub status` 也返回 1 |
-| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约；`link` 发现断链；`upgrade` 发现各 manifest 版本不一致 |
+| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约；`link` 发现断链；`upgrade` 发现插件各版本不一致 |
 | `3` | `doctor`/`check` 发现 `critical` finding |
 | `4` | `apply`、`init` 或 `hub init` 在 preflight 拒绝了 plan——什么都没动（move 源不存在、目标已存在、目标类型不对） |
 

@@ -34,6 +34,14 @@
       "description": "ISO date the hub was created.",
       "type": "string"
     },
+    "governance_docs": {
+      "description": "File names this hub counts as primary context-governance framework docs, looked up under the hub knowledge/general and ~/.agents/wiki. Absent or empty means GCR is reported as n/a instead of measured.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "paths": {
       "description": "Declared hub sections. Relative values are hub-relative and must not contain '..'; a hub may also declare external sections with absolute or ~/ paths. Schema 2 must declare knowledge and projects.",
       "type": "object",

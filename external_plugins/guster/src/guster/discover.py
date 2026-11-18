@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from . import __version__
-from .layout import resolve_hub_layout
+from .layout import load_governance_docs, resolve_hub_layout
 from .util import (
     EXCLUDE_DIRS,
     find_git_roots,
@@ -299,7 +299,7 @@ def scan(config: ScanConfig) -> Dict[str, Any]:
     credential_registry = scan_credential_registry(home)
     inline_bearers = scan_inline_bearers(home) if scope != "hub" else []
     governance_docs = find_governance_docs(home, hub)
-    if scope == "hub" and hub:
+    if governance_docs is not None and scope == "hub" and hub:
         governance_docs = [
             item for item in governance_docs if is_under(Path(item), hub)
         ]
@@ -1005,25 +1005,22 @@ def scan_inline_bearers(home: Path) -> List[Dict[str, Any]]:
     return records
 
 
-def find_governance_docs(home: Path, hub: Optional[Path]) -> List[str]:
+def find_governance_docs(home: Path, hub: Optional[Path]) -> Optional[List[str]]:
     # Framework docs, not topic authorities. A doc that labels itself a facet
     # ("分册") belongs to the primary framework and does not compete with it.
-    named = {
-        "agent-context-map.md",
-        "codex-context-stack.md",
-        "context-engineering-principles.md",
-        "knowledge-taxonomy.md",
-        "project-agents-layout.md",
-    }
+    named = load_governance_docs(hub)
+    if named is None:
+        return None
+    wanted = set(named)
     candidates: List[Path] = []
     if hub:
         general = resolve_hub_layout(hub)["knowledge"] / "general"
         if general.is_dir():
-            candidates.extend(path for path in general.iterdir() if path.name in named)
+            candidates.extend(path for path in general.iterdir() if path.name in wanted)
     candidates.extend(
         path
         for path in (home / ".agents" / "wiki").glob("*.md")
-        if path.name in named
+        if path.name in wanted
     )
     primary = []
     for path in candidates:

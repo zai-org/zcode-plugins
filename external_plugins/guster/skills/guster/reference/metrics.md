@@ -14,7 +14,7 @@ resolution and git metadata. Nothing measures runtime token usage.
 | FRS | state freshness rate | ≥90% | state docs verified within 90 days / state docs |
 | PHR | pointer health rate | 100% | resolvable pointers / resolvable-looking pointers |
 | SIR | secret isolation rate | ≥95% | credential files that are unregistered, tracked, unverifiable or inline / credential files + inline tokens. Inline means host config, not arbitrary file content |
-| GCR | governance complexity ratio | ≤0.5 | governance documents / 8; reported, never scored |
+| GCR | governance complexity ratio | ≤0.5 | framework docs named by the hub.yaml `governance_docs` list / 8; n/a when the hub declares no list; reported, never scored — no `scores.gcr` exists |
 
 ## Targets
 
@@ -31,6 +31,10 @@ resolution and git metadata. Nothing measures runtime token usage.
 - Secrets: 0 in git; 1 canonical root; 0 inline tokens. A file kept in place is
   accepted when `registry.md` declares it; an unreadable repository counts as
   unverified, never as clean.
+- Governance: the hub's `hub.yaml` `governance_docs` list names the framework
+  documents GCR counts (under the hub's `knowledge/general/` and
+  `~/.agents/wiki/`). There are no shipped defaults — the names are per-hub
+  facts; a hub that declares no list reports GCR as `n/a`.
 
 ## No evidence means n/a
 

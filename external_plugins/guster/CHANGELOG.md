@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.9.3 — 2026-11-18
+
+The honest-third-party release: no measurement ships with a built-in list of
+the author's own documents, no version drift can hide between the CLI and the
+manifests, and no flag pretends to do something it does not.
+
+- **GCR is configured, not hardcoded** (breaking for the metric): the
+  governance complexity ratio counted five fixed framework doc names that only
+  exist in the original author's hub, so every third-party install measured
+  `0` and still looked scored. The list is now the hub's own `governance_docs`
+  key in `hub.yaml` (added to `schemas/hub.schema.json`); a hub that declares
+  no list reports GCR as `n/a` through the same empty-evidence rule as every
+  other dimension. `scores.gcr` no longer exists in any output — GCR was
+  documented as "reported, never scored", and now the JSON agrees. The
+  `governance-overlap` finding (more than 4 framework docs) still fires when
+  the list is declared.
+- **`upgrade` compares the CLI too**: the command only diffed the three
+  manifests against each other, so a CLI that drifted from all of them stayed
+  green. The CLI `__version__` is now part of the comparison set and any
+  disagreement exits 2; `--json` reports a `versions` object (`cli`, `codex`,
+  `zcode`, `package`) instead of the old `manifests` map.
+- **`export --format json` writes only the JSON report** (behavior change):
+  it used to write the Markdown report unconditionally and add a `.json`
+  sibling; with `--format json` the Markdown file is no longer produced.
+  `--format md` (the default) is unchanged.
+- **Removed the dead `score --write` flag**: `cmd_score` never read it —
+  writing metrics is the default and `--no-write` is the real opt-out.
+- **`.release-gate.json` left public tracking**: the local release-gate
+  allowlist now lives in the gitignored `.agents/` directory; the gate tool
+  reads it from either location.
+- All five version sources (CLI, `pyproject.toml`, both plugin manifests,
+  `package.json`) realigned at 0.9.3; `test_manifest_versions_match` is green
+  again.
+
+Notable changes. Earlier history is in `git log`.
+
 ## 0.9.2 — 2026-11-18
 
 - New icon: a 1-bit pixel directory-tree base patrolled by four glowing

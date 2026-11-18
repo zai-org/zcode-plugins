@@ -22,7 +22,6 @@ SCOPE_DIMS = {
 }
 RBR_BUDGET_BYTES = 20_000
 RBR_BUDGET_SKILL_CHARS = 6_000
-GCR_TARGET = 0.5
 
 
 def dimensions_for_scope(scope: str) -> List[str]:
@@ -54,7 +53,8 @@ def percent(value: Optional[float]) -> Optional[float]:
 
 def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> Dict[str, Any]:
     stats = policy_result.get("stats", {})
-    governance_count = int(stats.get("governance_docs", 0))
+    governance_declared = stats.get("governance_docs") is not None
+    governance_count = int(stats.get("governance_docs") or 0)
 
     topic_data = registry.get("topics") or {}
     topic_total = int(topic_data.get("total", 0))
@@ -103,8 +103,7 @@ def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> 
     )
     secret_total = int(stats.get("secret_total", 0)) + inline_bearers
     sir = None if secret_total <= 0 else 1.0 - min(1.0, secret_bad / secret_total)
-    gcr = governance_count / 8.0 if governance_count else 0.0
-    gcr_score = 1.0 if gcr == 0 else min(1.0, GCR_TARGET / max(gcr, 0.01))
+    gcr = governance_count / 8.0 if governance_declared else None
 
     dim_values: Dict[str, Optional[float]] = {
         "ssr": ssr,
@@ -136,9 +135,8 @@ def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> 
     metrics: Dict[str, Optional[float]] = {
         dim: (None if value is None else round(value, 4)) for dim, value in raw_values.items()
     }
-    metrics["gcr"] = round(gcr, 4)
+    metrics["gcr"] = None if gcr is None else round(gcr, 4)
     scores: Dict[str, Optional[float]] = {dim: percent(value) for dim, value in dim_values.items()}
-    scores["gcr"] = round(gcr_score * 100, 1)
 
     return {
         "generated_at": now_iso(),
@@ -184,7 +182,7 @@ def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> 
             "inline_bearers": inline_bearers,
             "git_probe_failures": int(stats.get("git_probe_failures", 0)),
             "scan_walk_errors": int(stats.get("scan_walk_errors", 0)),
-            "governance_docs": governance_count,
+            "governance_docs": governance_count if governance_declared else None,
         },
     }
 

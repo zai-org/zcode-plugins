@@ -794,20 +794,17 @@ def cmd_export(args: argparse.Namespace) -> int:
     config = build_config(args)
     registry = do_scan(config, write=True)
     result = evaluate(registry, config)
-    report = render_report(registry, result["policy"], result["metrics"])
     out = Path(args.out).expanduser() if args.out else config.state_dir / "context-health.md"
-    write_text(out, report)
     if args.format == "json":
-        json_out = out.with_suffix(".json")
-        save_json(json_out, {
+        out = out.with_suffix(".json")
+        save_json(out, {
             "registry": redacted_registry(registry),
             "policy": result["policy"],
             "metrics": result["metrics"],
         })
-        if not args.quiet:
-            print(f"report: {out}")
-            print(f"json:   {json_out}")
-    elif not args.quiet:
+    else:
+        write_text(out, render_report(registry, result["policy"], result["metrics"]))
+    if not args.quiet:
         print(f"report: {out}")
     return 0
 
@@ -852,15 +849,15 @@ def cmd_upgrade(args: argparse.Namespace) -> int:
         for key, value in manifests.items()
         if isinstance(value, dict) and value.get("exists")
     }
+    compared = {"cli": __version__, **versions}
     if args.json:
-        print(json_dumps({"plugin": __version__, "manifests": versions}))
+        print(json_dumps({"plugin": __version__, "versions": compared}))
     elif not args.quiet:
-        print(f"Guster CLI: {__version__}")
-        for key, version in versions.items():
+        for key, version in compared.items():
             print(f"  {key}: {version or '(missing)'}")
-        if len(set(versions.values())) > 1:
-            print("  WARNING: manifest versions differ")
-    return 0 if len(set(versions.values())) <= 1 else 2
+        if len(set(compared.values())) > 1:
+            print("  WARNING: plugin versions differ")
+    return 0 if len(set(compared.values())) <= 1 else 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -890,7 +887,6 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.set_defaults(func=cmd_doctor)
 
     score = subparsers.add_parser("score", parents=[common], help="Compute metrics and CHI.")
-    score.add_argument("--write", action="store_true", help="Write metrics (default; kept for explicit scripts).")
     score.add_argument("--no-write", action="store_true", help="Do not write registry.json or append metrics.jsonl.")
     score.add_argument("--trend", action="store_true", help="Show the last 10 metric snapshots.")
     score.add_argument(
@@ -981,7 +977,7 @@ def build_parser() -> argparse.ArgumentParser:
     creds = subparsers.add_parser("credentials", parents=[common], help="List registered credentials by scope.")
     creds.set_defaults(func=cmd_credentials)
 
-    upgrade = subparsers.add_parser("upgrade", parents=[common], help="Check plugin manifest versions.")
+    upgrade = subparsers.add_parser("upgrade", parents=[common], help="Check that the CLI and all plugin manifests agree.")
     upgrade.set_defaults(func=cmd_upgrade)
 
     return parser

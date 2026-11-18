@@ -70,7 +70,7 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster link` | Check context pointers |
 | `guster export` | Export a redacted Markdown/JSON report |
 | `guster credentials` | List registered credentials by scope (company / personal) |
-| `guster upgrade` | Check Codex/ZCode/package manifest versions |
+| `guster upgrade` | Check that the CLI, Codex, ZCode and package versions agree |
 
 ## Configuration: roots and zones
 
@@ -170,6 +170,12 @@ CHI = 0.20 SSR + 0.15 RBR + 0.15 PCR + 0.15 ICR
 - **SIR** secret isolation rate: credential files plus literal tokens in host
   configuration. Guster does not scan arbitrary file content for token shapes —
   that is the release gate's job; SIR only claims what it actually looked at.
+
+**GCR** (governance complexity ratio) is reported next to the score, never in
+it. It counts the framework documents named by the hub's `hub.yaml`
+`governance_docs` list (looked up under the hub's `knowledge/general/` and
+`~/.agents/wiki/`); a hub that declares no list has no governance fact to
+measure, so GCR reports `n/a`, and no score is derived from it in any output.
 
 Critical findings do not rescale CHI: they make `doctor` exit 3 (any `high`
 finding exits 2), and the score stays the weighted sum above. Treat the exit code
@@ -278,7 +284,7 @@ required, `keys`/`used_by`/`status` are optional):
 
 ## Safety
 
-- Read-only on your workspace by default. `apply --yes`, `init --yes`, `hub init --yes` and `hub attach` are the only commands that change workspace files or Guster config on their own; `export` always writes a report file — `<state-dir>/context-health.md` by default, or the path you name with `--out` (plus a `.json` sibling with `--format json`).
+- Read-only on your workspace by default. `apply --yes`, `init --yes`, `hub init --yes` and `hub attach` are the only commands that change workspace files or Guster config on their own; `export` always writes one report file — `<state-dir>/context-health.md` by default, or the path you name with `--out`. `--format json` writes only the `.json` report (no Markdown).
 - Guster keeps five files under its state directory (`~/.agents/guster/`, or `scoped/<hash>/`): `config.json` (roots/zones/hub, written by `init`, `hub init`/`attach` and `zones`), `registry.json`, which every scanning command rewrites (`status` included, when no registry exists yet), `findings.json` from `doctor`, `metrics.jsonl` from `score`, and the transient `.lock` that serializes concurrent runs. `--no-write` suppresses the state writes of `scan`, `doctor`, `score` and `check` only. (`plans/` and `backups/` are directories, not files.)
 - Credential values are never persisted or printed; scans keep only paths and redacted shapes.
 - No automatic `git add`, `commit`, `push` or deploy.
@@ -291,7 +297,7 @@ required, `keys`/`used_by`/`status` are optional):
 |---|---|
 | `0` | success — clean run, or findings no worse than `medium` |
 | `1` | tool/config error: malformed or unreadable plan, an apply that failed mid-operation and was rolled back, missing workspace root, invalid `config.json` (non-list `roots`, a bad root/zone/hub path, empty `roots`, no scan candidates — run `guster init`); `hub status` also returns 1 when the attached hub fails its checks |
-| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract; `link` found broken pointers; `upgrade` found disagreeing manifest versions |
+| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract; `link` found broken pointers; `upgrade` found disagreeing plugin versions |
 | `3` | `doctor`/`check` found `critical` findings |
 | `4` | `apply`, `init` or `hub init` refused the plan at preflight — nothing was touched (missing move source, existing destination, bad target type) |
 
