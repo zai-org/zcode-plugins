@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.16
+
+- **extract `max_chars` 上限三处对齐：0-2000000。**0.1.13 回流时 dispatch（tools.ts
+  readInteger）与 session 钳制（browser-session）已提到 2M，MALO_TOOLS 清单滞留
+  20000——超 20k 的调用在清单层是非法值而实现允许。清单改 2000000 对齐，默认 4000
+  不变。
+- **两道防漂移测试：**① extract 清单上限 === dispatch 校验上限（上限值原样放行、
+  越界 400 报错点名同一上界）；② `.zcode-plugin` 三处 description（英文 /
+  i18n.en / i18n.zh-CN）的 session 工具数 === MALO_TOOLS 长度——0.1.14 新增 drag
+  后曾漏改 25→26，靠发版前 review 才抓到。
+- **publicLease 双份实现合并：**daemon.ts 与 broker-server.ts 的同形函数留
+  broker-server 一份导出，daemon 改 import（依赖方向不变，签名收窄为
+  version/features/leaseTtlSeconds 结构参数）。
+
 ## 0.1.15
 
 - 新图标：1-bit 黑白像素家族视觉——马喽背影坐在 CRT 前看浏览器窗口；六插件共享

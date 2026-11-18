@@ -1,6 +1,6 @@
 {
   "name": "malo-browser",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Scripted browser demo tool and agent browser runtime: a visible Electron stage for live web demos, hidden 1080p30 recording with evidence files, a director console and a loopback control API, plus a daemon handing out port leases with isolated, profile-backed browser sessions exposing 26 session tools (including network capture).",
   "description_i18n": {
     "en": "Scripted browser demo tool and agent browser runtime: a visible Electron stage for live web demos, hidden 1080p30 recording with evidence files, a director console and a loopback control API, plus a daemon handing out port leases with isolated, profile-backed browser sessions exposing 26 session tools (including network capture).",
