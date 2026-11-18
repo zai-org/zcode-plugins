@@ -230,10 +230,16 @@ def load_json_strict(path: Path) -> Tuple[Any, Optional[str]]:
 
 
 def is_indexed(name: str, index_text: str) -> bool:
-    """A backtick-wrapped index row, bare or as a `dir/name` tail.
+    """An index row naming the file: backtick-wrapped (bare or as a `dir/name`
+    tail), a backtick-wrapped stem, or a markdown table cell holding the stem.
 
     A bare substring does not count: `a.md` inside `data.md` is not an index row."""
-    return f"`{name}`" in index_text or f"/{name}`" in index_text
+    if f"`{name}`" in index_text or f"/{name}`" in index_text:
+        return True
+    stem = Path(name).stem
+    if f"`{stem}`" in index_text:
+        return True
+    return re.search(rf"^\|\s*{re.escape(stem)}\s*\|", index_text, re.MULTILINE) is not None
 
 
 def save_json(path: Path, data: Any) -> None:
@@ -296,6 +302,120 @@ def unquote(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
         return value[1:-1]
     return value
+
+
+def _scalar(raw: str) -> str:
+    raw = raw.strip()
+    if raw[:1] in ('"', "'"):
+        raw = unquote(raw)
+    return unquote(raw.split(" #", 1)[0].strip())
+
+
+_TOP_KEY = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):(?:[ \t]+(.*))?$")
+_INLINE_LIST = re.compile(r"^\[(.*)\]$")
+
+
+def parse_yaml_head(text: str) -> Dict[str, Any]:
+    """Parse the metadata face of a knowledge/v1 file without PyYAML.
+
+    Only column-0 `key: value` lines are read: scalar keys get their unquoted
+    string, a `key: [a, b]` inline list becomes a list of unquoted strings,
+    and block keys (`history:`, `body:`, `key: |`...) are recorded as None so
+    callers can tell "present but opaque" from "absent". List items and
+    anything indented are skipped. This covers the frontmatter-like header of
+    knowledge/v1 documents; the prose body is never parsed."""
+    data: Dict[str, Any] = {}
+    for line in text.lstrip("\ufeff").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if line[:1] in (" ", "\t") or stripped.startswith("- "):
+            continue
+        match = _TOP_KEY.match(line)
+        if match is None:
+            continue
+        key = match.group(1)
+        raw = (match.group(2) or "").strip()
+        inline = _INLINE_LIST.match(raw)
+        if inline:
+            items = [unquote(item) for item in inline.group(1).split(",") if item.strip()]
+            data[key] = items
+        elif raw in ("", "|", ">"):
+            # First block key ends the metadata face; prose below never
+            # overwrites header values with same-name column-0 lines.
+            data[key] = None
+            if key in ("body", "history"):
+                break
+        else:
+            data[key] = _scalar(raw)
+    return data
+
+
+_ROW_KEY = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*):(?:[ \t]+(.*))?$")
+_ROW_ITEM = re.compile(r"^-\s+(.*)$")
+
+
+def parse_register_rows(text: str) -> List[Dict[str, str]]:
+    """Parse the project rows of a register/v1 table (register/projects.yaml).
+
+    Returns one dict per top-level `- id: ...` entry with the flat keys the
+    drift reconciliation needs: id, status, as_of, name and the spec.path
+    nested one level down. Header keys (schema/kind/updated) and any other
+    nesting are ignored. Dependency-free by design, like parse_yaml_head."""
+    rows: List[Dict[str, str]] = []
+    current: Optional[Dict[str, str]] = None
+    in_spec = False
+    skipping_nested = False
+    for line in text.lstrip("\ufeff").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indented = line[:1].isspace()
+        indent = len(line) - len(line.lstrip(" "))
+        item = _ROW_ITEM.match(stripped)
+        if item is not None:
+            if not indented or indent <= 2:
+                payload = item.group(1)
+                match = _ROW_KEY.match(payload)
+                if match is not None and match.group(1) == "id":
+                    current = {"id": _scalar(match.group(2) or "")}
+                    rows.append(current)
+                    in_spec = False
+                    skipping_nested = False
+                    continue
+            else:
+                # a deeper `- key:` list item (deps, aliases...) belongs to a
+                # nested block, never to the current top-level row
+                skipping_nested = True
+                continue
+        if current is None or skipping_nested:
+            continue
+        if line[:1].isspace():
+            match = _ROW_KEY.match(stripped)
+            if match is None:
+                continue
+            key = match.group(1)
+            raw = (match.group(2) or "").strip()
+            if in_spec:
+                if key == "path" and raw:
+                    current["path"] = _scalar(raw)
+                continue
+            if key == "spec" and raw == "":
+                in_spec = True
+            elif raw and key in ("status", "as_of", "name"):
+                current[key] = _scalar(raw)
+        else:
+            in_spec = False
+    return rows
+
+
+_TOP_ROW_KEY_LINE = re.compile(r"^(?:id|name):(?:\s|$)", re.MULTILINE)
+
+
+def has_top_level_row_keys(text: str) -> bool:
+    """Column-0 `id:`/`name:` mapping keys — the flat-map mistake behind a
+    register table that parsed zero `- id:` rows."""
+    return _TOP_ROW_KEY_LINE.search(text) is not None
 
 
 def first_heading(text: str, fallback: str = "") -> str:
@@ -428,6 +548,7 @@ def git_last_commit_dates(root: Path) -> Optional[Dict[str, str]]:
 
 NOTE_DATE_KEYS = ("updated", "date", "lastmod", "created")
 _NOTE_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:[T ][\d:]+)?")
+DATE_ONLY_RE = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$")
 
 
 def parse_note_header(text: str) -> Optional[Dict[str, Any]]:

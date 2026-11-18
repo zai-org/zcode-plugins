@@ -21,7 +21,7 @@ RULE_ACTION_HINTS = {
     "secret-outside-root": "register or move unregistered credential files into the canonical root",
     "secret-undeclared": "register credential files in ~/.agents/credentials/registry.md",
     "secret-missing": "rotate or drop stale credential registry rows",
-    "broken-pointer": "fix the pointer path or replace it with a when-to-read pointer (`guster link` lists them)",
+    "broken-pointer": "fix the pointer path or replace it with a when-to-read pointer",
     "naked-pointer": "wrap naked paths in a link or inline code (CTX-03)",
     "misplaced-artifact": "move task bundles under a standard slot (`guster plan move`)",
     "stale-state": "refresh verified_at on state documents or archive them",
@@ -30,7 +30,12 @@ RULE_ACTION_HINTS = {
     "skill-budget": "trim skill descriptions to one trigger sentence",
     "skill-copy-drift": "make drifted skill copies byte-identical",
     "resident-budget": "demote resident detail into knowledge or skills",
-    "registry-drift": "reconcile the hub registry rows with scanned projects (CTX-10)",
+    "registry-drift": "reconcile the register rows with scanned projects (CTX-10)",
+    "registry-format": "fix the register/v1 header and rows (unique id, spec.path, dates)",
+    "knowledge-format": "fix knowledge/v1 metadata per the CTX-11 contract, or drop the schema header",
+    "see-also-broken": "point see_also at existing ids, or drop the stale reference",
+    "duplicate-knowledge-id": "merge the files or split the ids so each id has one home",
+    "knowledge-stale": "re-verify and bump `updated`, or set status dormant/archived",
     "hub-manifest-missing": "point the hub config at a real hub (`guster hub init`)",
     "note-header-malformed": "fix note front-matter (type key + machine-readable date)",
     "git-unavailable": "fix git access for the failing repositories",
@@ -99,8 +104,8 @@ def render_report(
     scope = metric_result.get("scope", registry.get("scope", "machine"))
     workspaces = registry.get("workspaces", [])
     if scope == "hub":
-        project_cards = summary.get("project_cards", 0)
-        projects_line = f"- Projects: **{project_cards}** (scanned roots: {summary.get('projects', 0)})"
+        registered = summary.get("registry_entries", 0)
+        projects_line = f"- Registered projects: **{registered}** (scanned roots: {summary.get('projects', 0)})"
     else:
         total_projects = int(summary.get("projects", 0))
         containers = int(summary.get("containers", 0))
@@ -136,6 +141,7 @@ def render_report(
     lines.append(
         f"- Skills: **{summary.get('skills', 0)}** unique / "
         f"**{summary.get('skill_copies', 0)}** copies"
+        + ("" if scope == "hub" else " (user-level roots only)")
     )
     lines.append(
         f"- Knowledge: **{summary.get('knowledge', 0)}** files; "
@@ -169,8 +175,9 @@ def render_report(
             "rbr",
             metrics.get("rbr"),
             scores.get("rbr"),
-            f"{human_bytes(raw.get('resident_bytes', 0))} over {raw.get('resident_entries', 0)} entry files; "
-            f"skills {raw.get('skill_chars', 0)} chars",
+            f"{human_bytes(raw.get('resident_bytes', 0))} entry bytes "
+            f"({raw.get('resident_entries', 0)} host entry files + hub AGENTS.md); "
+            f"skills {raw.get('skill_chars', 0)} chars; budget used, lower is better",
         ),
         (
             "Placement",
@@ -238,17 +245,6 @@ def render_report(
             f"_Knowledge files excluded from single-source checks (above the hash limit or unreadable): "
             f"{raw.get('knowledge_unhashed')}._"
         )
-        lines.append("")
-    if metrics.get("gcr") is None:
-        lines.append(
-            "_Not counted in CHI: Governance simplicity n/a "
-            "(hub.yaml declares no governance_docs list)._"
-        )
-    else:
-        lines.append(
-            f"_Not counted in CHI: Governance simplicity {metrics.get('gcr')} "
-            f"({raw.get('governance_docs', 0)} framework docs / 8; target ≤0.5)._"
-        )
     lines.append("")
     lines.append("## Findings")
     lines.append("")
@@ -304,7 +300,7 @@ def render_status(registry: Dict[str, Any], metric_result: Optional[Dict[str, An
     plugin = registry.get("plugin", {})
     summary = registry.get("summary", {})
     projects = (
-        summary.get("project_cards", 0)
+        summary.get("registry_entries", 0)
         if registry.get("scope") == "hub"
         else summary.get("projects", 0)
     )
@@ -319,7 +315,7 @@ def render_status(registry: Dict[str, Any], metric_result: Optional[Dict[str, An
         lines.append(
             "zones: "
             + ", ".join(
-                f"{Path(item.get('path', '.')).name}({item.get('profile', 'light')}, {item.get('tools', 0)} tools)"
+                f"{Path(item.get('path', '.')).name}({item.get('tools', 0)} tools)"
                 for item in zones
             )
         )
@@ -338,7 +334,8 @@ def render_status(registry: Dict[str, Any], metric_result: Optional[Dict[str, An
     lines.extend(
         [
             f"projects: {projects}",
-            f"skills: {summary.get('skills', 0)} unique / {summary.get('skill_copies', 0)} copies",
+            f"skills: {summary.get('skills', 0)} unique / {summary.get('skill_copies', 0)} copies"
+            + ("" if registry.get("scope") == "hub" else " (user-level roots only)"),
             f"knowledge: {summary.get('knowledge', 0)}",
             f"credentials: {summary.get('secret_files', 0)} files; {summary.get('inline_bearers', 0)} inline",
         ]

@@ -5,16 +5,16 @@ This repository is the data plane for agent context. The Guster plugin reads it;
 ## Map
 
 - Knowledge index: [{{KNOWLEDGE_PATH}}/README.md]({{KNOWLEDGE_PATH}}/README.md)
-- Project registry: [{{PROJECTS_PATH}}/_registry.md]({{PROJECTS_PATH}}/_registry.md)
+- Project register: [register/projects.yaml](register/projects.yaml)
 - Tool index: [{{TOOLS_PATH}}/README.md]({{TOOLS_PATH}}/README.md)
 - Hub contract: [hub.yaml](hub.yaml)
 
 ## Rules
 
-- One topic per knowledge file. Put durable, reusable knowledge in `{{KNOWLEDGE_PATH}}/general/` or `{{KNOWLEDGE_PATH}}/projects/`.
-- Register a project in `{{PROJECTS_PATH}}/_registry.md` before adding `{{PROJECTS_PATH}}/{slug}.md`.
+- One topic per knowledge file. First-level directories under `{{KNOWLEDGE_PATH}}/` are subzones (`general/`, `projects/`, `reference/`, ...), all discovered and index-checked.
+- Register every project as a row in `register/projects.yaml` (id, status, as_of, spec.path); keep spec.path resolvable.
 - State documents must carry `verified_at: YYYY-MM-DD`.
-- File paths are markdown links or inline code, never naked in prose, so `guster doctor` can verify them (CTX-03).
+- File paths are markdown links or inline code, never naked in prose, so `guster doctor` can verify them.
 - Code and tests remain the source of truth; this hub stores decisions and pointers.
 - Never store credentials, company secrets, generated caches or scratch files here.
 

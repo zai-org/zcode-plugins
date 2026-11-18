@@ -19,6 +19,7 @@ from .util import (
     load_json,
     now_iso,
     parse_frontmatter,
+    parse_register_rows,
     read_text,
     relative,
     sha256_file,
@@ -84,10 +85,9 @@ class ScanConfig:
     max_depth: int = 5
     scope: str = "machine"
     now: str = field(default_factory=now_iso)
-    # Declared machine zones (`config.json` `zones`): {"path": ..., "profile": ...}.
-    # "light" zones are tool areas — AGENTS/README artifacts and secrets, no
-    # project slots — so a non-git tool layer is governed without pretending
-    # each tool is a repository.
+    # Declared machine zones (`config.json` `zones`): {"path": ...}. Zones are
+    # tool areas — AGENTS/README artifacts and secrets, no project slots — so a
+    # non-git tool layer is governed without pretending each tool is a repository.
     zones: List[Dict[str, str]] = field(default_factory=list)
     # First-run UX: no config.json existed, and roots came from auto-detection.
     # Drives the "run `guster init`" banner; empty candidates fail loud earlier.
@@ -320,7 +320,6 @@ def scan(config: ScanConfig) -> Dict[str, Any]:
         "zones": [
             {
                 "path": str(Path(item["path"]).expanduser()),
-                "profile": item.get("profile", "light"),
                 "tools": count_zone_tools(Path(item["path"]).expanduser()),
             }
             for item in zones
@@ -345,7 +344,7 @@ def scan(config: ScanConfig) -> Dict[str, Any]:
             artifacts,
             secret_files,
             inline_bearers,
-            count_project_cards(hub, walk_errors),
+            count_registry_entries(hub, walk_errors),
         ),
     }
     return registry
@@ -642,21 +641,30 @@ def scan_hub_knowledge(
             )
         )
     default_suffixes = {".md", ".json", ".yaml", ".yml"}
-    groups = [
-        (layout["knowledge"] / "general", "knowledge", "knowledge", "general", True, default_suffixes),
-        (layout["knowledge"] / "projects", "knowledge", "knowledge", "project", True, default_suffixes),
-        (layout["knowledge"] / "workgroups", "knowledge", "knowledge", "workgroup", True, default_suffixes),
+    groups: List[Tuple[Path, str, str, str, bool, Set[str]]] = []
+    # Knowledge subzones are discovered, not enumerated: every first-level
+    # directory under the knowledge root (general/, projects/, machines/, ...)
+    # is scanned as hub knowledge and index-checked against the README.
+    knowledge_root = layout["knowledge"]
+    if knowledge_root.is_dir():
+        for child in sorted(knowledge_root.iterdir()):
+            if not child.is_dir() or child.name.startswith(".") or child.name in EXCLUDE_DIRS:
+                continue
+            groups.append((child, "knowledge", "knowledge", child.name, True, default_suffixes))
+    groups.extend([
         (layout["projects"], "state", "state", "project", False, default_suffixes),
+        (hub / "register", "state", "state", "project", False, default_suffixes),
         (hub / "handoff", "state", "state", "project", False, default_suffixes),
         (hub / "provision", "state", "state", "project", False, default_suffixes),
         (hub / "reports", "evidence", "evidence", "project", False, default_suffixes),
+        (hub / "output", "evidence", "evidence", "project", False, default_suffixes),
         (hub / "Human Output", "evidence", "evidence", "project", False, default_suffixes),
         (hub / "manuals", "state", "state", "project", False, default_suffixes),
         (hub / "cron-tasks", "state", "state", "project", False, default_suffixes | {".plist"}),
         (hub / "openspec", "plan", "state", "project", False, default_suffixes),
         (hub / "archive", "archive", "archive", "project", False, default_suffixes),
         (hub / ".agents" / "plans", "plan", "state", "project", False, default_suffixes),
-    ]
+    ])
     for root, kind, plane, scope, check_index, suffixes in groups:
         if not root.is_dir():
             continue
@@ -734,9 +742,9 @@ def scan_zones(
     zones: Sequence[Dict[str, str]],
     errors: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
-    """Light-profile zone scan: entry docs and nothing else.
+    """Zone scan: entry docs and nothing else.
 
-    A declared tool zone is not a project tree. The light profile collects
+    A declared tool zone is not a project tree. The scan collects
     AGENTS.md/README.md so pointer health and freshness can see them, and the
     caller feeds the zone root to the secret scan; slot compliance never
     applies because a tool is not a repository with `.agents/` slots.
@@ -1050,21 +1058,17 @@ def scan_plugin_manifests(plugin_root: Optional[Path]) -> Dict[str, Any]:
     return manifests
 
 
-PROJECT_CARD_NAMES = {"_registry.md", "readme.md", "agents.md"}
+def count_registry_entries(hub: Optional[Path], errors: Optional[List[str]] = None) -> int:
+    """Projects registered in the hub's register (register/projects.yaml).
 
-
-def count_project_cards(hub: Optional[Path], errors: Optional[List[str]] = None) -> int:
-    """Project cards known to the hub, not the project roots a run scanned."""
+    Same parser as the drift reconciliation, so the summary and the CTX-10
+    diff can never disagree about how many rows exist."""
     if not hub:
         return 0
-    root = resolve_hub_layout(hub)["projects"]
-    if not root.is_dir():
+    path = hub.expanduser().resolve() / "register" / "projects.yaml"
+    if not path.is_file():
         return 0
-    return sum(
-        1
-        for path in iter_files(root, suffixes={".md"}, max_depth=1, errors=errors)
-        if path.parent == root and path.name.lower() not in PROJECT_CARD_NAMES
-    )
+    return len(parse_register_rows(read_text(path, limit=1_000_000)))
 
 
 def summarize(
@@ -1073,12 +1077,12 @@ def summarize(
     artifacts: Sequence[Dict[str, Any]],
     secret_files: Sequence[Dict[str, Any]],
     inline_bearers: Sequence[Dict[str, Any]],
-    project_cards: int = 0,
+    registry_entries: int = 0,
 ) -> Dict[str, Any]:
     return {
         "projects": len(projects),
         "containers": sum(1 for project in projects if project.get("container")),
-        "project_cards": project_cards,
+        "registry_entries": registry_entries,
         "agents_dirs": sum(1 for project in projects if project.get("agents_dir")),
         "agents_with_index": sum(1 for project in projects if project.get("has_index")),
         "git_errors": sum(1 for project in projects if project.get("git_state") == "error"),

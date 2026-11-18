@@ -2,21 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/Lumos-789/guster/main/schemas/hub.schema.json",
   "title": "Guster hub manifest",
-  "description": "Format contract for hub.yaml, the Guster hub manifest. Field semantics follow src/guster/layout.py and src/guster/hub.py. Guster reads values in their string form, so quoted and unquoted spellings of schema_version are equivalent.",
+  "description": "Format contract for hub.yaml, the Guster hub manifest. Field semantics follow src/guster/layout.py and src/guster/hub.py. Guster reads values in their string form, so quoted and unquoted spellings of schema_version are equivalent. Unknown top-level keys (e.g. a leftover `profile`) are ignored by the CLI, so local extensions validate too.",
   "type": "object",
   "required": [
     "schema_version"
   ],
-  "additionalProperties": false,
   "properties": {
     "schema_version": {
       "description": "Manifest format major version; absent means 1.",
       "enum": ["1", "2", 1, 2]
-    },
-    "profile": {
-      "description": "Hub profile; any other value draws a `hub validate` warning.",
-      "type": "string",
-      "enum": ["lite", "full"]
     },
     "hub_version": {
       "description": "Version of the hub's own contract; informational, shown by `hub status`.",

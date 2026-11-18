@@ -1,6 +1,6 @@
 {
   "name": "guster",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Discover, audit, plan and evolve agent context across projects, skills, tools, knowledge and credentials; optionally scaffold a lightweight Guster Hub for durable knowledge and project state.",
   "author": {
     "name": "Lumos-789",

@@ -90,6 +90,8 @@ def parse_roots(raw: Any, config_path: Path) -> List[Path]:
 
 
 def parse_zones(raw: Any, config_path: Path) -> List[Dict[str, str]]:
+    """Only 'path' is read; extra keys a legacy config may still carry (e.g. a
+    retired 'profile') are tolerated silently."""
     if not isinstance(raw, list):
         raise ValueError(f"Guster config 'zones' must be a list: {config_path}")
     zones: List[Dict[str, str]] = []
@@ -101,12 +103,9 @@ def parse_zones(raw: Any, config_path: Path) -> List[Dict[str, str]]:
             raise ValueError(
                 f"Guster config 'zones' entries must be absolute paths: {item!r} in {config_path}"
             )
-        profile = str(item.get("profile", "light"))
         if not zone_path.is_dir():
             raise ValueError(f"configured zone does not exist: {zone_path.resolve()}")
-        if profile not in {"light", "full"}:
-            raise ValueError(f"zone profile must be 'light' or 'full': {profile}")
-        zones.append({"path": str(zone_path), "profile": profile})
+        zones.append({"path": str(zone_path)})
     return zones
 
 
@@ -302,13 +301,14 @@ def print_scan_summary(registry: Dict[str, Any], config: ScanConfig) -> None:
     print(f"  hub:        {registry.get('hub') or '(none)'}")
     if config.scope == "hub":
         print(
-            f"  projects:   {summary.get('project_cards', 0)} "
+            f"  registered: {summary.get('registry_entries', 0)} "
             f"(scanned roots: {summary.get('projects', 0)})"
         )
     else:
         print(f"  projects:   {summary.get('projects', 0)}")
     print(f"  .agents:    {summary.get('agents_dirs', 0)} (indexed {summary.get('agents_with_index', 0)})")
-    print(f"  skills:     {summary.get('skills', 0)} unique / {summary.get('skill_copies', 0)} copies")
+    skills_note = "" if config.scope == "hub" else " (user-level roots only)"
+    print(f"  skills:     {summary.get('skills', 0)} unique / {summary.get('skill_copies', 0)} copies{skills_note}")
     print(f"  knowledge:  {summary.get('knowledge', 0)}")
     print(f"  state:      {summary.get('state', 0)}")
     print(f"  evidence:   {summary.get('evidence', 0)}")
@@ -398,7 +398,13 @@ def cmd_score(args: argparse.Namespace) -> int:
         print(json_dumps(metric_result))
     elif not args.quiet:
         chi = metric_result.get("chi")
-        print(f"Guster Context Health: {'n/a' if chi is None else chi} / 100")
+        headline = f"Guster Context Health: {'n/a' if chi is None else chi} / 100"
+        unscored = metric_result.get("unscored_dims") or []
+        if unscored:
+            scored = len(metric_result.get("scored_dims") or [])
+            total = len(metric_result.get("dims") or [])
+            headline += f" ({scored}/{total} dims scored)"
+        print(headline)
         print("")
         dims = set(metric_result.get("dims") or [])
         for key, value in metric_result["scores"].items():
@@ -406,9 +412,9 @@ def cmd_score(args: argparse.Namespace) -> int:
                 continue
             print(f"  {key.upper():4s} {'n/a' if value is None else f'{value:6.1f}'}")
         print("")
-        print(metric_line(metric_result))
         print(f"registry: {config.state_dir / 'registry.json'}")
         print(f"metrics:  {config.state_dir / 'metrics.jsonl'}")
+        print("Definitions & targets: skills/guster/reference/metrics.md")
     if args.trend:
         path = config.state_dir / "metrics.jsonl"
         if path.is_file():
@@ -418,7 +424,8 @@ def cmd_score(args: argparse.Namespace) -> int:
             for line in lines:
                 try:
                     item = json.loads(line)
-                    print(f"  {item.get('at')}  CHI {item.get('chi')}")
+                    chi = item.get("chi")
+                    print(f"  {item.get('at')}  CHI {'n/a' if chi is None else chi}")
                 except ValueError:
                     continue
     if args.fail_under is not None:
@@ -455,7 +462,8 @@ def cmd_check(args: argparse.Namespace) -> int:
                 for line in lines:
                     try:
                         item = json.loads(line)
-                        print(f"  {item.get('at')}  CHI {item.get('chi')}")
+                        chi = item.get("chi")
+                        print(f"  {item.get('at')}  CHI {'n/a' if chi is None else chi}")
                     except ValueError:
                         continue
     severities = {item["severity"] for item in policy_result["findings"]}
@@ -579,8 +587,16 @@ def cmd_init(args: argparse.Namespace) -> int:
         else:
             mode = "FAILED"
         print(f"{mode}: init")
-        print(f"  applied: {result.get('applied', 0)}")
-        print(f"  skipped: {result.get('skipped', 0)}")
+        if result.get("dry_run"):
+            for index, operation in enumerate(result.get("operations") or [], start=1):
+                kind = operation.get("kind")
+                if kind == "mkdir":
+                    print(f"  {index}. mkdir {operation['path']}")
+                elif kind == "write":
+                    print(f"  {index}. write {operation['path']}")
+        else:
+            print(f"  applied: {result.get('applied', 0)}")
+            print(f"  skipped: {result.get('skipped', 0)}")
         if result.get("errors"):
             for error in result["errors"]:
                 print(f"  error: {error}")
@@ -672,16 +688,15 @@ def cmd_hub(args: argparse.Namespace) -> int:
     elif not args.quiet:
         manifest = info.get("manifest") or {}
         print(f"Hub:    {info['hub']}")
-        if info.get("profile") == "legacy":
-            print("Manifest: legacy (no hub.yaml)")
-        else:
+        if manifest:
             print(
                 "Manifest: "
-                f"{info.get('profile') or '(absent)'} "
                 f"schema={manifest.get('schema_version') or '(absent)'} "
                 f"hub={manifest.get('hub_version') or '(absent)'} "
                 f"min_guster={manifest.get('min_guster') or '(absent)'}"
             )
+        else:
+            print("Manifest: (absent)")
         print(f"Plugin: {info['plugin']}")
         paths = info.get("paths") or {}
         if paths:
@@ -718,7 +733,7 @@ def cmd_zones(args: argparse.Namespace) -> int:
                 print("no zones configured; add one with `guster zones add <path>`")
             for item in zones:
                 zone_path = Path(item["path"]).expanduser()
-                print(f"{item['path']}  profile={item['profile']}  tools={count_zone_tools(zone_path)}")
+                print(f"{item['path']}  tools={count_zone_tools(zone_path)}")
         return 0
 
     zone_path = Path(args.path).expanduser()
@@ -733,7 +748,7 @@ def cmd_zones(args: argparse.Namespace) -> int:
             if isinstance(item, dict) and str(item.get("path", "")).strip():
                 if Path(str(item["path"])).expanduser().resolve() == zone_path.resolve():
                     raise ValueError(f"zone already configured: {zone_path.resolve()}")
-        entry = {"path": str(zone_path), "profile": args.profile}
+        entry = {"path": str(zone_path)}
         config.setdefault("version", 1)
         config["zones"] = raw_zones + [entry]
         zones = parse_zones(config["zones"], config_path)
@@ -742,7 +757,7 @@ def cmd_zones(args: argparse.Namespace) -> int:
         if args.json:
             print(json_dumps({"ok": True, "added": entry, "zones": zones, "config": str(config_path)}))
         elif not args.quiet:
-            print(f"added zone: {entry['path']} (profile: {entry['profile']})")
+            print(f"added zone: {entry['path']}")
             print(f"config: {config_path}")
         return 0
 
@@ -772,22 +787,6 @@ def cmd_zones(args: argparse.Namespace) -> int:
         return 0
 
     raise SystemExit(f"unknown zones action: {action}")
-
-
-def cmd_link(args: argparse.Namespace) -> int:
-    config = build_config(args)
-    registry = do_scan(config, write=True)
-    result = evaluate(registry, config)
-    findings = [item for item in result["policy"]["findings"] if item["rule"] == "broken-pointer"]
-    if args.json:
-        print(json_dumps({"findings": findings, "stats": result["policy"]["stats"]}))
-    elif not args.quiet:
-        print(f"broken pointer files: {len(findings)}")
-        for item in findings:
-            print(f"  {item['path']}")
-            for pointer in item.get("evidence", {}).get("pointers", []):
-                print(f"    - {pointer}")
-    return 0 if not findings else 2
 
 
 def cmd_export(args: argparse.Namespace) -> int:
@@ -912,7 +911,6 @@ def build_parser() -> argparse.ArgumentParser:
     zones_list.set_defaults(func=cmd_zones)
     zones_add = zones_sub.add_parser("add", parents=[common], help="Add a zone to config.json.")
     zones_add.add_argument("path", help="Zone directory (must exist).")
-    zones_add.add_argument("--profile", choices=["light", "full"], default="light", help="Zone profile.")
     zones_add.set_defaults(func=cmd_zones)
     zones_remove = zones_sub.add_parser("remove", parents=[common], help="Remove a configured zone.")
     zones_remove.add_argument("path", help="Zone directory as configured.")
@@ -922,7 +920,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_sub = plan.add_subparsers(dest="plan_action", required=True)
     plan_findings = plan_sub.add_parser("findings", parents=[common], help="Turn findings into a review checklist.")
     plan_findings.set_defaults(func=cmd_plan)
-    plan_move_parser = plan_sub.add_parser("move", parents=[common], help="Plan a move with backup and pointer.")
+    plan_move_parser = plan_sub.add_parser("move", parents=[common], help="Plan a move with backup.")
     plan_move_parser.add_argument("--from", dest="source", required=True, help="Source path.")
     plan_move_parser.add_argument("--to", dest="destination", required=True, help="Destination path.")
     plan_move_parser.set_defaults(func=cmd_plan)
@@ -965,9 +963,6 @@ def build_parser() -> argparse.ArgumentParser:
     hub_validate = hub_sub.add_parser("validate", parents=[common], help="Validate a hub against the lite contract.")
     hub_validate.add_argument("--path", default=None, help="Hub directory; defaults to the attached hub or the conventional Guster Hub path.")
     hub_validate.set_defaults(func=cmd_hub)
-
-    link = subparsers.add_parser("link", parents=[common], help="Check context pointers.")
-    link.set_defaults(func=cmd_link)
 
     export = subparsers.add_parser("export", parents=[common], help="Export a redacted health report.")
     export.add_argument("--format", choices=["md", "json"], default="md")

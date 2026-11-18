@@ -12,7 +12,7 @@ guster doctor --scope hub
 
 ## Add content
 
-- Knowledge: create one topic per file under `{{KNOWLEDGE_PATH}}/general/` or `{{KNOWLEDGE_PATH}}/projects/`, then add it to `{{KNOWLEDGE_PATH}}/README.md`.
-- Project: add a row to `{{PROJECTS_PATH}}/_registry.md`, then create `{{PROJECTS_PATH}}/{slug}.md` with a `verified_at` date.
+- Knowledge: create one topic per file under any first-level subzone of `{{KNOWLEDGE_PATH}}/` (`general/`, `projects/`, ...), then add it to `{{KNOWLEDGE_PATH}}/README.md`.
+- Project: add a row to `register/projects.yaml` (id, status, as_of, spec.path, ...) pointing at the project directory.
 - Tool: add one directory under `{{TOOLS_PATH}}/` with its own `AGENTS.md`, then register it in `{{TOOLS_PATH}}/README.md`.
 - Handoff and reports are optional modules. Add them only when the workflow needs them.

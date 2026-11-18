@@ -29,7 +29,7 @@ If one container mixes two values on any axis, split it.
 2. Instruction: AGENTS.md and policies.
 3. Capability: skills, tools, MCP, plugins, scripts.
 4. Knowledge: durable principles, methods, business semantics, pitfalls.
-5. State: project cards, handoffs, environment and port registries.
+5. State: the project register, handoffs, environment and port registries.
 6. Evidence: reports, screenshots, videos, test output.
 7. Runtime: sessions, caches, logs, temp files, browser profiles.
 8. Secret: passwords, tokens, keys, cookies; references only.

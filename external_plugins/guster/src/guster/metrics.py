@@ -103,7 +103,6 @@ def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> 
     )
     secret_total = int(stats.get("secret_total", 0)) + inline_bearers
     sir = None if secret_total <= 0 else 1.0 - min(1.0, secret_bad / secret_total)
-    gcr = governance_count / 8.0 if governance_declared else None
 
     dim_values: Dict[str, Optional[float]] = {
         "ssr": ssr,
@@ -135,7 +134,6 @@ def compute_metrics(registry: Dict[str, Any], policy_result: Dict[str, Any]) -> 
     metrics: Dict[str, Optional[float]] = {
         dim: (None if value is None else round(value, 4)) for dim, value in raw_values.items()
     }
-    metrics["gcr"] = None if gcr is None else round(gcr, 4)
     scores: Dict[str, Optional[float]] = {dim: percent(value) for dim, value in dim_values.items()}
 
     return {

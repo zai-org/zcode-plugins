@@ -7,20 +7,23 @@ description: Create, attach or validate a lightweight Guster Hub data plane for 
 
 The Hub is the data plane: a plain repository for durable knowledge and project state. The Guster plugin is the control plane and reads this repository; it does not replace it.
 
-## Lite profile
+## Lite hub
 
 The lite Hub intentionally ships only:
 
 - `AGENTS.md`, `README.md` and `hub.yaml`
-- `knowledge/` with a single index and one starter note
-- `projects/` with a project registry
+- `knowledge/` with a single index, the `general/` starter note, an
+  all-commented knowledge/v1 skeleton next to it, and an empty `projects/`
+  subzone to grow into
+- `register/projects.yaml`, the project table (register/v1: one row per
+  project, with a commented example row in the scaffold)
 - `tools/` with an index and inclusion rules, but no tool preinstalled
 
 It does **not** ship `handoff/` or `reports/`. Add those later only when the workflow needs them. Missing optional directories are ignored by the scanner.
 
 The three core roots default to `knowledge/`, `projects/` and `tools/`, but they are configurable. They live in `hub.yaml` under `paths`.
 
-There is no mode switch: the scanner follows the directories that exist, and `profile` in `hub.yaml` is only a label. A fuller hub is also scanned across `handoff/`, `reports/`, `Human Output/`, `provision/`, `manuals/`, `cron-tasks/`, `openspec/`, `archive/`, `.agents/plans/`, `strategy.md` and `knowledge/workgroups/` when present. Generated directories such as `out/` are not knowledge sources. `--scope hub` excludes local wiki and machine-level secrets.
+There is no mode switch: the scanner follows the directories that exist — `hub.yaml` has no `profile` concept, and a leftover key from an older version is ignored like any unknown top-level manifest key. Knowledge subzones are discovered, not enumerated: every first-level directory under the knowledge root (`general/`, `projects/`, `machines/`, ...) is scanned and index-checked, whatever it is named. A fuller hub is also scanned across `handoff/`, `reports/`, `register/`, `output/` (legacy alias `Human Output/`), `provision/`, `manuals/`, `cron-tasks/`, `openspec/`, `archive/`, `.agents/plans/` and `strategy.md` when present. Generated directories such as `out/` are not knowledge sources. `--scope hub` excludes local wiki and machine-level secrets.
 
 ## Workflow
 
@@ -58,13 +61,14 @@ guster doctor --scope hub
 
 4. Add content:
 
-- Create one topic per file under `knowledge/general/` or `knowledge/projects/`.
+- Create one topic per file under any first-level subzone of `knowledge/` (`general/`, `projects/`, ...).
 - Add the file name to `knowledge/README.md`.
-- Register a project in `projects/_registry.md`, then create `projects/{slug}.md`.
+- Register a project as a row in `register/projects.yaml` (id, status, as_of, name, spec.path); spec.path must resolve to the project directory on this machine.
 - Add a tool only when it is a run-once command: one directory with its own `AGENTS.md`, then a row in `tools/README.md`.
 - Put `verified_at: YYYY-MM-DD` in every state document (`最后更新:` is the
   accepted Chinese form; `verified_at` is canonical — see the format spec).
 - Optional structured header (CTX-09): front-matter that declares `type:` plus a date key (Obsidian properties convention) opts the note into machine checks. Keep truth sources as body markdown links, never as invented header keys.
+- YAML knowledge files may opt into the knowledge/v1 contract (CTX-11) by declaring `schema: knowledge/v1` with `id/type/status/topic/as_of/updated` metadata; opted-in files get strict format, see_also cross-reference and freshness checks. The scaffold ships an all-commented skeleton (`knowledge/general/knowledge-v1-skeleton.txt`) showing every field.
 
 ## Existing hub
 
@@ -74,7 +78,7 @@ If the directory already exists, use:
 guster hub attach --path <hub>
 ```
 
-`attach` validates the core layout and backs up the Guster config before changing the hub path. Legacy hubs without `hub.yaml` are accepted with warnings; `guster hub validate` is the strict lite-contract check.
+`attach` validates the core layout and backs up the Guster config before changing the hub path. Legacy hubs without `hub.yaml` are accepted with warnings; `guster hub validate` is the strict lite-contract check. Upgrading a 0.9.3 hub: create `register/projects.yaml` (header `schema: register/v1`, `kind: projects`, `updated:` date, one row per project — the old `projects/_registry.md` table), delete `_registry.md`, then re-validate; see CHANGELOG 0.9.4.
 
 ## Boundaries
 

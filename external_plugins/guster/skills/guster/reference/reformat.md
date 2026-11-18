@@ -56,8 +56,8 @@ from the first inventory to the final verify.
 - The slot a `misplaced-artifact` finding suggests is shape-based —
   classification can override it (a finished review report is a wiki
   conclusion, not a live plan).
-- One artifact: `guster plan move --from <src> --to <dst>` (backup plus a
-  pointer at the old location on apply).
+- One artifact: `guster plan move --from <src> --to <dst>` (backup on apply;
+  no pointer is written — every referencer is updated in pass 3 instead).
 - A batch: hand-write one plan JSON — `version: 1`, an `operations` list of
   `mkdir`/`move`/`write` objects, same shape `plan move` emits — covering the
   whole destination slot, then `guster apply <plan>` dry-run, read it with the
@@ -76,15 +76,16 @@ from the first inventory to the final verify.
 | Non-canonical duplicate | Replace with a pointer card: front-matter `type: pointer` plus a date key, truth links in the body; volatile values are deleted, not copied | CTX-06, CTX-09 |
 | Instruction file over budget or contradicting a narrower one | Cut or split — nesting narrows, never contradicts | CTX-01 |
 | Referencer still pointing at a pre-move path | Update it to the new path (doctor reports each as `broken-pointer`); `~`-prefixed links are resolved against home, so cross-repo pointers to a hub stay verifiable | CTX-03 |
-| `<name>.moved.md` left by an applied move | Delete once every referencer is updated — a transition pointer nobody reads re-triggers `misplaced-artifact`; keep it only for referencers outside your control | CTX-05 |
+| Leftover `<name>.moved.md` transition pointer (older guster versions wrote them on apply) | Delete once every referencer is updated — a transition pointer nobody reads re-triggers `misplaced-artifact`; keep it only for referencers outside your control | CTX-05 |
 
 Content edits are ordinary file edits by the agent; plans are for moves.
 
 ## Pass 4 — Verify
 
 1. `guster doctor` — the pass kept the contract iff zero new findings appear.
-2. `guster link` for a pointer-only check; `guster score --trend` for the
-   before/after number to hand the user.
+2. `guster score --trend` for the before/after number to hand the user;
+   `doctor`'s `broken-pointer`/`naked-pointer` findings are the pointer
+   check.
 3. Committing is the user's workflow; guster never auto-commits.
 
 ## Scale and review

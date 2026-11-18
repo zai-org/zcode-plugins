@@ -8,7 +8,7 @@ from . import __version__
 from .executor import apply_plan
 from .layout import DEFAULT_PATHS, load_manifest, resolve_hub_layout, validate_layout_value
 from .planner import build_plan, op_mkdir, op_write, save_plan
-from .util import is_indexed, load_json_strict, now_iso, read_text, save_json, today_iso, unique_suffix
+from .util import DATE_ONLY_RE, EXCLUDE_DIRS, is_indexed, iter_files, load_json_strict, now_iso, read_text, save_json, today_iso, unique_suffix
 
 
 def default_hub_path(home: Path) -> Path:
@@ -125,16 +125,20 @@ def validate_hub(target: Path, strict: bool = True) -> Dict[str, Any]:
         and (hub / "knowledge").is_dir()
         and (hub / "projects").is_dir()
     )
-    required_files = [hub / "AGENTS.md", hub / "README.md", hub / "hub.yaml"]
+    required_files = [hub / "AGENTS.md", hub / "hub.yaml"]
     required_dirs = []
     if "knowledge" in layout:
         required_files.append(layout["knowledge"] / "README.md")
-        required_dirs.extend(
-            [layout["knowledge"], layout["knowledge"] / "general", layout["knowledge"] / "projects"]
-        )
+        required_dirs.append(layout["knowledge"])
     if "projects" in layout:
-        required_files.append(layout["projects"] / "_registry.md")
+        register = hub / "register" / "projects.yaml"
+        required_files.append(register)
         required_dirs.append(layout["projects"])
+        migration_note = (
+            " (migrate from projects/_registry.md - see CHANGELOG 0.9.4)"
+            if not register.is_file() and (layout["projects"] / "_registry.md").is_file()
+            else ""
+        )
     if "tools" in layout:
         required_files.append(layout["tools"] / "README.md")
         required_dirs.append(layout["tools"])
@@ -142,10 +146,11 @@ def validate_hub(target: Path, strict: bool = True) -> Dict[str, Any]:
         if path.is_file():
             continue
         rel = _relative(path, hub)
+        message = f"required file is absent: {rel}{migration_note if path == register and not legacy else ''}"
         if legacy and not strict:
             warnings.append(f"legacy hub lite contract file is absent: {rel}")
         else:
-            errors.append(f"required file is absent: {rel}")
+            errors.append(message)
     for path in required_dirs:
         if path.is_dir():
             continue
@@ -164,8 +169,6 @@ def validate_hub(target: Path, strict: bool = True) -> Dict[str, Any]:
     else:
         if manifest.get("schema_version") not in {"1", "2"}:
             errors.append(f"unsupported hub schema: {manifest.get('schema_version') or '(absent)'}")
-        if manifest.get("profile") not in {"lite", "full"}:
-            warnings.append(f"unexpected hub profile: {manifest.get('profile') or '(absent)'}")
         minimum = manifest.get("min_guster")
         if minimum and _version_tuple(minimum) > _version_tuple(__version__):
             errors.append(f"hub requires Guster >= {minimum}; installed CLI is {__version__}")
@@ -177,33 +180,36 @@ def validate_hub(target: Path, strict: bool = True) -> Dict[str, Any]:
     if strict:
         index_path = layout["knowledge"] / "README.md"
         if index_path.is_file():
-            index = read_text(index_path)
-            for folder in ("general", "projects"):
-                root = layout["knowledge"] / folder
-                if not root.is_dir():
+            index = read_text(index_path, limit=2_000_000)
+            knowledge_root = layout["knowledge"]
+            try:
+                subzones = sorted(knowledge_root.iterdir()) if knowledge_root.is_dir() else []
+            except OSError as exc:
+                subzones = []
+                errors.append(f"cannot list knowledge root {knowledge_root}: {exc}")
+            for subzone in subzones:
+                if not subzone.is_dir() or subzone.name.startswith(".") or subzone.name in EXCLUDE_DIRS:
                     continue
-                for note in sorted(root.rglob("*.md")):
+                for note in sorted(
+                    iter_files(subzone, suffixes={".md", ".json", ".yaml", ".yml"})
+                ):
                     if note.name.lower() == "readme.md":
                         continue
                     if not is_indexed(note.name, index):
                         errors.append(f"knowledge note is not indexed: {_relative(note, hub)}")
 
-        registry_path = layout["projects"] / "_registry.md"
-        if registry_path.is_file():
-            registry = read_text(registry_path)
-            if not re.search(
-                r"(?:最后更新|更新时间|更新于|最近核实|最后核实|已核实|verified_at|(?i:last updated|updated))"
-                r"\s*\*{0,2}\s*[:：]\s*\*{0,2}\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}",
-                registry,
-            ):
-                errors.append(f"{_relative(registry_path, hub)} has no verified date")
+        register_path = hub / "register" / "projects.yaml"
+        if register_path.is_file():
+            register = read_text(register_path)
+            declared = re.search(r"^updated:\s*['\"]?([^'\"\s#]+)", register, re.MULTILINE)
+            if declared is None or not DATE_ONLY_RE.fullmatch(declared.group(1)):
+                errors.append(f"{_relative(register_path, hub)} has no updated date")
 
     return {
         "ok": not errors,
         "hub": str(hub),
         "manifest": manifest,
         "paths": {key: _relative(value, hub) for key, value in layout.items()},
-        "profile": manifest.get("profile") or ("legacy" if legacy else ""),
         "errors": errors,
         "warnings": warnings,
         "plugin": __version__,

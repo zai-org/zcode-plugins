@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from .util import now_iso, save_json, slugify, today_iso, unique_suffix
+from .util import now_iso, save_json, slugify, unique_suffix
 
 
 PLAN_SCHEMA_HINT = (
@@ -64,22 +64,12 @@ def plan_move(src: Path, dst: Path) -> Dict[str, Any]:
         raise FileExistsError(f"destination already exists: {dst}")
     operations = [
         op_mkdir(dst.parent),
-        op_move(
-            src,
-            dst,
-            pointer={
-                "path": str(src.parent / f"{src.name}.moved.md"),
-                "content": (
-                    f"# Moved\n\nThis path moved to `{dst}`.\n\n"
-                    f"verified_at: {today_iso()}\n"
-                ),
-            },
-        ),
+        op_move(src, dst),
     ]
     return build_plan(
         f"Move {src.name} to {dst.name}",
         operations,
-        notes="Dry-run by default. Apply creates a backup and keeps a pointer at the old location.",
+        notes="Dry-run by default. Apply creates a backup.",
     )
 
 

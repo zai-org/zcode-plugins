@@ -2,13 +2,13 @@
 
 Guster 是一个可分发的 Agent 插件，用来审计和演进整台机器的上下文：项目、指令文件、Skill、工具、知识、项目状态、证据和凭据引用；也可以初始化一个轻量 Hub，承载长期知识与项目状态。
 
-它是上下文的**控制面**。Guster Hub 是可选的**数据面**：承载项目卡、知识、工具和报告的本地仓库。插件不替代 Hub，而是发现它、校验它，并帮助它保持自洽。
+它是上下文的**控制面**。Guster Hub 是可选的**数据面**：承载项目登记册、知识、工具和报告的本地仓库。插件不替代 Hub，而是发现它、校验它，并帮助它保持自洽。
 
 ## 理念来源
 
 理念皆有出处，实现是 guster 自己的：
 
-- **Cline Memory Bank** —— 启发了分层文件的职责划分（项目卡、知识、状态）与每个工作会话刷新一次的 banking 节奏；两边的记忆库都是纯 markdown。
+- **Cline Memory Bank** —— 启发了分层文件的职责划分（项目登记册、知识、状态）与每个工作会话刷新一次的 banking 节奏；两边的记忆库都是纯 markdown。
 - **Claude Code memory tool** —— 启发了「一事实一文件」的笔记形状与 front-matter 元数据；guster 的笔记头把这些键拼写为 `name`、`description`、`type`。
 - **Letta (MemGPT)** —— 启发了 memory block 的 label/limit 抽象，guster 的常驻预算背后正是它。
 - **Mem0** —— 启发了先裁决再动手的语义（ADD/UPDATE/DELETE/NOOP、以标记代删除的软失效），落到 plan/apply/waiver；waiver 只让门禁变绿，不改分数。
@@ -57,7 +57,7 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster check` | `scan` + `doctor` + `score --trend` 一条命令跑完；退出码承接 doctor 语义 |
 | `guster zones list/add/remove` | 管理 `config.json` 里的机器 zone |
 | `guster plan findings` | 把发现转成审阅清单 |
-| `guster plan move` | 计划一次带备份和指针的移动 |
+| `guster plan move` | 计划一次带备份的移动（不再自动写指针） |
 | `guster plan init` | 计划标准 `.agents/` 布局 |
 | `guster apply <plan>` | 默认 dry-run；`--yes` 才写入 |
 | `guster init` | 初始化状态目录或项目布局 |
@@ -65,7 +65,6 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster hub attach` | 接入已有 Hub，不复制其内容 |
 | `guster hub status` | 查看 Hub manifest 和契约检查 |
 | `guster hub validate` | 校验 Lite Hub 契约 |
-| `guster link` | 检查上下文指针 |
 | `guster export` | 导出脱敏 Markdown/JSON 报告 |
 | `guster credentials` | 按范围（公司 / 个人）列出已登记凭据 |
 | `guster upgrade` | 检查 CLI 与 Codex/ZCode/package 版本一致 |
@@ -78,7 +77,7 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 {
   "version": 1,
   "roots": ["/home/me/Projects"],
-  "zones": [{ "path": "/home/me/tools", "profile": "light" }],
+  "zones": [{ "path": "/home/me/tools" }],
   "scan_max_depth": 5
 }
 ```
@@ -90,10 +89,10 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
   嵌套深的布局可以调大，巨大的目录树可以调小加速。
 - **`zones`** —— 不是仓库的工具区：想让一个工具目录被治理、又不必把每个工具
   当成项目。zone 按 light 方式扫描：其 `AGENTS.md`/`README.md` 入口文档进指针
-  与新鲜度检查，`.env` 进密钥扫描，`.agents/` 六槽合规永不适用。`profile`
-  会被记录且只允许 `light`/`full`；当前扫描对所有 zone 都是 light 行为。
+  与新鲜度检查，`.env` 进密钥扫描，`.agents/` 六槽合规永不适用。条目只认
+  `{path}`；旧配置可能残留的多余键（如已退役的 `profile`）容忍并忽略。
 
-zone 用 `zones` 子命令管理（`list`、`add <dir> --profile`、`remove <dir>`），
+zone 用 `zones` 子命令管理（`list`、`add <dir>`、`remove <dir>`），
 直接写 `config.json`，校验同上。
 
 **没有 config 的首跑**：guster 探测约定目录 `~/Projects`、`~/code`、`~/dev`、
@@ -112,14 +111,17 @@ Guster/
 ├── hub.yaml
 ├── knowledge/
 │   ├── README.md
-│   └── general/start-here.md
+│   └── general/
+│       ├── start-here.md
+│       └── knowledge-v1-skeleton.txt
 ├── projects/
-│   └── _registry.md
+├── register/
+│   └── projects.yaml
 └── tools/
     └── README.md
 ```
 
-`tools/` 只提供索引和收录契约，不预装任何工具；`handoff/`、`reports/` 仍是可选模块，Lite 档不创建，扫描器会跳过缺失的可选目录。
+`tools/` 只提供索引和收录契约，不预装任何工具；`handoff/`、`reports/` 仍是可选模块，Lite 脚手架不创建，扫描器会跳过缺失的可选目录。
 
 `guster hub init` 会拒绝非空目录，先写可审阅的 plan，再把新 Hub 接入 `~/.agents/guster/config.json`。已有 Hub 用 `guster hub attach --path <hub>`。
 
@@ -131,7 +133,7 @@ guster hub init --path <hub> --knowledge notes --projects work --tools scripts -
 
 它们记录在 `hub.yaml` 的 `paths` 下，之后也可以修改。路径必须是 Hub 内的相对路径。
 
-扫描按目录是否存在走，不是开关：`hub.yaml` 里的 `profile` 只是标签。Hub 只要有 knowledge 根（其下的 `general/`、`projects/`、`workgroups/`）、配置的项目状态根、`handoff/`、`provision/`、`reports/`、`Human Output/`、`manuals/`、`cron-tasks/`、`openspec/`、`archive/`、`.agents/plans/` 和 `strategy.md`，就会被扫到。`out/`、`.manual-site/`、`.playwright-mcp/`、`.codegraph/` 等生成物或运行态不作为知识源。`--scope hub` 只算 Hub；本地 wiki 和机器级凭据归机器范围。
+扫描按目录是否存在走，不是开关：`hub.yaml` 没有 `profile` 概念（旧版残留的键会被忽略，未知的 manifest 顶层键同样忽略）。knowledge 子区是动态发现的，不写死枚举——knowledge 根下任意一层目录（`general/`、`projects/`、`machines/`……）都会被扫描并做索引检查。Hub 只要有配置的项目状态根、`register/`、`handoff/`、`provision/`、`reports/`、`output/`（旧别名 `Human Output/`）、`manuals/`、`cron-tasks/`、`openspec/`、`archive/`、`.agents/plans/` 和 `strategy.md`，就会被扫到。`out/`、`.manual-site/`、`.playwright-mcp/`、`.codegraph/` 等生成物或运行态不作为知识源。`--scope hub` 只算 Hub；本地 wiki 和机器级凭据归机器范围。
 
 ## 健康模型
 
@@ -146,9 +148,9 @@ CHI = 0.20 SSR + 0.15 RBR + 0.15 PCR + 0.15 ICR
   分母只算 `.agents/` 目录本身 —— 从未采用该布局的仓库不计分，而「包含其他已扫描项目」
   的目录（工作区或组根）不算项目。报告会打出不合格原因分布，低分能自己解释为什么低。
 - **ICR** 索引覆盖率
-- **FRS** 状态新鲜度：Hub 项目卡目录（`projects/`）、`handoff/`、`provision/`
-  与 `.agents/plans/` 四类状态文档中在 90 天 SLA 内核实过的比例；分母只认这四个
-  前缀，Hub `reports/` 或机器级笔记不算状态文档。日期取自前 40 行内的声明键——
+- **FRS** 状态新鲜度：Hub 项目目录（`projects/`）、`register/`、`handoff/`、
+  `provision/` 与 `.agents/plans/` 各前缀下状态文档中在 90 天 SLA 内核实过的
+  比例；分母只认这些前缀，Hub `reports/` 或机器级笔记不算状态文档。日期取自前 40 行内的声明键——
   `verified_at`（canonical）、中文 `最后更新` 族或英文 `Last updated:`/`updated:`
   ——或文件名开头处的日期（`2026-11-05-…`、`20261105-…`）；都没有时依次兜底到
   所属仓库最后一次 git 提交、再兜底文件 mtime（Raw 列会标注来源）。正文深处的
@@ -157,18 +159,14 @@ CHI = 0.20 SSR + 0.15 RBR + 0.15 PCR + 0.15 ICR
 - **SIR** 敏感隔离率：凭据文件 + host 配置里的字面令牌。Guster 不扫描任意文件内容找
   token 形状 —— 那是发布闸的职责；SIR 只声称它确实看过的东西。
 
-**GCR**（治理复杂度比）只随分数一起展示，从不计入 CHI。它统计的是 hub
-`hub.yaml` 里 `governance_docs` 名单点到的框架文档（在 Hub `knowledge/general/`
-与 `~/.agents/wiki/` 下查找）；没声明名单的 Hub 没有可测的治理事实，GCR 记
-`n/a`，任何输出都不再从它派生分数。
-
 严重 finding 不改写 CHI：它让 `doctor` 以 3 退出（任意 `high` 退出 2），分数仍是上面的加权和。门禁看退出码，CHI 看趋势。
 
-某个维度没有证据时记为 `n/a` 并从加权和中剔除，而不是记 1.0：空分母表示「没测」，不是「满分」。某 scope 的所有维度都为空时，CHI 本身为 `n/a`。
+某个维度没有证据时记为 `n/a` 并从加权和中剔除，而不是记 1.0：空分母表示「没测」，不是「满分」。某 scope 的所有维度都为空时，CHI 本身为 `n/a`，`score` 标题行也会说明实际测了几个维度——`n/a / 100 (5/7 dims scored)`。指标定义与目标值见
+[`skills/guster/reference/metrics.md`](skills/guster/reference/metrics.md)。
 
 ## 上下文格式规范
 
-指标全是静态的——文件名主干、内容哈希、路径解析、git 日期——所以只有守住格式契约的文档才被测得到。契约本身已写成文档并版本化：[`skills/guster/reference/spec.md`](skills/guster/reference/spec.md)（spec_version 1，规则 `CTX-01..10`——`CTX-09` 结构化条目头、`CTX-10` 机器可读项目登记表，markdownlint 式稳定编号）。它遵循开源惯例而不是另造一套：指令文件用 `AGENTS.md` 开放格式（[agents.md](https://agents.md)）——发现规则是嵌套 nearest-wins，与 CTX-01（嵌套只收窄、绝不矛盾）是同一条纪律，只认 `CLAUDE.md` 的宿主用 `ln -s AGENTS.md CLAUDE.md` 即可伺候——索引文件用 llms.txt 形态的链接列表（[llmstxt.org](https://llmstxt.org)）、笔记头用 YAML front-matter（Jekyll/Hugo/Gray Matter 共同坐实的业界事实标准）、规则编号学 markdownlint。
+指标全是静态的——文件名主干、内容哈希、路径解析、git 日期——所以只有守住格式契约的文档才被测得到。契约本身已写成文档并版本化：[`skills/guster/reference/spec.md`](skills/guster/reference/spec.md)（spec_version 2，规则 `CTX-01..11`——`CTX-09` 结构化条目头、`CTX-10` register/v1 项目登记册、`CTX-11` 可选加入的 knowledge/v1 契约，markdownlint 式稳定编号）。它遵循开源惯例而不是另造一套：指令文件用 `AGENTS.md` 开放格式（[agents.md](https://agents.md)）——发现规则是嵌套 nearest-wins，与 CTX-01（嵌套只收窄、绝不矛盾）是同一条纪律，只认 `CLAUDE.md` 的宿主用 `ln -s AGENTS.md CLAUDE.md` 即可伺候——索引文件用 llms.txt 形态的链接列表（[llmstxt.org](https://llmstxt.org)）、笔记头用 YAML front-matter（Jekyll/Hugo/Gray Matter 共同坐实的业界事实标准）、规则编号学 markdownlint。
 
 不守契约的文档不是被扣分——而是彻底隐身：正文里裸写的路径永远到不了指针检查、「上周更新」落到 git 时间兜底、索引里没有文件名等于没索引。0.7.0 起 `naked-pointer` finding 从另一侧堵上这个缺口：指令文档/索引页里留在链接和代码记号之外的文件路径会被直接报告，写不规范的形态同时也是会被标记的形态。
 
@@ -219,7 +217,7 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 2. **Instruction** — `AGENTS.md` 和策略。
 3. **Capability** — Skill、工具、MCP、插件、脚本。
 4. **Knowledge** — 稳定原则、方法、业务语义、坑。
-5. **State** — 项目卡、交接、环境和端口台账。
+5. **State** — 项目登记册、交接、环境和端口台账。
 6. **Evidence** — 报告、截图、视频、测试输出。
 7. **Runtime** — 会话、缓存、日志、临时文件、浏览器 profile。
 8. **Secret** — 密码、token、key、cookie；只存引用。
@@ -239,7 +237,7 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 |---|---|
 | `0` | 成功——干净运行，或 finding 严重度不高于 `medium` |
 | `1` | 工具/配置错误：plan 损坏或不可读、执行中失败且已回滚的 apply、工作区根不存在、`config.json` 无效（`roots` 非列表、root/zone/hub 路径坏、`roots` 为空、无可扫候选——跑 `guster init`）；已接入 hub 校验不过时 `hub status` 也返回 1 |
-| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约；`link` 发现断链；`upgrade` 发现插件各版本不一致 |
+| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约；`upgrade` 发现插件各版本不一致 |
 | `3` | `doctor`/`check` 发现 `critical` finding |
 | `4` | `apply`、`init` 或 `hub init` 在 preflight 拒绝了 plan——什么都没动（move 源不存在、目标已存在、目标类型不对） |
 
@@ -262,7 +260,7 @@ dsh plugin add /path/to/guster
 
 ### 额外 Skill 根
 
-默认扫描 `~/.agents/skills`、`~/.codex/skills`、`~/.dsh/skills` 和 `~/.claude/skills`。其他宿主保持在本机，通过环境变量注入，不改发布源：
+默认扫描 `~/.agents/skills`、`~/.codex/skills`、`~/.dsh/skills` 和 `~/.claude/skills`（仅用户级根——项目内 `.agents/skills/` 目录不在 skill 扫描面内）。其他宿主保持在本机，通过环境变量注入，不改发布源：
 
 ```bash
 export GUSTER_EXTRA_SKILL_ROOTS="name=/path/to/skills:other=/another/path"

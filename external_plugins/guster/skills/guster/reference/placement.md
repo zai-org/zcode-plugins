@@ -17,13 +17,14 @@ User instructions remain a single canonical file with host symlinks.
 
 ```text
 <hub>/
+├── register/        # state — project register (register/projects.yaml, CTX-10)
 ├── projects/        # state
 ├── handoff/         # state
-├── knowledge/       # knowledge
+├── knowledge/       # knowledge — subzones are discovered, not fixed (general/, projects/, machines/, ...)
 ├── provision/       # state
 ├── tools/           # capability
 ├── reports/         # evidence
-├── Human Output/    # evidence / deliverables
+├── output/          # evidence / deliverables (legacy alias: Human Output/)
 └── .agents/         # local plans and scratch
 ```
 
