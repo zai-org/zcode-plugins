@@ -1,6 +1,6 @@
 {
   "name": "make-it-a-bit-better",
-  "version": "0.2.6",
+  "version": "0.2.8",
   "description": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
   "description_i18n": {
     "en": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",

@@ -34,7 +34,7 @@ An ad-hoc prompt can produce a change; it can't produce this loop's three struct
 
 ## The ledger
 
-`.agents/mabb/ledger.md` in the target repo is the loop's memory. It prevents repeating old angles and carries a coverage view that keeps steering the brainstorm toward untouched dimensions. The icebox holds good-but-too-big ideas until you promote them to real projects — a round that lands one deletes its entry, so the icebox always lists what is still pending. Icebox entries carry short ids (`IB-1`, `IB-2`, …, stable once assigned), so reports, next-round hints and promotions cite an entry exactly instead of describing it.
+`.agents/mabb/ledger.md` in the target repo is the loop's memory. It prevents repeating old angles and carries a coverage view that keeps steering the brainstorm toward untouched dimensions. The icebox holds good-but-too-big ideas until you promote them to real projects — a round that lands one deletes its entry, so the icebox always lists what is still pending. Icebox entries carry short ids (`IB-1`, `IB-2`, …, stable once assigned), so reports, next-round hints and promotions cite an entry exactly instead of describing it. These mechanisms — dedup, `IB-N` ids, the `stalled` overwrite — live at the skill-text convention level; no script enforces them.
 
 ## Side effects (disclosed for review)
 
@@ -72,7 +72,11 @@ Expect: a ledger row per round and up to N committed small improvements — *up 
 
 ## What's new
 
-**0.2.5** — Trial expectation aligned to "up to two committed improvements" (self-stop or a reverted round yields fewer). Full history: [CHANGELOG.md](CHANGELOG.md).
+This section keeps the two most recent entries; the full history lives in [CHANGELOG.md](CHANGELOG.md).
+
+**0.2.8** — Docs only: the window line above is new — an older entry leaving this section is the window rolling, not a lost line (0.2.5 left it when 0.2.7 rolled the news forward, by design).
+
+**0.2.7** — README news (both languages) caught up through this entry, and the ledger section now states its boundary: dedup, `IB-N` ids and the `stalled` overwrite are skill-text conventions, not script-enforced.
 
 ## License
 

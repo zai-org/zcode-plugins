@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.8
+
+- Docs only: the README news section (both languages) now states its window
+  in one line — the two most recent entries stay, the full history lives in
+  this file. The rule was real (0.2.2 set "one line of news"; 0.2.7 rolled
+  it to two and 0.2.5 left the window) but lived only in this changelog's
+  wording, so a rolling exit read as a lost entry — 0.2.7's round report
+  even claimed the 0.2.5 line was preserved. The stated window makes the
+  next roll self-explaining.
+
+## 0.2.7
+
+- README bilingual news had stalled at 0.2.5: both languages now list 0.2.6
+  (the icon round) and this entry, keeping the README one-glance history in
+  step with this file.
+- The ledger section (both languages) states its boundary in one sentence:
+  dedup against old angles, stable `IB-N` ids and the `stalled` overwrite are
+  skill-text conventions with no script enforcing them.
+
 ## 0.2.6
 
 - New icon: 1-bit monochrome pixel hammer cracking a rough block into a
