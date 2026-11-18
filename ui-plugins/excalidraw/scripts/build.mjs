@@ -87,7 +87,8 @@ await writeFile(
   ),
 );
 for (const f of ui.outputFiles.filter((f) => f.path.endsWith(".LEGAL.txt")))
-  await writeFile(join(dist, "ui", f.path.split("/").pop()), f.contents);
+  // esbuild 在 Windows 上返回反斜杠路径，split("/") 取不到文件名
+  await writeFile(join(dist, "ui", f.path.split(/[\\/]/).pop()), f.contents);
 const server = await build({
   metafile: true,
   entryPoints: [join(root, "src/adapters/main.ts")],
