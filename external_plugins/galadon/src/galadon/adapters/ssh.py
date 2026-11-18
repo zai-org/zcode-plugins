@@ -262,7 +262,7 @@ systemctl cat "$service" >/dev/null 2>&1 || {{ echo "galadon: systemd service is
         self._local_command(ctx, ctx.config.deploy.migrate, "migrate")
 
     def release(self, ctx: DeployContext, artifact: Artifact) -> Release:
-        commit = self._commit_provider(ctx.root)
+        commit = (ctx.commit or self._commit_provider(ctx.root) or "").strip()
         if not commit:
             raise DeployError("cannot determine the git commit for this build")
 

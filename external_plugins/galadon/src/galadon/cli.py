@@ -325,7 +325,7 @@ def cmd_teardown(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="galadon", description=__doc__)
+    parser = argparse.ArgumentParser(prog="galadon")
     parser.add_argument("--version", action="version", version=f"galadon {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.7
+
+- Version sources realigned: `galadon.__version__` and `pyproject.toml` were
+  still on 0.3.5 after the 0.3.6 icon round bumped only the manifests and
+  `package.json`. Every version source now states 0.3.7, and a new version
+  consistency test fails the suite when any of them drifts again.
+- The ssh adapter's release step ignored `DeployContext.commit` and re-read
+  git itself, so a commit pinned on the context by the caller could disagree
+  with the release name and the probe expectation. It now prefers
+  `ctx.commit` and only falls back to the commit provider — the same
+  precedence the local adapter uses.
+- The byte-identical `deploy/README.md` shipped twice (service and webapp
+  layouts); it moved to the `_shared` layout layer, so a fix can no longer
+  land in one copy and leave the other stale. Plugin scaffolds now render the
+  same layout-level deploy README through that shared layer.
+- Dropped a dead `description=__doc__` argument from the argument parser:
+  `cli.py` has no module docstring, so the description was always `None`.
+
 ## 0.3.6
 
 - New icon: 1-bit monochrome pixel robot pushing a glowing block around a
