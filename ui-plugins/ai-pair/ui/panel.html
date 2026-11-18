@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Pair 评审</title>
+    <style>
+      /* 颜色取宿主 hostContext 变量（跟随用户设置的深浅主题），
+         兜底值对齐 ZCode 官方 zai-light / zai-dark 色板，两套主题都走 var() */
+      :root {
+        color-scheme: light;
+        --fg: var(--color-text-primary, #262626);
+        --bg: var(--color-background-primary, #f8f8f8);
+        --muted: var(--color-text-secondary, rgba(23, 23, 23, 0.7));
+        --line: var(--color-border-primary, rgba(13, 13, 13, 0.1));
+        --accent: var(--color-text-info, #0b6bcb);
+        --bad: var(--color-text-danger, #e03131);
+        --ok: var(--color-text-success, #1e8a3e);
+        --warn: var(--color-text-warning, #e07b00);
+        --chip: var(--color-background-secondary, #ffffff);
+        --font: var(--font-sans, system-ui, -apple-system, "PingFang SC", sans-serif);
+        --mono: var(--font-mono, ui-monospace, Menlo, monospace);
+      }
+      /* 暗色：优先宿主注入变量，兜底取 zai-dark 色板（applyTheme 会设置 data-theme） */
+      [data-theme="dark"] {
+        color-scheme: dark;
+        --fg: var(--color-text-primary, #f1f1f1);
+        --bg: var(--color-background-primary, #161616);
+        --muted: var(--color-text-secondary, rgba(212, 212, 212, 0.6));
+        --line: var(--color-border-primary, rgba(255, 255, 255, 0.1));
+        --accent: var(--color-text-info, #4099ff);
+        --bad: var(--color-text-danger, #ff5c5c);
+        --ok: var(--color-text-success, #46bf72);
+        --warn: var(--color-text-warning, #ff8a30);
+        --chip: var(--color-background-secondary, #202020);
+      }
+      html, body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.55 var(--font); }
+      body { padding: 10px 12px 16px; box-sizing: border-box; }
+      h1 { font-size: 14px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+      h1 .spacer { flex: 1; }
+      button {
+        font: 12px var(--font); color: var(--fg); background: var(--chip);
+        border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer;
+      }
+      button:hover { border-color: var(--accent); color: var(--accent); }
+      .muted { color: var(--muted); font-size: 12px; }
+      .config-warn {
+        border: 1px solid var(--warn); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;
+        color: var(--warn); font-size: 12px;
+      }
+      ul.list { list-style: none; margin: 0; padding: 0; }
+      li.item {
+        border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer;
+      }
+      li.item:hover { border-color: var(--accent); }
+      li.item .title { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+      li.item .title .t { flex: 1; min-width: 0; }
+      .del {
+        border: none; background: none; color: var(--muted); padding: 0 4px;
+        font-size: 12px; cursor: pointer; flex: none; font-family: var(--font);
+      }
+      .del:hover, .del.armed { color: var(--bad); }
+      .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; }
+      .chip {
+        background: var(--chip); border: 1px solid var(--line); border-radius: 999px;
+        padding: 1px 8px; color: var(--muted);
+      }
+      .chip.crit { color: var(--bad); border-color: var(--bad); }
+      .chip.warn { color: var(--warn); border-color: var(--warn); }
+      .chip.sugg { color: var(--accent); border-color: var(--accent); }
+      .chip.ok { color: var(--ok); border-color: var(--ok); }
+      .chip.fail { color: var(--bad); border-color: var(--bad); }
+      .chip.run { color: var(--warn); border-color: var(--warn); }
+      .back { margin-bottom: 8px; }
+      .provider h2 { font-size: 13px; margin: 10px 0 4px; }
+      /* 报告正文是渲染后的 markdown 文档：块级元素自行布局，不再用 pre-wrap */
+      .report {
+        border: 1px solid var(--line); border-radius: 8px; padding: 10px;
+        word-break: break-word; font-size: 12.5px; line-height: 1.6;
+      }
+      .report > :first-child { margin-top: 0; }
+      .report > :last-child { margin-bottom: 0; }
+      .report p { margin: 6px 0; }
+      .report h1, .report h2, .report h3, .report h4, .report h5, .report h6 {
+        margin: 12px 0 4px; font-weight: 600; line-height: 1.4;
+      }
+      .report h1, .report h2 { border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+      .report h1 { font-size: 14.5px; }
+      .report h2 { font-size: 13.5px; }
+      .report h3 { font-size: 13px; }
+      .report h4, .report h5, .report h6 { font-size: 12.5px; }
+      .report ul, .report ol { margin: 6px 0; padding-left: 20px; }
+      .report li { margin: 3px 0; }
+      .report li > ul, .report li > ol { margin: 3px 0; }
+      .report code { font-family: var(--mono); font-size: 11.5px; background: var(--chip); padding: 0 3px; border-radius: 3px; }
+      .report pre {
+        background: var(--chip); border: 1px solid var(--line); border-radius: 6px;
+        padding: 8px 10px; margin: 8px 0; overflow-x: auto;
+      }
+      .report pre code { background: none; padding: 0; white-space: pre; }
+      .report table {
+        border-collapse: collapse; margin: 8px 0; font-size: 12px;
+        max-width: 100%; display: block; overflow-x: auto;
+      }
+      .report th, .report td { border: 1px solid var(--line); padding: 3px 8px; text-align: left; }
+      .report th { background: var(--chip); font-weight: 600; }
+      .report blockquote { border-left: 3px solid var(--line); margin: 8px 0; padding: 2px 12px; color: var(--muted); }
+      .report hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
+      .report a { color: var(--accent); }
+      .report del { color: var(--muted); }
+      .report img { max-width: 100%; }
+      .report .sev-crit { color: var(--bad); font-weight: 700; }
+      .report .sev-warn { color: var(--warn); font-weight: 700; }
+      .report .sev-sugg { color: var(--accent); font-weight: 700; }
+      .spin { display: inline-block; animation: spin 1.2s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .empty { text-align: center; color: var(--muted); padding: 28px 0; }
+      /* 评审设置（级联选择） */
+      .slot-block {
+        border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px;
+      }
+      .slot-block h2 { font-size: 13px; margin: 0 0 4px; }
+      .field { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+      .field > span { width: 36px; color: var(--muted); font-size: 12px; flex: none; }
+      select {
+        flex: 1; font: 12px var(--font); color: var(--fg); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; min-width: 0;
+      }
+      select:focus { outline: none; border-color: var(--accent); }
+      .actions { margin: 12px 0; display: flex; gap: 8px; }
+      /* 交叉质证 */
+      .cross-field { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; cursor: pointer; }
+      .cross-field input { margin-top: 2px; accent-color: var(--accent); }
+      .cross-field span { flex: 1; color: var(--fg); font-size: 12px; }
+      .chip.xcross { color: var(--accent); border-color: var(--accent); }
+      .provider.xcross { border-left: 3px solid var(--accent); padding-left: 8px; }
+      .action-result {
+        border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 8px 0 0;
+        white-space: pre-wrap; word-break: break-word; font-size: 12px; font-family: var(--mono);
+        background: var(--chip);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"><div class="empty">加载中…</div></div>
+    <script>
+      __AI_PAIR_BUNDLE__
+    </script>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "name": "ai-pair",
+  "version": "0.4.8",
+  "description": "AI Pair 评审：主对话改完代码后，一键送两个异构模型（复用 ZCode 模型管理里的渠道）并行评审，侧栏面板查看报告。",
+  "skills": "skills",
+  "author": {
+    "name": "JustinChia"
+  },
+  "license": "MIT",
+  "mcpServers": {
+    "ai-pair": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "env": {
+        "ZCODE_PLUGIN_DATA": "${ZCODE_PLUGIN_DATA}",
+        "ZCODE_PROJECT_DIR": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "reviews",
+        "title": {
+          "zh-CN": "AI Pair 评审",
+          "en-US": "AI Pair Review"
+        },
+        "icon": "activity",
+        "server": "ai-pair",
+        "resourceUri": "ui://ai-pair/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "description_i18n": {
+    "en": "Send completed work to two heterogeneous reviewers (reusing ZCode model channels) for parallel review; read reports in the side pane.",
+    "zh-CN": "AI Pair 评审：主对话改完代码后，一键送两个异构模型（复用 ZCode 模型管理里的渠道）并行评审，侧栏面板查看报告。"
+  }
+}

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- ai-pair：一个创作、两个审查 —— 两张叠放的评审卡片，两枚异色对勾（异构双评审） -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4338CA"/>
+      <stop offset="1" stop-color="#6D28D9"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1E1B4B" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+
+  <!-- 背面卡片：评审员 1 · 正确性把关（青蓝对勾） -->
+  <g transform="rotate(-8 92 130)" filter="url(#cardShadow)">
+    <rect x="34" y="58" width="108" height="140" rx="18" fill="#DBEAFE"/>
+    <rect x="52" y="82" width="48" height="10" rx="5" fill="#93C5FD"/>
+    <rect x="52" y="103" width="70" height="10" rx="5" fill="#BFDBFE"/>
+    <path d="M56 152 l16 16 l29 -34" stroke="#0284C7" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- 正面卡片：评审员 2 · 设计与可维护性（琥珀对勾） -->
+  <g transform="rotate(8 164 138)" filter="url(#cardShadow)">
+    <rect x="114" y="66" width="108" height="140" rx="18" fill="#FFFFFF"/>
+    <rect x="132" y="90" width="48" height="10" rx="5" fill="#FCD34D"/>
+    <rect x="132" y="111" width="70" height="10" rx="5" fill="#FDE68A"/>
+    <path d="M136 160 l16 16 l29 -34" stroke="#F59E0B" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>
