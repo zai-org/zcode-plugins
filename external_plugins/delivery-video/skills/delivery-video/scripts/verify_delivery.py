@@ -46,7 +46,7 @@ def probe(path: Path) -> dict:
     return run_json([
         "ffprobe", "-v", "error",
         "-show_entries",
-        "stream=codec_name,codec_type,width,height,r_frame_rate:format=duration,size",
+        "stream=codec_name,codec_type,width,height,avg_frame_rate:format=duration,size",
         "-of", "json", str(path),
     ])
 
@@ -159,6 +159,9 @@ def check_shot_evidence(build: Path, errors: list[str], warnings: list[str]) -> 
     checked = 0
     referenced: set[Path] = set()
     for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            errors.append(f"segments[{index}] must be an object")
+            continue
         prefix = segment.get("id") or f"segments[{index}]"
         shot_name = segment.get("shot")
         if not isinstance(shot_name, str) or not shot_name:
@@ -299,7 +302,7 @@ def main() -> int:
                 "expected 1920x1080, got "
                 f"{video_stream.get('width')}x{video_stream.get('height')}"
             )
-        fps = parse_fps(str(video_stream.get("r_frame_rate", "0/1")))
+        fps = parse_fps(str(video_stream.get("avg_frame_rate", "0/1")))
         if abs(fps - 30) > 0.01:
             errors.append(f"expected 30fps, got {fps:.3f}")
     if audio_stream is None:

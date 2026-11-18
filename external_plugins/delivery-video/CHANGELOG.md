@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.2.4
+
+- Review-fix round (9 items). Docs: `episode-and-review.md` still said a static
+  stretch is only worth cutting past ~8s; the gate's hard threshold is 2s
+  (`T301`, with `T304` at 20% of the video), and the doc now says ~2s.
+- `render.py` no longer aborts with a bare traceback on malformed input: invalid
+  JSON, a non-object episode, a segment that is not an object with a string id,
+  duplicate ids and non-numeric `start`/`end` all raise `RenderError` and print
+  the usual `FAIL:` line. `verify_delivery.py` likewise skips non-object segments
+  with a `FAIL:` entry instead of crashing on `segment.get`.
+- Fixed a decode/encode deadlock window in `render_segment`: both ffmpeg
+  processes ran with `stderr=PIPE` that nobody read until after the frame loop,
+  so a >64KB log froze both pipes. stderr now goes to temp files that are read
+  after both processes have exited.
+- A failed loudness measurement (`ebur`) is no longer silently skipped: the gate
+  prints a `WARN` and records `loudness_lufs: null` in `checks`.
+- `verify_delivery.py` now reads `avg_frame_rate` like the gate in `render.py`,
+  instead of `r_frame_rate`, so both fps checks judge the same number.
+- `.codex-plugin/plugin.json`: description aligned with the current
+  `.zcode-plugin` wording (defect/feedback capability up front) and the retired
+  `pi` keyword dropped.
+- `examples/episode.example.json` no longer crops all three segments: absent
+  crop (full frame) is the documented recommendation; explicit `crop` stays an
+  opt-in documented in `references/episode-and-review.md`.
+- `index.js` parses the SKILL.md frontmatter with a small hand-rolled parser
+  (flat scalars plus one nesting level for `metadata`) and the `yaml` dependency
+  is gone from `package.json` — the frontmatter is our own controlled subset, so
+  the plugin now installs with zero npm dependencies.
+
 ## 1.2.3
 
 - New icon: 1-bit monochrome pixel camera, clapperboard and glowing play

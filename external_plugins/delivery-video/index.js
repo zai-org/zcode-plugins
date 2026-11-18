@@ -1,10 +1,44 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse as parseYaml } from "yaml";
 
 const skillRoot = fileURLToPath(new URL("./skills/delivery-video/", import.meta.url));
 const skillPath = join(skillRoot, "SKILL.md");
+
+function unquote(value) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+// Our frontmatter subset — flat scalars plus one nested metadata block — parses by hand, keeping the plugin dependency-free.
+function parseFrontmatter(source) {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);
+  if (match === null) {
+    throw new Error(`delivery-video: missing YAML frontmatter in ${skillPath}`);
+  }
+  const header = {};
+  let nested = null;
+  for (const rawLine of match[1].split(/\r?\n/)) {
+    const line = rawLine.trimEnd();
+    if (!line || line.startsWith("#")) continue;
+    const colon = line.indexOf(":");
+    if (colon < 1) continue;
+    const key = line.slice(0, colon).trim();
+    const value = unquote(line.slice(colon + 1).trim());
+    if (/^\s/.test(rawLine)) {
+      if (nested !== null) nested[key] = value;
+      continue;
+    }
+    nested = value === "" ? {} : null;
+    header[key] = value === "" ? nested : value;
+  }
+  return { header, body: source.slice(match[0].length).trimStart() };
+}
 
 function readFlag(value, field) {
   if (value === undefined) return false;
@@ -19,17 +53,8 @@ function readFlag(value, field) {
 
 function loadSkill() {
   const source = readFileSync(skillPath, "utf8");
-  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source);
-  if (frontmatter === null) {
-    throw new Error(`delivery-video: missing YAML frontmatter in ${skillPath}`);
-  }
-  const header = parseYaml(frontmatter[1]);
-  if (
-    header === null ||
-    typeof header !== "object" ||
-    typeof header.name !== "string" ||
-    typeof header.description !== "string"
-  ) {
+  const { header, body } = parseFrontmatter(source);
+  if (typeof header.name !== "string" || typeof header.description !== "string") {
     throw new Error(`delivery-video: invalid skill metadata in ${skillPath}`);
   }
   return {
@@ -43,7 +68,7 @@ function loadSkill() {
     },
     source: "bundled",
     path: skillPath,
-    content: source.slice(frontmatter[0].length).trimStart(),
+    content: body,
     resourceBase: { kind: "directory", path: skillRoot },
   };
 }
@@ -73,6 +98,7 @@ export function apply(ctx) {
   ctx.on("agent/created", ({ agent }) => {
     registerForAgent(agent);
   });
+
   ctx.on("agent/disposed", ({ agent }) => {
     agentRegistrations.get(agent)?.();
     agentRegistrations.delete(agent);

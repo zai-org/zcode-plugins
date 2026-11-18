@@ -1,7 +1,7 @@
 {
   "name": "delivery-video",
-  "version": "1.2.3",
-  "description": "Turn a feature that actually runs into a trustworthy delivery demo video, or a defect into a traceable feedback video: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+  "version": "1.2.4",
+  "description": "Record, render and gate trustworthy delivery demo videos — or defect/feedback report videos — of real, working software: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
   "author": {
     "name": "Lumos-789",
     "url": "https://github.com/Lumos-789"
@@ -15,7 +15,6 @@
     "bug-report",
     "screen-recording",
     "quality-gate",
-    "pi",
     "dsh"
   ],
   "skills": "./skills/",

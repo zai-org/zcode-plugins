@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 W, H, FPS = 1920, 1080, 30
@@ -444,7 +445,11 @@ def render_segment(segment: dict, mp3: Path, chars: list[dict], build: Path,
     src = build / segment["shot"]
     if not src.is_file():
         raise RenderError(f"missing real recording: {src}")
-    start, end = float(segment["start"]), float(segment["end"])
+    try:
+        start, end = float(segment["start"]), float(segment["end"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RenderError(
+            f"segment {segment.get('id')}: start/end must be numbers") from exc
     if not 0 <= start < end <= duration(src) + 0.1:
         raise RenderError(f"invalid recording interval: {segment['id']}")
     seconds = math.ceil((duration(mp3) + LEAD + TAIL) * FPS) / FPS
@@ -458,18 +463,21 @@ def render_segment(segment: dict, mp3: Path, chars: list[dict], build: Path,
     if crop is not None:
         crop = check_crop_bounds(segment["id"], crop, src)
     vf = segment_filter(crop, layout, seconds / (end - start), seconds)
+    # stderr to temp files: an unread stderr PIPE deadlocks both ffmpegs once a log passes 64KB.
+    decode_log = tempfile.TemporaryFile()
+    encode_log = tempfile.TemporaryFile()
     decode = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-ss", str(start), "-t", str(end - start),
          "-i", str(src), "-vf", vf, "-frames:v", str(frames),
          "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=decode_log)
     output = build / f"{segment['id']}.mp4"
     encode = subprocess.Popen(
         ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
          "-s", f"{W}x{H}", "-r", str(FPS), "-i", "pipe:0", "-an", "-t", str(seconds),
          "-c:v", "libx264", "-preset", "fast", "-crf", "19", "-pix_fmt", "yuv420p",
          str(output)],
-        stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdin=subprocess.PIPE, stderr=encode_log)
     lines = group_lines(chars)
     starts = [line[0]["start_ms"] for line in lines]
     font, label_font, case_font = find_font(48), find_font(32), find_font(30)
@@ -517,9 +525,14 @@ def render_segment(segment: dict, mp3: Path, chars: list[dict], build: Path,
     finally:
         decode.stdout.close()
         encode.stdin.close()
-    decode_error = decode.stderr.read().decode()
-    encode_error = encode.stderr.read().decode()
-    if decode.wait() or encode.wait():
+        failed = decode.wait() or encode.wait()
+        decode_log.seek(0)
+        encode_log.seek(0)
+        decode_error = decode_log.read().decode(errors="replace")
+        encode_error = encode_log.read().decode(errors="replace")
+        decode_log.close()
+        encode_log.close()
+    if failed:
         raise RenderError(f"video encoding failed:\n{decode_error}\n{encode_error}")
     run(["ffmpeg", "-y", "-v", "error", "-i", str(mp3),
          "-af", "adelay=150:all=1,apad", "-t", str(seconds),
@@ -644,6 +657,13 @@ def quality_gate(video: Path, work: Path) -> dict:
             if not -30 <= integrated <= -5:
                 hard.append({"code": "L101",
                              "message": f"integrated loudness {integrated:.1f} LUFS outside [-30,-5]"})
+        else:
+            checks["loudness_lufs"] = None
+            print(
+                f"WARN: loudness measurement failed (exit {ebur.returncode}), "
+                f"L101 not evaluated: {ebur.stderr.strip()[-300:]}",
+                flush=True,
+            )
         filters = {
             "black": (["-vf", "blackdetect=d=0.5:pix_th=0.05", "-an"], 1.0, 0.3, "B101"),
             "freeze": (["-vf", "freezedetect=n=-60dB:d=0.5", "-an"], 2.0, 0.8, "T301"),
@@ -839,10 +859,19 @@ def cmd_render(build: Path) -> int:
     episode_path = build / "episode.json"
     if not episode_path.is_file():
         raise RenderError(f"missing {episode_path}")
-    episode = json.loads(episode_path.read_text(encoding="utf-8"))
+    try:
+        episode = json.loads(episode_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RenderError(f"invalid JSON in {episode_path}: {exc}") from exc
+    if not isinstance(episode, dict):
+        raise RenderError(f"episode.json must be an object: {episode_path}")
     segments = episode.get("segments") or []
-    if not segments or len({s["id"] for s in segments}) != len(segments):
-        raise RenderError("missing segments or duplicate segment IDs")
+    if not segments or not all(
+            isinstance(s, dict) and isinstance(s.get("id"), str) for s in segments):
+        raise RenderError(
+            "missing segments, or a segment is not an object with a string id")
+    if len({s["id"] for s in segments}) != len(segments):
+        raise RenderError("duplicate segment IDs")
     rule_errors = feedback_errors(episode, segments)
     if rule_errors:
         raise RenderError("; ".join(rule_errors))

@@ -71,7 +71,7 @@ Only for a video covering two or more cases: write one row per case — case id,
 - Leave 0.3–0.8s before the action starts so the entry reads.
 - Success feedback, read-back and key states must fall inside the range.
 - The last segment must be a result, not a waiting state.
-- A stretch of static frames longer than ~8s inside a take means cut it: idle time makes the whole video feel stuck (the gate's `T301`/`T304` enforce this).
+- A stretch of static frames longer than ~2s inside a take means cut it: idle time makes the whole video feel stuck (`T301` fires on a ≥2s frozen span, `T304` when frozen frames reach 20% of the video).
 - You may cut waiting gaps, but never merge pieces of different runs into one success.
 - Playback speed lands between 0.3x and 3x by construction; below 0.3x the action is too slow or the narration too short, above 3x the narration overruns the range — split or trim instead of forcing.
 - Aim for 15–35 characters per narration segment; important results get their own segment.
