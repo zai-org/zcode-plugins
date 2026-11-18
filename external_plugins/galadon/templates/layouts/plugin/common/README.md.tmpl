@@ -1,0 +1,47 @@
+# {{PROJECT}}
+
+Created with Galadon on {{DATE}} using the `plugin` layout and the
+`{{STACK}}` stack.
+
+This repository is an installable agent plugin: a CLI, a bundled skill and the
+docs needed to package it. Distribution files (`.zcode-plugin/`,
+`.codex-plugin/`, marketplace icons) are intentionally not generated. Packaging
+is a separate gate, and a placeholder icon would pass a check it should fail.
+
+The engineering loop is:
+
+```text
+Spec -> Build -> Verify -> Ship -> Learn
+```
+
+Start with:
+
+```bash
+galadon next
+```
+
+## Layout
+
+```text
+bin/{{NPM_NAME}}        the runnable CLI
+src/                    library and CLI code ({{STACK}})
+skills/{{NPM_NAME}}/    bundled agent skill
+tests/                  unit and CLI tests
+docs/                   profile and packaging notes
+openspec/               construction tickets
+spec/                   product behaviour facts
+wiki/                   knowledge / progress / runbook
+.agents/                agent runtime, gitignored
+scripts/dev.sh          run the CLI from a checkout (python/node stacks)
+```
+
+With the `python` or `node` stack, `galadon.yaml` already declares real checks,
+so `galadon check` is green on a fresh clone; `--stack none` ships no checks and
+no `scripts/dev.sh`, and fails the gate.
+
+## Commands
+
+```bash
+scripts/dev.sh ping --json
+galadon check
+```

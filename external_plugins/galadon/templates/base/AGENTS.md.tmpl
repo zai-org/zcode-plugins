@@ -1,0 +1,41 @@
+# {{PROJECT}}
+
+## Start here
+
+1. Read `galadon.yaml`.
+2. Run `galadon next`.
+3. Do only the current phase, write its artifact, then pass its gate.
+
+## Current iteration
+
+<!-- galadon:begin -->
+- phase: spec
+- role: agent
+- next: Write spec/spec.md: problem, acceptance criteria and non-goals.
+<!-- galadon:end -->
+
+## Rules
+
+- Do not write business code before the spec gate passes.
+- Do not ship before verification passes.
+- Production release requires explicit confirmation in the current session.
+- Never put secret values in `galadon.yaml` or git.
+- Fail loud: no silent fallback, no partial-success claim.
+
+## Artifacts
+
+| Phase | Write | Gate |
+|---|---|---|
+| spec | `spec/spec.md` | acceptance is testable |
+| build | code and tests | build checks pass |
+| verify | `verify/evidence.md` | tests and review pass |
+| ship | `release/release.json` | probe matches |
+| learn | `wiki/retro.md` | archived and docs updated |
+
+## Commands
+
+```bash
+galadon next
+galadon check
+galadon ship --env test
+```
