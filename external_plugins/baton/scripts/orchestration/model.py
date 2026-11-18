@@ -26,9 +26,8 @@ class TaskPacket:
     A packet fully describes one unit of work: the goal, how success is
     judged (``acceptance_criteria`` / ``verification_commands`` /
     ``output_contract``), what it depends on (``dependencies`` /
-    ``base_commit`` / ``artifacts``), where it may touch (``project_path`` /
-    ``allowed_paths``), and how the orchestrator should
-    behave on ambiguity (``retry_policy``). ``plan_revision`` binds the
+    ``base_commit`` / ``artifacts``), where it may touch
+    (``project_path``). ``plan_revision`` binds the
     packet to the Live Plan revision that produced it; ``task_packet_hash``
     is the canonical content hash callers use for idempotency.
     """
@@ -41,10 +40,8 @@ class TaskPacket:
     base_commit: str = ""
     artifacts: list[str] = field(default_factory=list)
     project_path: str = ""
-    allowed_paths: list[str] = field(default_factory=list)
     verification_commands: list[str] = field(default_factory=list)
     output_contract: list[str] = field(default_factory=list)
-    retry_policy: str = "manual-on-ambiguous"
     plan_revision: int = 0
     task_packet_hash: str = ""
 
@@ -59,10 +56,8 @@ class TaskPacket:
             base_commit=str(data.get("base_commit", "")),
             artifacts=[str(x) for x in data.get("artifacts", [])],
             project_path=str(data.get("project_path", "")),
-            allowed_paths=[str(x) for x in data.get("allowed_paths", [])],
             verification_commands=[str(x) for x in data.get("verification_commands", [])],
             output_contract=[str(x) for x in data.get("output_contract", [])],
-            retry_policy=str(data.get("retry_policy", "manual-on-ambiguous")),
             plan_revision=int(data.get("plan_revision", 0)),
             task_packet_hash=str(data.get("task_packet_hash", "")),
         )

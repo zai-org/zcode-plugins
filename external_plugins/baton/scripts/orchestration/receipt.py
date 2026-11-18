@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from orchestration.git_run import run_git
 from orchestration.model import TaskPacket
 from orchestration.result import ResultEnvelope
 from orchestration.session_model import finalize_task_packet
@@ -178,19 +179,7 @@ def _load_packet(packet_path: str | Path) -> tuple[Path, dict[str, Any], TaskPac
 
 
 def _run_git(worktree: Path, args: list[str]) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=str(worktree),
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise ReceiptError(
-            result.stderr.strip() or result.stdout.strip() or f"git {' '.join(args)} failed"
-        )
-    return result.stdout.strip()
+    return run_git(args, cwd=worktree, error=ReceiptError).stdout.strip()
 
 
 def _verification_path(payload: dict[str, Any], packet_path: Path) -> Path:
@@ -276,17 +265,8 @@ def seal_receipt(packet_path: str | Path) -> ResultEnvelope:
         for line in _run_git(worktree, ["diff", "--name-only", f"{base}..{head}"]).splitlines()
         if line.strip()
     ]
-    if task.allowed_paths:
-        disallowed = [
-            file
-            for file in changed
-            if not any(file == allowed or file.startswith(allowed.rstrip("/") + "/") for allowed in task.allowed_paths)
-        ]
-        if disallowed:
-            raise ReceiptError(f"changed files outside allowed paths: {disallowed}")
     envelope = ResultEnvelope(
         task_id=task.task_id,
-        profile_id=str(payload.get("profileId", "session-subagent")),
         status="succeeded",
         ticket_num=int(payload["ticketNum"]),
         assignment_id=str(payload["assignmentId"]),

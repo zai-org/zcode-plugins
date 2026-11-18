@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
+from orchestration.git_run import run_git
 from orchestration.worktree import WorktreeError, branch_is_merged
 
 _LOCK_TIMEOUT_SECONDS = 120.0
@@ -16,17 +17,9 @@ _LOCK_STALE_SECONDS = 3600
 
 
 def _git(path: Path, args: list[str]) -> subprocess.CompletedProcess:
-    try:
-        return subprocess.run(
-            ["git", *args],
-            cwd=str(path),
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=False,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        raise WorktreeError(f"git {' '.join(args)} failed: {exc}") from exc
+    """Tolerant git call: raises only on spawn failure/timeout; callers judge
+    the exit status (see :func:`run_git`)."""
+    return run_git(args, cwd=path, error=WorktreeError, timeout=60, check=False)
 
 
 def _lock_owner_alive(lock_path: Path) -> bool:

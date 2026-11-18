@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.4 (2026-11-18)
+
+Dead-code and dispatch-semantics round from the 11-18 audit: eight items, no
+feature change.
+
+- **`blocked-review` now dispatches by `failure_code` instead of always
+  re-emitting `resolve_merge`.** A parked attempt whose receipt can no longer
+  be re-read (receipt or packet gone from disk) used to get a "resolve the
+  preserved merge" prompt even when nothing had been merged
+  (`integration-failed`, `branch-moved-after-seal`); only `merge-conflict`
+  leaves a preserved merge, and it is now the only failure that gets
+  `resolve_merge` — the others surface as their named `blocked` action with
+  the abandon exit. Two regression tests cover both failure codes.
+- **TaskPacket loses two never-populated fields** (`retry_policy`,
+  `allowed_paths`) together with the `allowed_paths` enforcement in `seal`
+  that could never trigger — the controller never fills it (verified against
+  every packet on disk: all carry the defaults). **Packet format change:**
+  `task_packet_hash` is computed over the packet dict, so running
+  `receipt.py verify`/`seal` on a packet written by ≤0.4.3 now fails the
+  recomputed-hash check — finish in-flight assignments before upgrading, or
+  abandon and let the ticket re-claim. Sealed receipts from ≤0.4.3 still
+  verify and reconcile unchanged.
+- **ResultEnvelope loses four never-populated fields** (`profile_id`, always
+  `"session-subagent"`, and `artifacts`/`findings`/`proposed_followups`,
+  always `[]` — verified against all receipts of the fusion-s1-skeleton
+  run). Newly sealed receipts no longer carry these keys; older receipts
+  still load and verify (`from_dict` ignores unknown keys).
+- **One git subprocess wrapper instead of four.**
+  `scripts/orchestration/git_run.py` exposes a single `run_git(args, cwd=…,
+  error=…, timeout=…, check=…)`; `session_controller`, `integrator`,
+  `worktree` and `receipt` now delegate to it, each keeping its own exception
+  type. Git failure messages are unified to one format.
+- **One frontier judgment.** `_frontier.is_frontier_ticket` is the shared
+  predicate behind both the board's `compute_frontier` and the claim loop in
+  `attempt_store` (status from tasks.md, blockers from the plan revision —
+  semantics unchanged, implementation single-sourced).
+- Cleanup: dead `touched_files` variable removed from `attempt_store`;
+  long blank-line runs collapsed in `plan_store`.
+
+Regression: 211 → 213 tests pass; `./tests/regression.sh` 5/5 stages green.
+
 ## 0.4.3 (2026-11-18)
 
 - New icon: 1-bit monochrome pixel relay — two gloves passing a glowing baton

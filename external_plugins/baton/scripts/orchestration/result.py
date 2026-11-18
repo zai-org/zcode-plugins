@@ -13,7 +13,6 @@ class ResultEnvelope:
     """Structured output returned by a worker/agent for one task."""
 
     task_id: str
-    profile_id: str
     status: str
     ticket_num: int
     assignment_id: str
@@ -25,16 +24,12 @@ class ResultEnvelope:
     integration_sha: str = ""
     changed_files: list[str] = field(default_factory=list)
     verification: list[dict[str, Any]] = field(default_factory=list)
-    artifacts: list[str] = field(default_factory=list)
-    findings: list[str] = field(default_factory=list)
-    proposed_followups: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=utc_now)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ResultEnvelope":
         return cls(
             task_id=str(data["task_id"]),
-            profile_id=str(data.get("profile_id", "")),
             status=str(data["status"]),
             ticket_num=int(data["ticket_num"]),
             assignment_id=str(data.get("assignment_id", "")),
@@ -46,9 +41,6 @@ class ResultEnvelope:
             integration_sha=str(data.get("integration_sha", "")),
             changed_files=[str(x) for x in data.get("changed_files", [])],
             verification=[dict(x) for x in data.get("verification", [])],
-            artifacts=[str(x) for x in data.get("artifacts", [])],
-            findings=[str(x) for x in data.get("findings", [])],
-            proposed_followups=[str(x) for x in data.get("proposed_followups", [])],
             created_at=str(data.get("created_at", utc_now())),
         )
 

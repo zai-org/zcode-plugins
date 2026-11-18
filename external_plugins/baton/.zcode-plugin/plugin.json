@@ -1,6 +1,6 @@
 {
   "name": "baton",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",
   "description_i18n": {
     "en": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",

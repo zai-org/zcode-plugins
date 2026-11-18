@@ -14,6 +14,7 @@ import json
 import sqlite3
 import uuid
 
+from _frontier import is_frontier_ticket
 from _ticket import TasksMarkdownError, check_task
 
 from orchestration.plan_model import stable_hash, utc_now
@@ -53,7 +54,6 @@ class AttemptStoreMixin:
 
         conn = self._connect()
         claimed: list[ExecutionAttempt] = []
-        touched_files: list[Path] = []
         try:
             conn.execute("BEGIN IMMEDIATE")
             plan = self._ensure_initial_plan_locked(conn)
@@ -90,8 +90,9 @@ class AttemptStoreMixin:
                 and ticket.num not in active_tickets
                 and ticket.num not in resolved
                 and ticket_files.get(ticket.num) is not None
-                and ticket_files[ticket.num].status == "ready"
-                and all(blocker in resolved for blocker in ticket.blocked_by)
+                and is_frontier_ticket(
+                    ticket_files[ticket.num].status, ticket.blocked_by, resolved
+                )
             ]
             eligible.sort(key=lambda ticket: ticket.num)
 

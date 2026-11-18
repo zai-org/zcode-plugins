@@ -15,6 +15,17 @@ from __future__ import annotations
 from _ticket import Ticket
 
 
+def is_frontier_ticket(status: str, blocked_by: list[int], resolved_nums: set[int]) -> bool:
+    """The frontier judgment shared by the board and the claim loop.
+
+    ``status`` is the ticket's own status, ``resolved_nums`` the set the
+    caller considers resolved; ``blocked_by`` may come from another view of
+    the same ticket (the claim loop reads status from tasks.md and blockers
+    from the plan revision).
+    """
+    return status == "ready" and set(blocked_by) <= resolved_nums
+
+
 def compute_frontier(tickets: list[Ticket]) -> list[Ticket]:
     """Compute the frontier: ready + all blockers resolved.
 
@@ -25,12 +36,8 @@ def compute_frontier(tickets: list[Ticket]) -> list[Ticket]:
         frontier ticket list (unsorted; callers order by num where needed).
     """
     resolved_nums = {t.num for t in tickets if t.status == "resolved"}
-    frontier = [
+    return [
         t
         for t in tickets
-        if t.status == "ready"
-        # every number in blocked_by must be resolved (empty set is a subset
-        # of any set, i.e. no blockers — OK)
-        and set(t.blocked_by) <= resolved_nums
+        if is_frontier_ticket(t.status, t.blocked_by, resolved_nums)
     ]
-    return frontier

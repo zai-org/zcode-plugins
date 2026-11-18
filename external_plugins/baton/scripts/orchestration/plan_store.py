@@ -74,16 +74,6 @@ class PlanStore(AttemptStoreMixin):
         finally:
             conn.close()
 
-
-
-
-
-
-
-
-
-
-
     def run_verification_commands(self) -> list[str]:
         """Return the verification commands persisted for this run, if any.
 
@@ -411,10 +401,6 @@ class PlanStore(AttemptStoreMixin):
                 json.dumps(payload, ensure_ascii=False, sort_keys=True),
             ),
         )
-
-
-
-
 
     def _write_plan_json(self, plan: PlanRevision) -> None:
         _atomic_write(self.plan_path, _pretty_json(plan.to_dict()))

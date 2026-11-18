@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
+from orchestration.git_run import run_git
 from orchestration.integrator import integrate_assignment
 from orchestration.model import ROLE_BUILDER, TaskPacket
 from orchestration.plan_store import (
@@ -153,7 +153,7 @@ class SessionController:
                     # replace this attempt instead of deadlocking the run.
                     retryable_recover_ids.add(attempt.assignment_id)
             elif attempt.state == "blocked-review":
-                produced.append(self._merge_action(attempt, token))
+                produced.append(self._blocked_review_action(attempt, token))
             elif attempt.session_id == session_id and attempt.state == "leased" and token:
                 produced.append(self._dispatch_from_attempt(attempt, token))
 
@@ -833,6 +833,54 @@ class SessionController:
             # surfaces the rejection loudly.
             pass
 
+    def _blocked_review_action(
+        self, attempt: ExecutionAttempt, claim_token: str
+    ) -> BaseAction:
+        """Re-surface a parked blocked-review attempt whose receipt can no
+        longer be re-reconciled (receipt or packet gone from disk).
+
+        Only ``merge-conflict`` leaves a preserved merge to resolve; the
+        other failure codes merged nothing, so a ``resolve_merge`` prompt
+        would point at a merge that does not exist.
+        """
+        if attempt.failure_code == "merge-conflict":
+            return self._merge_action(attempt, claim_token)
+        if attempt.failure_code.startswith("integration-failed"):
+            detail = attempt.failure_code.removeprefix("integration-failed").lstrip(": ")
+            return BlockedAction(
+                code="integration-failed",
+                ticket_num=attempt.ticket_num,
+                reason=(
+                    f"cannot merge {attempt.worktree_branch} into "
+                    f"{attempt.integration_path}: {detail}. Nothing was merged. "
+                    f"Fix the integration worktree, or retire the attempt with "
+                    f"`abandon {attempt.assignment_id}`."
+                ),
+            )
+        if attempt.failure_code == "branch-moved-after-seal":
+            return BlockedAction(
+                code="branch-moved-after-seal",
+                ticket_num=attempt.ticket_num,
+                reason=(
+                    f"branch {attempt.worktree_branch} advanced past the commit "
+                    f"the sealed receipt for {attempt.assignment_id} verified, "
+                    "and the receipt can no longer be re-read; commits after "
+                    "the seal were never verified. Nothing was merged. Retire "
+                    f"the attempt with `abandon {attempt.assignment_id}` (the "
+                    "ticket is re-claimed fresh)."
+                ),
+            )
+        return BlockedAction(
+            code=attempt.failure_code or "blocked-review",
+            ticket_num=attempt.ticket_num,
+            reason=(
+                f"attempt {attempt.assignment_id} is parked in blocked-review "
+                f"({attempt.failure_code or 'no failure code'}) and its "
+                "receipt can no longer be re-read; fix the cause and call "
+                f"actions again, or retire it with `abandon {attempt.assignment_id}`."
+            ),
+        )
+
     def _merge_action(
         self,
         attempt: ExecutionAttempt,
@@ -871,17 +919,7 @@ class SessionController:
 
     @staticmethod
     def _git(path: Path, *args: str) -> str:
-        result = subprocess.run(
-            ["git", *args],
-            cwd=str(path),
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-        if result.returncode != 0:
-            raise WorktreeError(result.stderr.strip() or "git command failed")
-        return result.stdout.strip()
+        return run_git(list(args), cwd=path, error=WorktreeError).stdout.strip()
 
     @staticmethod
     def _write_immutable_json(path: Path, payload: dict[str, Any]) -> None:

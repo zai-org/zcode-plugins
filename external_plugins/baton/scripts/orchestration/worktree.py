@@ -43,6 +43,8 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from orchestration.git_run import run_git
+
 
 class WorktreeError(Exception):
     """Worktree creation/cleanup failure."""
@@ -65,32 +67,14 @@ class WorktreeSlot:
     worker_id: str
 
 
-def _run_git(args: list[str], cwd: str, timeout: int = 30) -> subprocess.CompletedProcess:
-    """Run a git subprocess in ``cwd``; raise WorktreeError on failure.
+def _run_git(args: list[str], cwd: str) -> subprocess.CompletedProcess:
+    """Run a raising git subprocess in ``cwd`` (see :func:`run_git`).
 
     git unavailable / not a git repo / branch conflict → uniformly raised as
     WorktreeError, so the executor can decide whether to skip this worker or
     abort the whole batch.
     """
-    try:
-        result = subprocess.run(
-            ["git"] + args,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except FileNotFoundError as exc:
-        raise WorktreeError(f"git unavailable: {exc}") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise WorktreeError(f"git {' '.join(args)} timed out ({exc.timeout}s)") from exc
-    if result.returncode != 0:
-        stderr = (result.stderr or "").strip()
-        raise WorktreeError(
-            f"git {' '.join(args)} failed (exit {result.returncode}): {stderr}"
-        )
-    return result
+    return run_git(args, cwd=cwd, error=WorktreeError)
 
 
 def _is_git_repo(path: Path) -> bool:
@@ -247,23 +231,14 @@ def _branch_exists(repo: Path, branch: str) -> bool:
     return result.returncode == 0
 
 
-def _git_quiet(args: list[str], cwd: str, timeout: int = 30) -> subprocess.CompletedProcess:
+def _git_quiet(args: list[str], cwd: str) -> subprocess.CompletedProcess:
     """Run git WITHOUT raising on non-zero exit (for tolerant operations).
 
-    Unlike :func:`_run_git`, this does not raise — used by cleanup where a
-    non-zero exit (e.g. a dirty worktree) is an expected, handleable case.
+    Unlike :func:`_run_git`, this does not raise on exit status — used by
+    cleanup where a non-zero exit (e.g. a dirty worktree) is an expected,
+    handleable case.
     """
-    try:
-        return subprocess.run(
-            ["git"] + args,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        raise WorktreeError(f"git {' '.join(args)} unavailable/timed out: {exc}") from exc
+    return run_git(args, cwd=cwd, error=WorktreeError, check=False)
 
 
 def cleanup_feature_worktrees(

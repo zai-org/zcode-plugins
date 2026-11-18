@@ -102,8 +102,11 @@ session_controller.py ──→ plan_store.py (durable: queue.db)
    │   └──────→ receipt.py (verify/seal — the subagent CLI)
    └──────────→ session_model.py (action/attempt contracts)
 plan_store.py ──→ _ticket.py (OpenSpec tasks.md parser)
-ticket_board.py ──→ _frontier.py (DAG frontier, observability only)
+plan_store.py ──→ _frontier.py (shared frontier judgment, via attempt_store)
+ticket_board.py ──→ _frontier.py (DAG frontier, observability)
 session_control.py ──→ session_controller.py (thin CLI adapter)
+session_controller.py / integrator.py / worktree.py / receipt.py ──→ git_run.py
+  (the single git subprocess wrapper; every caller picks its own error type)
 ```
 
 - `plan_store.py`: durable plan store (`queue.db`) — plan revisions (synced
@@ -115,8 +118,9 @@ session_control.py ──→ session_controller.py (thin CLI adapter)
   writing state.
 - `_ticket.py`: OpenSpec tasks.md parsing — the ticket source the plan store
   reads on every sync.
-- `_frontier.py`: DAG frontier — used by `ticket_board.py` to label claimable
-  cards; the controller claims through `plan_store.py` instead.
+- `_frontier.py`: DAG frontier — `compute_frontier` labels claimable cards on
+  the board, and the shared `is_frontier_ticket` predicate drives the claim
+  loop in `attempt_store.py`, so board and claim cannot drift apart.
 
 ## Why the plan face is OpenSpec tasks.md
 
