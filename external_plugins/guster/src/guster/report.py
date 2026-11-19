@@ -85,7 +85,7 @@ def next_actions(findings: Sequence[Dict[str, Any]]) -> List[str]:
             break
     actions.append(
         "Turn the rest into a checklist with `guster plan findings`; structural changes go "
-        "through `guster plan move`/`guster plan init` and `guster apply <plan> --yes`."
+        "through `guster plan move`/`guster init --project <path>` and `guster apply <plan> --yes`."
     )
     actions.append("Re-run `guster score` after fixes and compare the trend.")
     return actions
@@ -356,6 +356,9 @@ def render_status(registry: Dict[str, Any], metric_result: Optional[Dict[str, An
 def redacted_registry(registry: Dict[str, Any]) -> Dict[str, Any]:
     def scrub(value: Any) -> Any:
         if isinstance(value, dict):
+            # Key-level blacklist only; parse_warnings is allowed through
+            # because its text is redacted at the source (line/column info,
+            # never the broken row's content).
             return {
                 key: scrub(item)
                 for key, item in value.items()

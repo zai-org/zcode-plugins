@@ -231,13 +231,17 @@ def load_json_strict(path: Path) -> Tuple[Any, Optional[str]]:
 
 def is_indexed(name: str, index_text: str) -> bool:
     """An index row naming the file: backtick-wrapped (bare or as a `dir/name`
-    tail), a backtick-wrapped stem, or a markdown table cell holding the stem.
+    tail), a backtick-wrapped stem, a markdown table cell holding the stem, or
+    a markdown link whose target is the file (bare or a `dir/name` relative
+    path — the llms.txt-shaped `- [title](general/start-here.md)` index form).
 
     A bare substring does not count: `a.md` inside `data.md` is not an index row."""
     if f"`{name}`" in index_text or f"/{name}`" in index_text:
         return True
     stem = Path(name).stem
     if f"`{stem}`" in index_text:
+        return True
+    if re.search(rf"\((?:[^)]*?/)?{re.escape(name)}\)", index_text):
         return True
     return re.search(rf"^\|\s*{re.escape(stem)}\s*\|", index_text, re.MULTILINE) is not None
 

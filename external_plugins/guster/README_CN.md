@@ -58,7 +58,6 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster zones list/add/remove` | 管理 `config.json` 里的机器 zone |
 | `guster plan findings` | 把发现转成审阅清单 |
 | `guster plan move` | 计划一次带备份的移动（不再自动写指针） |
-| `guster plan init` | 计划标准 `.agents/` 布局 |
 | `guster apply <plan>` | 默认 dry-run；`--yes` 才写入 |
 | `guster init` | 初始化状态目录或项目布局 |
 | `guster hub init` | 创建 Lite Hub 并接入本地配置 |
@@ -67,7 +66,6 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster hub validate` | 校验 Lite Hub 契约 |
 | `guster export` | 导出脱敏 Markdown/JSON 报告 |
 | `guster credentials` | 按范围（公司 / 个人）列出已登记凭据 |
-| `guster upgrade` | 检查 CLI 与 Codex/ZCode/package 版本一致 |
 
 ## 配置：roots 与 zones
 
@@ -125,15 +123,15 @@ Guster/
 
 `guster hub init` 会拒绝非空目录，先写可审阅的 plan，再把新 Hub 接入 `~/.agents/guster/config.json`。已有 Hub 用 `guster hub attach --path <hub>`。
 
-三个核心目录可以在创建时自定义：
+核心目录在创建时声明：
 
 ```bash
 guster hub init --path <hub> --knowledge notes --projects work --tools scripts --yes
 ```
 
-它们记录在 `hub.yaml` 的 `paths` 下，之后也可以修改。路径必须是 Hub 内的相对路径。
+`hub.yaml` schema 2 下布局是声明式的：`knowledge` 与 `projects` 必须在 `paths` 下显式声明——缺一个直接 fail-loud——其余节（如 `tools`）可选。相对声明必须留在 Hub 内；任何节都可以改声明为外部路径（绝对路径或 `~/`）。声明记录在 `hub.yaml` 的 `paths` 下，之后也可以修改。
 
-扫描按目录是否存在走，不是开关：`hub.yaml` 没有 `profile` 概念（旧版残留的键会被忽略，未知的 manifest 顶层键同样忽略）。knowledge 子区是动态发现的，不写死枚举——knowledge 根下任意一层目录（`general/`、`projects/`、`machines/`……）都会被扫描并做索引检查。Hub 只要有配置的项目状态根、`register/`、`handoff/`、`provision/`、`reports/`、`output/`（旧别名 `Human Output/`）、`manuals/`、`cron-tasks/`、`openspec/`、`archive/`、`.agents/plans/` 和 `strategy.md`，就会被扫到。`out/`、`.manual-site/`、`.playwright-mcp/`、`.codegraph/` 等生成物或运行态不作为知识源。`--scope hub` 只算 Hub；本地 wiki 和机器级凭据归机器范围。
+扫描按目录是否存在走，不是开关：`hub.yaml` 没有 `profile` 概念（旧版残留的键会被忽略，未知的 manifest 顶层键同样忽略）。knowledge 子区是动态发现的，不写死枚举——knowledge 根下任意一层目录（`general/`、`projects/`、`machines/`……）都会被扫描并做索引检查。Hub 只要有配置的项目状态根、`register/`、`handoff/`、`reports/`、`output/`、`.agents/plans/` 和 `strategy.md`，就会被扫到。旧结构——`provision/`、`manuals/`、`cron-tasks/`、`openspec/`、`archive/` 以及 `output/` 的旧别名 `Human Output/`——仅作兼容扫描（存在才扫），绝不是要新建的结构。`out/`、`.manual-site/`、`.playwright-mcp/`、`.codegraph/` 等生成物或运行态不作为知识源。`--scope hub` 只算 Hub；本地 wiki 和机器级凭据归机器范围。
 
 ## 健康模型
 
@@ -203,6 +201,8 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 - `secret-missing` — 已登记的位置已不存在。
 - `git-unavailable` — 某个仓库查询失败，跟踪状态与提交日期未知；SIR 会把这类凭据记为「未核实」而不是「干净」。
 
+`secret-undeclared` 与 `secret-missing` 只在登记表存在且解析出至少一行时生效：`~/.agents/credentials/registry.md` 缺失时这两项检查整体关闭——`guster credentials` 打印 `registry: (missing)` 就是这个意思。照下方的表头加一行样例把表建起来即可启用。
+
 登记表保存范围（`company` / `personal`）、站点、账号、类型、位置和变量名，从不保存凭据值。`guster credentials` 按范围输出。一行可复制的样例（列序固定——详见格式规范；前 6 列必填，`keys`/`used_by`/`status` 可选）：
 
 ```markdown
@@ -237,9 +237,9 @@ Guster 读取 `~/.agents/credentials/registry.md`，并对照它检查发现的�
 |---|---|
 | `0` | 成功——干净运行，或 finding 严重度不高于 `medium` |
 | `1` | 工具/配置错误：plan 损坏或不可读、执行中失败且已回滚的 apply、工作区根不存在、`config.json` 无效（`roots` 非列表、root/zone/hub 路径坏、`roots` 为空、无可扫候选——跑 `guster init`）；已接入 hub 校验不过时 `hub status` 也返回 1 |
-| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约；`upgrade` 发现插件各版本不一致 |
+| `2` | `doctor`/`check` 发现 `high`（但无 `critical`）finding；`score --fail-under` 低于目标或 CHI 不可算；`hub validate` 未过 Lite 契约 |
 | `3` | `doctor`/`check` 发现 `critical` finding |
-| `4` | `apply`、`init` 或 `hub init` 在 preflight 拒绝了 plan——什么都没动（move 源不存在、目标已存在、目标类型不对） |
+| `4` | `apply`、`init` 或 `hub init` 在 preflight 拒绝了 plan——什么都没动（move 源不存在、目标已存在、`hub init` 目标无效；`init --project` 目标若在执行中才失败，回滚后按第 1 行退出 1） |
 
 同一张表也随 `guster` skill 发布，agent 与人读同一份契约。门禁看退出码，CHI 看趋势。
 

@@ -32,8 +32,8 @@ resolution and git metadata. Nothing measures runtime token usage.
   real path, host symlinks do not double count) plus the hub instruction file.
   Soft line budgets are 150 per user entry and 50 for the hub.
 - Skills: ≤6,000 characters of description in total, ≤500 per skill.
-- State: one 90-day SLA for every state document — hub `projects/`, `handoff/`,
-  `provision/` and `.agents/plans/`. There is no separate 7- or 30-day tier.
+- State: one 90-day SLA for every state document — hub `projects/`, `register/`,
+  `handoff/`, `provision/` and `.agents/plans/`. There is no separate 7- or 30-day tier.
   The date is `verified_at`, a `最后更新` line in the first 40 lines, a date that
   opens the filename, or the owning repository's last commit — that last one is
   "touched", not "verified".

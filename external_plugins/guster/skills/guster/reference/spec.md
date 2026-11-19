@@ -112,7 +112,9 @@ body: |
 
 CTX-08's registry (`~/.agents/credentials/registry.md`) is a markdown table
 with a fixed column order; only paths and variable **names** live here,
-never values:
+never values. When the file is missing (or parses zero rows) the
+`secret-undeclared`/`secret-missing` checks do not apply — create the table
+with its header plus at least one row to enable them:
 
 | # | Column | Required |
 |---|---|---|

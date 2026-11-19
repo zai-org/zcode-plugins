@@ -15,18 +15,26 @@ User instructions remain a single canonical file with host symlinks.
 
 ## Guster Hub
 
+The standard skeleton — what `guster hub init` scaffolds:
+
 ```text
 <hub>/
-├── register/        # state — project register (register/projects.yaml, CTX-10)
+├── AGENTS.md        # instruction
+├── README.md        # index
+├── hub.yaml         # manifest (schema 2: knowledge and projects declared, tools optional)
+├── register/        # state — project register (projects.yaml, CTX-10)
 ├── projects/        # state
-├── handoff/         # state
-├── knowledge/       # knowledge — subzones are discovered, not fixed (general/, projects/, machines/, ...)
-├── provision/       # state
-├── tools/           # capability
-├── reports/         # evidence
-├── output/          # evidence / deliverables (legacy alias: Human Output/)
-└── .agents/         # local plans and scratch
+├── knowledge/
+│   ├── README.md    # knowledge index
+│   ├── general/     # starter note + knowledge/v1 skeleton; subzones are discovered, not fixed
+│   └── projects/    # empty starter subzone
+├── tools/           # capability — index only, no tool preinstalled
+└── .agents/plans/   # local plans
 ```
+
+Optional state and evidence directories — `handoff/`, `reports/`, `output/`
+(legacy alias `Human Output/`) — are added when the workflow needs them, never
+by the scaffold; the scanner picks them up when present.
 
 ## Project level
 

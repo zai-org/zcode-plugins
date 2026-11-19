@@ -60,7 +60,6 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster zones list/add/remove` | Manage the machine zones in `config.json` |
 | `guster plan findings` | Turn findings into a review checklist |
 | `guster plan move` | Plan a move with backup (no pointer is written) |
-| `guster plan init` | Plan a standard `.agents/` layout |
 | `guster apply <plan>` | Dry-run by default; `--yes` writes with backup |
 | `guster init` | Initialize the state home or a project |
 | `guster hub init` | Create a lite Hub and attach it to the local config |
@@ -69,7 +68,6 @@ ln -s "$(pwd)/bin/guster" ~/.local/bin/guster
 | `guster hub validate` | Validate the lite Hub contract |
 | `guster export` | Export a redacted Markdown/JSON report |
 | `guster credentials` | List registered credentials by scope (company / personal) |
-| `guster upgrade` | Check that the CLI, Codex, ZCode and package versions agree |
 
 ## Configuration: roots and zones
 
@@ -133,15 +131,15 @@ Guster/
 
 `guster hub init` refuses a non-empty target, writes a reviewable plan, and attaches the new Hub to `~/.agents/guster/config.json`. Use `guster hub attach --path <hub>` for an existing Hub.
 
-The three core roots can be chosen at creation time:
+The core roots are declared at creation time:
 
 ```bash
 guster hub init --path <hub> --knowledge notes --projects work --tools scripts --yes
 ```
 
-They are recorded in `hub.yaml` under `paths` and can be changed later. Paths must be relative to the Hub and must stay inside it.
+Under `hub.yaml` schema 2 the layout is declarative: `knowledge` and `projects` must be declared under `paths` — a missing declaration fails loud — while every other section (such as `tools`) is optional. Relative declarations stay inside the Hub; any section may instead be declared external (absolute or `~/`). Declarations are recorded in `hub.yaml` under `paths` and can be changed later.
 
-Scanning follows the directories that exist, not a mode: there is no `profile` concept in `hub.yaml` (a leftover key from an older version is ignored, as are unknown top-level manifest keys). Knowledge subzones are discovered, not enumerated — every first-level directory under the knowledge root (`general/`, `projects/`, `machines/`, ...) is scanned and index-checked. A hub is also scanned across the configured project state root, `register/`, `handoff/`, `provision/`, `reports/`, `output/` (legacy alias `Human Output/`), `manuals/`, `cron-tasks/`, `openspec/`, `archive/`, `.agents/plans/` and `strategy.md` whenever those exist. Generated or runtime areas such as `out/`, `.manual-site/`, `.playwright-mcp/` and `.codegraph/` are not treated as knowledge sources. `--scope hub` is Hub-only; local wiki and machine-level secrets belong to the machine scope.
+Scanning follows the directories that exist, not a mode: there is no `profile` concept in `hub.yaml` (a leftover key from an older version is ignored, as are unknown top-level manifest keys). Knowledge subzones are discovered, not enumerated — every first-level directory under the knowledge root (`general/`, `projects/`, `machines/`, ...) is scanned and index-checked. A hub is also scanned across the configured project state root, `register/`, `handoff/`, `reports/`, `output/`, `.agents/plans/` and `strategy.md` whenever those exist. Legacy layouts — `provision/`, `manuals/`, `cron-tasks/`, `openspec/`, `archive/` and the `Human Output/` alias of `output/` — are compat-scanned when present only; they are never structures to create. Generated or runtime areas such as `out/`, `.manual-site/`, `.playwright-mcp/` and `.codegraph/` are not treated as knowledge sources. `--scope hub` is Hub-only; local wiki and machine-level secrets belong to the machine scope.
 
 ## Health model
 
@@ -262,6 +260,12 @@ Guster reads `~/.agents/credentials/registry.md` and checks it against every cre
   commit dates are unknown. SIR counts those credentials as unverified rather
   than clean.
 
+`secret-undeclared` and `secret-missing` apply only when the registry exists
+and parses at least one row: with `~/.agents/credentials/registry.md` missing,
+both checks stay off — `guster credentials` printing `registry: (missing)`
+means exactly that. Create the table (header row plus one row, like the
+copyable example below) to enable them.
+
 The registry holds scope (`company` / `personal`), site, account, kind, location and variable names.
 It never holds values. `guster credentials` prints the split. A copyable row
 (column order is fixed — see the format spec; the first six columns are
@@ -299,9 +303,9 @@ required, `keys`/`used_by`/`status` are optional):
 |---|---|
 | `0` | success — clean run, or findings no worse than `medium` |
 | `1` | tool/config error: malformed or unreadable plan, an apply that failed mid-operation and was rolled back, missing workspace root, invalid `config.json` (non-list `roots`, a bad root/zone/hub path, empty `roots`, no scan candidates — run `guster init`); `hub status` also returns 1 when the attached hub fails its checks |
-| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract; `upgrade` found disagreeing plugin versions |
+| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract |
 | `3` | `doctor`/`check` found `critical` findings |
-| `4` | `apply`, `init` or `hub init` refused the plan at preflight — nothing was touched (missing move source, existing destination, bad target type) |
+| `4` | `apply`, `init` or `hub init` refused the plan at preflight — nothing was touched (missing move source, existing destination, invalid `hub init` target; an `init --project` target that only fails mid-apply exits 1 after rollback) |
 
 The same table ships in the `guster` skill so agents and humans read one
 contract. Treat the exit code as the gate and CHI as the trend.

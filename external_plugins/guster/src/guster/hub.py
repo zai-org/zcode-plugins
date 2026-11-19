@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from . import __version__
-from .executor import apply_plan
+from .executor import ConfigError, apply_plan
 from .layout import DEFAULT_PATHS, load_manifest, resolve_hub_layout, validate_layout_value
 from .planner import build_plan, op_mkdir, op_write, save_plan
 from .util import DATE_ONLY_RE, EXCLUDE_DIRS, is_indexed, iter_files, load_json_strict, now_iso, read_text, save_json, today_iso, unique_suffix
@@ -225,11 +225,11 @@ def attach_hub(state_dir: Path, target: Path) -> Dict[str, Any]:
     config_path = state_dir / "config.json"
     data, error = load_json_strict(config_path)
     if error is not None:
-        raise ValueError(f"cannot read Guster config {config_path}: {error}")
+        raise ConfigError(f"cannot read Guster config {config_path}: {error}")
     if data is None:
         config: Dict[str, Any] = {}
     elif not isinstance(data, dict):
-        raise ValueError(f"Guster config must be a JSON object: {config_path}")
+        raise ConfigError(f"Guster config must be a JSON object: {config_path}")
     else:
         config = data
     backup: Optional[Path] = None
@@ -279,7 +279,13 @@ def init_hub(
         tools=path_values["tools"],
     )
     plan_path = save_plan(state_dir, plan)
-    result = apply_plan(plan, state_dir, dry_run=dry_run, yes=yes)
+    result = apply_plan(
+        plan,
+        state_dir,
+        dry_run=dry_run,
+        yes=yes,
+        extra_bases=[target.resolve()],
+    )
     result["hub"] = str(hub)
     result["plan"] = str(plan_path)
     result["paths"] = path_values

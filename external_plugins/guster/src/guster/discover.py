@@ -67,7 +67,7 @@ INLINE_PATTERNS = [
     # Host configs carry tokens in more shapes than one: keep the detector
     # narrow enough to stay quiet, broad enough not to miss a literal key.
     r"\bBearer\s+([A-Za-z0-9._\-]{8,})",
-    r"\bsk-[A-Za-z0-9]{16,}",
+    r"\b(sk-[A-Za-z0-9]{16,})",
     r"(?i)\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|secret[_-]?key)"
     r"\s*[:=]\s*[\"']?([A-Za-z0-9._\-]{16,})",
 ]
@@ -958,9 +958,11 @@ def scan_credential_registry(home: Path) -> Dict[str, Any]:
             if len(cells) < 6:
                 # An entry-shaped row that cannot be an entry is a broken row,
                 # not silence: ID|scope|site|account|kind|locations are required.
+                # Line/column info only — the row text stays out because a
+                # broken row may carry a pasted secret value.
                 warnings.append(
                     f"line {line_no}: expected at least 6 columns "
-                    f"(ID|scope|site|account|kind|locations), got {len(cells)}: {stripped[:80]}"
+                    f"(ID|scope|site|account|kind|locations), got {len(cells)}"
                 )
                 continue
             entries.append(
@@ -1004,7 +1006,7 @@ def scan_inline_bearers(home: Path) -> List[Dict[str, Any]]:
         values: List[str] = []
         for pattern in INLINE_PATTERNS:
             for match in re.finditer(pattern, text):
-                value = match.group(1)
+                value = match.group(1) if match.groups() else match.group(0)
                 redacted = f"{value[:4]}...{value[-4:]}"
                 if redacted not in values:
                     values.append(redacted)

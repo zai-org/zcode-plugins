@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.9.5 — 2026-11-19
+
+- **apply/plan safety hardening**: plans are validated for schema
+  equivalence before execution, path boundaries keep every operation inside
+  its intended root (paths are resolved first, so a symlink cannot smuggle
+  a write past the boundary into the allowed roots), the legacy `pointer`
+  operation is removed from the executor, backups can no longer be
+  overwritten by a later plan, and a failed `mkdir` rolls back with the
+  rest of the plan.
+- **Drift baseline fixed**: the machine↔disk drift check compares against
+  the registry captured *before* this scan overwrites it (the old code read
+  the file back after its own write, so write-path runs never saw drift);
+  a corrupt baseline is a visible finding instead of a silent skip.
+- **Crash fix**: `sk-`-shaped tokens no longer crash the scan.
+- **Index shape recognition**: llms.txt-style index forms are recognized for
+  index coverage.
+- **Removed command surface** (breaking): the `upgrade` subcommand, the
+  `plan init` subcommand, the explicit `--dry-run` flag and the `--home`
+  flag are gone. DRY-run-by-default and `--yes` semantics are unchanged;
+  `guster init --project <path>` replaces `plan init` for scaffolding.
+- **`hub init` preflight exits 4**: a plan refused at preflight (non-empty
+  target, bad type) now returns exit code 4, aligned with `apply`/`init`.
+- **CLI polish**: `score --fail-under` failures emit a JSON error envelope
+  under `--json` (exit 2 unchanged); `init` refuses an existing broken
+  `config.json` instead of returning a success-shaped no-op;
+  credential-registry warnings no longer echo the broken row's text.
+- **Documentation alignment and skill simplification**: the docs describe
+  the current architecture only (hub schema 2 declarative paths, five FRS
+  state prefixes, scaffold-shaped placement tree, CTX-09 date-key list,
+  credential-registry precondition); legacy directory names are marked as
+  compat-scan-only; the `guster` skill is compressed to 150 lines and the
+  reformat playbook to 75 without dropping commands, workflow, gates, exit
+  codes or rule IDs.
+
 ## 0.9.4 — 2026-11-19
 
 The hub contract catches up with the reference hub's 2026-11-19 restructure,

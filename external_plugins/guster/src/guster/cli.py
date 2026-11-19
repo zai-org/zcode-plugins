@@ -5,11 +5,11 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from . import __version__
 from .discover import ScanConfig, count_zone_tools, default_roots, scan
-from .executor import ApplyError, apply_plan, init_home
+from .executor import ApplyError, ConfigError, apply_plan, init_home
 from .hub import attach_hub, default_hub_path, init_hub, validate_hub
 from .metrics import compute_metrics, metric_line
 from .planner import (
@@ -220,13 +220,28 @@ def ensure_state(config: ScanConfig) -> None:
     (config.state_dir / "backups").mkdir(parents=True, exist_ok=True)
 
 
-def do_scan(config: ScanConfig, write: bool = True) -> Dict[str, Any]:
+def load_previous_registry(config: ScanConfig) -> Optional[Dict[str, Any]]:
+    """The persisted machine table this scan replaces, captured before the new
+    registry overwrites it; unreadable content reads as None so run_policy's
+    own strict disk read (and its corrupt-baseline finding) stays in charge."""
+    data, error = load_json_strict(config.state_dir / "registry.json")
+    if error is not None or not isinstance(data, dict):
+        return None
+    return data
+
+
+def do_scan(
+    config: ScanConfig, write: bool = True
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """Scan fresh; the second value is the pre-overwrite registry handed to
+    run_policy as the drift baseline."""
     ensure_state(config)
     with state_lock(config.state_dir):
+        previous = load_previous_registry(config)
         registry = scan(config)
         if write:
             save_json(config.state_dir / "registry.json", registry)
-    return registry
+    return registry, previous
 
 
 def load_registry(config: ScanConfig) -> Optional[Dict[str, Any]]:
@@ -245,8 +260,12 @@ def load_registry(config: ScanConfig) -> Optional[Dict[str, Any]]:
     return data
 
 
-def evaluate(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
-    policy_result = run_policy(registry, config)
+def evaluate(
+    registry: Dict[str, Any],
+    config: ScanConfig,
+    previous_registry: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    policy_result = run_policy(registry, config, previous_registry=previous_registry)
     metric_result = compute_metrics(registry, policy_result)
     return {"policy": policy_result, "metrics": metric_result}
 
@@ -321,7 +340,7 @@ def cmd_status(args: argparse.Namespace) -> int:
     registry = load_registry(config)
     cached = registry is not None
     if registry is None:
-        registry = do_scan(config, write=True)
+        registry, previous = do_scan(config, write=True)
     policy_result: Optional[Dict[str, Any]] = None
     if cached:
         # The cached registry describes an earlier scan. Running policy against
@@ -329,7 +348,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         # stored snapshot and let `doctor` own the fresh evaluation.
         metric_result = last_metric(config)
     else:
-        result = evaluate(registry, config)
+        result = evaluate(registry, config, previous_registry=previous)
         policy_result = result["policy"]
         metric_result = result["metrics"]
     if args.json:
@@ -359,7 +378,7 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 def cmd_scan(args: argparse.Namespace) -> int:
     config = build_config(args)
-    registry = do_scan(config, write=not args.no_write)
+    registry, _ = do_scan(config, write=not args.no_write)
     if args.json:
         print(json_dumps(registry))
     elif not args.quiet:
@@ -369,8 +388,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
 def cmd_doctor(args: argparse.Namespace) -> int:
     config = build_config(args)
-    registry = do_scan(config, write=not args.no_write)
-    result = evaluate(registry, config)
+    registry, previous = do_scan(config, write=not args.no_write)
+    result = evaluate(registry, config, previous_registry=previous)
     policy_result = result["policy"]
     if not args.no_write:
         write_findings(config, policy_result)
@@ -387,13 +406,34 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 0
 
 
+def metrics_reference_line(config: ScanConfig) -> str:
+    """The metrics reference as an absolute pointer into the installed plugin;
+    a generic fallback when that layout does not ship the file."""
+    if config.plugin_root is None:
+        return "Definitions & targets: see the guster skill reference (metrics.md)"
+    reference = config.plugin_root / "skills" / "guster" / "reference" / "metrics.md"
+    if reference.is_file():
+        return f"Definitions & targets: {reference}"
+    return "Definitions & targets: see the guster skill reference (metrics.md)"
+
+
 def cmd_score(args: argparse.Namespace) -> int:
     config = build_config(args)
-    registry = do_scan(config, write=not args.no_write)
-    result = evaluate(registry, config)
+    registry, previous = do_scan(config, write=not args.no_write)
+    result = evaluate(registry, config, previous_registry=previous)
     metric_result = result["metrics"]
     if not args.no_write:
         append_metric(config, metric_result)
+    fail_reason: Optional[str] = None
+    if args.fail_under is not None:
+        chi = metric_result.get("chi")
+        if chi is None:
+            fail_reason = "CHI is not computable; no dimension has evidence"
+        elif chi < args.fail_under:
+            fail_reason = f"CHI {chi} is below --fail-under {args.fail_under}"
+    if fail_reason is not None and args.json:
+        print(json_dumps({"ok": False, "error": fail_reason, "metrics": metric_result}))
+        return 2
     if args.json:
         print(json_dumps(metric_result))
     elif not args.quiet:
@@ -414,7 +454,7 @@ def cmd_score(args: argparse.Namespace) -> int:
         print("")
         print(f"registry: {config.state_dir / 'registry.json'}")
         print(f"metrics:  {config.state_dir / 'metrics.jsonl'}")
-        print("Definitions & targets: skills/guster/reference/metrics.md")
+        print(metrics_reference_line(config))
     if args.trend:
         path = config.state_dir / "metrics.jsonl"
         if path.is_file():
@@ -428,14 +468,9 @@ def cmd_score(args: argparse.Namespace) -> int:
                     print(f"  {item.get('at')}  CHI {'n/a' if chi is None else chi}")
                 except ValueError:
                     continue
-    if args.fail_under is not None:
-        chi = metric_result.get("chi")
-        if chi is None:
-            print("error: CHI is not computable; no dimension has evidence", file=sys.stderr)
-            return 2
-        if chi < args.fail_under:
-            print(f"error: CHI {chi} is below --fail-under {args.fail_under}", file=sys.stderr)
-            return 2
+    if fail_reason is not None:
+        print(f"error: {fail_reason}", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -443,8 +478,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     """scan -> doctor -> score --trend in one pass; the exit code carries the
     doctor semantics (3 critical, 2 high, 0 clean)."""
     config = build_config(args)
-    registry = do_scan(config, write=not args.no_write)
-    result = evaluate(registry, config)
+    registry, previous = do_scan(config, write=not args.no_write)
+    result = evaluate(registry, config, previous_registry=previous)
     policy_result = result["policy"]
     if not args.no_write:
         write_findings(config, policy_result)
@@ -478,17 +513,14 @@ def cmd_plan(args: argparse.Namespace) -> int:
     if args.plan_action == "findings":
         config = build_config(args)
         ensure_state(config)
-        registry = do_scan(config, write=True)
-        result = evaluate(registry, config)
+        registry, previous = do_scan(config, write=True)
+        result = evaluate(registry, config, previous_registry=previous)
         plan = plan_from_findings(result["policy"]["findings"])
         state_dir = config.state_dir
     elif args.plan_action == "move":
         src = Path(args.source).expanduser()
         dst = Path(args.destination).expanduser()
         plan = plan_move(src, dst)
-        state_dir = state_dir_from(args)
-    elif args.plan_action == "init":
-        plan = plan_init_project(Path(args.project).expanduser())
         state_dir = state_dir_from(args)
     else:
         raise SystemExit(f"unknown plan action: {args.plan_action}")
@@ -514,8 +546,6 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_apply(args: argparse.Namespace) -> int:
-    if args.dry_run and args.yes:
-        raise ValueError("--dry-run and --yes are mutually exclusive")
     plan = load_plan(Path(args.plan).expanduser())
     result = apply_plan(
         plan,
@@ -549,7 +579,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         project = Path(args.project).expanduser()
         plan = plan_init_project(project)
         path = save_plan(state_dir, plan)
-        result = apply_plan(plan, state_dir, dry_run=not args.yes, yes=args.yes)
+        result = apply_plan(
+            plan,
+            state_dir,
+            dry_run=not args.yes,
+            yes=args.yes,
+            extra_bases=[project.resolve()],
+        )
         if not args.json and not args.quiet:
             print(f"plan: {path}")
             if result.get("dry_run"):
@@ -632,16 +668,34 @@ def cmd_hub(args: argparse.Namespace) -> int:
     ).expanduser()
 
     if action == "init":
-        result = init_hub(
-            target,
-            state_dir,
-            yes=args.yes,
-            dry_run=not args.yes,
-            name=args.name,
-            knowledge=args.knowledge,
-            projects=args.projects,
-            tools=args.tools,
-        )
+        try:
+            result = init_hub(
+                target,
+                state_dir,
+                yes=args.yes,
+                dry_run=not args.yes,
+                name=args.name,
+                knowledge=args.knowledge,
+                projects=args.projects,
+                tools=args.tools,
+            )
+        except ConfigError as exc:
+            # Config discipline errors (invalid config.json roots/hub) follow the
+            # exit-code table's tool/config-error row, not the preflight refusal.
+            if args.json:
+                print(json_dumps({"ok": False, "error": str(exc)}))
+            else:
+                print(f"[guster] {exc}", file=sys.stderr)
+            return 1
+        except ValueError as exc:
+            # init_hub raises before building the plan (bad target type, a
+            # non-empty target, an invalid layout): nothing was touched, which
+            # is the preflight-refusal contract behind exit code 4.
+            if args.json:
+                print(json_dumps({"ok": False, "error": str(exc)}))
+            else:
+                print(f"[guster] {exc}", file=sys.stderr)
+            return 4
         if args.json:
             print(json_dumps(result))
         elif not args.quiet:
@@ -791,8 +845,8 @@ def cmd_zones(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     config = build_config(args)
-    registry = do_scan(config, write=True)
-    result = evaluate(registry, config)
+    registry, previous = do_scan(config, write=True)
+    result = evaluate(registry, config, previous_registry=previous)
     out = Path(args.out).expanduser() if args.out else config.state_dir / "context-health.md"
     if args.format == "json":
         out = out.with_suffix(".json")
@@ -810,7 +864,7 @@ def cmd_export(args: argparse.Namespace) -> int:
 
 def cmd_credentials(args: argparse.Namespace) -> int:
     config = build_config(args)
-    registry = do_scan(config, write=True)
+    registry, _ = do_scan(config, write=True)
     info = (registry.get("secrets") or {}).get("registry") or {}
     entries = info.get("entries") or []
     scopes: Dict[str, List[Dict[str, str]]] = {}
@@ -839,34 +893,11 @@ def cmd_credentials(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_upgrade(args: argparse.Namespace) -> int:
-    config = build_config(args)
-    registry = do_scan(config, write=True)
-    manifests = registry.get("plugin_manifests", {})
-    versions = {
-        key: value.get("version")
-        for key, value in manifests.items()
-        if isinstance(value, dict) and value.get("exists")
-    }
-    compared = {"cli": __version__, **versions}
-    if args.json:
-        print(json_dumps({"plugin": __version__, "versions": compared}))
-    elif not args.quiet:
-        for key, version in compared.items():
-            print(f"  {key}: {version or '(missing)'}")
-        if len(set(compared.values())) > 1:
-            print("  WARNING: plugin versions differ")
-    return 0 if len(set(compared.values())) <= 1 else 2
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="guster",
         description="Discover, audit, plan and evolve agent context.",
-        epilog=(
-            "Scans refresh Guster's state files; workspace writes need a plan with --yes. "
-            "Exit codes: 1 tool/config error, 2 high findings, 3 critical findings, 4 plan refused at preflight."
-        ),
+        epilog="Scans refresh Guster's state files; workspace writes need a plan with --yes.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -924,22 +955,13 @@ def build_parser() -> argparse.ArgumentParser:
     plan_move_parser.add_argument("--from", dest="source", required=True, help="Source path.")
     plan_move_parser.add_argument("--to", dest="destination", required=True, help="Destination path.")
     plan_move_parser.set_defaults(func=cmd_plan)
-    plan_init_parser = plan_sub.add_parser("init", parents=[common], help="Plan a standard .agents layout.")
-    plan_init_parser.add_argument("--project", required=True, help="Project root.")
-    plan_init_parser.set_defaults(func=cmd_plan)
 
     apply_parser = subparsers.add_parser("apply", parents=[common], help="Apply a plan.")
     apply_parser.add_argument("plan", help="Plan JSON path.")
     apply_parser.add_argument("--yes", action="store_true", help="Actually write; without it this is a dry run.")
-    apply_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Explicit dry run (the default); cannot be combined with --yes.",
-    )
     apply_parser.set_defaults(func=cmd_apply)
 
     init = subparsers.add_parser("init", parents=[common], help="Initialize Guster home or a project layout.")
-    init.add_argument("--home", action="store_true", help="Initialize the Guster state home (default when --project is omitted).")
     init.add_argument("--project", default=None, help="Project root; omit to initialize the Guster state home.")
     init.add_argument("--yes", action="store_true", help="Actually write; without it this is a dry run.")
     init.set_defaults(func=cmd_init)
@@ -971,9 +993,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     creds = subparsers.add_parser("credentials", parents=[common], help="List registered credentials by scope.")
     creds.set_defaults(func=cmd_credentials)
-
-    upgrade = subparsers.add_parser("upgrade", parents=[common], help="Check that the CLI and all plugin manifests agree.")
-    upgrade.set_defaults(func=cmd_upgrade)
 
     return parser
 

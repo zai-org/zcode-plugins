@@ -21,9 +21,9 @@ The lite Hub intentionally ships only:
 
 It does **not** ship `handoff/` or `reports/`. Add those later only when the workflow needs them. Missing optional directories are ignored by the scanner.
 
-The three core roots default to `knowledge/`, `projects/` and `tools/`, but they are configurable. They live in `hub.yaml` under `paths`.
+Under `hub.yaml` schema 2 the layout is declarative: `knowledge` and `projects` must be declared under `paths` — a missing declaration fails loud — while every other section (such as `tools`) is optional and may live outside the Hub.
 
-There is no mode switch: the scanner follows the directories that exist — `hub.yaml` has no `profile` concept, and a leftover key from an older version is ignored like any unknown top-level manifest key. Knowledge subzones are discovered, not enumerated: every first-level directory under the knowledge root (`general/`, `projects/`, `machines/`, ...) is scanned and index-checked, whatever it is named. A fuller hub is also scanned across `handoff/`, `reports/`, `register/`, `output/` (legacy alias `Human Output/`), `provision/`, `manuals/`, `cron-tasks/`, `openspec/`, `archive/`, `.agents/plans/` and `strategy.md` when present. Generated directories such as `out/` are not knowledge sources. `--scope hub` excludes local wiki and machine-level secrets.
+There is no mode switch: the scanner follows the directories that exist — `hub.yaml` has no `profile` concept, and a leftover key from an older version is ignored like any unknown top-level manifest key. Knowledge subzones are discovered, not enumerated: every first-level directory under the knowledge root (`general/`, `projects/`, `machines/`, ...) is scanned and index-checked, whatever it is named. A fuller hub is also scanned across `register/`, `handoff/`, `reports/`, `output/`, `.agents/plans/` and `strategy.md` when present. Legacy layouts — `provision/`, `manuals/`, `cron-tasks/`, `openspec/`, `archive/` and the `Human Output/` alias of `output/` — are compat-scanned when present only; they are never structures to create. Generated directories such as `out/` are not knowledge sources. `--scope hub` excludes local wiki and machine-level secrets.
 
 ## Workflow
 
@@ -47,7 +47,7 @@ Choose custom core paths at creation time:
 guster hub init --path <hub> --knowledge notes --projects work --tools scripts --yes
 ```
 
-Paths are relative to the Hub and must not escape it. To change them later, edit the `paths` map in `hub.yaml`, then run `guster hub validate`.
+Relative paths stay inside the Hub (no `..`, no absolute); any section may instead be declared external (absolute or `~/`). To change them later, edit the `paths` map in `hub.yaml`, then run `guster hub validate`.
 
 The same manifest carries `doctor.waivers`: findings the owner knowingly accepts, each with a `reason` and an optional `path`. Keep them in the hub so the decision is versioned next to the corpus it protects.
 
@@ -67,7 +67,13 @@ guster doctor --scope hub
 - Add a tool only when it is a run-once command: one directory with its own `AGENTS.md`, then a row in `tools/README.md`.
 - Put `verified_at: YYYY-MM-DD` in every state document (`最后更新:` is the
   accepted Chinese form; `verified_at` is canonical — see the format spec).
-- Optional structured header (CTX-09): front-matter that declares `type:` plus a date key (Obsidian properties convention) opts the note into machine checks. Keep truth sources as body markdown links, never as invented header keys.
+  `verified_at` is the state-document freshness key only; it is not one of
+  the CTX-09 header keys.
+- Optional structured header (CTX-09): front-matter that declares `type:` plus
+  a date key opts the note into machine checks. The accepted date keys are
+  `updated`/`date`/`lastmod`/`created` as YYYY-MM-DD (Obsidian properties
+  convention). Keep truth sources as body markdown links, never as invented
+  header keys.
 - YAML knowledge files may opt into the knowledge/v1 contract (CTX-11) by declaring `schema: knowledge/v1` with `id/type/status/topic/as_of/updated` metadata; opted-in files get strict format, see_also cross-reference and freshness checks. The scaffold ships an all-commented skeleton (`knowledge/general/knowledge-v1-skeleton.txt`) showing every field.
 
 ## Existing hub

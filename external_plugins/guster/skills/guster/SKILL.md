@@ -5,28 +5,19 @@ description: Audit and evolve agent context across projects, skills, tools, know
 
 # Guster
 
-Guster is the control plane for agent context. It discovers projects, instruction files, skills, tools, knowledge, state, evidence and credential references; diagnoses drift; computes a health score; and produces reviewable migration plans.
-
-Guster Hub is the data plane: the optional local repository that holds knowledge, the project register, tools and reports. Guster the plugin does not replace the hub.
-
-For a new data plane, use the companion `guster-hub` skill or `guster hub init`.
+Guster is the control plane for agent context: it discovers projects,
+instruction files, skills, tools, knowledge, state, evidence and credential
+references; diagnoses drift; scores health; plans reviewable migrations. The
+optional Guster Hub is the data plane (`guster-hub` skill, `guster hub init`).
 
 ## When to use
 
-Use Guster when the user asks:
-
-- to inspect or reorganize the machine's agent context structure;
-- where a file, skill, tool, register entry, knowledge note or credential reference belongs;
-- to audit drift, duplicates, broken pointers, budgets or stale state;
-- to initialize a project with the standard `.agents/` layout;
-- to onboard a new project — place it, scaffold it and register it (see below);
-- to migrate task folders into `plans/`, `wiki/`, `evidence/`, `tmp/` or `archive/`;
-- to make context documents machine-verifiable under the context format spec;
-- to reformat scattered, legacy (pre-spec) context into the standard format;
-- for a context health score or a before/after comparison;
-- to install the same context rules on another machine or workspace.
-
-Do not use Guster for ordinary code edits, runtime debugging or content writing unless the request is about the context structure itself.
+- Inspect or reorganize machine agent context; place a file, skill, tool, register row, note or credential reference.
+- Audit drift, duplicates, broken pointers, budgets, stale state; health scores and before/after comparisons.
+- Initialize the standard `.agents/` layout; onboard a new project; reformat
+  scattered legacy (pre-spec) context into the standard format.
+- Install the same context rules on another machine or workspace.
+- Not for ordinary code edits, debugging or writing unless the request is about context structure itself.
 
 ## Scope
 
@@ -39,19 +30,14 @@ Four levels. `--scope` is inferred from `--root` when omitted.
 | group | `guster doctor --root A --root B [--root C]` | a requirement family or any set of related repos | SSR PCR ICR FRS PHR |
 | project | `guster doctor --root <repo>` | one repository | SSR PCR ICR FRS PHR |
 
-Rules:
-
-- Machine level owns resident budgets, skill budgets and credential layout.
-- Hub level owns knowledge indexing, register freshness and hub pointers.
-- Group level exposes cross-repo facts: the same file name with different content,
-  duplicated copies, and per-repo placement gaps.
-- Project level shows only that repo's findings and states how many machine-level
-  findings were hidden.
-- Every scoped run writes to `~/.agents/guster/scoped/<hash>/`, so it never
-  overwrites the machine-wide registry or trend.
-- Pointer checks skip documentation templates (`draft-NNN.md`,
-  `daily-YYYY-MM-DD.md`, `0X-xxx.md`) and `~/` paths that sit on an
-  `ssh`/`scp`/`rsync` command line, because those name a remote home.
+- Machine level owns resident budgets, skill budgets and credential layout;
+  hub level owns knowledge indexing, register freshness and hub pointers.
+- Group exposes cross-repo facts (same stem different content, duplicates);
+  project shows only that repo plus how many machine findings were hidden.
+- Scoped runs write to `~/.agents/guster/scoped/<hash>/`, never the
+  machine-wide registry or trend. Pointer checks skip doc templates
+  (`draft-NNN.md`, `daily-*.md`, `0X-xxx.md`) and `~/` on `ssh`/`scp`/
+  `rsync` command lines.
 
 ## Workflow
 
@@ -59,65 +45,48 @@ Rules:
 2. `guster scan --json` (add `--root <project>` for a single project)
 3. `guster doctor`
 4. `guster score`
-5. `guster plan findings` or a targeted `guster plan move|init`
-6. Read the plan with the user.
-7. `guster apply <plan> --yes`
-8. `guster doctor` again — zero new findings means the edit kept the format contract
-9. `guster score --trend`
+5. `guster plan findings` or a targeted `guster plan move`
+6. Read the plan with the user, then `guster apply <plan> --yes`
+7. `guster doctor` again (zero new findings = contract kept), then `guster score --trend`
 
-Workspace writes are gated behind a plan and `--yes`. Reading is not fully
-read-only: every scanning command refreshes `~/.agents/guster/registry.json`,
-`doctor` also writes `findings.json`, and `score` appends `metrics.jsonl`.
-`--no-write` skips that command's own state file for `scan`, `doctor`, `score`
-and `check`.
-
-For a human-driven patrol, `guster check` runs scan → doctor → score with the
-trend in one pass; its exit code carries the doctor semantics.
+Workspace writes are gated behind a plan and `--yes`; scans refresh
+`registry.json` (`doctor` adds `findings.json`, `score` appends
+`metrics.jsonl`) — `--no-write` skips that for `scan`, `doctor`, `score`
+and `check`. `guster check` runs the patrol in one pass.
 
 ## Commands
 
 ```bash
 guster status
-guster scan --root ~/Projects --json
+guster scan --root <project> --json
 guster doctor
-guster score --trend
-guster score --fail-under 80   # optional gate: exit 2 when CHI is below the target
-guster check                   # scan + doctor + score --trend in one pass
-guster zones list              # configured machine zones
-guster zones add <dir>
-guster zones remove <dir>
+guster score --trend | --fail-under 80   # --fail-under: exit 2 below target
+guster check                              # scan + doctor + score --trend
+guster zones list|add <dir>|remove <dir>
 guster plan findings
 guster plan move --from <src> --to <dst>
-guster plan init --project <path>
 guster apply <plan> --yes
 guster init
 guster init --project <path> --yes
 guster hub init --path <hub> --yes
-guster hub attach --path <hub>
-guster hub status
-guster hub validate
+guster hub attach|status|validate
 guster export --format md
 guster credentials
-guster upgrade
 ```
 
 ## Gates
 
 - **Never persist or print credential values.** Paths, variable names and redacted forms only.
-- **Never auto-commit, auto-push or auto-deploy.**
-- **Never apply a plan without explicit confirmation.**
-- **Never treat tracked files you do not own or have no authority over as
-  ordinary migration targets** — the test is ownership/authority over the
-  tracked files (a shared or employer repository usually fails it), not the
-  word "company".
+- **Never auto-commit, auto-push, auto-deploy; never apply a plan without explicit confirmation.**
+- **Never treat tracked files you do not own as ordinary migration targets** —
+  the test is ownership/authority over them, not the word "company".
 - **Fail loud** on an unknown workspace, malformed plan or missing backup.
-- Prefer no-focus, CLI-only operation. Do not activate apps or switch Spaces.
-- If the scan finds a credential in git, stop structural work and report it as critical.
+- Prefer no-focus, CLI-only operation; if the scan finds a credential in
+  git, stop structural work and report it as critical.
 
 ## Waivers
 
-A finding you knowingly accept is waived in `<hub>/hub.yaml` under `doctor.waivers`,
-never by deleting the check:
+A finding you knowingly accept is waived in `<hub>/hub.yaml` under `doctor.waivers`, never by deleting the check:
 
 ```yaml
 doctor:
@@ -127,85 +96,48 @@ doctor:
       reason: company-tracked doc, owned upstream
 ```
 
-`path` is optional; without it the whole rule is waived. Every waiver needs a
-`reason` — a malformed block fails loud. Waived findings still appear in
-`doctor --json` and in the report's `Waived` section, so the decision stays
-visible. Use a waiver only when the fix is outside your authority (tracked
-files owned upstream, host limitations), not to skip ordinary work.
-
-A waiver greens the gate, not the score: waived findings no longer set the
-`doctor` exit code, but metrics are computed from the registry before waivers
-apply, so CHI does not improve. A waived problem is an acknowledged problem,
-not a healthy one.
+`path` is optional; without it the whole rule is waived. Every waiver needs
+a `reason` — a malformed block fails loud. A waiver greens the gate, not the
+score: waived findings stay visible in `doctor --json` and skip the exit
+code, but CHI is computed before waivers apply — waive only what you cannot fix.
 
 ## Format spec
 
-Context assets follow the versioned format contract in `reference/spec.md`
-(CTX-01..11): `AGENTS.md` instruction files, llms.txt-shaped indexes,
-machine-verifiable pointers, machine-readable dates, the six `.agents/` slots,
-one home per fact, skill metadata budgets, credentials by reference, the
-machine-readable project register (register/v1) and the opt-in knowledge/v1
-contract. When writing or moving a context
-asset, follow the spec; when a doctor finding fires, it names the rule that
-was broken. CTX-09 note headers also accept optional `name` and `description`
-keys (the one-fact-per-file shape inspired by the Claude Code memory tool) and
-`superseded_by` (metadata only; `superseded_by` never joins the pointer scan),
-and the plugin's `schemas/` directory carries JSON Schema
-(draft 2020-12) contracts for `hub.yaml` and the plan JSON.
+Context assets follow the versioned contract in `reference/spec.md`
+(CTX-01..11): instruction files, llms.txt-shaped indexes, machine-verifiable
+pointers and dates, the six `.agents/` slots, one home per fact, skill
+budgets, credentials by reference, register/v1, opt-in knowledge/v1 — a doctor
+finding names the broken rule; schema contracts live in `schemas/`.
 
 ## New project onboarding
 
-When the user starts a new project (新项目开张/立项/开新仓), the goal is that it
-lands in the right place, gets the standard `.agents/` layout and shows up in
-the hub registry — with the user confirming every structural step. This is
-orchestration of existing commands, not new machinery.
+Orchestration of existing commands — the user confirms every structural step (conventions: `reference/placement.md`):
 
-1. **Inventory the layout** — `guster status --json` (or read
-   `~/.agents/guster/config.json`): configured `roots`, `zones`, attached hub.
-   With no config yet the report banner names the auto-scanned roots; suggest
-   `guster init` to pin them before adding a project.
-2. **Propose a placement** — under a configured root or zone the user already
-   governs, never a new top-level directory of your own invention. Naming and
-   sub-structure follow the user's own conventions (their instruction files,
-   their existing registry rows), not ours.
-3. **User confirms the path** before anything is created.
-4. **Create** — `mkdir` the directory; `git init` and all other git operations
-   follow the user's own git conventions (Guster never runs git). Then
-   scaffold the standard layout with `guster init --project <path>` — the
-   default dry run lists the tree it will create, which also catches typos in
-   the path — and apply with `--yes` once the user has read it.
-5. **Register** — draft a register/v1 row for the hub's
-   `register/projects.yaml` (id, status, as_of, name, spec.path and an
-   optional note; `as_of`/`name` are optional, unknown keys are ignored) and
-   hand it to the user to paste; Guster does not edit hub content itself.
-   `spec.path` resolves against the hub root (or `~` / absolute) and must
-   exist on disk — a row that owns no directory of its own uses the `./`
-   placeholder.
-6. **Close the loop** — `guster scan` so the project enters the machine table,
-   then `guster doctor`: zero new findings (placement, register row, freshness)
-   is the definition of done. `guster check` adds a score baseline in the same
-   pass.
+1. `guster status --json`: read configured `roots`, `zones`, attached hub.
+2. Propose a placement under a root the user governs, per their own naming
+   conventions; they confirm the path before anything is created.
+3. `mkdir` + `git init` per the user's git conventions (Guster never runs
+   git); scaffold with `guster init --project <path>`, then `--yes`.
+4. Draft a register/v1 row (`id`/`status`/`as_of`/`name`/`spec.path`) for the
+   hub's `register/projects.yaml`; the user pastes it — Guster never edits hub content.
+5. `guster scan` + `guster doctor`: zero new findings is done.
 
 ## Reformatting legacy context
 
-When the target is not a new asset but an inherited mess — a project or hub
-whose context predates the spec — run the playbook in
-`reference/reformat.md`: **inventory and classify** every artifact (doctor
-findings as the worklist, one destination class each) → **placement**
-(`plan init` for the slots, one `plan move` or one batch plan for moves —
-paths final before pointers are written) → **content** (index lines, naked
-paths to links, date lines, duplicates to pointer notes, per the CTX table) →
-**verify** (`doctor` zero new findings, `score --trend` before/after). The
-pass is meaning-preserving; deletions and distillations are proposed in the
-classification table for the user to approve, never silent.
+For an inherited pre-spec mess, run the four-pass playbook in
+`reference/reformat.md`: inventory and classify (doctor findings as the
+worklist) → placement (`guster init --project <path>` for the slots, `plan
+move` or a batch plan) → content (indexes, links, dates, pointer notes) →
+verify (`doctor` zero new findings, `score --trend`). Deletions and
+distillations are proposed for approval, never silent.
 
 ## References
 
-- `reference/spec.md` — context format spec v2 (CTX rules and their findings).
-- `reference/reformat.md` — legacy context reformat playbook (four passes, classify-before-touch).
+- `reference/spec.md` — format spec v2 (CTX rules and their findings).
+- `reference/reformat.md` — four-pass legacy reformat playbook.
 - `reference/framework.md` — 1-3-5-8 framework and placement tree.
 - `reference/metrics.md` — metric definitions, targets and CHI.
-- `reference/placement.md` — user/hub/project directory trees and the git boundary.
+- `reference/placement.md` — directory trees and the git boundary.
 
 ## Exit codes
 
@@ -213,6 +145,6 @@ classification table for the user to approve, never silent.
 |---|---|
 | `0` | success — clean run, or findings no worse than `medium` |
 | `1` | tool/config error: malformed or unreadable plan, an apply that failed mid-operation and was rolled back, missing workspace root, invalid `config.json` (non-list `roots`, a bad root/zone/hub path, empty `roots`, no scan candidates — run `guster init`); `hub status` also returns 1 when the attached hub fails its checks |
-| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract; `upgrade` found disagreeing plugin versions |
+| `2` | `doctor`/`check` found `high` (but no `critical`) findings; `score --fail-under` below target or CHI not computable; `hub validate` failed the lite contract |
 | `3` | `doctor`/`check` found `critical` findings |
-| `4` | `apply`, `init` or `hub init` refused the plan at preflight — nothing was touched (missing move source, existing destination, bad target type) |
+| `4` | `apply`, `init` or `hub init` refused the plan at preflight — nothing was touched (missing move source, existing destination, invalid `hub init` target; an `init --project` target that only fails mid-apply exits 1 after rollback) |

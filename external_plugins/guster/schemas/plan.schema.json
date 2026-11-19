@@ -54,9 +54,10 @@
                 "enum": ["mkdir"]
               },
               "path": {
-                "description": "Directory to create.",
+                "description": "Directory to create; absolute path.",
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^/"
               }
             }
           },
@@ -73,34 +74,16 @@
                 "enum": ["move"]
               },
               "src": {
-                "description": "Existing file or directory to move.",
+                "description": "Existing file or directory to move; absolute path.",
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^/"
               },
               "dst": {
-                "description": "Destination path; must not exist yet.",
+                "description": "Destination path; must not exist yet; absolute path.",
                 "type": "string",
-                "minLength": 1
-              },
-              "pointer": {
-                "description": "Optional note left at the old location; null when unused.",
-                "oneOf": [
-                  {
-                    "type": "null"
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "path": {
-                        "type": "string"
-                      },
-                      "content": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                ]
+                "minLength": 1,
+                "pattern": "^/"
               }
             }
           },
@@ -117,9 +100,10 @@
                 "enum": ["write"]
               },
               "path": {
-                "description": "File to write.",
+                "description": "File to write; absolute path.",
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^/"
               },
               "content": {
                 "description": "Full file content.",

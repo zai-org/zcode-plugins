@@ -18,7 +18,7 @@ from .util import (
     git_last_commit_dates,
     has_top_level_row_keys,
     is_under,
-    load_json,
+    load_json_strict,
     note_header_date,
     parse_date,
     parse_note_header,
@@ -187,7 +187,15 @@ def collect_knowledge_v1(
     return docs, mismatches
 
 
-def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
+def run_policy(
+    registry: Dict[str, Any],
+    config: ScanConfig,
+    previous_registry: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Orchestration only: seed stats, run every rule family in its own
+    _check_* function, then scope, waive and order the findings.
+    `previous_registry` is the machine table captured before this run
+    overwrote it; when omitted the baseline is read from disk, strictly."""
     findings: List[Dict[str, Any]] = []
     governance = registry.get("governance_docs")
     stats: Dict[str, Any] = {
@@ -250,7 +258,83 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
     ]
     skills = registry.get("skills", [])
 
-    # Resident budget: every host entry file that exists, counted once.
+    findings.extend(_check_resident_budget(home, hub, scope, stats))
+    if scope != "hub":
+        findings.extend(_check_skill_metadata(skills, home, stats))
+        findings.extend(_check_skill_copy_drift(skills))
+    knowledge, knowledge_index_findings = _check_knowledge_index(artifacts, stats)
+    findings.extend(knowledge_index_findings)
+    findings.extend(_check_knowledge_v1(artifacts, hub, hub_layout, stats))
+    findings.extend(_check_duplicate_canonical(registry, stats))
+    structured_notes, note_findings = _check_structured_notes(knowledge, stats)
+    findings.extend(note_findings)
+    findings.extend(_check_project_layout(projects, stats))
+    findings.extend(
+        _check_state_freshness(artifacts, projects, hub, hub_layout, git_failures, stats)
+    )
+    findings.extend(_check_pointers(artifacts, structured_notes, hub, home, config, stats))
+    secrets_findings, secrets_ctx = _check_secrets(registry, home, stats)
+    findings.extend(secrets_findings)
+    findings.extend(_check_credential_registry(registry, secrets_ctx, stats))
+    findings.extend(_check_governance_overlap(registry))
+    findings.extend(_check_tmp_hygiene(projects))
+    findings.extend(_check_plugin_manifests(registry))
+    findings.extend(
+        _check_registry_drift(registry, config, hub_layout, stats, previous_registry)
+    )
+
+    scoped = scope_roots(config)
+    if scoped is not None:
+        kept = [
+            item for item in findings if in_scope_path(item.get("path", ""), scoped)
+        ]
+        hidden = [
+            item for item in findings if not in_scope_path(item.get("path", ""), scoped)
+        ]
+        stats["scoped_hidden_findings"] = len(hidden)
+        if hidden:
+            by_rule: Dict[str, int] = {}
+            for item in hidden:
+                by_rule[item["rule"]] = by_rule.get(item["rule"], 0) + 1
+            kept.append(
+                finding(
+                    "out-of-scope",
+                    "info",
+                    f"Machine-level findings hidden in {scope} scope",
+                    "",
+                    f"{len(hidden)} finding(s) sit outside the {scope} scope.",
+                    "Run `guster doctor` without --root for the machine-wide view.",
+                    {"by_rule": by_rule},
+                )
+            )
+        findings = kept
+
+    waived: List[Dict[str, Any]] = []
+    waivers = load_waivers(hub)
+    if waivers:
+        kept, waived = [], []
+        for item in findings:
+            reason = _waiver_reason(item, waivers)
+            if reason is None:
+                kept.append(item)
+            else:
+                item["waiver_reason"] = reason
+                waived.append(item)
+        stats["waived_findings"] = len(waived)
+        findings = kept
+
+    findings.sort(key=lambda item: (SEVERITY_ORDER.get(item["severity"], 9), item["rule"], item["path"]))
+    for index, item in enumerate(findings, start=1):
+        item["id"] = f"F{index:04d}"
+    return {"findings": findings, "waived": waived, "stats": stats}
+
+
+def _check_resident_budget(
+    home: Path, hub: Optional[Path], scope: str, stats: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Resident budget: every host entry file that exists, counted once.
+    Owns stats keys: resident_entries, resident_bytes, resident_lines."""
+    findings: List[Dict[str, Any]] = []
     user_agents = resident_entries(home) if scope != "hub" else []
     hub_agents = (hub / "AGENTS.md") if hub and (hub / "AGENTS.md").is_file() else None
     resident_bytes = sum(file_size(path) for path in user_agents) + (
@@ -298,57 +382,74 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 "Move detail into a knowledge reference doc under knowledge/general/.",
             )
         )
+    return findings
 
-    if scope != "hub":
-        # Skill metadata budget
-        total_skill_chars = sum(int(skill.get("description_chars", 0)) for skill in skills)
-        stats["skill_chars"] = total_skill_chars
-        for skill in skills:
-            chars = int(skill.get("description_chars", 0))
-            if chars <= 500:
-                continue
+
+def _check_skill_metadata(
+    skills: List[Dict[str, Any]], home: Path, stats: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Skill metadata budget. Owns stats keys: skill_chars."""
+    findings: List[Dict[str, Any]] = []
+    total_skill_chars = sum(int(skill.get("description_chars", 0)) for skill in skills)
+    stats["skill_chars"] = total_skill_chars
+    for skill in skills:
+        chars = int(skill.get("description_chars", 0))
+        if chars <= 500:
+            continue
+        findings.append(
+            finding(
+                "skill-budget",
+                "high",
+                "Skill description exceeds per-item budget",
+                skill.get("root", ""),
+                f"{skill.get('name')} description is {chars} chars; limit is 500.",
+                "Shorten the description to trigger conditions only; move detail into SKILL.md body.",
+                {"skill": skill.get("name"), "chars": chars},
+            )
+        )
+    if total_skill_chars > 6_000:
+        findings.append(
+            finding(
+                "skill-budget",
+                "high",
+                "Skill metadata exceeds total budget",
+                str(home / ".agents" / "skills"),
+                f"Unique skill descriptions total {total_skill_chars} chars; budget is 6,000.",
+                "Trim the longest descriptions first; keep each description to one clear trigger sentence.",
+                {"chars": total_skill_chars, "target": 6_000},
+            )
+        )
+    return findings
+
+
+def _check_skill_copy_drift(skills: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Skill copy drift."""
+    findings: List[Dict[str, Any]] = []
+    for skill in skills:
+        copies = skill.get("copies", [])
+        hashes = {copy.get("hash") for copy in copies if copy.get("hash")}
+        if len(copies) > 1 and len(hashes) > 1:
             findings.append(
                 finding(
-                    "skill-budget",
+                    "skill-copy-drift",
                     "high",
-                    "Skill description exceeds per-item budget",
+                    "Skill copies drifted",
                     skill.get("root", ""),
-                    f"{skill.get('name')} description is {chars} chars; limit is 500.",
-                    "Shorten the description to trigger conditions only; move detail into SKILL.md body.",
-                    {"skill": skill.get("name"), "chars": chars},
+                    f"{skill.get('name')} has {len(hashes)} different copies.",
+                    "Make copies byte-identical or replace the copy strategy with symlinks where the host supports it.",
+                    {"copies": copies},
                 )
             )
-        if total_skill_chars > 6_000:
-            findings.append(
-                finding(
-                    "skill-budget",
-                    "high",
-                    "Skill metadata exceeds total budget",
-                    str(home / ".agents" / "skills"),
-                    f"Unique skill descriptions total {total_skill_chars} chars; budget is 6,000.",
-                    "Trim the longest descriptions first; keep each description to one clear trigger sentence.",
-                    {"chars": total_skill_chars, "target": 6_000},
-                )
-            )
+    return findings
 
-        # Skill copy drift
-        for skill in skills:
-            copies = skill.get("copies", [])
-            hashes = {copy.get("hash") for copy in copies if copy.get("hash")}
-            if len(copies) > 1 and len(hashes) > 1:
-                findings.append(
-                    finding(
-                        "skill-copy-drift",
-                        "high",
-                        "Skill copies drifted",
-                        skill.get("root", ""),
-                        f"{skill.get('name')} has {len(hashes)} different copies.",
-                        "Make copies byte-identical or replace the copy strategy with symlinks where the host supports it.",
-                        {"copies": copies},
-                    )
-                )
 
-    # Knowledge index coverage and duplicates
+def _check_knowledge_index(
+    artifacts: List[Dict[str, Any]], stats: Dict[str, Any]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Knowledge index coverage and duplicates.
+    Owns stats keys: knowledge_total, knowledge_indexed. Returns the knowledge
+    artifact list for the downstream structured-notes check."""
+    findings: List[Dict[str, Any]] = []
     knowledge = [item for item in artifacts if item.get("kind") == "knowledge"]
     stats["knowledge_total"] = len(knowledge)
     orphan_groups: Dict[str, List[Dict[str, Any]]] = {}
@@ -363,7 +464,7 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
 
     for orphan_scope, items in orphan_groups.items():
         severity = "medium" if orphan_scope != "local" else "low"
-        examples = [relative(Path(item["path"]), Path(item["path"]).parent) for item in items[:10]]
+        examples = [str(Path(item["path"]).resolve()) for item in items[:10]]
         findings.append(
             finding(
                 "orphan-knowledge",
@@ -375,11 +476,22 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"count": len(items), "examples": examples},
             )
         )
+    return knowledge, findings
 
-    # knowledge/v1 format contract (CTX-11): files that declare the schema
-    # header get strict format, cross-reference and freshness checks; plain
-    # notes are never touched. These findings stay outside CHI (same
-    # discipline as registry-drift) so scores stay comparable.
+
+def _check_knowledge_v1(
+    artifacts: List[Dict[str, Any]],
+    hub: Optional[Path],
+    hub_layout: Dict[str, Path],
+    stats: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """knowledge/v1 format contract (CTX-11): files that declare the schema
+    header get strict format, cross-reference and freshness checks; plain
+    notes are never touched. These findings stay outside CHI (same
+    discipline as registry-drift) so scores stay comparable.
+    Owns stats keys: knowledge_v1_total, knowledge_format_bad, see_also_broken,
+    knowledge_stale, knowledge_duplicate_ids."""
+    findings: List[Dict[str, Any]] = []
     v1_docs: List[Dict[str, Any]] = []
     schema_mismatches: List[Tuple[Path, str]] = []
     knowledge_root = hub_layout.get("knowledge") if hub is not None else None
@@ -553,7 +665,15 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"count": len(stale_files), "files": stale_files[:10]},
             )
         )
+    return findings
 
+
+def _check_duplicate_canonical(
+    registry: Dict[str, Any], stats: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Same-fact-many-homes from the scan's topic grouping.
+    Owns stats keys: duplicate_knowledge."""
+    findings: List[Dict[str, Any]] = []
     multi_topics = (registry.get("topics") or {}).get("multi_topics") or []
     stats["duplicate_knowledge"] = len(multi_topics)
     if multi_topics:
@@ -574,11 +694,19 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 },
             )
         )
+    return findings
 
-    # Structured note headers (CTX-09). Opt-in: only notes whose front-matter
-    # declares a ``type:`` are checked, so legacy prose notes never fire. The
-    # format follows the Obsidian properties convention (see reference/spec.md);
-    # truth pointers live in the body as CTX-03 links, not in the header.
+
+def _check_structured_notes(
+    knowledge: List[Dict[str, Any]], stats: Dict[str, Any]
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Structured note headers (CTX-09). Opt-in: only notes whose front-matter
+    declares a ``type:`` are checked, so legacy prose notes never fire. The
+    format follows the Obsidian properties convention (see reference/spec.md);
+    truth pointers live in the body as CTX-03 links, not in the header.
+    Owns stats keys: note_headers_total. Returns the structured note list for
+    the pointer check."""
+    findings: List[Dict[str, Any]] = []
     structured_notes: List[Dict[str, Any]] = []
     for item in knowledge:
         if Path(item["path"]).suffix.lower() != ".md":
@@ -614,8 +742,16 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                     {"problems": problems},
                 )
             )
+    return structured_notes, findings
 
-    # Project .agents layout
+
+def _check_project_layout(
+    projects: List[Dict[str, Any]], stats: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Project .agents layout. Owns stats keys: agents_dirs_total,
+    agents_indexed, agents_dirs_compliant, agents_dirs_missing_index,
+    agents_dirs_missing_slots, agents_dirs_extra_entries, misplaced_entries."""
+    findings: List[Dict[str, Any]] = []
     for project in projects:
         if not project.get("agents_dir"):
             continue
@@ -658,12 +794,26 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                     {"entries": unknown[:100], "suggested": suggested},
                 )
             )
+    return findings
 
-    # State freshness. Plans are state-plane documents too, even though their
-    # kind is "plan"; select on the plane so project/group scopes are not
-    # vacuously fresh. The date ladder is declared (verified_at / updated /
-    # 最后更新 / filename date) → owning repository's git date → file mtime,
-    # each tier reported as its own freshness source.
+
+def _check_state_freshness(
+    artifacts: List[Dict[str, Any]],
+    projects: List[Dict[str, Any]],
+    hub: Optional[Path],
+    hub_layout: Dict[str, Path],
+    git_failures: List[str],
+    stats: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """State freshness. Plans are state-plane documents too, even though their
+    kind is "plan"; select on the plane so project/group scopes are not
+    vacuously fresh. The date ladder is declared (verified_at / updated /
+    最后更新 / filename date) → owning repository's git date → file mtime,
+    each tier reported as its own freshness source.
+    Owns stats keys: state_docs_total, state_docs_fresh,
+    state_docs_fresh_declared, state_docs_fresh_from_git,
+    state_docs_fresh_from_mtime, git_probe_failures. Mutates git_failures."""
+    findings: List[Dict[str, Any]] = []
     state_prefixes = ["handoff/", "provision/", "register/", ".agents/plans/"]
     if hub_layout:
         state_prefixes.append(relative(hub_layout["projects"], hub).rstrip("/") + "/")
@@ -767,8 +917,20 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"count": len(git_failures), "repos": git_failures[:10]},
             )
         )
+    return findings
 
-    # Pointers
+
+def _check_pointers(
+    artifacts: List[Dict[str, Any]],
+    structured_notes: List[Dict[str, Any]],
+    hub: Optional[Path],
+    home: Path,
+    config: ScanConfig,
+    stats: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Pointers. Owns stats keys: pointer_files_total, pointer_files_scanned,
+    pointers_checked, pointers_valid, broken_pointers, naked_pointers."""
+    findings: List[Dict[str, Any]] = []
     pointer_files = [
         item
         for item in artifacts
@@ -850,8 +1012,21 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
             )
     findings.extend(broken_by_file[:100])
     findings.extend(naked_by_file[:100])
+    return findings
 
-    # Secrets
+
+def _check_secrets(
+    registry: Dict[str, Any], home: Path, stats: Dict[str, Any]
+) -> Tuple[
+    List[Dict[str, Any]],
+    Tuple[Dict[str, Any], List[Dict[str, str]], Set[str], List[str]],
+]:
+    """Secrets. Owns stats keys: secret_total, inline_bearers,
+    secret_outside_root, secret_tracking_unknown, secret_in_git,
+    secret_undeclared_outside. Returns the findings plus the
+    credential-registry context (registry_info, entries, declared_paths,
+    missing_locations) for the registry coverage check."""
+    findings: List[Dict[str, Any]] = []
     secret_data = registry.get("secrets", {})
     secret_files = secret_data.get("files", [])
     inline = secret_data.get("inline_bearers", [])
@@ -933,8 +1108,19 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"count": item.get("count", 0), "redacted": item.get("redacted", [])},
             )
         )
+    return findings, (registry_info, entries, declared_paths, missing_locations)
 
-    # Credential registry coverage
+
+def _check_credential_registry(
+    registry: Dict[str, Any],
+    secrets_ctx: Tuple[Dict[str, Any], List[Dict[str, str]], Set[str], List[str]],
+    stats: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    """Credential registry coverage. Owns stats keys: credentials_registered,
+    credentials_by_scope, credentials_undeclared, credentials_missing."""
+    registry_info, entries, declared_paths, missing_locations = secrets_ctx
+    findings: List[Dict[str, Any]] = []
+    secret_files = (registry.get("secrets") or {}).get("files", [])
     stats["credentials_registered"] = len(entries)
     stats["credentials_by_scope"] = {}
     for entry in entries:
@@ -975,8 +1161,12 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                     {"count": len(missing_locations), "examples": missing_locations[:10]},
                 )
             )
+    return findings
 
-    # Governance document overlap
+
+def _check_governance_overlap(registry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Governance document overlap."""
+    findings: List[Dict[str, Any]] = []
     governance_docs = registry.get("governance_docs") or []
     if len(governance_docs) > 4:
         findings.append(
@@ -990,8 +1180,12 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"docs": governance_docs},
             )
         )
+    return findings
 
-    # Tmp and evidence hygiene
+
+def _check_tmp_hygiene(projects: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Tmp and evidence hygiene."""
+    findings: List[Dict[str, Any]] = []
     tmp_old: List[str] = []
     for project in projects:
         agents_dir = project.get("agents_dir")
@@ -1016,13 +1210,33 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"count": len(tmp_old), "examples": tmp_old[:10]},
             )
         )
+    return findings
 
-    # Plugin manifest drift
+
+def _check_plugin_manifests(registry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Plugin manifest drift. A half-installed plugin (manifest file missing)
+    is a high finding in its own right and stays in the version comparison as
+    a null source, so it can never pass as green by being excluded."""
+    findings: List[Dict[str, Any]] = []
     manifests = registry.get("plugin_manifests", {})
+    for key, value in sorted(manifests.items()):
+        if isinstance(value, dict) and not value.get("exists"):
+            path = str(value.get("path") or "")
+            findings.append(
+                finding(
+                    "host-manifest-drift",
+                    "high",
+                    "Plugin manifest is missing",
+                    path,
+                    f"plugin manifest missing: {path}",
+                    "Reinstall or repair the plugin so every host manifest (codex, zcode, package) is present.",
+                    {"key": key, "path": path},
+                )
+            )
     versions = {
-        key: value.get("version")
+        key: (value.get("version") if value.get("exists") else None)
         for key, value in manifests.items()
-        if isinstance(value, dict) and value.get("exists") and value.get("version")
+        if isinstance(value, dict) and (not value.get("exists") or value.get("version"))
     }
     if len(set(versions.values())) > 1:
         findings.append(
@@ -1036,12 +1250,29 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                 {"versions": versions},
             )
         )
+    return findings
 
-    # Registry drift (CTX-10): the machine table (registry.json), the hub's
-    # register (register/projects.yaml spec.path entries) and the git roots on
-    # disk each claim to know which projects exist; disagreement is a finding,
-    # never a CHI dimension. The human side needs a hub; the machine↔disk edge
-    # stands on its own for hub-less users.
+
+def _check_registry_drift(
+    registry: Dict[str, Any],
+    config: ScanConfig,
+    hub_layout: Dict[str, Path],
+    stats: Dict[str, Any],
+    previous_registry: Optional[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Registry drift (CTX-10): the machine table (registry.json), the hub's
+    register (register/projects.yaml spec.path entries) and the git roots on
+    disk each claim to know which projects exist; disagreement is a finding,
+    never a CHI dimension. The human side needs a hub; the machine↔disk edge
+    stands on its own for hub-less users.
+    Owns stats keys: registry_rows, registry_rows_remote,
+    registry_drift_dead_rows, registry_drift_unscanned_rows,
+    registry_format_bad, registry_drift_unregistered,
+    registry_drift_stale_machine."""
+    findings: List[Dict[str, Any]] = []
+    home = config.home
+    hub = config.hub
+    projects = registry.get("projects", [])
     if hub is not None and not (hub / "hub.yaml").is_file() and not (hub / "AGENTS.md").is_file():
         findings.append(
             finding(
@@ -1070,6 +1301,7 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
     register_path: Optional[Path] = None
     register_rows: List[Dict[str, str]] = []
     register_text = ""
+    register_display = ""
     if hub is not None:
         register_path = hub / "register" / "projects.yaml"
         register_display = resolved_str(str(register_path))
@@ -1222,8 +1454,27 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                         {"kind": head.get("kind")},
                     )
                 )
-    persisted_registry = load_json(config.state_dir / "registry.json", None)
-    if isinstance(persisted_registry, dict) and isinstance(persisted_registry.get("projects"), list):
+    # Machine↔disk baseline. `previous_registry` is the pre-overwrite capture
+    # (the default write path compares before storing); when it is not given,
+    # the baseline is read from disk, strictly — a corrupt baseline is a
+    # visible finding, never a silent skip of the drift check.
+    if previous_registry is None:
+        persisted_registry, baseline_error = load_json_strict(config.state_dir / "registry.json")
+    else:
+        persisted_registry, baseline_error = previous_registry, None
+    if baseline_error is not None:
+        findings.append(
+            finding(
+                "registry-drift",
+                "medium",
+                "Machine registry baseline is corrupt",
+                str(config.state_dir / "registry.json"),
+                "registry baseline corrupt; drift check skipped",
+                "Fix or delete registry.json so the machine↔disk drift check has a readable baseline.",
+                {"error": baseline_error},
+            )
+        )
+    elif isinstance(persisted_registry, dict) and isinstance(persisted_registry.get("projects"), list):
         persisted_paths: Set[str] = set()
         for project in persisted_registry["projects"]:
             if not isinstance(project, dict) or not project.get("path"):
@@ -1248,51 +1499,7 @@ def run_policy(registry: Dict[str, Any], config: ScanConfig) -> Dict[str, Any]:
                     {"vanished": vanished[:10], "appeared": appeared[:10]},
                 )
             )
-
-    scoped = scope_roots(config)
-    if scoped is not None:
-        kept = [
-            item for item in findings if in_scope_path(item.get("path", ""), scoped)
-        ]
-        hidden = [
-            item for item in findings if not in_scope_path(item.get("path", ""), scoped)
-        ]
-        stats["scoped_hidden_findings"] = len(hidden)
-        if hidden:
-            by_rule: Dict[str, int] = {}
-            for item in hidden:
-                by_rule[item["rule"]] = by_rule.get(item["rule"], 0) + 1
-            kept.append(
-                finding(
-                    "out-of-scope",
-                    "info",
-                    f"Machine-level findings hidden in {scope} scope",
-                    "",
-                    f"{len(hidden)} finding(s) sit outside the {scope} scope.",
-                    "Run `guster doctor` without --root for the machine-wide view.",
-                    {"by_rule": by_rule},
-                )
-            )
-        findings = kept
-
-    waived: List[Dict[str, Any]] = []
-    waivers = load_waivers(hub)
-    if waivers:
-        kept, waived = [], []
-        for item in findings:
-            reason = _waiver_reason(item, waivers)
-            if reason is None:
-                kept.append(item)
-            else:
-                item["waiver_reason"] = reason
-                waived.append(item)
-        stats["waived_findings"] = len(waived)
-        findings = kept
-
-    findings.sort(key=lambda item: (SEVERITY_ORDER.get(item["severity"], 9), item["rule"], item["path"]))
-    for index, item in enumerate(findings, start=1):
-        item["id"] = f"F{index:04d}"
-    return {"findings": findings, "waived": waived, "stats": stats}
+    return findings
 
 
 def _waiver_reason(item: Dict[str, Any], waivers: Sequence[Dict[str, str]]) -> Optional[str]:

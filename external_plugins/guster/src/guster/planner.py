@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from .util import now_iso, save_json, slugify, unique_suffix
 
@@ -13,6 +14,18 @@ PLAN_SCHEMA_HINT = (
     '{"kind": "write", "path": "...", "content": "..."}, '
     '{"kind": "manual", "path": "...", "action": "...", "reason": "..."}]}'
 )
+
+# Mirrors schemas/plan.schema.json (top-level required keys, per-kind fields,
+# slug-shaped id); tests/test_schemas.py fails when the two drift apart.
+PLAN_TOP_REQUIRED = ("version", "id", "created_at", "title", "notes", "operations")
+PLAN_OPERATION_KINDS = ("mkdir", "move", "write", "manual")
+PLAN_OPERATION_FIELDS: Dict[str, Tuple[Tuple[str, bool], ...]] = {
+    "mkdir": (("path", True),),
+    "move": (("src", True), ("dst", True)),
+    "write": (("path", True), ("content", False)),
+    "manual": (("path", False), ("action", False), ("reason", False)),
+}
+PLAN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 def new_plan_id(title: str) -> str:
@@ -36,17 +49,8 @@ def op_mkdir(path: Path) -> Dict[str, Any]:
     return {"kind": "mkdir", "path": str(path)}
 
 
-def op_move(
-    src: Path,
-    dst: Path,
-    pointer: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
-    return {
-        "kind": "move",
-        "src": str(src),
-        "dst": str(dst),
-        "pointer": pointer or None,
-    }
+def op_move(src: Path, dst: Path) -> Dict[str, Any]:
+    return {"kind": "move", "src": str(src), "dst": str(dst)}
 
 
 def op_write(path: Path, content: str) -> Dict[str, Any]:
@@ -58,6 +62,10 @@ def op_manual(path: str, action: str, reason: str) -> Dict[str, Any]:
 
 
 def plan_move(src: Path, dst: Path) -> Dict[str, Any]:
+    # Absolute at plan time: the reviewed object must be the applied object,
+    # never re-resolved against whatever CWD `apply` later runs from.
+    src = src.expanduser().resolve()
+    dst = dst.expanduser().resolve()
     if not src.exists():
         raise FileNotFoundError(f"source does not exist: {src}")
     if dst.exists():
@@ -136,13 +144,20 @@ def plan_from_findings(findings: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
                         )
                     )
                 continue
-            operations.append(
-                op_manual(
-                    item.get("path", ""),
-                    item.get("suggestion", ""),
-                    f"{item.get('rule')}: {item.get('message')}",
-                )
+            raw_examples = (item.get("evidence") or {}).get("examples")
+            examples = (
+                [str(example) for example in raw_examples if isinstance(example, str) and example]
+                if isinstance(raw_examples, list)
+                else []
             )
+            for target in examples or [item.get("path", "")]:
+                operations.append(
+                    op_manual(
+                        target,
+                        item.get("suggestion", ""),
+                        f"{item.get('rule')}: {item.get('message')}",
+                    )
+                )
     return build_plan(
         "Review context findings",
         operations,
@@ -154,6 +169,73 @@ def save_plan(state_dir: Path, plan: Dict[str, Any]) -> Path:
     path = state_dir / "plans" / f"{plan['id']}.json"
     save_json(path, plan)
     return path
+
+
+def _validate_plan(data: Dict[str, Any], path: Path) -> None:
+    """Enforce the schemas/plan.schema.json contract before any write can happen;
+    a mistyped key (e.g. 'contnet') must stop the plan, not truncate a file."""
+    problems: List[str] = []
+    for key in PLAN_TOP_REQUIRED:
+        if key not in data:
+            problems.append(f"missing required key {key!r}")
+    for key in data:
+        if key not in PLAN_TOP_REQUIRED:
+            problems.append(f"unknown key {key!r}")
+    for key in ("title", "created_at", "notes"):
+        if key in data and not isinstance(data[key], str):
+            problems.append(f"{key} must be a string, got {type(data[key]).__name__}")
+    if "title" in data and data["title"] == "":
+        problems.append("title must be a non-empty string")
+    if "id" in data:
+        plan_id = data["id"]
+        if not isinstance(plan_id, str):
+            problems.append(f"id must be a string, got {type(plan_id).__name__}")
+        elif not PLAN_ID_RE.match(plan_id):
+            problems.append(
+                f"id must be a safe slug (letters, digits, '.', '_', '-'; "
+                f"no path separators or '..'): {plan_id!r}"
+            )
+    for index, operation in enumerate(data["operations"], start=1):
+        if not isinstance(operation, dict):
+            problems.append(f"op {index}: operation is not a JSON object")
+            continue
+        kind = operation.get("kind")
+        if not isinstance(kind, str) or kind not in PLAN_OPERATION_FIELDS:
+            problems.append(
+                f"op {index}: unknown operation kind: {kind!r} "
+                f"(expected one of {', '.join(PLAN_OPERATION_KINDS)})"
+            )
+            continue
+        fields = PLAN_OPERATION_FIELDS[kind]
+        allowed = {"kind"} | {field for field, _ in fields}
+        for key in operation:
+            if key not in allowed:
+                hint = (
+                    "; pointer updates are no longer applied by `apply`; "
+                    "update the referenced file with a write op"
+                    if key == "pointer" and kind == "move"
+                    else ""
+                )
+                problems.append(f"op {index}: unknown key {key!r} in {kind} operation{hint}")
+        for field, non_empty in fields:
+            if field not in operation:
+                problems.append(f"op {index}: {kind} operation needs {field!r}")
+                continue
+            value = operation[field]
+            if not isinstance(value, str):
+                problems.append(
+                    f"op {index}: {kind} {field} must be a string, got {type(value).__name__}"
+                )
+                continue
+            if non_empty and not value:
+                problems.append(f"op {index}: {kind} {field} must be a non-empty string")
+            elif field in ("path", "src", "dst") and not Path(value).is_absolute():
+                problems.append(f"op {index}: {kind} {field} must be an absolute path: {value!r}")
+    if problems:
+        raise ValueError(
+            f"plan {path} does not match the plan contract: {'; '.join(problems)}; "
+            f"the contract is schemas/plan.schema.json, e.g. {PLAN_SCHEMA_HINT}"
+        )
 
 
 def load_plan(path: Path) -> Dict[str, Any]:
@@ -178,4 +260,5 @@ def load_plan(path: Path) -> Dict[str, Any]:
             "plan has no operations list; expected an 'operations' array of operation "
             f"objects with a 'kind' of mkdir/move/write/manual, e.g. {PLAN_SCHEMA_HINT}"
         )
+    _validate_plan(data, path)
     return data

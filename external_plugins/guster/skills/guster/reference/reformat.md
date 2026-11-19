@@ -1,68 +1,49 @@
 # Legacy Context Reformat
 
 The playbook for bringing a scattered, pre-spec context site under the format
-contract (`spec.md`). Reach for it when inheriting a project or hub whose
-context predates the spec: instruction files written as essays, knowledge with
-no index, naked paths in prose, undated state documents, duplicated copies,
-task folders sitting at the top level. The agent supplies the judgment; this
-page fixes the order of operations so the deterministic tools stay useful
-from the first inventory to the final verify.
+contract (`spec.md`) — essay-style instructions, unindexed knowledge, naked
+paths, undated state, duplicates, top-level task folders. The agent judges;
+this page fixes the order of operations.
 
-## Principles
-
-- **Meaning-preserving.** Reformat moves and links what is already there; it
-  never invents facts, fills gaps with guesses or rewrites wording for style.
-  A claim that cannot be verified keeps its text, flagged for the user.
-- **Classify before touching.** Formatting garbage launders it. Every
-  artifact gets a destination class first; what has no future reader is
-  proposed for deletion or distillation, not formatted.
-- **Placement before content.** A pointer written before its target moves is
-  a pointer rewritten after. Moves and deletions land first, content edits
-  second, so paths are final when pointers get written.
-- **One scope, one pass.** Leave the scope internally consistent — indexed,
-  pointed, dated — even if the pass ends at its boundary.
+Principles: **meaning-preserving** (never invent facts or rewrite for style);
+**classify before touching** (formatting garbage launders it); **placement
+before content** (a pointer written before its target moves is rewritten
+after); **one scope, one pass** (leave it internally consistent).
 
 ## Pass 1 — Inventory and classify
 
 1. `guster doctor --root <project>` (add `--json`): the findings list is the
-   worklist and each finding names the CTX rule it broke. `guster scan` adds
-   the asset inventory behind the findings.
+   worklist, each naming the CTX rule it broke; `guster scan` adds the assets.
 2. Classify every artifact — flagged or not — into exactly one class:
 
    | Class | Destination |
    |---|---|
    | instruction | root `AGENTS.md`, narrowed per CTX-01 |
-   | durable knowledge | hub `knowledge/` (cross-project) or `.agents/wiki/` (project-local) |
+   | durable knowledge | hub `knowledge/` or `.agents/wiki/` (project-local) |
    | plan / task bundle | `.agents/plans/` |
    | evidence | `.agents/evidence/` |
-   | skill | `.agents/skills/` (project) or `~/.agents/skills/` (machine) |
+   | skill | `.agents/skills/` or `~/.agents/skills/` |
    | scratch | `.agents/tmp/` — or delete |
-   | retired | `.agents/archive/` — or distill into wiki, then delete |
+   | retired | `.agents/archive/` — or distill, then delete |
    | code or config | the repository itself, not context |
    | no future reader | propose deletion, never format |
 
 3. Duplicate stems (CTX-06): pick the canonical copy by freshness and
-   completeness; mark the rest to become pointer cards in pass 3.
-4. A credential value found anywhere stops structural work: report critical,
-   then continue with references only (CTX-08).
+   completeness; the rest become pointer cards in pass 3. A credential value
+   found anywhere stops structural work: report critical (CTX-08).
 
 ## Pass 2 — Placement
 
-- No `.agents/` yet: `guster plan init --project <path>` gives the six slots,
-  README and a minimal `AGENTS.md`.
+- No `.agents/` yet: `guster init --project <path>` gives the six slots, README and a minimal `AGENTS.md`.
 - Before any move, search the repo for the artifact's path stem: every
-  referencer found now is a pointer you update in pass 3; doctor after the
-  move confirms none were missed (it catches what the search missed).
-- The slot a `misplaced-artifact` finding suggests is shape-based —
-  classification can override it (a finished review report is a wiki
-  conclusion, not a live plan).
-- One artifact: `guster plan move --from <src> --to <dst>` (backup on apply;
-  no pointer is written — every referencer is updated in pass 3 instead).
+  referencer found now is a pointer you update in pass 3 (doctor after the
+  move catches the rest). The slot a `misplaced-artifact` finding suggests
+  is shape-based — classification can override it.
+- One artifact: `guster plan move --from <src> --to <dst>` (backup on apply; referencers updated in pass 3, no pointer written).
 - A batch: hand-write one plan JSON — `version: 1`, an `operations` list of
-  `mkdir`/`move`/`write` objects, same shape `plan move` emits — covering the
-  whole destination slot, then `guster apply <plan>` dry-run, read it with the
-  user, `--yes`. Apply backs up every touched path and rolls back on failure.
-- Nothing inside a moved file is rewritten in this pass.
+  `mkdir`/`move`/`write` objects, same shape `plan move` emits — then
+  dry-run, read it with the user, `--yes`. Apply backs up every touched path
+  and rolls back on failure.
 
 ## Pass 3 — Content (per scope, table order)
 
@@ -75,7 +56,7 @@ from the first inventory to the final verify.
 | Task bundle at `.agents/` top level | Move into its slot (pass 2) | CTX-05 |
 | Non-canonical duplicate | Replace with a pointer card: front-matter `type: pointer` plus a date key, truth links in the body; volatile values are deleted, not copied | CTX-06, CTX-09 |
 | Instruction file over budget or contradicting a narrower one | Cut or split — nesting narrows, never contradicts | CTX-01 |
-| Referencer still pointing at a pre-move path | Update it to the new path (doctor reports each as `broken-pointer`); `~`-prefixed links are resolved against home, so cross-repo pointers to a hub stay verifiable | CTX-03 |
+| Referencer still pointing at a pre-move path | Update it to the new path (doctor reports each as `broken-pointer`); `~`-prefixed links resolve against home, so cross-repo pointers to a hub stay verifiable | CTX-03 |
 | Leftover `<name>.moved.md` transition pointer (older guster versions wrote them on apply) | Delete once every referencer is updated — a transition pointer nobody reads re-triggers `misplaced-artifact`; keep it only for referencers outside your control | CTX-05 |
 
 Content edits are ordinary file edits by the agent; plans are for moves.
@@ -83,16 +64,12 @@ Content edits are ordinary file edits by the agent; plans are for moves.
 ## Pass 4 — Verify
 
 1. `guster doctor` — the pass kept the contract iff zero new findings appear.
-2. `guster score --trend` for the before/after number to hand the user;
-   `doctor`'s `broken-pointer`/`naked-pointer` findings are the pointer
-   check.
-3. Committing is the user's workflow; guster never auto-commits.
+2. `guster score --trend` for the before/after number; committing stays the
+   user's workflow — guster never auto-commits.
 
 ## Scale and review
 
-Batch by directory or topic. For a large legacy site, deliver the pass-1
-classification table (artifact → class → keep/merge/delete) to the user
-before pass 2 — one approval for the map, not one per file. Deletion and
-distillation proposals live in that table, never execute silently. A
-company-tracked file is never a migration target: report it, waive it with a
-reason if the user accepts, move on.
+For a large legacy site, deliver the pass-1 classification table (artifact →
+class → keep/merge/delete) to the user before pass 2 — one approval for the
+map, not one per file; deletions never execute silently. A company-tracked
+file is never a migration target: report it, waive it, move on.
