@@ -196,10 +196,10 @@ by 16; use 1088x1920 instead. No 1K/2K/4K tiers for chat_image models.
 
 ## Prices
 
-Official list prices from the Tripo pricing pages (developers.tripo3d.com/zh/pricing
-and developers.tripo3d.ai/pricing; the same numbers in both regions), checked on
-2026-10-30. Numeric prices and add-ons anywhere in this file (including processing
-tables) come from those pages. An estimate must name its source, region and date and
+Official list prices from the Tripo China-site pricing page
+(developers.tripo3d.com/zh/pricing), checked on 2026-10-30. Numeric prices
+and add-ons anywhere in this file (including processing tables) come from that
+page. An estimate must name its source, region and date and
 match the exact model/options. If this table cannot price the request (a legacy model
 or anything not listed), report **not_estimated** (unestimated), not zero; disclose
 that uncertainty and obtain consent before billing. Never infer a fixed P2/P1 ratio.

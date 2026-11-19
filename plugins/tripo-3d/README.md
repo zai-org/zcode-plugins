@@ -4,9 +4,8 @@
 
 ## 0.1.5
 
-Works with both China-mainland and international Tripo accounts: the plugin
-ships one MCP server per region, `tripo` for the China site and `tripo-global`
-for the international site, and you authorize the one your account belongs to.
+This plugin connects to the Tripo China site through its `tripo` MCP server.
+It requires a Tripo mainland China account.
 
 A user's explicitly chosen compatible model overrides usage-based defaults.
 Choose from models that support the required features before applying the
@@ -33,10 +32,8 @@ prompt or a reference image, with rigging, animation, retopology and format
 conversion (GLB/FBX/OBJ/STL/USDZ/3MF). You can ask to save the files in your
 project. Built for games, film, AR and 3D printing.
 
-Connect your Tripo account once in the browser — no API key pasting. Both
-**China-mainland** (developers.tripo3d.com) and **international**
-(developers.tripo3d.ai) accounts work: the plugin ships one MCP server per
-region and you authorize only the one your account belongs to.
+Connect your Tripo mainland China account (developers.tripo3d.com) once in
+the browser, without pasting an API key into the chat.
 
 ## Components
 
@@ -45,8 +42,7 @@ region and you authorize only the one your account belongs to.
 | Skill `tripo-3d` | Main workflow: tool check, authorization guidance, MCP workflow, scenario → tool-chain mapping, input handling, credit rules |
 | Skill `tripo-game-asset` | Game-asset recipes: budgeted low-poly props, LOD chains, rigged characters with locomotion clips, wiring into Unity/Unreal/Godot/Three.js |
 | MCP server `tripo` | China site: remote Streamable HTTP server `https://developers.tripo3d.com/mcp` (OAuth 2.1), including `tripo_plan`, generation, rigging, conversion and `tripo_smart_uv`; available tool schemas are authoritative |
-| MCP server `tripo-global` | International site: the same tools on `https://openapi-mcp.tripo3d.ai/mcp` (OAuth 2.1) |
-| Hook `SessionStart` | Injects eight rules covering async waiting, short-lived links, credit confirmation, browser authorization, honest failures, PBR, model selection and concept-image confirmation, plus a region hint from the system time zone |
+| Hook `SessionStart` | Injects eight rules covering async waiting, short-lived links, credit confirmation, browser authorization, honest failures, PBR, model selection and concept-image confirmation |
 
 ## Usage
 
@@ -70,34 +66,24 @@ be used directly for 3D generation.
 
 ### First-time authorization
 
-Authorize the Tripo MCP server for your account's region once:
+Authorize the Tripo China MCP server once:
 
-1. Open **Settings → MCP Servers**. Under "Plugin MCP servers" there are two Tripo
-   rows, both showing "Authorization required": `tripo` for a China-mainland
-   account and `tripo-global` for an international account. Click
-   **Open authorization** on the row for your account; the other row can stay
-   as it is.
-2. The system browser opens that site's authorization page: `tripo` uses the
-   **China site** (developers.tripo3d.com — +86 SMS sign-in, Alipay top-up),
-   `tripo-global` the **international site** (developers.tripo3d.ai — email
-   sign-in, Stripe top-up). The page has no region picker. You can sign up on
-   the spot; new accounts get free credits.
-3. The page shows a one-time verification code and opens the Tripo console:
-   sign in, type the code into **Verification code**, click **Authorize**.
+1. Open **Settings → MCP Servers**. Under "Plugin MCP servers", find the
+   `tripo` row and click **Open authorization**.
+2. The browser opens the **China site** authorization page
+   (developers.tripo3d.com, +86 SMS sign-in, Alipay top-up). The page has no
+   region picker. You can sign up on the spot.
+3. The page shows a one-time verification code and opens the Tripo console.
+   Sign in, type the code into **Verification code**, and click **Authorize**.
 4. ZCode reconnects and loads the tools automatically. To revoke access,
    delete the API key you picked during authorization on the console's
    API Keys page.
 
-If you connect accounts in both regions, choose the account for the task before
-planning or uploading. Task IDs, file tokens and balances stay with that server.
-
 ## Dependencies, network access and side effects
 
-- **Network**: ZCode connects to both MCP endpoints,
-  `https://developers.tripo3d.com/mcp` (China site) and
-  `https://openapi-mcp.tripo3d.ai/mcp` (international site); tool calls go
-  only to the one you authorized, and authorization redirects to that site's
-  Tripo console. Results are available through short-lived Tripo CDN links.
+- **Network**: MCP tool calls go to `https://developers.tripo3d.com/mcp`;
+  authorization redirects to the Tripo China console (developers.tripo3d.com).
+  Results are available through short-lived Tripo CDN links.
   `tripo_task_status` refreshes them when needed.
 - **Account and billing**: every generation spends credits from your own
   Tripo account; use task status and the usage ledger for actual charges. Failed
@@ -105,7 +91,7 @@ planning or uploading. Task IDs, file tokens and balances stay with that server.
   `tripo_plan` and asks for explicit confirmation before they run. For a batch,
   it checks the balance and confirms the cost of each phase before that phase runs.
 - **File writes**: when you ask to save or integrate a model, the agent
-  downloads it into your project with `curl`. The hook and the MCP servers
+  downloads it into your project with `curl`. The hook and the MCP server
   write nothing.
 - **Command execution**: shell commands run only to upload a local image/model
   (using the command returned by `tripo_upload_ticket` or, for larger files when
@@ -113,12 +99,10 @@ planning or uploading. Task IDs, file tokens and balances stay with that server.
   plugin never installs or runs a command-line client, including after an MCP
   failure, missing authorization, batch work or a request to save files locally.
 - **Hook**: `hooks/session-start.mjs` needs `node` on PATH. It reads the
-  event from stdin and prints the rules plus a region hint derived from the
-  system time zone to stdout; no network, no file access.
+  event from stdin and prints the rules to stdout; no network, no file access.
 - **Telemetry**: the plugin has no independent analytics SDK. When enabled on
-  the Tripo MCP server you authorized (China or international site; both
-  record the same fields), analytics can record tool results, task
-  metadata and the Tripo account ID when resolved. Both MCP servers declare the
+  the deployed Tripo China MCP server, analytics can record tool results, task
+  metadata and the Tripo account ID when resolved. The plugin declares the
   non-credential `X-Tripo-Distribution: zcode_plugin` header; if the host
   forwards it, the server records the distribution channel separately from
   the detected client (such as ZCode, Claude, or unknown). Analytics excludes
@@ -131,6 +115,6 @@ planning or uploading. Task IDs, file tokens and balances stay with that server.
 - Plugin: MIT, by [VAST](https://www.tripo3d.ai).
 - Both skills are ported from Tripo's official Kimi / Codex plugins (also
   maintained by VAST, MIT).
-- Both MCP servers run the official Tripo implementation;
+- The MCP server runs the official Tripo implementation;
   generated content is subject to the
   [Tripo API content policy](https://platform.tripo3d.ai/docs).
