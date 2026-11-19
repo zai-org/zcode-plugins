@@ -1,5 +1,7 @@
 # Tripo 3D
 
+[中文文档](./README_CN.md)
+
 ## 0.1.5
 
 Works with both China-mainland and international Tripo accounts: the plugin
@@ -7,6 +9,9 @@ ships one MCP server per region, `tripo` for the China site and `tripo-global`
 for the international site, and you authorize the one your account belongs to.
 
 A user's explicitly chosen compatible model overrides usage-based defaults.
+Choose from models that support the required features before applying the
+scenario preference. If an explicitly chosen model conflicts with a required
+feature, ask before changing the model or dropping the requirement.
 Game/realtime recipes explicitly prefer **P2** (more credits than H/P1), the
 P-series default; **P1** is used only when the user names it or picks it for lower
 cost and speed, and v3.1 for film/render/print. Rigs pass the model
@@ -21,11 +26,11 @@ missing authorization is never a reason to switch to one. PBR stays off unless
 you explicitly ask for it. A plan is advisory, not a price quote or budget lock.
 Show estimated or unestimated costs, cite the source, region and date of any
 static list estimate, and obtain explicit consent. Never switch accounts silently.
-The hook also enforces the PBR default and explicit model/billing decisions.
+The hook also provides the PBR default and explicit model/billing guidance.
 
 The official Tripo plugin for ZCode. Generate textured 3D models from a text
 prompt or a reference image, with rigging, animation, retopology and format
-conversion (GLB/FBX/OBJ/STL/USDZ/3MF), and land the files directly in your
+conversion (GLB/FBX/OBJ/STL/USDZ/3MF). You can ask to save the files in your
 project. Built for games, film, AR and 3D printing.
 
 Connect your Tripo account once in the browser — no API key pasting. Both
@@ -41,7 +46,7 @@ region and you authorize only the one your account belongs to.
 | Skill `tripo-game-asset` | Game-asset recipes: budgeted low-poly props, LOD chains, rigged characters with locomotion clips, wiring into Unity/Unreal/Godot/Three.js |
 | MCP server `tripo` | China site: remote Streamable HTTP server `https://developers.tripo3d.com/mcp` (OAuth 2.1), including `tripo_plan`, generation, rigging, conversion and `tripo_smart_uv`; available tool schemas are authoritative |
 | MCP server `tripo-global` | International site: the same tools on `https://openapi-mcp.tripo3d.ai/mcp` (OAuth 2.1) |
-| Hook `SessionStart` | Injects seven rules: async waiting, link expiry, credit confirmation, browser authorization, honest failures, PBR off by default and explicit model/billing decisions, plus a region hint from the system time zone |
+| Hook `SessionStart` | Injects eight rules covering async waiting, short-lived links, credit confirmation, browser authorization, honest failures, PBR, model selection and concept-image confirmation, plus a region hint from the system time zone |
 
 ## Usage
 
@@ -55,6 +60,13 @@ Install and enable the plugin, then just describe what you need, for example:
 
 You can also type `/` in the composer and pick `tripo-3d` or `tripo-game-asset`
 from the Skills group.
+
+For a text-only model request, the skill first plans and asks you to confirm
+the concept-image cost. It generates and shows the image, then waits for your
+acceptance before planning and asking for separate confirmation of the 3D step
+and any requested post-processing. You can explicitly ask to skip the image and
+generate directly from text. An image or multiview set you already supplied can
+be used directly for 3D generation.
 
 ### First-time authorization
 
@@ -76,23 +88,28 @@ Authorize the Tripo MCP server for your account's region once:
    delete the API key you picked during authorization on the console's
    API Keys page.
 
+If you connect accounts in both regions, choose the account for the task before
+planning or uploading. Task IDs, file tokens and balances stay with that server.
+
 ## Dependencies, network access and side effects
 
 - **Network**: ZCode connects to both MCP endpoints,
   `https://developers.tripo3d.com/mcp` (China site) and
   `https://openapi-mcp.tripo3d.ai/mcp` (international site); tool calls go
   only to the one you authorized, and authorization redirects to that site's
-  Tripo console. Results are downloaded from Tripo's CDN through short-lived
-  links (about 2 hours).
+  Tripo console. Results are available through short-lived Tripo CDN links.
+  `tripo_task_status` refreshes them when needed.
 - **Account and billing**: every generation spends credits from your own
   Tripo account; use task status and the usage ledger for actual charges. Failed
-  tasks are refunded automatically. The skill drafts the chain with `tripo_plan`,
-  checks the balance and asks before generating a batch.
-- **File writes**: only when you ask for the model on disk, the agent
+  tasks are refunded automatically. The skill drafts billed steps with
+  `tripo_plan` and asks for explicit confirmation before they run. For a batch,
+  it checks the balance and confirms the cost of each phase before that phase runs.
+- **File writes**: when you ask to save or integrate a model, the agent
   downloads it into your project with `curl`. The hook and the MCP servers
   write nothing.
 - **Command execution**: shell commands run only to upload a local image/model
-  (the `curl` returned by `tripo_upload_ticket`) or to download a result. The
+  (using the command returned by `tripo_upload_ticket` or, for larger files when
+  the connected server supports it, `tripo_upload_presign`) or to download a result. The
   plugin never installs or runs a command-line client, including after an MCP
   failure, missing authorization, batch work or a request to save files locally.
 - **Hook**: `hooks/session-start.mjs` needs `node` on PATH. It reads the

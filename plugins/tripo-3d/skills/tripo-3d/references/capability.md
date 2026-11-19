@@ -10,16 +10,20 @@ change one, resolve the conflict with the user before creating a paid task.
 
 | model | MCP `model` | use for | limits |
 | --- | --- | --- | --- |
-| **v3.1** (default) | `v3.1` | high fidelity: film, render, print | full parameter set |
+| **v3.1** | `v3.1` | high fidelity: film, render, print | full parameter set |
 | **P1** | `P1` | P series alternative, only when the user names it or picks it for lower cost and speed | `face_limit` 50–20000; no `quad`, `smart_low_poly`, `generate_parts`, `geometry_quality` |
 | **P2** | `P2` → wire `P2-20260801` | default P-series model, preferred for game/realtime topology, with explicit user confirmation | `face_limit` 48–50000 tri / 48–25000 quad; supports `quad`, still no `smart_low_poly`, `generate_parts`, `geometry_quality`; costs more credits than H/P1, and price depends on texture options; confirm the estimate. Pass the generation model explicitly |
 | v3.0, v2.5 | `v3.0`, `v2.5` | legacy, only when the user asks | v2.5 has no `geometry_quality`, `quad`, `smart_low_poly`, `generate_parts`, `auto_size`, `compress` (stripped with a note) |
 
 Website model names map to these rows: H3.1 → `v3.1`, P1.0 → `P1`, P2.0 → `P2`.
+The current MCP resolves an omitted generation `model` to P2. Pass the
+confirmed model explicitly and follow the connected tool schema.
 
 Selection policy: the explicitly requested model wins over use-based defaults;
-resolve incompatible requirements with the user before any paid call. Otherwise,
-explicitly choose P2 for game/realtime topology; within the P series the default
+resolve incompatible requirements with the user before any paid call. When the
+user has not specified a model, choose one that supports the required features
+first: use v3.1 for `generate_parts`, `smart_low_poly`, or detailed geometry.
+Otherwise, explicitly choose P2 for game/realtime topology; within the P series the default
 is P2, and P1 is used only when the user names it or picks it for lower cost and
 speed; v3.1 for film/render/print.
 This is plugin guidance, not an API requirement. Do not rely on implicit routing
@@ -77,6 +81,16 @@ paid task for integrated smart_uv without confirming the extra cost.
 
 ## Processing steps
 
+For local image or model files, `tripo_upload_presign` provides a direct storage
+URL when the connected server exposes it. Pass the file extension as `format`,
+then PUT the raw bytes using the returned `how_to`. Use the returned `file_token`
+only after the PUT succeeds; do not send a Tripo authorization header with it.
+The tool supports PNG/JPEG/WebP images and GLB/FBX/OBJ/STL models.
+
+If a model task reports a `normalize_scale` other than 1, tell the user that
+Tripo scaled the imported model. Final size is original size multiplied by
+`normalize_scale`, and the original size is the final size divided by that value.
+
 Most mesh processing tools accept a model task_id, a `file_token` or a model URL
 as `input`. Check each tool's schema; for example: `tripo_animate` (`task_id` of a successful rig task),
 `tripo_mesh_complete` (`task_id` of a successful segment task) and
@@ -87,10 +101,10 @@ as `input`. Check each tool's schema; for example: `tripo_animate` (`task_id` of
 | `tripo_texture` | `texture_quality` `standard`/`detailed`/`extreme`/`fast` (fast requires v3.5); `pbr` (send `false` unless the user explicitly asks for PBR); `texture_seed`; `texture_alignment`; `model` as the short name: `v3.0` (`v3.0-20250812`, default) / `v3.5` (`v3.5-20260815`, newest; unlocks `delight` and `texture_quality: "fast"`, picked automatically for them when `model` is omitted) / `v2.5`; `bake`; `part_names` (segmented models); `compress`. Guidance — select one of `prompt` (+ optional `style_image`), `image`, `images` (4 views front/left/back/right), or native `texture_prompt`; native `texture_prompt` cannot be combined with the shortcut fields. Provide guidance for imported meshes; it may be omitted for Tripo-generated models. Re-supply the original reference image when re-texturing a model made from one. Re-textures any model, including imported files |
 | `tripo_mesh_edit` | Experimental P2 regional regenerate: use only when listed by the connected server. `input` (task_id / file_token / URL) + axis-aligned `bbox` in model space; optional `ref_image`. Rest of mesh kept. Billed separately |
 | `tripo_plan` | Free advisory draft **before** any billed call. Pass structured `generation` only for `tripo_text_to_3d`, `tripo_image_to_3d` and `tripo_multiview_to_3d`; text-to-3D requires its exact prompt. Do not add `generation` to other steps such as `tripo_image_to_splat`. Review `dry_run` only for these three when their connected schemas expose it; validate other steps against their own schemas. Free-text `params` alone leave the model unresolved. Show billed steps and estimates or `not_estimated`, then wait for explicit confirmation; not a quote or budget lock. Skip only for pure reads |
-| `tripo_convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo` (FBX only). `quad` with `GLTF` is rejected. A non-default `quad`, `flatten_bottom`/`flatten_bottom_threshold`, `texture_size`, `texture_format`, `pivot_to_center_bottom` or `scale_factor`, or any `face_limit`, bills the complex tier (10 credits instead of 5); the other options do not |
+| `tripo_convert` | `format` `GLTF` `USDZ` `FBX` `OBJ` `STL` `3MF` (3MF = single-colour print). Mesh: `quad`, `force_symmetry` (quad only), `face_limit` (default: keep), `flatten_bottom` + `flatten_bottom_threshold` (0.01). Texture: `texture_size` (4096), `texture_format` `JPEG`/`PNG`/`WEBP`/`BMP`/`TIFF`/`TARGA`/`HDR`/`DPX`/`OPEN_EXR`, `bake` (true), `pack_uv`, `export_vertex_colors` (OBJ/GLTF only). Export: `pivot_to_center_bottom`, `scale_factor`, `auto_size`, `with_animation` (true), `animate_in_place`, `part_names`, `export_orientation`, `fbx_preset` `blender`/`3dsmax`/`mixamo`/`bake_scale` (FBX only; `bake_scale` bakes the scale transform into the geometry). `quad` with `GLTF` is rejected. A non-default `quad`, `flatten_bottom`/`flatten_bottom_threshold`, `texture_size`, `texture_format`, `pivot_to_center_bottom` or `scale_factor`, or any `face_limit`, bills the complex tier (10 credits instead of 5); the other options do not |
 | `tripo_import_model` | GLB/GLTF/FBX/OBJ/STL ≤150 MB via `file_token` or URL (`.gltf` only as a URL — upload `.glb`) |
 | `tripo_rig_check` | free. Input: successful model task ID, `file_token`, or public model URL; documented file formats are GLB, FBX, OBJ and STL (up to 150 MB). Result: `riggable` and recommended `rig_type`: `biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`. Gate step — not riggable → stop; riggable → rig the **original model task**, not the check task |
-| `tripo_rig` | `model`: always pass it by body type: `v3.0` (`v3.0-20260909`) for `biped` and `others`, `v2.5` (`v2.5-20260210`, the official animal rig) for `quadruped`/`hexapod`/`octopod`/`avian`/`serpentine`/`aquatic`. When it is omitted the MCP sends v3.0 for every body type, and the API's own default is `v1.0-20240301`, which rigs bipeds only. v3.0 is required for `others` and the `actorcore`/`unity`/`unreal`/`vrm` specs. Both take `preset:walk` / `preset:idle` on bipeds and body-type clips on creatures. Explicit `v1.0-20240301` (`v1.0`) is legacy biped-only for 90+ `preset:biped:*` clips. Read the returned model before animation. `rig_type` comes from rig-check; rig the original model, not the check task. `spec` is biped-only; `out_format` is `glb`/`fbx`. |
+| `tripo_rig` | `model`: always pass it by body type: `v3.0` (`v3.0-20260909`) for `biped` and `others`, `v2.5` (`v2.5-20260210`, the official animal rig) for `quadruped`/`hexapod`/`octopod`/`avian`/`serpentine`/`aquatic`. When it is omitted the MCP sends v2.5 for `quadruped` and v3.0 for other body types, and the API's own default is `v1.0-20240301`, which rigs bipeds only. v3.0 is required for `others` and the `actorcore`/`unity`/`unreal`/`vrm` specs. Both take `preset:walk` / `preset:idle` on bipeds and body-type clips on creatures. Explicit `v1.0-20240301` (`v1.0`) is legacy biped-only for 90+ `preset:biped:*` clips. Read the returned model before animation. `rig_type` comes from rig-check; rig the original model, not the check task. `spec` is biped-only; `out_format` is `glb`/`fbx`. |
 | `tripo_animate` | needs a rig task. `animations: [...]` (≤5, billed per clip). `out_format` `glb`/`fbx`, `animate_in_place` (no root motion — game code drives movement), `export_with_geometry` (true); `bake_animation` is deprecated — do not pass it (it is ignored) |
 | `tripo_segment` | `model` `v1.0-20250506` (geometry-based, default) or `v2.0-20260430` (semantic, beta) with `segmentation_granularity` `simple`/`balanced`/`detailed`, `split_by_connectivity` (true), `ref_image` (overrides the other two). The tool switches to v2.0 automatically when a v2-only argument is set without `model`; an explicit `v1.0-20250506` with any of them is rejected and no task is created |
 | `tripo_mesh_complete` | needs a segment task. `completion_mode` `ai_completion` (default) / `quick_cap` (hole fill, cheaper); `part_names` (default all) |
@@ -112,7 +126,8 @@ from the `tripo_rig` result (this skill passes v3.0 for bipeds and v2.5 for anim
 `tripo_generate_image` (text→image when no `input`; edit/fusion with `input`
 or `inputs`), `tripo_image_to_multiview`, `tripo_edit_multiview`,
 `tripo_image_to_splat`. An image task_id is a valid `input` for
-`tripo_image_to_3d` — no re-upload.
+`tripo_image_to_3d` — no re-upload. Follow the [main workflow](../SKILL.md)
+for displaying and confirming a concept image before model generation.
 
 - **Templates** (`template`): choose from the documented endpoint whitelist:
   - Text-to-image templates: `asset_extraction`, `character_completion`, `t_pose`, `variants`, `figure`.
@@ -121,7 +136,8 @@ or `inputs`), `tripo_image_to_multiview`, `tripo_edit_multiview`,
     and the `template` argument does not accept them; do not recommend them as
     supported templates.
   - Image editing requires `prompt` and/or `template`; text-to-image requires a
-    prompt. Negative prompts go inside `prompt` after `--no`.
+    prompt. For `tripo_generate_image`, pass exclusions using the separate
+    `negative_prompt` argument when it is exposed by the connected schema.
 - **Image models** (`model`): `seedream_v4` (text-to-image default; **not accepted
   by image editing**), `seedream_v5` (editing default), Google Gemini as
   `banana` (= gemini-2.5-flash, fast), `banana_pro` (= gemini-3-pro, quality),

@@ -1,6 +1,6 @@
 ---
 name: tripo-3d
-description: Generate a 3D model from a text prompt, a reference image, or an existing mesh, and deliver it as GLB, FBX, OBJ, STL, USDZ or 3MF. Use when the user asks for a 3D asset, model, mesh, prop, character or texture for a game, renderer, viewer, AR scene or 3D print — including requests like "make me a low-poly X", "turn this image into 3D", "rig this character", "convert this model to FBX", or "generate placeholder assets", and the same requests in any language (text-to-3D, image-to-3D, rigging, character animation, texturing, low-poly or face reduction, 3D-printed figurines, format conversion). Also use to re-run, convert or inspect a previous Tripo generation.
+description: Generate a 3D model from a text prompt, a reference image, or an existing mesh, and deliver it as GLB, FBX, OBJ, STL, USDZ or 3MF. Use when the user asks for a 3D asset, model, mesh, prop, character or texture for a game, renderer, viewer, AR scene or 3D print — including requests like "make me a low-poly X", "turn this image into 3D", "rig this character", "convert this model to FBX", or "generate placeholder assets", and the same requests in any language (text-to-3D, image-to-3D, rigging, character animation, texturing, low-poly or face reduction, 3D-printed figurines, format conversion). Also use to re-run, convert or inspect a previous Tripo generation, or to answer questions about Tripo model selection, supported parameters, and credits.
 ---
 
 # Tripo 3D
@@ -32,7 +32,8 @@ instead — not for a balance check, not because a local login or
 `TRIPO_API_KEY` happens to exist (that may be a different account, and the
 user installed this plugin to use MCP). Local files and bulk jobs stay on MCP
 too: `tripo_upload_ticket` covers both images and mesh files (see Inputs
-below), and results are downloaded with `curl` (see Deliver).
+below). Use `curl` to save results into the project when the user requests a
+local file or project integration (see Deliver).
 
 ## Authorization
 
@@ -76,14 +77,44 @@ with exactly one key it is used as is). To revoke access, delete that key on
 the console's API Keys page — any other client sharing that key loses access
 too.
 
-If tools from both servers are available, ask which account to spend credits
-from before the first billed step, and keep the whole task chain on that
-server: task IDs, file tokens and balances belong to one region and do not
-carry over to the other server. Never switch servers silently.
+If tools from both servers are available and the user has not chosen an
+account, ask before planning or uploading. Keep the whole task chain on the
+chosen server. Task IDs, file tokens and balances belong to that region.
+Never switch servers silently.
+
+## Text prompts for new 3D assets
+
+When the user describes a new asset in words and has not supplied reference
+images, start with a concept image:
+
+1. Plan and confirm only `tripo_generate_image`. Use the text prompt without
+   `input` or `inputs`. State the image model, options and cost or
+   `not_estimated`. For a humanoid to be rigged, describe the T-pose in this
+   prompt. The 3D model and its costs stay out of this first plan.
+2. After the user confirms the image cost, generate the image and wait for
+   success. Get the generated image from the image task's `output_urls`
+   and show it as a Markdown image (`![Concept image](<image-url>)`). If
+   inline display is unavailable, offer one labeled link to the image and
+   ask the user to open it before deciding. Use `tripo_task_status` on the same
+   task to refresh an expired link. End the turn and wait for explicit
+   acceptance of the image or a request to revise it. If the user cannot see
+   the image, help them open it and keep the 3D step pending.
+3. After the user accepts the image, plan `tripo_image_to_3d` with its successful
+   image task ID as `input`, plus any requested post-processing. Show that
+   plan's model, options and costs and wait for separate spending confirmation
+   before starting it. A replacement concept needs a new image plan and
+   confirmation.
+
+Use `tripo_text_to_3d` for a new asset only if the user explicitly asks to
+skip the concept image. If the image tool is unavailable, explain and ask
+whether the user wants to supply an image or skip the concept step. If the user
+supplied an image or a multiview set, plan `tripo_image_to_3d` or
+`tripo_multiview_to_3d` directly using their input.
 
 ## Workflow
 
-1. **Plan** — for any billed generation or chain, call `tripo_plan` first.
+1. **Plan** — call `tripo_plan` for the billed steps being confirmed now.
+   For the first phase of Text prompts, this is only `tripo_generate_image`.
    For `tripo_text_to_3d`, `tripo_image_to_3d` and `tripo_multiview_to_3d`
    steps only, supply a structured `generation` object; include the exact
    `prompt` for text-to-3D. Never attach `generation` to other tools, including
@@ -97,19 +128,19 @@ carry over to the other server. Never switch servers silently.
    `not_estimated` to the user, and wait for explicit confirmation. Skip the
    plan only for pure reads (`tripo_balance`, `tripo_usage`, `tripo_task_status`
    / `tripo_task_list`). Re-plan and reconfirm changed paid steps.
-2. **Create** — `tripo_text_to_3d` for prompts (Chinese or English, concrete
-   nouns + style + materials), `tripo_image_to_3d` for images. Both return a
-   `task_id` immediately. If creation times out without a `task_id`, do not
-   automatically retry: check the original account's balance and task history
-   when available, then ask the user before considering another submission.
+2. **Create** — use the tool in the confirmed plan. New 3D assets from words
+   follow Text prompts above, including its separate image and 3D confirmations.
+   Creation tools return a `task_id` immediately. If creation times out without
+   a `task_id`, do not automatically retry. Check the original account's
+   balance and task history when available, then ask before another submission.
 3. **Wait** — call `tripo_task_wait` with the `task_id`; each call returns
    within about 55 s, so call it again while status is still `queued`/`running`
    (a generation takes 1–4 minutes). Do not invent your own sleep loop and do
    not treat the `task_id` as completion.
-4. **Judge** — on `success`, check the result before building on it: you may
-   look at the rendered image listed in `output_urls`, but never paste
-   `output_urls` into the reply. On `failed`/`banned`, report
-   `failure_reason` honestly; failed-task credits are refunded automatically.
+4. **Judge** — on `success`, check the result before building on it. Inspect
+   the rendered preview if available. For a concept image, show the single
+   generated image by following Text prompts above. On `failed`/`banned`,
+   report `failure_reason` honestly. Failed-task credits are refunded automatically.
    Do not silently re-roll a disappointing result — say what is off and ask;
    re-rolling means creating a new task with the same prompt.
 5. **Post-process** (each asynchronous task requires `tripo_task_wait`; check
@@ -120,10 +151,11 @@ carry over to the other server. Never switch servers silently.
      the original reference image when re-texturing a model made from one.
    - `tripo_rig_check` → `tripo_rig` — check riggability before spending rig
      credits, then add a skeleton with the `rig_type` the check returned.
-     Prompt characters as **T-pose** at generation time; `spec: "unity"` for
-     Unity Humanoid, `"mixamo"` for Mixamo pipelines. Always pass `model` by
-     body type: `"v3.0"` for `biped`, `"v2.5"` for the animal types the check
-     reports (`quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`).
+     Prompt humanoids in a **T-pose** and use `spec` only for `biped`
+     (e.g. `"unity"` for Unity Humanoid or `"mixamo"` for Mixamo pipelines).
+     Pass `model` explicitly by body type: `"v3.0"` for `biped` and `others`,
+     `"v2.5"` for `quadruped`, `hexapod`, `octopod`, `avian`, `serpentine`
+     and `aquatic`.
      The API's own default is still `v1.0-20240301`, which rigs bipeds only.
      The `tripo_rig` result says which preset family the rig takes.
    - `tripo_animate` — presets on a **successful rig task** (≤5 per call,
@@ -143,19 +175,16 @@ carry over to the other server. Never switch servers silently.
      existing mesh with P2 (`bbox` required). It is experimental; use it only
      when the connected server's actual tool list exposes it. Stylize (lego /
      voxel / voronoi / minecraft) has been retired — there is no `tripo_stylize` tool.
-6. **Deliver** — result URLs (`model_url` and `output_urls`) **expire after
-   about 2 hours**; never cache or re-print an old one — call
-   `tripo_task_status` for fresh links. Download the file into the project
-   (`curl -L -o <path> "<model_url>"`) and give the local path as plain text in
-   backticks — never as a clickable link, the chat preview cannot render
-   meshes — then also offer `model_url` as a single markdown download link;
-   offer the next real action: reveal it in the file manager
-   (`open -R <path>` on macOS, `explorer /select,<path>` on Windows) or wire it
-   into the project. Only when no shell is available give just the fresh
-   `model_url` link and say it is short-lived, offering to refresh it on
-   request. Do not paste other URLs from `output_urls`. After a
-   `tripo_convert`, the native GLB stays on the earlier task — fetch it with
-   `tripo_task_status` on that task instead of paying for another conversion.
+6. **Deliver** — result links are short-lived. If a link is stale or missing,
+   refresh it with `tripo_task_status`. Offer the model
+   as a single labeled download link. Only save a local file when the user
+   asks for a file on disk or for project integration. With a shell available,
+   download it to the requested or appropriate project path
+   (`curl -fL -o "<path>" "<model_url>"`) and report the path in backticks. If
+   saving was requested but the shell is unavailable or the download failed,
+   report that and provide the fresh link. Do not paste raw URLs or the full
+   `output_urls` list. After `tripo_convert`, fetch the native GLB through
+   `tripo_task_status` on the original task whenever it is needed.
    Call `tripo_usage` with all workflow task IDs and report actual total and
    per-task charges; if the ledger is unavailable, say the amount is pending.
 
@@ -164,9 +193,10 @@ carry over to the other server. Never switch servers silently.
 Pick the chain from what the user is building; each asynchronous task must
 finish before a dependent step runs. Check each tool's billing and input rules:
 `tripo_rig_check` is free and rig uses the original model, not the check task.
-The examples below are suggestions only; an explicitly requested compatible
-model overrides the usage-based default. GLB is the native output — a
-`tripo_convert` step is only worth its credits when the target needs another format.
+The examples pick 3D options after any required concept-image approval. Use
+the model compatible with the user's requirements before applying these
+suggestions. GLB is the native output — a `tripo_convert` step is only worth
+its credits when the target needs another format.
 
 - **Game prop, mobile / WebGL / many instances** — generate with
   explicit `model: "P2"` and a confirmed `face_limit` →
@@ -180,12 +210,10 @@ model overrides the usage-based default. GLB is the native output — a
   `format: "STL"` (`flatten_bottom: true` for a stable base); `3MF` also works.
 - **AR / iOS Quick Look** — `auto_size: true` (real-world meters) →
   `tripo_convert` `format: "USDZ"`; WebXR uses the GLB directly.
-- **Animated character** — T-pose reference first (`tripo_generate_image`
-  with `template: "t_pose"` turns a character image into one) →
-  `tripo_image_to_3d`/`tripo_text_to_3d` → `tripo_rig_check` → `tripo_rig`
-  (`model: "v3.0"`, or `"v2.5"` for an animal; `spec: "unity"` for Unity Humanoid) →
-  `tripo_animate` with the preset
-  family named in the `tripo_rig` result: v3.0 humanoids
+- **Animated character** — use the accepted T-pose concept or supplied image
+  for `tripo_image_to_3d`, then `tripo_rig_check` → `tripo_rig` (explicit model
+  by body type; `spec: "unity"` only for a Unity Humanoid biped) →
+  `tripo_animate` with the preset family named in the `tripo_rig` result: v3.0 humanoids
   `["preset:walk", "preset:idle"]`; creatures use their body-specific presets
   (e.g. `preset:quadruped:walk`); explicit v1.0 humanoids alone use
   `preset:biped:*`.
@@ -201,17 +229,19 @@ model overrides the usage-based default. GLB is the native output — a
   reusable task_id with a preview (`.gltf` is rejected — export `.glb`).
 - **Not a mesh** — `tripo_image_to_splat` outputs a Gaussian-splat `.splat`
   scene for viewers, not an editable model; say so before running it. If the
-  result has no `model_url`, the file is the `model_url` entry of `output_urls`;
-  deliver that one.
+  result has no `model_url`, deliver the `.splat` result from `output_urls`.
 
 ## Parameters that matter
 
 - **Choose the generation model explicitly**: the user's explicitly chosen model
   wins over usage-based defaults. If it conflicts with required features, explain
-  the conflict and ask before changing model or dropping a requirement. Otherwise,
-  P2 is preferred for game/realtime topology (costs more credits than H/P1);
-  within the P series the default is P2, and P1 is used only when the user names it
-  or picks it for lower cost and speed. Use v3.1 for film/render/print. This is
+  the conflict and ask before changing model or dropping a requirement. If the
+  user did not specify a model, first filter by required capabilities and then
+  apply the scenario preference. For example, use `v3.1` for `generate_parts`,
+  `smart_low_poly` or `geometry_quality: "detailed"` even for a game asset.
+  Among compatible models, P2 is preferred for game/realtime topology (costs
+  more credits than H/P1). For choices within the P series the default is P2,
+  and P1 is used only when the user names it or picks it for lower cost and speed. Use v3.1 for film/render/print. This is
   plugin policy, not an API requirement. Confirm the model, texture options and
   cost; re-confirm any paid model change.
 - **PBR is opt-in.** Send `pbr: false` on every `tripo_text_to_3d`,
@@ -246,7 +276,11 @@ model overrides the usage-based default. GLB is the native output — a
   and read `file_token` from the JSON response.
 - Model files (GLB/FBX/OBJ/STL, ≤150 MB) use the same ticket with
   `kind: "model"` and `format`; the `file_token` then feeds
-  `tripo_import_model` or any processing tool directly.
+  `tripo_import_model` or any processing tool directly. Tell the user if the
+  import reports a `normalize_scale` other than 1, since it changed the model size.
+- For larger local inputs, use `tripo_upload_presign` when the connected server
+  exposes it and supports the file format. Follow its returned upload command
+  and use the file token after the upload succeeds.
 - Task ids chain: use a successful model task where the processing tool accepts
   it. Animation requires a successful rig task, mesh completion a segment task,
   and smart segmentation a file token or URL. Rig uses the original model task,
@@ -265,9 +299,11 @@ model overrides the usage-based default. GLB is the native output — a
 
 ## Spending the user's credits
 
-- `tripo_balance` first when the user asks for several assets; confirm the
-  whole batch and its cost once before generating more than one, then call the
-  tools one asset at a time, and report `credits_consumed` after.
+- Use `tripo_balance` before spending on several assets. Confirm the steps and
+  cost for each phase of the batch, and call the tools one asset at a time.
+  For concept-first batches, present each image for acceptance before planning
+  its 3D generation, then confirm the 3D costs before generating any models.
+  Report the actual charges from `tripo_usage` after the work.
 - Error `2000` means that category's concurrency pool is full and no task was
   created: retry after `Retry-After` or once a running task of the same
   category finishes. Error `1007` is the request rate limit: wait a few

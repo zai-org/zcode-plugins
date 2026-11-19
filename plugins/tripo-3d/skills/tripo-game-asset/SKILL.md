@@ -14,21 +14,30 @@ and rig uses the original model task rather than the check task. Each
 `tripo_text_to_3d`, `tripo_image_to_3d`, `tripo_multiview_to_3d` and
 `tripo_texture` call sends `pbr: false` unless the user explicitly asks for PBR.
 
-The point of these recipes is that assets land in the project's own directory
-structure: after each final step download the file with
-`curl -L -o <project-art-dir>/<name>.<ext> "<model_url>"` (links expire after about
-2 hours — fetch fresh ones with `tripo_task_status` if needed) and report the
-local path.
+For a subject described in words, follow the `tripo-3d` concept-image workflow:
+plan and confirm the billed `tripo_generate_image` step, wait for it, show the
+image, and stop for the user's acceptance. Only after acceptance, plan and
+confirm `tripo_image_to_3d` and any requested post-processing, then use the
+accepted image task ID as `input`. Call `tripo_text_to_3d` only when the user
+explicitly asks to skip the image. A user-supplied image or multiview set goes
+directly to `tripo_image_to_3d` or `tripo_multiview_to_3d` respectively.
+
+Download the final file into the project only when the user asks to save it or
+integrate it there. Result links are short-lived; call `tripo_task_status` for
+a fresh link before use. Report the saved path when a file is downloaded.
 
 ## Pick a budget first
 
 An explicitly requested model takes priority over these recipes. If it cannot
 support a requested feature, explain the conflict and ask before changing the
-model or dropping the feature. Otherwise, explicitly choose P2 for game/realtime
-topology; within the P series the default is P2, and P1 is used only when the
-user names it or picks it for lower cost and speed; v3.1 for film/render/print.
-Confirm the selected model, texture options and estimated or unestimated cost;
-re-confirm any paid model change. The example calls below use defaults only.
+model or dropping the feature. When no model was specified, select a model that
+supports the required features first: v3.1 supports `generate_parts`,
+`smart_low_poly` and `geometry_quality: "detailed"`. Otherwise, explicitly choose
+P2 for game/realtime topology; within the P series the default is P2, and P1 is
+used only when the user names it or picks it for lower cost and speed; v3.1 for
+film/render/print. Confirm the selected model, texture options and estimated or
+unestimated cost before the billed model step; re-confirm any paid model change.
+The example calls below use defaults only and start after image acceptance.
 
 | target                        | generation call                                              | export                                       |
 | ----------------------------- | ------------------------------------------------------------ | -------------------------------------------- |
@@ -46,28 +55,32 @@ Two budget-related choices the defaults do not make for you:
 - **v3.1 quality under a face cap** — explicitly set `model: "v3.1"` when the
   user wants v3.1 geometry with a budget.
 
-Override the face budget when the project has a stricter one, e.g.
-`tripo_text_to_3d` `{ model: "P2", prompt: "a health potion bottle", face_limit: 3000, pbr: false }` →
+Override the face budget when the project has a stricter one. For example, after
+accepting a concept image of a health potion bottle and confirming this 3D chain:
+`tripo_image_to_3d` `{ input: <accepted image task>, model: "P2", face_limit: 3000, pbr: false }` →
 `tripo_convert` `{ format: "FBX", texture_size: 1024 }`.
 
 ## Props
 
-`tripo_text_to_3d` `{ model: "P2", prompt: "an ornate treasure chest, fantasy style", texture_quality: "detailed", pbr: false }`
-→ download the GLB (or → `tripo_convert` `{ format: "FBX" }` for Unity/Unreal).
+For an ornate fantasy treasure chest, first create and show a concept image as
+above. After the user accepts it and confirms the 3D chain, use
+`tripo_image_to_3d` `{ input: <accepted image task>, model: "P2", texture_quality: "detailed", pbr: false }`
+→ deliver the GLB (or → `tripo_convert` `{ format: "FBX" }` for Unity/Unreal).
 
-For a set of props, generate them one at a time and check each
-result before continuing — a bad seed early is cheaper to catch
-than at the end of a batch. Confirm the total cost of the whole set with the
-user first (`tripo_plan`, `tripo_balance`), then call the tools one asset at a
-time, and use `tripo_task_list` to check the status of many task ids in one
-call.
+For a set of props, plan and confirm the estimated or unestimated cost of the
+image batch first (`tripo_plan`, `tripo_balance`), then show the images and wait
+for acceptance. After acceptance, plan and confirm the 3D and post-processing
+steps before running them. Generate assets one at a time and check each result
+before continuing. Use `tripo_task_list` to check many task IDs in one call.
 
 ## LOD chain from one source
 
 Generate once, then one `tripo_decimate` per level — each with the **original
 generation task** as `input`, not the previous LOD:
 
-`tripo_text_to_3d` `{ model: "P2", prompt: "a stone golem", pbr: false }` (LOD0)
+After the user accepts a stone golem concept image and confirms the 3D chain:
+
+`tripo_image_to_3d` `{ input: <accepted image task>, model: "P2", pbr: false }` (LOD0)
 → `tripo_decimate` `{ input: <gen task>, face_limit: 5000 }` (LOD1)
 → `tripo_decimate` `{ input: <gen task>, face_limit: 1500 }` (LOD2)
 → `tripo_convert` `{ input: <each LOD task>, format: "FBX" }` if the engine needs FBX.
@@ -88,23 +101,32 @@ skill).
 
 ## Characters with animation
 
-1. **T-pose source.** Prompt for it (`"a knight in full armor, T-pose, standing straight"`)
-   or turn a character image into one with `tripo_generate_image`
-   `{ input: <image>, template: "t_pose" }` — rigging quality depends heavily on it.
-2. `tripo_text_to_3d` / `tripo_image_to_3d` with explicit `model: "P2"` → the
-   character model task.
+1. **Character source.** For a humanoid described in words, include a T-pose in
+   the concept-image request (for example, `"a knight in full armor, T-pose, standing
+   straight"`) and use `template: "t_pose"` when the connected image tool supports
+   it. Confirm the image cost, show the image, and wait for acceptance as above.
+   A supplied character image or multiview set can be used directly. If the user
+   asks to make a T-pose image first, confirm and run `tripo_generate_image`
+   `{ input: <image>, template: "t_pose" }`, then show it and wait for acceptance.
+2. After any required image acceptance, plan and confirm the model and
+   requested post-processing. Use `tripo_image_to_3d`
+   `{ input: <accepted image task or supplied image>, model: "P2", pbr: false }`
+   or `tripo_multiview_to_3d` for supplied multiviews. Use
+   `tripo_text_to_3d` only for an explicit request to skip the image. Pass
+   `pbr: false` unless the user requested PBR. The result is the character model task.
 3. `tripo_rig_check` `{ input: <model task> }` — free. It gates the chain: not
    riggable → stop before spending rigging credits. Read the recommended
-   `rig_type` (`biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`).
-4. `tripo_rig` `{ input: <model task>, model: "v3.0", rig_type: <from check>, spec: "mixamo", out_format: "fbx" }`
-   — rig the **original model task**, not the check task. `spec: "mixamo"`
-   gives Mixamo bone names (`"unity"` for Unity Humanoid, `"unreal"` for the UE
-   Mannequin); `spec` applies to `biped`
-   only, so drop it for the other body types (the tool rejects it). Pass
-   `model: "v3.0"` for `biped` and `model: "v2.5"` for the animal types
-   (`quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic`): the API's
-   own default, v1.0, rigs bipeds only. The result names the preset family to
-   use next.
+   `rig_type` (`biped` `quadruped` `hexapod` `octopod` `avian` `serpentine` `aquatic` `others`).
+4. `tripo_rig` on the **original model task** using the returned body type:
+   - Biped: `{ input: <model task>, model: "v3.0", rig_type: "biped", spec: "mixamo", out_format: "fbx" }`.
+     `spec: "mixamo"` gives Mixamo bone names; use `"unity"` for Unity Humanoid
+     or `"unreal"` for the UE Mannequin.
+   - Animal: `{ input: <model task>, model: "v2.5", rig_type: <animal type>, out_format: "fbx" }`
+     for `quadruped`, `hexapod`, `octopod`, `avian`, `serpentine` or `aquatic`.
+   - Other: `{ input: <model task>, model: "v3.0", rig_type: "others", out_format: "fbx" }`.
+
+   `spec` applies only to `biped`. The API's own default, v1.0, rigs bipeds
+   only. The result names the preset family to use next.
 5. `tripo_animate` `{ task_id: <rig task>, animations: [...], out_format: "fbx", animate_in_place: true }`
    — at most five clips, billed per clip. Explicit legacy v1.0 rigs take
    `preset:biped:idle` `preset:biped:walk` `preset:biped:run` `preset:biped:jump`
@@ -132,11 +154,11 @@ To animate a mesh the project already has: `tripo_upload_ticket`
 
 ## Wiring into the project
 
-After a successful chain, download the final `model_url` into the project's
-art directory and use that path for the import. Do the integration work the
-user actually asked for — add the loader call, register the prefab, update the
-asset manifest — rather than stopping at "the file is generated". Check the
-preview first so a wrong asset does not get wired in.
+When the user asks to integrate the asset into the project, download the final
+`model_url` into the project's art directory and use that path for the import.
+Do the integration work the user asked for — add the loader call, register the
+prefab, or update the asset manifest. Check the preview first so a wrong asset
+does not get wired in.
 
 Retopology: `tripo_decimate` with explicit `model: "v3.0", smart_uv: true`
 combines retopology and UVs; check current pricing. Standalone
