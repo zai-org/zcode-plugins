@@ -6,6 +6,8 @@
 速率统计行已改为确定性渲染（overlay.js 经 renderer 只读桥读取会话状态，完成的 turn
 在消息流末尾由前端插入统计行），不再向模型下达"本问统计"指令——模型零配合、零额外
 工具调用，回复末尾也不再有模型贴的统计行。
+重启/安装提醒不走本 hook：每轮注入会让模型在每条回复第一行重复弹出同一提醒
+（issue #108），改由会话启动（SessionStart）通道提醒一次。
 ⚙ 面板开关：运行时 config.json 的 answer_rate_line（缺省=开启）；关闭后每次提问
 仍记录时刻（守卫数据保持新鲜），且不再注入背景行——下一问即生效，无需重启。
 输出只包含 hook 协议字段，诊断不得混入 stdout。
@@ -60,6 +62,16 @@ def rate_line_enabled():
 
 def main():
     read_stdin()
+    # 启动策略按 agent 分流：逐问速率行依赖 ZCode 的渲染桥与 token_rate 状态文件，
+    # 其它宿主（WorkBuddy）没有这条链，静默跳过而不是写无用状态。
+    try:
+        sys.path.insert(0, str(PLUGIN_ROOT))
+        import zusage
+        if zusage.detect_agent() != zusage.AGENT_ZCODE:
+            print(json.dumps({"suppressOutput": True}, ensure_ascii=False))
+            return
+    except Exception:   # noqa: BLE001 — 判定失败按 ZCode 老路径继续
+        pass
     enabled = rate_line_enabled()   # 先判开关：关闭时不再开库查"上轮行"（白查还占锁）
     sid = os.environ.get("ZCODE_SESSION_ID") or os.environ.get("CLAUDE_SESSION_ID") or ""
     try:
@@ -71,16 +83,10 @@ def main():
     except Exception:
         prev = None
     try:
-        from restart_notice import reminder_context
-        notice = reminder_context()
-    except Exception:
-        notice = ""
-    try:
-        head = (notice + "\n") if notice else ""
         if not enabled:
-            emit(head)   # 关：只留重启提醒（若有），不注入背景行、不下达统计指令
+            emit("")   # 关：不注入背景行、不下达统计指令
             return
-        emit(head + "【内部背景·勿展示】上一条回复:" + (prev or "暂无已完成的模型请求"))
+        emit("【内部背景·勿展示】上一条回复:" + (prev or "暂无已完成的模型请求"))
     except Exception:
         emit("")
 

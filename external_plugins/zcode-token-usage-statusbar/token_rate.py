@@ -15,33 +15,155 @@
                                          的统计指令带此参数，防止模型迟迟才跑该命令时，
                                          并行会话抢先提问把"最近提问会话"状态覆盖掉）
   ZCODE_SESSION_ID=xxx python3 ...       只统计指定会话
-  ZCODE_USAGE_DB=/path/db.sqlite         指定数据库路径（默认按用户主目录解析）
+  ZCODE_USAGE_DB=/path/db.sqlite         指定数据库路径（最高优先；其次 config.json 的 hosts.zcode.db_path
+                                         显式覆盖，与 zusage 同款，issue #314；都未设时默认镜像宿主
+                                         agent 会话库解析：ZCODE_SESSION_DB_PATH/config.sessionDbPath
+                                         优先，兼容 dataBaseDir 迁移目录并仲裁陈旧候选，回落 ~/.zcode）
   ZUSAGE_RATE_STATE_FILE=/path           指定钩子状态文件（测试接缝）
 
 只读打开 WAL 数据库，不影响运行中的客户端。
 速率口径（2026-10-14 据真库 raw_usage_json 与思考段时间分布裁决）：
   分子 = output_tokens（ZCode 的该列已包含思考 token，provider 原生 totalTokens
   = input + output 不另加 reasoning，不能再相加）；
-  分母 = 纯生成时长——无思考段 completed_at − first_token_at，含思考段
-  completed_at − started_at（思考 token 在 first_token_at 之前流出，窗口须前移），
+  分母 = 纯生成时长——无思考段 completed_at − first_token_at，含思考段默认
+  completed_at − started_at（思考 token 在 first_token_at 之前流出，窗口须前移）；
+  「首块即落章」provider 例外（first_token_covers：ttft 不随推理量增长的供应商，
+  思考在首字后随输出流出，首字窗口已含思考）改用 completed_at − first_token_at。
   按段累加，段间工具等待不计入。Claude 系列不单独上报思考 token（reasoning_tokens
   恒为 0）也按含思考段计时（2026-10-15 真库裁决，见 hides_reasoning）。
+  会话均 = 全会话加权平均（Σ可评分段输出 ÷ Σ生成窗口，aggregate_requests 同款），
+  与「近N次均」的算术平均互补：长段权重自然，不被碎片小段拉偏（2026-10-30 增加）。
 """
 import json
 import math
 import os
+import re
 import sqlite3
 import sys
-import tempfile
 import time
 from pathlib import Path
 
-from runtime_lock import file_lock
-from usage_stats import (MIN_GEN_MS, MAX_GEN_MS, hides_reasoning, request_stats,
-                         aggregate_requests)
+from runtime_lock import bounded_mkstemp, file_lock
+from usage_stats import (MIN_GEN_MS, MAX_GEN_MS, hides_reasoning,
+                         request_stats, aggregate_requests, round1 as _round1)
+try:
+    from usage_stats import query_first_token_covers
+except ImportError:
+    query_first_token_covers = None
+try:
+    import token_pricing as _pricing   # v376 本轮预估费用；可选，缺失时统计行不带费用段
+except ImportError:
+    _pricing = None
 
-DB_PATH = os.environ.get("ZCODE_USAGE_DB") or str(
-    Path.home() / ".zcode" / "cli" / "db" / "db.sqlite")
+
+def _mirror_agent_db_path(value, home):
+    """宿主 localUsageEvidence.resolveMirroredSessionDbPath 镜像：~/ 展开与绝对
+    路径采纳；相对路径按 agent 工作区 cwd 解析、宿主视为无法镜像，返回 None 逐级回落。"""
+    v = str(value or "").strip()
+    if not v:
+        return None
+    if v.startswith("~/"):
+        return home / v[2:]
+    if re.match(r"^(?:[a-z]:[\\/]|\\\\|/)", v, re.IGNORECASE):
+        return Path(v)
+    return None
+
+
+def _db_write_fresh(path):
+    """库写入新鲜度：db.sqlite 与 -wal 的最新 mtime；-shm 只读连接也会更新，不入仲裁。"""
+    fresh = 0.0
+    for suffix in ("", "-wal"):
+        try:
+            fresh = max(fresh, os.stat(str(path) + suffix).st_mtime)
+        except OSError:
+            pass
+    return fresh
+
+
+def _adopt_migration_candidate(candidate, home):
+    """issue #294 陈旧迁移库仲裁（zusage._adopt_migration_candidate 内联同款，
+    改动两处同步）：3.18.0 宿主源码复核写库方（agent 链）恒写 HOME 默认库、
+    不消费 dataBaseDir，迁移目录库与 HOME 库并存时可能是历史遗留。两库并存按
+    写入新鲜度取舍：候选不落后（>=）才采纳；HOME 库未建仍采纳候选（#279 真迁移）。"""
+    home_db = home / ".zcode" / "cli" / "db" / "db.sqlite"
+    if not home_db.exists():
+        return True
+    return _db_write_fresh(candidate) >= _db_write_fresh(home_db)
+
+
+def _default_db_path(env=None, home=None):
+    """未设 ZCODE_USAGE_DB 时的默认库路径：与 zusage.resolve_db_path 同源解析
+    （issue #279 及查漏补缺——镜像宿主 agent 会话库 localUsageEvidence 序并兼容
+    3.17.x 迁移目录存在性 + issue #294 陈旧候选新鲜度仲裁；本脚本单独部署不
+    import zusage，改动两处同步）。"""
+    env = os.environ if env is None else env
+    home = Path.home() if home is None else Path(home)
+    picked = ""
+    for key, value in env.items():
+        if key in ("ZCODE_SESSION_DB_PATH", "ZCODE_SESSION_DB"):
+            picked = value or ""   # 宿主双别名按 env 键序取后（含空值，空即弃用该来源）
+    candidate = _mirror_agent_db_path(picked, home)
+    if candidate:
+        return candidate
+    try:
+        file = home / ".zcode" / "cli" / "config.json"
+        if file.exists():
+            raw = json.loads(file.read_text(encoding="utf-8-sig"))
+            storage = raw.get("storage") if isinstance(raw, dict) else None
+            candidate = _mirror_agent_db_path(
+                storage.get("sessionDbPath") if isinstance(storage, dict) else None, home)
+            if candidate:
+                return candidate
+    except Exception:
+        pass   # 缺文件/损坏忽略（宿主读不出按默认），不拖垮统计链
+    try:
+        file = home / ".zcode" / "v2" / "setting.json"
+        if file.exists():
+            raw = json.loads(file.read_text(encoding="utf-8-sig"))
+            base = str((raw.get("dataBaseDir") if isinstance(raw, dict) else "") or "").strip()
+        else:
+            base = ""
+    except Exception:
+        base = ""   # 损坏按无迁移处理；env 迁移标记不受其连累（与 Node 侧同构）
+    if not base or not re.match(r"^(?:[a-z]:[\\/]|\\\\|/)", base, re.IGNORECASE):
+        base = str(env.get("ZCODE_DATA_BASE_DIR") or "").strip()
+    if base and re.match(r"^(?:[a-z]:[\\/]|\\\\|/)", base, re.IGNORECASE):
+        candidate = Path(base) / ".zcode" / "cli" / "db" / "db.sqlite"
+        if candidate.exists() and _adopt_migration_candidate(candidate, home):
+            return candidate
+    return home / ".zcode" / "cli" / "db" / "db.sqlite"
+
+
+def _configured_db_path(home=None, script_dir=None):
+    """config.json 的 hosts.zcode.db_path 显式覆盖（issue #314，规格 specs/db-path-config-override.md）：
+    与 zusage.zcode_db_path 同款——两跳 config（脚本同目录 → ~/.zcode/zcode-token-usage-statusbar/
+    config.json，UTF-8），hosts.zcode 对象先到者整段胜出（其 db_path 为空也遮蔽后一跳），非空串
+    经 expandvars/expanduser；不检查存在性、不仲裁（显式来源即写库位）。本脚本单独部署不 import
+    zusage，改动两处同步。缺失/损坏/无法展开一律返回 None（当未配置）：DB_PATH 在导入期求值，
+    抛异常会连带丢掉 hook 的 write_session_state。"""
+    home = Path.home() if home is None else Path(home)
+    script_dir = Path(__file__).parent if script_dir is None else Path(script_dir)
+    for file in (script_dir / "config.json",
+                 home / ".zcode" / "zcode-token-usage-statusbar" / "config.json"):
+        try:
+            data = json.loads(file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        hosts = data.get("hosts") if isinstance(data, dict) else None
+        entry = hosts.get("zcode") if isinstance(hosts, dict) else None
+        if not isinstance(entry, dict):
+            continue
+        raw = entry.get("db_path")
+        if not (isinstance(raw, str) and raw.strip()):
+            return None   # 先到者整段胜出：空值同样遮蔽后一跳（与 zusage 一致）
+        try:
+            return Path(os.path.expandvars(raw.strip())).expanduser()
+        except (RuntimeError, OSError):
+            return None   # ~user 无法展开：当未配置，不在导入期抛
+    return None
+
+
+DB_PATH = os.environ.get("ZCODE_USAGE_DB") or str(_configured_db_path() or _default_db_path())
 # 钩子状态文件：记录"用户最后所处的会话"与最近提问时刻（--current 守卫依赖 promptTs）
 STATE_FILE = os.environ.get("ZUSAGE_RATE_STATE_FILE") or str(
     Path.home() / ".zcode" / "zusage-rate.last-session.json")
@@ -102,7 +224,7 @@ def write_session_state(session_id, source):
             data = {"sessionId": session_id, "ts": now, "source": source, "prompts": prompts}
             if session_id in prompts:
                 data["promptTs"] = prompts[session_id]
-            fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+            fd, tmp = bounded_mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 json.dump(data, stream)
             _replace_state_file(tmp, path)
@@ -112,7 +234,7 @@ def write_session_state(session_id, source):
         if tmp is not None:
             try:
                 os.unlink(tmp)
-            except FileNotFoundError:
+            except OSError:
                 pass
 
 
@@ -139,11 +261,28 @@ def fallback_session_id(db):
     return row[0] if row else None
 
 
+def _has_col(db, name):
+    """旧库/测试桩可能缺列（见 _provider_fallback 的同款降级）：缺列时不把该列选进
+    scope，消费端按缺省容错，别让整条查询崩掉。"""
+    if db is None:
+        return False
+    try:
+        return any(r[1] == name for r in db.execute("pragma table_info(model_usage)"))
+    except sqlite3.OperationalError:
+        return False
+
+
+def _has_provider_col(db):
+    return _has_col(db, "provider_id")
+
+
 def scope_for(db, sid):
     """有 main_turn 数据时只统计 main_turn，否则回退为该会话全部请求。"""
     cols = ("model_id, output_tokens, reasoning_tokens, input_tokens,"
             " cache_read_input_tokens, started_at, first_token_at, completed_at,"
             " time_to_first_token_ms, status")
+    if _has_provider_col(db):
+        cols += ", provider_id"
     base = f"select {cols} from model_usage where status='completed' and query_source='main_turn'"
     tail = " and session_id = ?" if sid else ""
     args = [sid] if sid else []
@@ -157,27 +296,41 @@ def scope_for(db, sid):
     return base + tail, args
 
 
-def to_item(r):
-    item = request_stats(r)
+def first_token_covers(db):
+    """「首块即落章」provider 集合（委派 usage_stats.query_first_token_covers，与
+    zusage._provider_first_token_covers 同源；若运行目录 usage_stats.py 因热修保留为
+    旧版则回退为空集合，绝不因 ImportError 中断逐问速率）。"""
+    if query_first_token_covers is None:
+        return frozenset()
+    return query_first_token_covers(db)
+
+
+def to_item(r, covers=frozenset()):
+    item = request_stats(r, covers)
     item.update(inputTokens=r["input_tokens"] or 0,
                 cacheRead=r["cache_read_input_tokens"] or 0)
     return item
 
 
-def session_aggregate(db, scope_sql, args, rated):
-    """会话累计用独立 SUM（不受窗口限制）；均/峰由已评分窗口计算。"""
+def session_aggregate(db, scope_sql, args, rated, covers=frozenset()):
+    """会话累计用独立 SUM（不受窗口限制）；均/峰由已评分窗口计算。
+    sessionAvg = 全会话加权平均：把 scope 内全部行过一遍 request_stats 后交给
+    aggregate_requests（Σ可评分输出 ÷ Σ生成窗口），长段权重自然；「近N次均」是
+    算术平均，两者互补。全会话行数即会话请求量（几百行毫秒级），一次性进程可接受。"""
     if db is None:
         return None
     row = db.execute(
         f"select count(*), coalesce(sum(output_tokens),0), coalesce(sum(reasoning_tokens),0),"
         f" coalesce(sum(input_tokens),0), coalesce(sum(cache_read_input_tokens),0)"
         f" from ({scope_sql})", args).fetchone()
+    whole = aggregate_requests(to_item(r, covers) for r in db.execute(scope_sql, args))
     return {
         "samples": len(rated),
         "requests": row[0],
         "avg": _round1(sum(i["tokPerSec"] for i in rated) / len(rated)) if rated else None,
         "max": max(i["tokPerSec"] for i in rated) if rated else None,
         "min": min(i["tokPerSec"] for i in rated) if rated else None,
+        "sessionAvg": whole["tokPerSec"],
         "totalOutput": row[1],
         "totalReasoning": row[2],
         "totalInput": row[3],
@@ -194,10 +347,11 @@ def query_latest(session_id=None):
         if db is None:
             items, rated, session = [], [], None
         else:
+            covers = first_token_covers(db)
             rows = db.execute(scope_sql + " order by completed_at desc limit ?", args + [N]).fetchall()
-            items = [to_item(r) for r in rows]
+            items = [to_item(r, covers) for r in rows]
             rated = [i for i in items if i["tokPerSec"] is not None]
-            session = session_aggregate(db, scope_sql, args, rated)
+            session = session_aggregate(db, scope_sql, args, rated, covers)
         latest = items[0] if items else None
         return {"sessionId": sid, "latest": latest, "session": session, "history": items[::-1]}
     finally:
@@ -249,9 +403,10 @@ def query_turn(session_id=None, current=False, turn_id=None):
         scope_sql, args = scope_for(db, sid)
         session = None
         if db is not None:
+            covers = first_token_covers(db)
             win = db.execute(scope_sql + " order by completed_at desc limit ?", args + [N]).fetchall()
-            rated = [i for i in map(to_item, win) if i["tokPerSec"] is not None]
-            session = session_aggregate(db, scope_sql, args, rated)
+            rated = [i for i in (to_item(r, covers) for r in win) if i["tokPerSec"] is not None]
+            session = session_aggregate(db, scope_sql, args, rated, covers)
         prompt_ts = last_prompt_ts(sid) if current else None
         if current and turn_id is None and prompt_ts is None:
             return {"sessionId": sid, "turnId": None, "turn": None,
@@ -276,10 +431,19 @@ def query_turn(session_id=None, current=False, turn_id=None):
             if current:
                 result.update(noCurrentTurnData=True, currentTurnUnavailableReason="noMatchingTurn")
             return result
-        items = [to_item(r) for r in rows]
+        items = [to_item(r, covers) for r in rows]
         turn = aggregate_requests(items)
         turn.update(ttftMs=items[0]["ttftMs"], firstAt=items[0]["completedAt"],
                     lastAt=max(i["completedAt"] for i in items))
+        # v376 本轮模型 id（首次出现顺序去重，供统计行前置）与本轮预估费用 USD
+        seen_models = []
+        for it in items:
+            mid = it.get("model")
+            if mid and mid not in seen_models:
+                seen_models.append(mid)
+        turn["models"] = seen_models
+        _pricing_configure_for_cost()
+        turn["cost_usd"] = _turn_cost(db, sid, turn_id)
         return {"sessionId": sid, "turnId": turn_id, "turn": turn, "session": session,
                 "turnIdentitySource": identity_source,
                 "currentTurnIdentityVerified": identity_source == "explicitTurnId"}
@@ -301,6 +465,17 @@ def fmt_compact(n):
 
 def fmt_num(n):
     return f"{n:,}"
+
+
+def fmt_kmb(n):
+    # 在原始 token 数上做半数进位，避免浮点缩放及 Python 偶数舍入差异。
+    if n >= 1_000_000_000:
+        return f"{(n + 5_000_000) // 10_000_000 / 100:.2f}B"
+    if n >= 1_000_000:
+        return f"{(n + 5_000) // 10_000 / 100:.2f}M"
+    if n >= 1000:
+        return f"{(n + 50) // 100 / 10:.1f}K"
+    return str(n)
 
 
 # 万/亿单位（本问统计行缺省；渲染端「中文单位」开关关闭时经 --no-cn-units 退回千分位/k）：≥1 亿用亿、
@@ -332,32 +507,136 @@ def _sec(ms):
     return f"{ms / 1000:.1f}" if isinstance(ms, (int, float)) else "-"
 
 
-def _round1(x):
-    """一位小数；整数值去掉 .0（JS Math.round 的显示口径：400 而非 400.0）。"""
-    r = round(x, 1)
-    return int(r) if r == int(r) else r
+def _gen_duration(ms):
+    """本轮行「生成 <耗时>」：分级中文单位（overlay-ui.md 时间文案规范）。
+    <60s 沿用 _sec 一位小数 `3.2s`；≥60s `7分44.8秒`；≥1h `1时2分4.8秒`。
+    秒保留一位小数、分/时取整不补零，数字与单位紧邻。非数值/≤0 返回 `-`/`0.0s`。"""
+    if not isinstance(ms, (int, float)):
+        return "-"
+    if ms <= 0:
+        return "0.0s"
+    secs = ms / 1000
+    # 先四舍五入到 0.1s 再分档：59.95s 起按 60.0s 走分档（输出 `1分0.0秒`），
+    # 避免秒档冒出 `60.0s` 或分档冒出 `59分60.0秒`，与「≥60s 用分秒」规范一致。
+    total_tenths = int(round(secs * 10))
+    if total_tenths < 600:
+        return f"{total_tenths / 10:.1f}s"
+    minutes, sec10 = divmod(total_tenths, 600)   # 600 个 0.1s = 1 分；商=分钟、余=0.1s
+    hours, minutes = divmod(minutes, 60)          # 60 分钟 = 1 时
+    sec_txt = f"{sec10 / 10:.1f}秒"
+    if hours:
+        return f"{hours}时{minutes}分{sec_txt}"
+    return f"{minutes}分{sec_txt}"
+
+
+def _money(usd):
+    """USD → 显示串（与 zusage._wb_money / overlay.fmtMoney 同口径）：有汇率走 ¥，否则 $；
+    非有限/缺失返回 None（调用方整段省略，不显假 0）。价表模块缺失/汇率读失败按无汇率降 $。"""
+    if not isinstance(usd, (int, float)) or isinstance(usd, bool) or not math.isfinite(usd):
+        return None
+    rate = 0
+    if _pricing is not None:
+        try:
+            rate = float((_pricing.fx_view() or {}).get("rate") or 0)
+        except Exception:
+            rate = 0
+    if rate > 0:
+        v = usd * rate
+        return "<¥0.01" if 0 < v < 0.01 else f"¥{v:.2f}"
+    return "<$0.01" if 0 < usd < 0.01 else f"${usd:.2f}"
+
+
+def _pricing_configure_for_cost():
+    """让 token_pricing 定位 pricing-cache.json（汇率/运行时牌价）：config.json
+    两跳与 _configured_db_path 同路径。任何失败静默，费用段按无汇率/内置价表降级。"""
+    if _pricing is None:
+        return
+    try:
+        home = Path.home()
+        script_dir = Path(__file__).parent
+        cfg = None
+        for file in (script_dir / "config.json",
+                     home / ".zcode" / "zcode-token-usage-statusbar" / "config.json"):
+            try:
+                cfg = json.loads(file.read_text(encoding="utf-8"))
+                break
+            except (OSError, ValueError):
+                continue
+        # config_dir=None：让 token_pricing 自己走「脚本目录 → ~/.zcode/zcode-token-usage-statusbar
+        # 」双基地探测（与 zusage 一致）。不硬传 script_dir——否则源码 clone/混装时 config.json
+        # 在 HOME 运行目录、pricing-cache.json 却定位到 clone，汇率不可得误显 $。
+        _pricing.configure(cfg, None)
+    except Exception:
+        pass
+
+
+def _turn_cost(db, sid, turn_id):
+    """本轮预估费用（USD）：本轮已完成行按 (model_id, provider_id) 计价求和。
+    直接查 model_usage（不经 scope_for——它的 SELECT 未含 turn_id/缓存写列，套子查询会
+    缺列），turn_id 即本轮身份，已完成行即可；价表缺失/查询失败/无有效分组返回 None
+    （消费端整段省略，不显假 0）。"""
+    if _pricing is None or db is None:
+        return None
+    try:
+        has_provider = _has_provider_col(db)
+        has_creation = _has_col(db, "cache_creation_input_tokens")
+        creation = "cache_creation_input_tokens" if has_creation else "0"
+        cols = (f"input_tokens, output_tokens, cache_read_input_tokens, {creation} as cw, model_id"
+                + (", provider_id" if has_provider else ""))
+        rows = db.execute(
+            f"select {cols} from model_usage where status='completed' and turn_id = ?"
+            + (" and session_id = ?" if sid else ""),
+            (turn_id, sid) if sid else (turn_id,),
+        ).fetchall()
+        groups = []
+        for r in rows:
+            groups.append((r["model_id"] or "", (r["provider_id"] or "") if has_provider else "",
+                           r["input_tokens"] or 0, r["output_tokens"] or 0,
+                           r["cache_read_input_tokens"] or 0, r["cw"] or 0))
+        if not groups:
+            return None
+        return _pricing.merge_model_costs(groups)[0]
+    except Exception:
+        return None
+
+
+# _round1 已由 usage_stats.round1 导入
 
 
 # 本问统计行（回复收尾自测用）。调用方判定 turn 为空时（含 --current 守卫）不显示任何行。
 # cn 缺省 True 与渲染端「中文单位」开关默认开启一致；只有开关关闭时 inject-main 才传 --no-cn-units。
-def format_turn_line(r, cn=True):
+def format_turn_line(r, cn=True, force_kmb=False, cost=True):
     t = r.get("turn")
     if not t:
         return "暂无本轮请求记录"
-    num = fmt_cn if cn else fmt_num
-    big = fmt_cn if cn else fmt_compact
+    num = fmt_kmb if force_kmb else (fmt_cn if cn else fmt_num)
+    big = fmt_kmb if force_kmb else (fmt_cn if cn else fmt_compact)
+    # v376 本轮模型 id 去重前置（首次出现顺序，空 id 跳过；旧快照/无模型时不拼）
+    seen = []
+    for m in (t.get("models") or []):
+        if m and m not in seen:
+            seen.append(str(m))
+    model_prefix = "/".join(seen) + " " if seen else ""
+    gen = _gen_duration(t['genMs']) if t.get('genMs') > 0 else '-'
     parts = [
-        f"⚡ {t['tokPerSec'] if t['tokPerSec'] is not None else '-'} token/s(本轮)",
+        f"⚡ {model_prefix}{t['tokPerSec'] if t['tokPerSec'] is not None else '-'} token/s(本轮)",
         f"首字 {_sec(t['ttftMs'])}s",
         f"输出 {num(t['totalOutput'])}"
         f"{'(含 ' + num(t['totalReasoning']) + ' 思考)' if t['totalReasoning'] else ''}"
-        f" token / 生成 {_sec(t['genMs']) if t['genMs'] > 0 else '-'}s",
+        f" token / 生成 {gen}",
     ]
     if t["requests"] > 1:
         parts.append(f"{t['requests']} 段 / 峰 {t['peak']} token/s" if t["peak"] is not None else f"{t['requests']} 段 / 峰 -")
     if r.get("session"):
         s = r["session"]
+        if s.get("sessionAvg") is not None:
+            parts.append(f"会话均 {s['sessionAvg']} token/s")
         parts.append(f"累计 {big(s['totalOutput'])} token")
+    # v376 本轮预估费用（受 --no-cost 门控）：价表/费用不可得整段省略，不显假 0
+    if cost:
+        money = _money(t.get("cost_usd"))
+        if money is not None:
+            parts.append(f"预估费用 {money}")
     parts.append(f"⏱ {_cn_fulltime(t['lastAt'])}")
     return " · ".join(parts)
 
@@ -378,6 +657,8 @@ def format_line(r):
     if s:
         if s["samples"]:
             parts.append(f"近{s['samples']}次均 {s['avg']} / 峰 {s['max']} token/s")
+        if s.get("sessionAvg") is not None:
+            parts.append(f"会话均 {s['sessionAvg']} token/s")
         parts.append(f"累计 {fmt_compact(s['totalOutput'])} token")
     parts.append(f"⏱ {_hhmmss(l['completedAt'])}")
     return " · ".join(parts)
@@ -406,7 +687,9 @@ def main(argv):
         if json_out:
             print(json.dumps(r, ensure_ascii=False))
         elif r.get("turn"):
-            print(format_turn_line(r, cn="--no-cn-units" not in argv))
+            print(format_turn_line(r, cn="--no-cn-units" not in argv,
+                                   force_kmb="--force-kmb" in argv,
+                                   cost="--no-cost" not in argv))
         # --current 且本问尚无数据：不输出任何行，调用方据此不显示统计（绝不回退到上一轮）
     else:
         r = query_latest(sid)
@@ -419,7 +702,8 @@ def main(argv):
                 print(f"会话累计:输出 {fmt_num(s['totalOutput'])}"
                       f"{'(含 ' + fmt_num(s['totalReasoning']) + ' 思考)' if s['totalReasoning'] else ''}"
                       f" token · 输入 {fmt_num(s['totalInput'])} token(其中缓存读 {fmt_num(s['totalCacheRead'])})"
-                      f" · 请求 {s['requests']} 次")
+                      f" · 请求 {s['requests']} 次"
+                      f"{' · 平均 ' + str(s['sessionAvg']) + ' token/s' if s.get('sessionAvg') is not None else ''}")
     return 0
 
 

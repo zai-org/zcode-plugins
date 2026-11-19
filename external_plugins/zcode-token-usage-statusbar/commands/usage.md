@@ -8,17 +8,18 @@ argument-hint: [today|week|days:N|sessions|models|session:<id前缀>|workspace:<
 
 1. 优先调用 MCP 工具 `token_usage`（本插件 zcode-token-usage-statusbar 提供的 stdio server）。
 2. 若该工具不可用（未启用/未注册），退回用 Bash 直接跑 CLI，插件根目录即本命令文件所在目录的上一级：
-   `python3 "<插件根目录>/zusage.py" <子命令>`
+   `python3 "<插件根目录>/zusage.py" <子命令>`（Windows 上 `python3` 可能是 Microsoft Store 存根会静默失败，依次改用 `python`、`py -3`；macOS/Linux 用 `python3`）
 
 参数规则（$ARGUMENTS），括号内为 CLI 子命令对照：
 
-- 为空或 "now" → scope=current（子命令 now）
-- "today" → scope=today（子命令 today）
-- "week" → scope=week；"近N天" → scope=days:N（N=天数；用户没给 N 就用 week）（子命令 days N）
-- "sessions" → scope=sessions；"最近N个会话" → scope=sessions:N（子命令 sessions [N]）
-- "models" → scope=models；"按模型近N天" → scope=models:N（子命令 models [days]）
+- 为空或 "now" → scope="current"（子命令 now）
+- "today" → scope="today"（子命令 today）
+- "week" → scope=week（子命令 days 7）；"近N天" → scope="days:N"（N=天数；用户没给 N 就用 week）
+- "sessions" → scope="sessions"；"最近N个会话" → scope="sessions:N"（子命令 sessions [N]）
+- "models" → scope="models"；"按模型近N天" → scope="models:N"（子命令 models [days]）
 - "session:<会话id前缀>" → 原样传入（返回该会话总量+按模型+子代理明细）（子命令 session <前缀>）
-- 统计某个工作区/项目（如"XX 工作区/项目用了多少 token"）→ scope=workspace:<目录名子串>。用户用中文或简称称呼工作区时，先从需求推断实际目录名的特征子串（缩写式称呼可直接传，工具支持单词首字母缩写匹配）；未命中时工具会列出候选目录，照着换更准的子串重试（子命令 workspace <关键词>）
+- 统计某个工作区/项目（如"XX 工作区/项目用了多少 token"）→ scope="workspace:<目录关键词>"。用户用中文或简称称呼工作区时，先从需求推断实际目录名的特征子串（缩写式称呼可直接传，工具支持单词首字母缩写匹配）；未命中时工具会列出候选目录，照着换更准的子串重试（子命令 workspace <关键词>）
+- 用户明确要查 **WorkBuddy** 的用量（如"workbuddy 今天用了多少"）→ 额外传 host="workbuddy"（CLI 加 `--host workbuddy`）；其余情况不传 host（跟随配置，默认 ZCode）。WorkBuddy 可给上下文占比、credit、token 分项、近似速度、工具调用与预估费用（价表未收录的模型报表标「不可得」）；缺 `wb_usage.py` 的精简部署只剩上下文与 credit。照报表如实转述，不要补造数字
 - 其他输入 → 原样作为 scope 传入
 
 用户附加要求：$ARGUMENTS

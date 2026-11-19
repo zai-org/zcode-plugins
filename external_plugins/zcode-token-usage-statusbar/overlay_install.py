@@ -18,12 +18,10 @@ sync_plugin.py 生成的副本；本脚本把副本同步进稳定运行时目�
 测试接缝（环境变量）：ZUSAGE_PLUGIN_RUNTIME / ZUSAGE_PLUGIN_ASAR 可把运行时目录和
 目标 asar 指到别处（自测用临时副本，不碰真机）。
 
-自动安装开关（默认开，SessionStart hook 自动执行安装/修复）：
-  运行时目录 config.json 写 "plugin_auto_install_overlay": false 可关闭；
-  配置损坏或字段不是布尔值时不自动安装，环境变量 ZUSAGE_PLUGIN_AUTO_INSTALL 优先。
-
-提示豁免：运行时目录写 .plugin-overlay-optout 后 hook 永久静默（remove 自动写入）；
-未安装时每次 SessionStart 都提示；旧 .plugin-overlay-nudge 不再阻止提示，安装成功后清除。
+自动安装（始终开启，SessionStart hook 自动执行安装/修复）：未注入时 hook 直接
+安装，不再有开关；安装失败才有故障提示。不想安装用 /uninstall-overlay
+（remove 写 .plugin-overlay-optout 豁免标记，hook 永久静默，不重注入不提示）；
+旧 .plugin-overlay-nudge 不再阻止提示，安装成功后清除。
 """
 import contextlib
 import hashlib
@@ -34,17 +32,31 @@ import shutil
 import signal
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
 PLUGIN_ROOT = Path(__file__).parent.resolve()
+# 手动命令模板里的解释器：用当前真实解释器绝对路径，不猜 python/python3 别名
+# （Windows 上 python3 可能是 Microsoft Store 存根会静默失败；用户反馈 2026-11-03）
+PYEXE = sys.executable or "python"
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
-from runtime_lock import file_lock, update_config
-# 会同步进运行时目录的插件副本（usage_mcp.py 不在其中：MCP 直接从插件目录跑）
+from runtime_lock import (
+    bounded_mkstemp,
+    bounded_tempdir,
+    file_lock,
+    fixed_drives,
+    real_home as _rt_real_home,
+    sudo_user as _rt_sudo_user,
+    update_config,
+)
+# 会同步进运行时目录的插件副本（usage_mcp.py 与 overlay_install.py 自身等插件入口
+# 不在其中：它们从插件目录跑；inject-main.cjs 的相对 require 依赖必须全数在列，
+# test_plugin_package 按此不变量守护）
 RUNTIME_FILES = [
     "inject-main.cjs",
+    "mobile-relay.cjs",
+    "mobile_relay_patch.py",
     "overlay.js",
     "zusage.py",
     "patch_install.py",
@@ -53,38 +65,161 @@ RUNTIME_FILES = [
     "plugin-release.cjs",
     "plugin-storage.cjs",
     "quota-client.cjs",
+    "model-puller.cjs",
+    "engine-patch.cjs",
+    "sysmon-client.cjs",
     "release_unpack.py",
     "runtime_lock.py", "usage_stats.py", "turn-stats.js",
-    "token_rate.py", "renderer_bridge.py",
+    "token_rate.py", "renderer_bridge.py", "token_pricing.py",
+    "pending_zip_patch.py",
 ]
 
 
 def sudo_user():
     """sudo 运行时的真实用户名（POSIX；非 sudo / Windows 返回 None）。"""
-    if sys.platform == "win32" or not os.environ.get("SUDO_USER"):
-        return None
-    try:
-        return os.environ["SUDO_USER"] if os.geteuid() == 0 else None
-    except AttributeError:
-        return None
+    return _rt_sudo_user(sys.platform)
 
 
 def real_home():
     """真实用户家目录：sudo 会重置 HOME，Path.home() 指向 /root，而运行时目录、config.json
-    与 hook 都以普通用户身份读写，必须落在 SUDO_USER 的家里（与根目录 install.py 同源）。
-    Linux 上 /opt 等系统安装位置写入需要 root，这是本函数存在的唯一场景。"""
-    user = sudo_user()
-    if user:
-        try:
-            import pwd
-            return Path(pwd.getpwnam(user).pw_dir)
-        except (KeyError, OSError, ImportError):
-            pass
-    return Path.home()
+    与 hook 都以普通用户身份读写，必须落在 SUDO_USER 的家里（与根目录 install.py 同源）。"""
+    return _rt_real_home(sudo_user, Path.home)
 
 
 def default_runtime():
     return real_home() / ".zcode" / "zcode-token-usage-statusbar"
+
+
+# 独立安装器（仓库根 install.py）把 MCP 服务注册在宿主 CLI 配置的 mcp.servers 里；插件渠道
+# 另由 .mcp.json 注册同一工具。两条渠道并存时宿主每个会话会各拉起一份 usage_mcp.py
+# （插件侧还多一个 node mcp-launch 包装），内存占用翻倍；运行目录里的副本还可能停在旧版本。
+# 插件渠道已经提供 MCP，这里只清指向本插件脚本的遗留条目，绝不改用户其它 MCP 服务。
+LEGACY_MCP_NAMES = ("zcode-token-usage-statusbar", "token-usage", "zusage")
+LEGACY_MCP_ENTRY_KEYS = frozenset(("command", "args", "type", "enabled"))
+
+
+def host_cli_config():
+    """宿主 CLI 的 MCP 配置文件（与 install.py 的 ZCODE_CONFIG 同源）。"""
+    override = os.environ.get("ZUSAGE_PLUGIN_HOST_CONFIG")   # 测试/排障接缝
+    if override:
+        try:
+            return Path(override).expanduser()
+        except (OSError, RuntimeError):   # 坏形态（如 ~未知用户）按字面路径处理，is_file 自然为 False
+            return Path(override)
+    return real_home() / ".zcode" / "cli" / "config.json"
+
+
+def _mcp_string_values(value):
+    """注册项内全部字符串（command/args 以及历史版本可能嵌套的列表）。"""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, list):
+        for item in value:
+            yield from _mcp_string_values(item)
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _mcp_string_values(item)
+
+
+def _owned_usage_mcp(entry, roots):
+    """注册项是否指向本插件的 usage_mcp.py。
+
+    只认 command/args/type/enabled 这组形态（install.py 生成的正是它）；带 env 等自定义
+    键的条目可能是用户手改过的，保留不猜。路径父目录必须正好是运行目录或插件目录——
+    同名服务指向别处（其它工具/别的仓库）一律不动。"""
+    if not isinstance(entry, dict) or set(entry) - LEGACY_MCP_ENTRY_KEYS:
+        return False
+    normal_roots = set()
+    for root in roots:
+        try:
+            normal_roots.add(os.path.normcase(str(Path(root).expanduser().resolve(strict=False))))
+        except (OSError, RuntimeError):
+            continue
+    for raw in _mcp_string_values(entry):
+        candidate = Path(os.path.expandvars(raw)).expanduser()
+        if candidate.name.lower() != "usage_mcp.py":
+            continue
+        try:
+            parent = candidate.resolve(strict=False).parent
+        except (OSError, RuntimeError):
+            parent = candidate.parent
+        if os.path.normcase(str(parent)) in normal_roots:
+            return True
+    return False
+
+
+def _legacy_mcp_names(servers, roots):
+    return [name for name in LEGACY_MCP_NAMES
+            if name in servers and _owned_usage_mcp(servers[name], roots)]
+
+
+def dedupe_legacy_mcp(runtime=None, plugin_root=None):
+    """移除独立安装遗留的 MCP 注册，消除每会话双份 usage_mcp 进程。
+
+    返回 removed / absent / skipped-invalid / skipped-locked / skipped-io / skipped-env。
+    永不抛异常：SessionStart hook 的任何失败都不能影响会话。结构异常（顶层非对象、mcp 或
+    mcp.servers 不是对象）一律原样保留；锁内重读再改，同目录备份 + 原子替换消除截断窗口。
+    """
+    if os.environ.get("ZUSAGE_KEEP_LEGACY_MCP"):
+        return "skipped-env"
+    config = host_cli_config()
+    try:
+        if not config.is_file():
+            return "absent"
+    except OSError:
+        return "absent"
+    runtime = Path(runtime or os.environ.get("ZUSAGE_PLUGIN_RUNTIME") or default_runtime())
+    roots = [runtime, Path(plugin_root or PLUGIN_ROOT)]
+
+    def load():
+        try:
+            data = json.loads(config.read_text(encoding="utf-8-sig"))
+        except FileNotFoundError:
+            return "absent", None, None
+        except (OSError, ValueError):
+            return "invalid", None, None
+        if not isinstance(data, dict):
+            return "invalid", None, None
+        mcp = data.get("mcp")
+        if mcp is None:
+            return "absent", None, None
+        if not isinstance(mcp, dict):
+            return "invalid", None, None
+        servers = mcp.get("servers")
+        if servers is None:
+            return "absent", None, None
+        if not isinstance(servers, dict):
+            return "invalid", None, None
+        return "ok", data, _legacy_mcp_names(servers, roots)
+
+    state, data, gone = load()
+    if state != "ok":
+        return "absent" if state == "absent" else "skipped-invalid"
+    if not gone:
+        return "absent"
+    lock_path = runtime / "legacy-mcp.lock"   # 锁放运行目录，不往宿主 CLI 配置目录添文件
+    try:
+        with file_lock(lock_path, timeout=5.0):
+            state, data, gone = load()   # 锁内重读：不覆盖并发会话刚写入的其它改动
+            if state != "ok":
+                return "absent" if state == "absent" else "skipped-invalid"
+            if not gone:
+                return "absent"
+            servers = data["mcp"]["servers"]
+            for name in gone:
+                del servers[name]
+            try:   # 备份失败不阻塞清理；config 本身损坏时另有 invalid 分支
+                shutil.copy2(config, config.with_name(config.name + ".zusage-mcp.bak"))
+            except OSError:
+                pass
+            _atomic_write(config, json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8"), src=config)
+    except TimeoutError:
+        return "skipped-locked"
+    except OSError:
+        return "skipped-io"
+    print("[zusage-plugin] 已移除独立安装遗留的 MCP 注册 {}：插件 .mcp.json 已提供同一工具，"
+          "避免每个会话双份 usage_mcp 进程。".format(", ".join(gone)), file=sys.stderr)
+    return "removed"
 
 
 SYSTEM_NODE_LOCATIONS = ("/usr/local/bin/node", "/usr/bin/node", "/usr/bin/nodejs")
@@ -146,16 +281,6 @@ def load_runtime_config(runtime):
     return config if isinstance(config, dict) else None
 
 
-def fixed_drives(letters):
-    """本地固定盘盘符：离线的映射网络盘一被访问就触发重连（可卡数秒），光驱/读卡器可能无介质。"""
-    try:
-        import ctypes
-        drive_type = ctypes.windll.kernel32.GetDriveTypeW
-    except (ImportError, AttributeError, OSError):
-        return []
-    return [letter for letter in letters if drive_type(f"{letter}:\\") == 3]   # DRIVE_FIXED
-
-
 def asar_candidates():
     """仅枚举当前平台常见位置；候选仍须通过包身份校验。"""
     if sys.platform == "darwin":
@@ -170,11 +295,12 @@ def asar_candidates():
                              ("LOCALAPPDATA", "ZCode"), ("ProgramFiles", "ZCode")):
         if os.environ.get(variable):
             candidates.append(Path(os.environ[variable]) / suffix / "resources/app.asar")
-    # 自定义盘符安装（如 D:\Program Files\ZCode）：逐个本地固定盘枚举两种常见布局；
-    # %ProgramFiles% 只跟系统盘走。候选仍须通过 is_zcode_asar 包身份校验。
+    # 自定义盘符安装（如 D:\Program Files\ZCode）：逐个本地固定盘枚举三种常见布局
+    # （%ProgramFiles% 只跟系统盘走；盘根 Programs/ZCode 是用户自装位置）。候选仍须通过
+    # is_zcode_asar 包身份校验。
     candidates.extend(Path(f"{letter}:/{folder}/resources/app.asar")
                       for letter in fixed_drives("DEFGHIJKLMNOPQRSTUVWXYZ")
-                      for folder in ("Program Files/ZCode", "ZCode"))
+                      for folder in ("Program Files/ZCode", "Programs/ZCode", "ZCode"))
     if os.environ.get("LOCALAPPDATA"):
         programs = Path(os.environ["LOCALAPPDATA"]) / "Programs"
         candidates.extend(sorted(programs.glob("*/resources/app.asar")))
@@ -183,18 +309,9 @@ def asar_candidates():
 
 def is_zcode_asar(pi, asar):
     """生产目标必须由 asar 内 package.json 的 name 确认为 ZCode。"""
-    try:
-        with asar.open("rb") as stream:
-            header, base = pi.read_header(stream)
-            node = header["files"]["package.json"]
-            if node.get("unpacked"):
-                return False
-            stream.seek(base + int(node["offset"]))
-            package = json.loads(stream.read(int(node["size"])).decode("utf-8"))
-        name = package.get("name")
-        return isinstance(name, str) and "zcode" in name.lower()
-    except Exception:
-        return False
+    pkg = load_patch_install().read_asar_package(asar, pi=pi)
+    name = pkg.get("name") if pkg else None
+    return isinstance(name, str) and "zcode" in name.lower()
 
 
 def resolve_paths(runtime=None):
@@ -261,7 +378,7 @@ def _version_key(version):
 def _atomic_write(dst, data, src=None):
     """同目录原子替换；已有运行时内容改变必须产生不同 mtime 供 loader 检测。"""
     previous_stat = dst.stat() if src is not None and dst.exists() else None
-    fd, temporary = tempfile.mkstemp(prefix="." + dst.name + ".", dir=str(dst.parent))
+    fd, temporary = bounded_mkstemp(prefix="." + dst.name + ".", dir=str(dst.parent))
     temporary = Path(temporary)
     try:
         with os.fdopen(fd, "wb") as stream:
@@ -277,7 +394,7 @@ def _atomic_write(dst, data, src=None):
     finally:
         try:
             temporary.unlink()
-        except FileNotFoundError:
+        except OSError:
             pass
 
 
@@ -290,14 +407,16 @@ def _run_verifier(command, env):
     Windows 上之后还会不限时地读完输出管道，子孙若继承了管道就永远等不到 EOF。
     收尾总耗时有界（taskkill 3 秒、回收 2 秒），叠加后仍在更新器 30 秒时限内。"""
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
-                               start_new_session=os.name != "nt")
+                               start_new_session=os.name != "nt",
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))   # issue #227：GUI 候选（ZCode.exe）不受影响，回退控制台子系统 node.exe 时不再弹终端窗；POSIX 取 0 等价
     try:
         stdout, stderr = process.communicate(timeout=VERIFY_TIMEOUT)
     except subprocess.TimeoutExpired:
         if os.name == "nt":
             try:
                 subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))   # issue #227
             except (OSError, subprocess.SubprocessError):
                 pass
             process.kill()
@@ -316,6 +435,40 @@ def _run_verifier(command, env):
         raise
     return subprocess.CompletedProcess(command, process.returncode, stdout.decode("utf-8", "replace"),
                                        stderr.decode("utf-8", "replace"))
+
+
+def _identity_diff(before, after):
+    """锚定身份与当前身份的字段级差异：路径精确到键，长值截断、条目封顶，
+    让「运行时同步期间安装身份发生变化」的排查不用再猜是谁在同步窗口内改了什么。"""
+    missing = object()
+    changes = []
+
+    def brief(value):
+        if value is missing:
+            return "(无)"
+        try:
+            text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+        except (TypeError, ValueError):
+            text = repr(value)
+        return text if len(text) <= 120 else text[:117] + "..."
+
+    def walk(old, new, path):
+        if isinstance(old, dict) and isinstance(new, dict):
+            for key in sorted(set(old) | set(new)):
+                walk(old.get(key, missing), new.get(key, missing),
+                     f"{path}.{key}" if path else key)
+        elif isinstance(old, list) and isinstance(new, list):
+            if old != new:
+                changes.append(f"{path}: {brief(old)} → {brief(new)}")
+        elif old is not missing or new is not missing:
+            if old != new:
+                changes.append(f"{path}: {brief(old)} → {brief(new)}")
+
+    if isinstance(before, dict) and isinstance(after, dict):
+        walk(before, after, "")
+    else:
+        changes.append(f"identity: {brief(before)} → {brief(after)}")
+    return "; ".join(changes[:8]) + (f"（共 {len(changes)} 处差异）" if len(changes) > 8 else "")
 
 
 @contextlib.contextmanager
@@ -343,6 +496,11 @@ def _sync_verifier(runtime, target_asar=None):
         candidates = ([target.parent.parent / "MacOS" / "ZCode"] if sys.platform == "darwin"
                       else [target.parent.parent / ("ZCode.exe" if sys.platform == "win32" else "zcode")])
         executable = next((str(item) for item in candidates if item.is_file()), None)
+        # darwin 换 LSUIElement Helper 验收，Dock 不闪主二进制图标（issue #238）；
+        # patch_install 缺该函数时按原二进制，下面的启动失败回退链不变。
+        swap = getattr(load_patch_install(), "ui_element_exe_for", None)
+        if swap is not None:
+            executable = swap(executable)
     # asar 旁的同名可执行文件可能是外部应用/损坏文件（文件名不是身份依据）：
     # 启动失败（OSError/WinError 216）或启动后挂起超时，都回退 Node 再试。
     launch_candidates = list(dict.fromkeys(str(item) for item in
@@ -354,7 +512,7 @@ def _sync_verifier(runtime, target_asar=None):
             " sudo env \"HOME=$HOME\" \"PATH=$PATH\" python3 overlay_install.py install"
             "（或把 node 加入 root 的 PATH / 设 ZCODE_ASAR 指向 /opt/ZCode/resources/app.asar）")
     names = ("plugin-updater.cjs", "plugin-release.cjs", "plugin-storage.cjs")
-    with tempfile.TemporaryDirectory(prefix="zusage-sync-verifier-") as directory:
+    with bounded_tempdir(prefix="zusage-sync-verifier-") as directory:
         snapshot = Path(directory)
         original = {}
         for name in names:
@@ -412,7 +570,9 @@ function migrate() {
   }
   if (records.length !== 1) throw Error("同步所需用户插件安装记录不唯一");
   const record = records[0];
-  if (record.enabled === false || typeof record.installPath !== "string" || fs.realpathSync(record.installPath) !== root || record.version !== manifest.version) throw Error("同步插件与官方安装记录不一致或已禁用");
+  if (record.enabled === false) throw Error("同步插件已被禁用，停止运行时同步");
+  if (typeof record.installPath !== "string" || fs.realpathSync(record.installPath) !== root) throw Error("同步插件与官方安装记录不一致：安装器须从官方安装记录指向的插件根目录（插件缓存目录）运行，而非运行时目录");
+  if (record.version !== manifest.version) throw Error("同步插件与官方安装记录版本不一致，停止运行时同步");
   const selected = release.readChannel(os.homedir(), storage);
   const channel = { kind: selected.kind, repository: selected.repository || "", source: selected.marketplace ? selected.marketplace.source : null };
   if (hasPending) {
@@ -421,9 +581,14 @@ function migrate() {
     if (pending.pendingRelease != null) {
       const expected = pending.pendingRelease, r = expected.release, m = expected.manifest;
       if (!r || !m || !expected.channel || !isDeepStrictEqual(channel, expected.channel)) throw Error("Release 更新意图无效或市场来源已变化，停止运行时同步");
-      const validated = release.validateRelease({ tag_name: r.tag, draft: false, prerelease: false, assets: [r.archive, r.manifest] }, r.repository);
+      /* 与 updater.verifyRuntimeSync 同构：清单兜底意图（catalogSha256 标记）走专用形状门；
+         运行目录 release 模块过旧无该导出时按旧规则拒绝，保持 fail-closed。 */
+      const validated = r.catalogSha256 !== undefined && typeof release.validateGithubCatalogRelease === "function"
+        ? release.validateGithubCatalogRelease(r)
+        : release.validateRelease({ tag_name: r.tag, draft: false, prerelease: false, assets: [r.archive, r.manifest] }, r.repository);
       if (!validated || validated.version !== r.version || channel.kind !== "release" || channel.repository !== r.repository) throw Error("Release 更新意图无效，停止运行时同步");
       release.validateManifest(m, validated);
+      if (r.catalogSha256 !== undefined && m.asset.sha256 !== r.catalogSha256) throw Error("发布 manifest 与渠道清单的 SHA256 不一致，停止运行时同步");
       const source = record.source;
       if (record.version !== r.version || !source || source.url !== r.archive.browser_download_url || source.sha256 !== m.asset.sha256 || source.source !== "url" || source.type !== "zip" || source.path !== "plugins/zcode-token-usage-statusbar" || (source.stripRoot !== undefined && source.stripRoot !== false) || source.headers !== undefined) throw Error("官方安装结果与选定 Release 不一致，停止运行时同步");
     } else if (channel.kind === "release") throw Error("历史更新意图缺少 Release 校验信息，停止运行时同步");
@@ -465,7 +630,8 @@ try {
             if "identity" not in anchor:
                 anchor["identity"] = current
             elif current != anchor["identity"]:
-                raise ValueError("运行时同步期间安装身份发生变化")
+                raise ValueError("运行时同步期间安装身份发生变化（"
+                                 + _identity_diff(anchor["identity"], current) + "）")
         yield recheck
 
 
@@ -567,9 +733,9 @@ def _sync_runtime_locked(runtime, verify=lambda: None):
     result = {"changed": changed, "skipped": skipped, "preserved": preserved,
               "version": version, "plugin_root": plugin_root, "hashes": hashes,
               "restartRecorded": True}
-    cold_files = {"inject-main.cjs", "plugin-updater.cjs", "plugin-release.cjs", "plugin-storage.cjs", "quota-client.cjs"}
+    cold_files = {"inject-main.cjs", "plugin-updater.cjs", "plugin-release.cjs", "plugin-storage.cjs", "quota-client.cjs", "model-puller.cjs", "engine-patch.cjs", "sysmon-client.cjs"}
     if (load_runtime_config(runtime) or {}).get("hot_reload") is False:
-        cold_files.update(("overlay.js", "zusage.py"))
+        cold_files.update(("overlay.js", "zusage.py", "mobile-relay.cjs"))
     restart_hashes = {name: hashes[name] for name in changed if name in cold_files}
     record = dict(result)
     if downgrade:
@@ -628,14 +794,6 @@ def save_runtime_config(runtime, pi):
     return True
 
 
-def auto_enabled(runtime):
-    v = os.environ.get("ZUSAGE_PLUGIN_AUTO_INSTALL")
-    if v is not None:
-        return v.strip().lower() in ("1", "true", "yes", "on")
-    config = load_runtime_config(runtime)
-    return config is not None and config.get("plugin_auto_install_overlay", True) is True
-
-
 def write_marker(marker):
     try:
         marker.parent.mkdir(parents=True, exist_ok=True)
@@ -668,12 +826,12 @@ def chown_runtime_to_user(runtime):
             pass
 
 
-def _nudge(output, message):
+def _nudge(output, message, label="安装提醒", detail="状态条安装尚未完成。"):
     from restart_notice import visible_context
     output["systemMessage"] = message
     output["hookSpecificOutput"] = {
         "hookEventName": "SessionStart",
-        "additionalContext": visible_context("安装提醒", "状态条安装尚未完成。", message)}
+        "additionalContext": visible_context(label, detail, message)}
     return output
 
 
@@ -681,6 +839,72 @@ def _install_overlay(runtime, pi):
     from restart_notice import record_restart
     return pi.install(before_publish=lambda installation: record_restart(
         runtime, {"state": "pending-install", "installation": installation}))
+
+
+def _ensure_mobile_patch_safely(pi, ensure):
+    """Never publish a mobile patch into the shared pending journal."""
+    try:
+        with pi._target_lock():
+            if any(path.exists() or path.is_symlink() for path in (pi.TMP, pi.TMP_META)):
+                return {"status": "deferred", "detail": "existing pending operation"}
+            result = ensure(pi.ASAR)
+            if result.get("status") != "replace-failed":
+                return result
+            try:
+                Path(result["stage"]).unlink(missing_ok=True)
+            except OSError as error:
+                return {"status": "deferred", "detail": f"stage cleanup failed: {error}"}
+            return {"status": "deferred", "version": result.get("version"),
+                    "detail": result.get("detail")}
+    except TimeoutError as error:
+        return {"status": "deferred", "detail": str(error)}
+
+
+def ensure_mobile_relay_stash(pi, quiet_monitor=False):
+    """安全补装 mobile relay；有 pending 或无法替换时保守延后。"""
+    try:
+        from mobile_relay_patch import ensure_deployed as ensure_stash
+        redirect = contextlib.redirect_stdout(sys.stderr) if quiet_monitor else contextlib.nullcontext()
+        with redirect:
+            return _ensure_mobile_patch_safely(pi, lambda path: ensure_stash(path, _locked=True))
+    except Exception as e:
+        print(f"[zusage-plugin] mobile relay stash ensure failed（已忽略）：{e}", file=sys.stderr)
+        return {"status": "skipped-error", "detail": str(e)}
+
+
+def _mobile_retry_command(pi, operation="apply"):
+    """deferred 场景的可执行动作：完全退出后对目标 asar 单独打/剥补丁。"""
+    script = PLUGIN_ROOT / "mobile_relay_patch.py"
+    return (f'"{PYEXE}" "{script}" {operation} --asar "{pi.ASAR}"'
+            f"（或重跑 \"{PYEXE}\" \"{PLUGIN_ROOT / 'overlay_install.py'}\" install）")
+
+
+def _mobile_deferred_message(pi):
+    return ("手机中继补丁尚未就绪：请先完全退出 ZCode（关闭窗口不等于退出；"
+            "仍在托盘/后台时请从托盘退出，并在任务管理器确认没有 ZCode 进程残留），"
+            f"然后执行 {_mobile_retry_command(pi)}。"
+            "在运行中的客户端里重跑 /install-overlay 无法完成该补丁。")
+
+
+def record_mobile_restart(runtime, pi, mobile):
+    """mobile 补丁刚写入且客户端仍在运行时标记需完全重启。
+
+    使用无 hashes、无 installation 的 state=installed + asarPatch=True：loader 在
+    下一次启动按 createdAt 时间戳直接 ack 销账；asarPatch 让 ack_restart 拒绝把
+    合并进来的 pending-sync hashes 走热销账路径（asar 中段补丁只能完全重启生效）。
+    pending-install 需要 installation/publishedAt，在 mobile 路径上永远无法销账，
+    不得借用。"""
+    if (mobile or {}).get("status") != "patched":
+        return False
+    try:
+        if not pi.client_running():
+            return False
+        from restart_notice import record_restart
+        record_restart(runtime, {"state": "installed", "asarPatch": True})
+        return True
+    except Exception as e:
+        print(f"[zusage-plugin] mobile relay restart marker failed（已忽略）：{e}", file=sys.stderr)
+        return False
 
 
 def ensure_renderer_bridge(pi, quiet_monitor=False):
@@ -701,7 +925,6 @@ def ensure_renderer_bridge(pi, quiet_monitor=False):
         stage = Path(result["stage"])
 
         def discard_stage():
-            # 杀毒扫描短暂锁文件/ACL 有建无删时清理自身不能炸——桥绝不影响主流程
             try:
                 stage.unlink(missing_ok=True)
             except OSError:
@@ -716,9 +939,21 @@ def ensure_renderer_bridge(pi, quiet_monitor=False):
             result = {"status": "skipped-error", "version": result.get("version"),
                       "detail": "已有待收尾的卸载操作，桥补装让位"}
         else:
-            # hook 路径（quiet_monitor）stdout 只能是 hook JSON：publish/syntax 检查行
-            # 全部重定向 stderr（与 auto-install 分支包 _install_overlay 同款）
             redirect = contextlib.redirect_stdout(sys.stderr) if quiet_monitor else contextlib.nullcontext()
+            # v359（issue #321）：待收尾包的入口指纹先于 publish 取（publish 接管并删除
+            # stage）；落定成功后按主安装同语义（_install_overlay 的 before_publish）补记录
+            # 重启意图——v172 取消会话文字提醒后，⚙ 红点标记（.plugin-restart-required）
+            # 是 pending 唯一用户可见信号，缺它则「桥 pending→scope 属性缺席→富文本回推
+            # fail-closed」整条链零可诊断。swap 时 patch_install._replace_pending 按该标记
+            # 经 publish_install 记 publishedAt，下次启动 loader ack 销账，生命周期与主安装一致。
+            installation = None
+            try:
+                installation = {"asar": str(pi.ASAR.resolve()),
+                                "entryHash": hashlib.sha256(pi.entry_bytes_of(stage)).hexdigest()}
+            except Exception as e:
+                # 指纹取不到（异常包/杀毒锁）就不写标记：宁缺勿假——没有 installation 的
+                # pending-install 标记 swap 后无法销账，红点会永远亮着
+                print(f"[zusage-plugin] renderer bridge pending fingerprint failed（已忽略）：{e}", file=sys.stderr)
             try:
                 with redirect:
                     pi.publish_external_pending(stage, source=result.get("source"), operation="install")
@@ -733,11 +968,16 @@ def ensure_renderer_bridge(pi, quiet_monitor=False):
                 result = {"status": "skipped-error", "version": result.get("version"),
                           "detail": f"pending publish failed: {e}"}
             else:
+                if installation is not None:
+                    try:
+                        from restart_notice import record_restart
+                        record_restart(str(pi.RUNTIME), {"state": "pending-install", "installation": installation})
+                    except Exception as e:
+                        print(f"[zusage-plugin] renderer bridge restart marker failed（已忽略）：{e}", file=sys.stderr)
                 monitor_env = {name: os.environ.get(name) for name in
                                ("ZUSAGE_NO_MONITOR", "ZUSAGE_MONITOR_QUIET")}
                 try:
                     if quiet_monitor:
-                        # SessionStart 场景不弹监控黑窗，systemMessage 里已说明去向
                         os.environ["ZUSAGE_NO_MONITOR"] = "1"
                         os.environ["ZUSAGE_MONITOR_QUIET"] = "1"
                     with redirect:
@@ -758,26 +998,51 @@ def ensure_renderer_bridge(pi, quiet_monitor=False):
     return result
 
 
-def _bridge_notice(out, result, pi):
-    """桥补装的用户可见提示（issue #67：受保护目录/客户端运行中不再静默失效）。
-    pending 提示收敛（客户端退出收尾后转 present）；权限不足在目标持续不可写期间
-    每次会话提示，与未安装时的 INSTALL_MESSAGE 同一强度。已有安装/重启提示时
-    不覆盖——桥只是增强，优先级低于主链。"""
+def _mobile_pending_notice(out, pi, mobile):
+    """SessionStart 静默链：只提示明确的 deferred（已有待替换操作，需用户先处理）。
+    skipped-error/unknown 属可选增强不可用（宿主不支持/夹具无有效 asar），不得每会话
+    打扰；显式 /install-overlay 的失败仍走 CLI 分支自行打印。
+
+    文案必须可执行：deferred 时在运行中的客户端里重试 /install-overlay 只会再次
+    撞上占用，唯一出路是完全退出后走独立补丁命令。已有 systemMessage 优先保留。"""
+    if "systemMessage" in out or "hookSpecificOutput" in out:
+        return out
+    if (mobile or {}).get("status") == "deferred":
+        from restart_notice import PREFIX
+        return _nudge(out, PREFIX + _mobile_deferred_message(pi))
+    return out
+
+
+def _bridge_notice(out, result, pi, quiet_hook=False):
+    """桥补装的用户可见提示（issue #67：受保护目录不再静默失效）。pending 收敛
+    由监控在客户端退出后自动完成，不再发文字提醒；权限不足在目标持续不可写期间
+    每次会话提示（故障提示保留）。已有提示时不覆盖——桥只是增强，优先级低于主链。
+    v258 quiet_hook（SessionStart 自动链，注入行在位）：静态桥缺席/打不上不影响
+    统计主链——readFiberPaneScope fiber 兜底 + 渲染端运行时合成桥接手，DB 轮询
+    保底，skipped-unknown/skipped-error（含受保护目录权限）一律静默放行，只在
+    stderr 留既有诊断行；显式 /install-overlay CLI（quiet_hook=False）保留原提示。"""
     if "systemMessage" in out:
         return out
     status = (result or {}).get("status")
-    if status == "pending":
-        from restart_notice import PREFIX, RESTART_ACTION
-        return _nudge(out, PREFIX + "逐问速率行所需的一次性客户端补丁已排定："
-                      "完全退出 ZCode（所有窗口）后会自动完成，之后重新打开即可；"
-                      "其余功能不受影响。" + RESTART_ACTION)
+    if quiet_hook and status in ("skipped-unknown", "skipped-error"):
+        return out
     if status == "skipped-error" and result.get("permission"):
-        # Windows 上 os.access 看不见 ACL（目录恒报可写），权限判定按真实
-        # PermissionError 而不是 target_writable()，否则 Program Files 场景静默
         from restart_notice import PREFIX
+        # PermissionError 在 Windows 上不只来自 ACL：客户端占用 asar、杀毒扫描新写入的
+        # 大文件同样抛它。target_writable() 含真实写入探针（不止 os.access），探针能在
+        # 同目录建文件说明不是受保护目录（如 %LOCALAPPDATA%\Programs\ZCode），此时让用户
+        # 提权既无必要也不对症——只提示占用/拦截并给重试方式。
+        try:
+            protected = not pi.target_writable()
+        except Exception:
+            protected = True
+        if not protected:
+            return _nudge(out, PREFIX + f"状态条已安装，但逐问速率行所需的客户端补丁暂时无法写入 {pi.ASAR}"
+                          f"（文件被 ZCode 占用或被安全软件拦截，并非权限不足）。"
+                          f"完全退出 ZCode 后运行 /install-overlay 重试；不需要该功能可忽略本提示。")
         script = PLUGIN_ROOT / "overlay_install.py"
         if os.name == "nt":
-            action = (f'以管理员身份打开终端，执行 python "{script}" install')
+            action = (f'以管理员身份打开终端，执行 "{PYEXE}" "{script}" install')
         else:
             action = (f'执行 sudo env HOME="$HOME" PATH="$PATH" python3 "{script}" install')
         return _nudge(out, PREFIX + f"状态条已安装，但逐问速率行所需的客户端补丁"
@@ -800,63 +1065,273 @@ def remove_renderer_bridge(pi):
         return {"status": "skipped-error", "detail": str(e)}
 
 
+def remove_mobile_relay_stash(pi):
+    """卸载对称清理 mobile relay 两段注入（stash + uplink），保留 patch_install 尾缀。
+
+    与 remove_renderer_bridge 同构：有 pending 时不碰既有待替换包，deferred/失败
+    只写 stderr，不阻塞主卸载。"""
+    try:
+        from mobile_relay_patch import check_deployed, remove_deployed
+        # 只读探测先行：未注入时不拿目标锁——受保护/只读目录下建 app.asar.zusage.lock
+        # 会抛 PermissionError，被当成 cleanup 未完成打印到 stderr（未注入应静默跳过）。
+        probe = check_deployed(pi.ASAR)
+        if probe.get("status") == "absent":
+            return {"status": "absent", "detail": probe.get("detail", "not injected")}
+        if probe.get("status") == "error":
+            # 读不到目标不能假装已卸载：保留 error 上报，不再拿锁叠加权限噪声。
+            return {"status": "error", "detail": probe.get("detail", "unreadable")}
+        with pi._target_lock():
+            if any(path.exists() or path.is_symlink() for path in (pi.TMP, pi.TMP_META)):
+                result = {"status": "deferred", "detail": "existing pending operation"}
+            else:
+                result = remove_deployed(pi.ASAR, _locked=True)
+        if result.get("status") not in ("removed", "absent"):
+            print(f"[zusage-plugin] mobile relay remove: {result.get('status')} "
+                  f"{result.get('detail')}", file=sys.stderr)
+        return result
+    except TimeoutError as e:
+        print(f"[zusage-plugin] mobile relay remove deferred: {e}", file=sys.stderr)
+        return {"status": "deferred", "detail": str(e)}
+    except Exception as e:
+        print(f"[zusage-plugin] mobile relay remove failed（已忽略）：{e}", file=sys.stderr)
+        return {"status": "skipped-error", "detail": str(e)}
+
+
+def _pending_install_waiting(pi):
+    """安装失败但「待收尾包已排定 + 客户端在跑」：重试 /install-overlay 无法前进
+    （Windows 客户端持续运行期间只会再 repack 一次再失败），用户需要的动作是完全
+    退出客户端让监控自动收尾（issue #120）。返回 None=判据不成立（回落到重试提示）；
+    True=目标可写，hook 每次 SessionStart 都能重建收尾监控，「无需重试」承诺成立；
+    False=受保护目录（issue #130）：hook 无提权收不了尾，提权 monitor 若已退出则
+    无人收尾——必须引导以管理员身份重跑安装重建收尾者，不能再给「无需重试」。
+    任何异常都按不成立处理。"""
+    try:
+        pi.pending_tmp("install")
+        if not pi.client_running():
+            return None
+        return pi.target_writable()
+    except Exception:
+        return None
+
+
+def _revive_orphan_pending(pi):
+    """孤儿待收尾包自愈（issue #228，与 patch_install.revive_orphan_pending 同源）：
+    合法 pending + 实例锁空闲 + 目标可写时补拉静默监控接管收尾。"""
+    try:
+        load_patch_install().revive_orphan_pending(pi, require_writable=True)
+    except Exception as e:  # noqa: BLE001
+        print(f"[zusage-plugin] 孤儿待收尾包监控复活失败（已忽略）：{e}", file=sys.stderr)
+
+
+def _plugin_version():
+    """本插件副本的版本号（hook 从宿主管理的插件缓存目录运行，即「已装版本」）。"""
+    try:
+        manifest = json.loads((PLUGIN_ROOT / ".zcode-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        version = manifest.get("version") if isinstance(manifest, dict) else None
+        return version if isinstance(version, str) and version else ""
+    except Exception:
+        return ""
+
+
+def _host_build(pi):
+    """宿主客户端版本（asar 内 package.json）。读取失败返回 None：探测失败不改变
+    既有行为，兼容性提示与强制更新都只建立在确凿读取之上。"""
+    if pi.ASAR is None:
+        return None
+    pkg = load_patch_install().read_asar_package(pi.ASAR, pi=pi)
+    version = pkg.get("version") if pkg else None
+    return version if isinstance(version, str) and version else None
+
+
+def _host_registered(version):
+    """宿主版本是否登记在本插件渲染桥适配表（HOST_TARGETS）。表读取失败按已登记
+    处理：提示与强制更新都建立在「确凿未登记」之上，不做悲观误报。"""
+    try:
+        from renderer_bridge import HOST_TARGETS
+        return any(item.get("version") == version for item in HOST_TARGETS)
+    except Exception:
+        return True
+
+
+def _auto_update_disabled(runtime):
+    """插件自动更新是否不会拉起——口径与拉起层逐值一致（plugin_auto_update.py）：
+    非 True 值（0/"false"/null 等）与损坏 config 都不拉起，提示不得谎称「已触发」；
+    仅缺文件视为缺省开启。"""
+    try:
+        cfg = json.loads((runtime / "config.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return False   # 缺省开启（与 start_auto_update 的 cfg={} 同款）
+    except Exception:
+        return True    # 损坏 config 主链不拉起（plugin_auto_update.py except → return False）
+    return not (isinstance(cfg, dict) and cfg.get("plugin_auto_update", True) is True)
+
+
+def _compat_notice_line(runtime, host_version):
+    """未登记宿主版本的用户可见说明（拼进既有故障提示之后，或单独成条）。带上
+    最近一次自动更新失败原因，让「检查过了、什么都没发生」变成可行动的信息
+    （issue #247：市场清单被宿主 CLI 静默刷新失败卡住四天无人知晓）。显式关闭
+    自动更新时如实说明，不谎称「已触发」。"""
+    version = _plugin_version() or "?"
+    if _auto_update_disabled(runtime):
+        line = (f"当前插件 v{version} 未登记适配 ZCode {host_version}："
+                "请升级插件（⚙ → 插件更新手动检查，自动更新已被显式关闭），"
+                "升级并重启 ZCode 后状态条才会恢复。")
+    else:
+        line = (f"当前插件 v{version} 未登记适配 ZCode {host_version}："
+                "已触发插件自动更新，升级到新版并重启 ZCode 后状态条才会恢复。")
+    try:
+        state = json.loads((runtime / "plugin-update.json").read_text(encoding="utf-8"))
+        error = state.get("lastError") if isinstance(state, dict) else None
+        if isinstance(error, dict) and isinstance(error.get("message"), str) and error["message"]:
+            line += f"最近一次自动更新失败：{error['message'][:200]}"
+    except Exception:
+        pass
+    return line
+
+
+def _notify_compat_once(runtime, pi, out, host_version):
+    """已注入（或刚装好）但渲染桥按未知版本跳过（skipped-unknown）时的去重提示：
+    同一宿主版本 × 已装版本只提示一次——状态条仍有运行时动态桥 + DB 轮询兜底，
+    反复提示是打扰；宿主升级或插件换版后重新提示。同时再拉一次强制更新（run_hook
+    开头那次不带桥结果；双拉由更新锁串行化，代价是一次检查）。任何失败只进 stderr，
+    绝不影响 hook 主流程。"""
+    try:
+        from plugin_auto_update import start_auto_update
+        from restart_notice import PREFIX
+        marker = {"hostBuild": host_version, "pluginVersion": _plugin_version()}
+        marker_file = runtime / ".plugin-compat-notice.json"
+        try:
+            previous = json.loads(marker_file.read_text(encoding="utf-8"))
+        except Exception:
+            previous = None
+        start_auto_update(runtime, pi, force=True)
+        if previous == marker:
+            return
+        try:
+            marker_file.write_text(json.dumps(marker, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        _nudge(out, PREFIX + _compat_notice_line(runtime, host_version),
+               label="兼容性提醒", detail="当前插件版本未登记适配此 ZCode 版本。")
+    except Exception as e:  # noqa: BLE001
+        print(f"[zusage-plugin] 兼容性提示失败（已忽略）：{e}", file=sys.stderr)
+
+
+LAST_DIAG = None   # 最近一次 run_hook 的兼容性诊断；session-start.py 读走记入 plugin-session-start.json
+
+
 def run_hook():
     """SessionStart hook 主体：返回 hook 协议 JSON dict。任何异常都转成合法输出，
     绝不影响会话；patch_install 的人类可读输出重定向到 stderr，保证 stdout 纯 JSON。"""
+    global LAST_DIAG
+    LAST_DIAG = None
     out = {"suppressOutput": True}
     runtime = Path(os.environ.get("ZUSAGE_PLUGIN_RUNTIME") or default_runtime())
     try:
         runtime, pi = resolve_paths()
-        changed = sync_runtime(runtime, pi.ASAR)["changed"]
+        sync_runtime(runtime, pi.ASAR)
+        # 独立安装遗留的 MCP 注册与插件 .mcp.json 并存会让宿主每会话拉起双份 usage_mcp；
+        # 清理是尽力而为的附加步骤，任何失败只进诊断，绝不挡会话（optout 也照常清理）。
+        try:
+            legacy_mcp = dedupe_legacy_mcp(runtime)
+        except Exception as e:  # noqa: BLE001 — hook 契约：任何异常都不得上抛
+            legacy_mcp = "skipped-error"
+            print(f"[zusage-plugin] 遗留 MCP 清理失败（已忽略）：{e}", file=sys.stderr)
+        st = injected_status(pi)
+        # 兼容性预判（issue #247）：已装版本未登记适配当前宿主 build 时，未注入分支的
+        # 自动更新绕过 1h 限频立即升级——只重装旧版永远修不好状态条。optout 不豁免
+        # 更新（既有契约），故预判在 optout 检查之前。
+        host_version = _host_build(pi)
+        unregistered = host_version is not None and not _host_registered(host_version)
+        LAST_DIAG = {"hostBuild": host_version, "pluginVersion": _plugin_version(), "injected": st}
+        if legacy_mcp != "absent":   # 只在真有遗留注册或清理失败时留档，别给常态诊断加噪声
+            LAST_DIAG["legacyMcp"] = legacy_mcp
         try:
             from plugin_auto_update import start_auto_update
-            start_auto_update(runtime, pi)
+            start_auto_update(runtime, pi, force=unregistered and st is False)
         except Exception as e:
             print(f"[zusage-plugin] 后台更新启动失败（已忽略）：{e}", file=sys.stderr)
         if optout_marker(runtime).exists():
             return out
-        st = injected_status(pi)
         if st is None:
             return out  # 本机没有可定位的桌面客户端（远程会话等），静默
         save_runtime_config(runtime, pi)
         if st:
             bridge = ensure_renderer_bridge(pi, quiet_monitor=True)   # 已注入也可能缺桥（客户端升级重写 asar）：幂等补一次
-            from restart_notice import session_notice
-            cold_files = {"inject-main.cjs", "plugin-updater.cjs", "plugin-release.cjs", "plugin-storage.cjs", "quota-client.cjs"}
-            if (load_runtime_config(runtime) or {}).get("hot_reload") is False:
-                cold_files.update(("overlay.js", "zusage.py"))
-            restart_files = [name for name in changed if name in cold_files]
-            out = session_notice(runtime, out, injected=st, restart_files=restart_files)
-            return _bridge_notice(out, bridge, pi)
-        if auto_enabled(runtime):
-            monitor_env = {name: os.environ.get(name) for name in
-                           ("ZUSAGE_NO_MONITOR", "ZUSAGE_MONITOR_QUIET")}
-            try:
-                os.environ["ZUSAGE_NO_MONITOR"] = "1"
-                os.environ["ZUSAGE_MONITOR_QUIET"] = "1"  # 无窗口后台收尾
-                with contextlib.redirect_stdout(sys.stderr):
-                    ok = _install_overlay(runtime, pi)
-            finally:
-                for name, value in monitor_env.items():
-                    if value is None:
-                        os.environ.pop(name, None)
-                    else:
-                        os.environ[name] = value
-            if ok:
-                bridge = ensure_renderer_bridge(pi, quiet_monitor=True)
-                clear_markers(runtime)
-                from restart_notice import session_notice
-                out = session_notice(runtime, out, injected=injected_status(pi))
-                return _bridge_notice(out, bridge, pi)
+            mobile = ({"status": "deferred", "detail": "bridge pending"}
+                      if bridge.get("status") in ("pending", "deferred")
+                      else ensure_mobile_relay_stash(pi, quiet_monitor=True))
+            if bridge.get("status") != "pending" and mobile.get("status") != "pending":
+                # 本轮刚 publish 的链路已自带 launch（去重放行的旧监控靠 PendingTmpBusy
+                # 续守新世代，issue #228）：自愈只兜其余情形（含 launch 失败的下轮补拉），
+                # 不在 publish 当轮重复拉起。
+                _revive_orphan_pending(pi)
+            LAST_DIAG["bridge"] = bridge.get("status")
+            record_mobile_restart(runtime, pi, mobile)
+            if unregistered and bridge.get("status") == "skipped-unknown":
+                _notify_compat_once(runtime, pi, out, host_version)
+            _mobile_pending_notice(out, pi, mobile)
+            return _bridge_notice(out, bridge, pi, quiet_hook=True)   # 桥缺席由运行时动态桥兜底
+        # 未注入：自动安装始终开启，失败只保留故障提示（补丁排定/受保护目录/请重试）
+        monitor_env = {name: os.environ.get(name) for name in
+                       ("ZUSAGE_NO_MONITOR", "ZUSAGE_MONITOR_QUIET")}
+        try:
+            os.environ["ZUSAGE_NO_MONITOR"] = "1"
+            os.environ["ZUSAGE_MONITOR_QUIET"] = "1"  # 无窗口后台收尾
+            with contextlib.redirect_stdout(sys.stderr):
+                ok = _install_overlay(runtime, pi)
+        finally:
+            for name, value in monitor_env.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+        if ok:
+            bridge = ensure_renderer_bridge(pi, quiet_monitor=True)
+            mobile = ({"status": "deferred", "detail": "bridge pending"}
+                      if bridge.get("status") in ("pending", "deferred")
+                      else ensure_mobile_relay_stash(pi, quiet_monitor=True))
+            clear_markers(runtime)
+            LAST_DIAG["bridge"] = bridge.get("status")
+            LAST_DIAG["injected"] = True   # 自动安装刚成功：诊断按安装后的真实状态记录
+            record_mobile_restart(runtime, pi, mobile)
+            if unregistered and bridge.get("status") == "skipped-unknown":
+                _notify_compat_once(runtime, pi, out, host_version)   # 装上了也带不动此宿主：明确说明，不静默（issue #247）
+            _mobile_pending_notice(out, pi, mobile)
+            return _bridge_notice(out, bridge, pi, quiet_hook=True)   # 自动安装刚成功（注入行在位）：同上，桥缺席静默交给运行时兜底
+        from restart_notice import PREFIX
+        # 未登记适配当前宿主时，三条故障提示都补上兼容性说明与最近失败原因：
+        # 反复「已排定」至少要讲清为什么排定也修不好（issue #247）。
+        compat_tail = ("\n" + _compat_notice_line(runtime, host_version)) if unregistered else ""
+        waiting = _pending_install_waiting(pi)
+        if waiting:
+            # issue #185：「所有窗口」常被理解成「关掉窗口即退出」，Windows 客户端
+            # 驻留托盘/后台时收尾永远等不到空档——点名关窗不等于退出与核对办法。
+            _nudge(out, PREFIX + "状态条补丁已排定：完全退出 ZCode 后"
+                     "会自动完成替换，之后重新打开即可生效，无需重试安装。"
+                     "注意关闭窗口不等于退出：若关窗后仍未替换，说明 ZCode 仍驻留托盘/后台，"
+                     "请从托盘图标退出，或在任务管理器中确认没有 ZCode 进程残留。"
+                     "客户端增强补丁尚未就绪，后续 SessionStart 将继续补装，可能需要再次完全退出。"
+                     "不需要请运行 /uninstall-overlay，之后不再提示。" + compat_tail)
+        elif waiting is False:
+            # 受保护目录（issue #130）：「无需重试」是假承诺，提权重跑才是
+            # 唯一解——它复用已排定的待收尾包并重建提权收尾监控，秒级完成。
+            script = PLUGIN_ROOT / "overlay_install.py"
+            if os.name == "nt":
+                action = f'以管理员身份打开终端，执行 "{PYEXE}" "{script}" install'
             else:
-                from restart_notice import PREFIX
-                _nudge(out, (PREFIX + "用量状态条自动安装未完成。"
-                             "请运行 /install-overlay 重试；"
-                             "不需要请运行 /uninstall-overlay，之后不再提示。"
-                             "如果仍然失败，请查看客户端插件日志。"))
-            return out
-        from restart_notice import INSTALL_MESSAGE
-        return _nudge(out, INSTALL_MESSAGE)
+                action = f'执行 sudo env HOME="$HOME" PATH="$PATH" python3 "{script}" install'
+            _nudge(out, (PREFIX + "状态条补丁已排定，但 ZCode 安装在受保护目录，"
+                         "当前身份无法完成替换，也不会自动重建收尾进程。"
+                         f"请{action}（会复用已排定的补丁，很快），"
+                         "然后完全退出 ZCode（所有窗口）并重新打开。"
+                         "不需要请运行 /uninstall-overlay，之后不再提示。" + compat_tail))
+        else:
+            _nudge(out, (PREFIX + "用量状态条自动安装未完成。"
+                         "请运行 /install-overlay 重试；"
+                         "不需要请运行 /uninstall-overlay，之后不再提示。"
+                         "如果仍然失败，请查看客户端插件日志。" + compat_tail))
+        return out
     except Exception as e:  # noqa: BLE001 — hook 绝不能抛
         message = f"zusage 插件自检失败（已忽略）：{e}"
         if optout_marker(runtime).exists():
@@ -891,6 +1366,15 @@ def main():
         ok = _install_overlay(runtime, pi)
         if ok:
             bridge = ensure_renderer_bridge(pi)
+            mobile = ({"status": "deferred", "detail": "bridge pending"}
+                      if bridge.get("status") in ("pending", "deferred")
+                      else ensure_mobile_relay_stash(pi))
+            record_mobile_restart(runtime, pi, mobile)
+            status = mobile.get("status")
+            if status == "deferred":
+                print(_mobile_deferred_message(pi))
+            elif status not in ("present", "patched"):
+                print("手机中继补丁尚未就绪；请先完成已有待替换操作或解除占用及权限问题，再重试安装。本次未为手机中继排定替换。")
             if bridge.get("status") == "pending":
                 print("客户端运行中，逐问速率行补丁已排定：完全退出 ZCode 后自动完成替换。")
             from restart_notice import reminder
@@ -904,6 +1388,7 @@ def main():
         ok = pi.remove()
         if ok:
             remove_renderer_bridge(pi)
+            remove_mobile_relay_stash(pi)
         if ok and not write_marker(optout_marker(runtime)):
             print("（豁免标记写入失败，hook 可能继续提示）")
         chown_runtime_to_user(runtime)
@@ -912,8 +1397,7 @@ def main():
         print(f"runtime: {runtime}")
         print(f"asar:    {pi.ASAR}")
         print("injected:", {True: "是", False: "否", None: "asar 不可读"}[st])
-        print(f"auto install: {auto_enabled(runtime)}"
-              f"（config.json 的 plugin_auto_install_overlay 或环境变量 ZUSAGE_PLUGIN_AUTO_INSTALL）")
+        print("auto install: 始终开启（未注入时 hook 自动安装；/uninstall-overlay 可豁免）")
         print(f"optout: {optout_marker(runtime).exists()}  nudge: {nudge_marker(runtime).exists()}")
         with contextlib.redirect_stdout(sys.stdout):
             pi.check()

@@ -1,5 +1,5 @@
 {
-  "description": "zcode-token-usage-statusbar: 会话启动时同步运行时文件;缺配置文件或缺 plugin_auto_install_overlay 字段时默认自动安装/修复悬浮状态条,会修改 app.asar,成功后需完全退出并重开;显式 false 保留,ZUSAGE_PLUGIN_AUTO_INSTALL=1/0 优先于配置,卸载豁免仍阻止重注入;无环境变量覆盖时损坏/非布尔配置不开启;自动安装失败时用 install-overlay 兜底;仅已注入且待加载时提醒重启,uninstall-overlay 可豁免提醒;每次提问记录时刻并注入上一轮速率背景行(回答末尾统计行由前端确定性渲染,依赖 renderer 桥,--current 守卫防止拿上一轮数据充数);hook 解释器按 python3→python→py -3 自动回退(Windows 无 python3 别名)",
+  "description": "zcode-token-usage-statusbar: 会话启动时同步运行时文件;未注入时自动安装/修复悬浮状态条(始终开启,会修改 app.asar,成功后需完全退出并重开;不想安装用 /uninstall-overlay 写豁免标记,仍会阻止重注入与提示);自动安装失败时给出故障提示,用 /install-overlay 兜底;待重启/待更新由状态条齿轮红点提醒,不再注入会话文字;每次提问记录时刻并注入上一轮速率背景行(回答末尾统计行由前端确定性渲染,依赖 renderer 桥,--current 守卫防止拿上一轮数据充数);hook 解释器按 python3→python→py -3 自动回退(Windows 无 python3 别名)",
   "hooks": {
     "SessionStart": [
       {

@@ -3,7 +3,8 @@
 """SessionStart hook：stdin 收 hook 入参 JSON，stdout 只输出 hook 协议 JSON。
 
 职责（由 overlay_install.run_hook 承担，见其 docstring）：
-  同步运行时文件（热更新）；已注入则按需提醒重启，未注入则按开关自动安装或每次提示安装。
+  同步运行时文件（热更新）；未注入即自动安装（恒开，v172 起无开关）；待重启/待更新
+  不再注入会话文字，由 ⚙ 齿轮红点承载（plugin-updater 推送 markerAt 代际）。
 任何异常都转成合法 JSON 输出，绝不抛出、绝不影响会话。
 """
 import json
@@ -38,6 +39,18 @@ def main():
         payload = json.loads(raw or "{}")
     except ValueError:
         payload = {}
+    # 启动策略按 agent 分流：本 hook 只会做 ZCode 的事（同步运行目录、检查/修复 asar 注入）。
+    # 装到 WorkBuddy 等其它宿主时必须在动手前退出——那些客户端没有 asar 注入链，
+    # 更不能被改程序文件；它们的浮层由 MCP 进程按策略拉起（CDP）。
+    try:
+        sys.path.insert(0, str(PLUGIN_ROOT))
+        import zusage
+        agent = zusage.detect_agent()
+        if agent != zusage.AGENT_ZCODE:
+            print(json.dumps({"suppressOutput": True}, ensure_ascii=False))
+            return
+    except Exception as e:  # noqa: BLE001 — 判定失败按 ZCode 老路径继续，绝不能挡会话
+        print(f"[zusage-plugin] agent 判定失败，按 ZCode 继续：{e}", file=sys.stderr)
     try:  # 记录会话启动时刻到速率状态文件（token_rate --current 守卫的会话跟随依据）
         sid = os.environ.get("ZCODE_SESSION_ID") or os.environ.get("CLAUDE_SESSION_ID")
         if sid:
@@ -72,6 +85,13 @@ def main():
                   "source": payload.get("source", "") if isinstance(payload, dict) else "",
                   "sessionId": os.environ.get("ZCODE_SESSION_ID") or os.environ.get("CLAUDE_SESSION_ID") or "",
                   "result": result}
+        try:   # run_hook 的兼容性诊断（宿主 build × 已装版本 × 桥状态，issue #247）：排障不再只有「补丁已排定」
+            import overlay_install as _overlay_install
+            diag = getattr(_overlay_install, "LAST_DIAG", None)
+            if isinstance(diag, dict):
+                record["host"] = diag
+        except Exception:
+            pass
         overlay_install._atomic_write(runtime / "plugin-session-start.json",
                                      json.dumps(record, ensure_ascii=False, indent=2).encode("utf-8"))
     except Exception as e:

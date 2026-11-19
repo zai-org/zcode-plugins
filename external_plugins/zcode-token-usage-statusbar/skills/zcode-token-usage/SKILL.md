@@ -4,7 +4,7 @@ description: 查询 ZCode token 用量统计（当前会话/今日/近 N 天/按
 when_to_use: 用户想了解 token 用量、消耗统计或某个会话/工作区/模型的用量明细时
 license: MIT
 ---
-用本插件提供的 MCP 工具 `token_usage`（stdio server，只读 `~/.zcode/cli/db/db.sqlite`）查询 ZCode token 用量；工具不可用时退回 CLI：`python3 "<插件根目录>/zusage.py" <子命令>`（插件根目录 = 本 SKILL.md 所在目录的上一级的上一级）。
+用本插件提供的 MCP 工具 `token_usage`（stdio server，只读本地用量库——默认 `~/.zcode/cli/db/db.sqlite`，跟随宿主 dataBaseDir 迁移）查询 ZCode token 用量；工具不可用时退回 CLI：`python3 "<插件根目录>/zusage.py" <子命令>`（插件根目录 = 本 SKILL.md 所在目录的上一级的上一级；Windows 上 `python3` 可能是 Microsoft Store 存根会静默失败，依次改用 `python`、`py -3`；macOS/Linux 用 `python3`）。
 
 scope 取值：current（默认，当前会话）/ today / week / days:N / sessions[:N] / models[:days] / session:<会话id前缀> / workspace:<目录名子串>。
 

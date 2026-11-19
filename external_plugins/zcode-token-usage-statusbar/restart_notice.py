@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""重新注入后的会话提醒；标记由客户端 loader 成功加载时清除。"""
+"""重新注入后的待重启记录；标记由客户端 loader 成功加载时清除。
+
+会话内文字提醒已取消，待重启/待更新由状态条齿轮红点承载（overlay.js 读
+plugin-updater 推送的 restartRequired）；本模块的 reminder() 仅供
+/install-overlay 命令行反馈与 _nudge 故障提示共用文案。"""
 import hashlib
 import json
 import os
@@ -16,7 +20,7 @@ PREFIX = "🔴 zcode-token-usage-statusbar 插件提醒："
 RESTART_ACTION = ("请完全退出 ZCode（所有窗口）：从 ZCode 菜单选择「退出」，然后重新打开 ZCode，"
                   "让窗口底部的用量状态条加载新版本。只关窗口、刷新页面或重开会话无效。")
 MESSAGE = PREFIX + "用量状态条已安装或更新。" + RESTART_ACTION
-INSTALL_MESSAGE = (PREFIX + "窗口底部的用量状态条还没有安装好。插件默认自动安装，但当前尚未完成。"
+INSTALL_MESSAGE = (PREFIX + "窗口底部的用量状态条还没有安装好。插件会自动安装，但当前尚未完成。"
                    "需要请运行 /install-overlay（会修改客户端文件），"
                    "安装成功后再退出并重开 ZCode；仅重启不能完成安装。"
                    "不需要请运行 /uninstall-overlay，之后不再提示。")
@@ -49,8 +53,15 @@ def visible_context(label, detail, message):
             "\n提醒之后继续回答用户当前问题；不要自行退出或重启客户端。")
 
 
+RESTART_HASH_FILES = (
+    "inject-main.cjs", "plugin-updater.cjs", "plugin-release.cjs",
+    "plugin-storage.cjs", "quota-client.cjs", "model-puller.cjs",
+    "engine-patch.cjs", "mobile-relay.cjs", "mobile_relay_patch.py", "sysmon-client.cjs", "overlay.js", "zusage.py",
+)
+
+
 def reminder(runtime=None, injected=None, restart_files=()):
-    """只读判定；两个 hook 提示通道和 CLI 共用同一文案。"""
+    """只读判定；SessionStart 提示通道和 CLI 共用同一文案。"""
     runtime = Path(runtime) if runtime is not None else runtime_dir()
     marker = runtime / MARKER
     if not marker.is_file() or (runtime / ".plugin-overlay-optout").exists():
@@ -70,8 +81,7 @@ def reminder(runtime=None, injected=None, restart_files=()):
             raise ValueError("提醒记录形状或状态无效")
         hashes = data.get("hashes", {})
         if not isinstance(hashes, dict) or any(
-                name not in ("inject-main.cjs", "plugin-updater.cjs", "plugin-release.cjs",
-                             "plugin-storage.cjs", "quota-client.cjs", "overlay.js", "zusage.py")
+                name not in RESTART_HASH_FILES
                 or not isinstance(digest, str) or len(digest) != 64
                 or any(char not in "0123456789abcdef" for char in digest)
                 for name, digest in hashes.items()):
@@ -111,18 +121,3 @@ def reminder(runtime=None, injected=None, restart_files=()):
             message = (PREFIX + "用量状态条已更新，重启 ZCode 后生效。" + RESTART_ACTION +
                        " 更新文件：" + " / ".join(restart_files))
     return {"message": message, "context": visible_context(label, detail, message)}
-
-
-def reminder_context(runtime=None, injected=None):
-    notice = reminder(runtime, injected)
-    return notice["context"] if notice else ""
-
-
-def session_notice(runtime, output, injected=None, restart_files=()):
-    """仅展示仍待确认的记录；安装成功后不得重新记录已被 ack 的意图。"""
-    notice = reminder(runtime, injected, restart_files)
-    if notice:
-        output["systemMessage"] = notice["message"]
-        output["hookSpecificOutput"] = {
-            "hookEventName": "SessionStart", "additionalContext": notice["context"]}
-    return output

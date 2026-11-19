@@ -30,6 +30,7 @@ Electron fuses: EmbeddedAsarIntegrityValidation=0（已实测），改动 asar �
 ZCode、确认注入加载后自动退出；运行中替换失败（.tmp 待替换）时还会在 ZCode 退出后
 自动完成替换 —— 该收尾职责已由监控窗口承担，旧的 schtasks 计划任务方案废弃。
 """
+import base64
 import hashlib
 import json
 import os
@@ -38,15 +39,19 @@ import stat
 import struct
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
-from contextlib import nullcontext
-from runtime_lock import file_lock, publish_install
+import contextlib
+from contextlib import contextmanager, nullcontext
+from runtime_lock import bounded_mkstemp, file_lock, publish_install, real_home, sudo_user
 
 IS_WIN = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
+# 手动命令模板里的解释器：用当前正在跑的真实解释器绝对路径，不猜 python/python3
+# 别名——Windows 上 python3 可能是 Microsoft Store 存根（静默失败），python 也可能
+# 被禁用；能走到提示这一步说明本解释器一定可用（用户反馈 2026-11-03）。
+PYEXE = sys.executable or "python"
 
 if IS_WIN:
     ASAR_DEFAULT = Path(r"D:\ZCode\resources\app.asar")
@@ -92,18 +97,11 @@ def L(zh, en):
     if _LANG is None:
         _LANG = "zh"
         # sudo 运行时（Linux 系统级安装）config 在真实用户的家目录，Path.home() 会指到 root
-        sudo_home = None
-        if sys.platform != "win32" and os.environ.get("SUDO_USER"):
-            try:
-                if os.geteuid() == 0:
-                    import pwd
-                    sudo_home = Path(pwd.getpwnam(os.environ["SUDO_USER"]).pw_dir)
-            except (KeyError, OSError, AttributeError):
-                pass
+        user_home = real_home(lambda: sudo_user(sys.platform), Path.home)
         bases = [RUNTIME,
                  Path.home() / ".zcode" / "zcode-token-usage-statusbar"]
-        if sudo_home:
-            bases.append(sudo_home / ".zcode" / "zcode-token-usage-statusbar")
+        if user_home != Path.home():
+            bases.append(user_home / ".zcode" / "zcode-token-usage-statusbar")
         for base in bases:
             try:
                 lang = json.loads((base / "config.json").read_text(encoding="utf-8")).get("lang")
@@ -140,6 +138,27 @@ def zcode_exe_for(asar_path):
     return None
 
 
+def _safe_is_file(path):
+    try:
+        return bool(path) and Path(path).is_file()
+    except OSError:
+        return False
+
+
+def ui_element_exe_for(exe_path):
+    """darwin 后台拉起换 LSUIElement 的 Helper（plugin-updater.cjs cliExecutable 同款）：
+    主 bundle 二进制即使带 ELECTRON_RUN_AS_NODE，部分客户端版本仍会向 LaunchServices
+    登记 Foreground 应用，Dock 闪现「zcode」图标（issue #238）；Helper 登记 UIElement
+    不进 Dock。Helper 缺失/不可执行/结构不符时原样返回——宁可闪图标不可更新/自检失败。"""
+    if not IS_MAC or not exe_path:
+        return exe_path
+    helper = (Path(exe_path).parent.parent / "Frameworks" / "ZCode Helper.app"
+              / "Contents" / "MacOS" / "ZCode Helper")
+    if _safe_is_file(helper) and os.access(helper, os.X_OK):
+        return helper
+    return exe_path
+
+
 def set_target(asar_path):
     """改指目标安装位置（BAK/TMP/ZCODE_EXE 随动）。ZCODE_EXE 只用于语法自检，缺了自动跳过。"""
     global ASAR, BAK, TMP, TMP_META, ZCODE_EXE
@@ -157,6 +176,7 @@ def client_running():
             out = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq ZCode.exe"],
                 capture_output=True, text=True, encoding="gbk", errors="replace",
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),   # issue #221：无控制台宿主里探测会弹终端窗
             ).stdout
             return "ZCode.exe" in out
         # macOS/Linux：pgrep 精确匹配主进程名；误判"未运行"在 POSIX 上也无害
@@ -166,31 +186,120 @@ def client_running():
         return True  # 查不到时按在跑处理，走安全路径
 
 
-def _spawn_detached(cmd, flags, **kwargs):
+def _spawn_detached(cmd, flags, fallback=True, **kwargs):
     """Windows：优先带 CREATE_BREAKAWAY_FROM_JOB 拉起，让监控脱离父进程的 Job 对象——
     从 agent/工具会话里跑安装时，会话清理会整树杀掉子进程，监控等不到客户端退出就被杀，
-    收尾只能寄望下次 SessionStart 重试。Job 不允许 breakaway 时降级为普通创建。"""
+    收尾只能寄望下次 SessionStart 重试。Job 不允许 breakaway 时降级为普通创建，并留
+    一行 stderr 线索（降级后的监控大概率活不过宿主回收，见 issue #208；静默场景的
+    存活兜底由 launch_monitor 的 WMI 通道承担，这里只是最后一级回退）。
+    fallback=False 时 breakaway 被拒直接抛 OSError，由调用方改走 WMI 脱离通道，
+    不先留一个注定被回收的树内监控。"""
     if not IS_WIN:
         return None
     breakaway = getattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0)
     try:
         return subprocess.Popen(cmd, creationflags=flags | breakaway, **kwargs)
-    except OSError:
+    except OSError as e:
+        if not fallback:
+            raise
+        _warn_breakaway_denied(e)
         return subprocess.Popen(cmd, creationflags=flags, **kwargs)
+
+
+def _warn_breakaway_denied(e):
+    print(L(f"（breakaway 被拒（{e}）：监控留在父进程 Job 内，会随宿主回收被杀，"
+            f"可能收不了尾，见 issue #208）",
+            f"(breakaway denied ({e}): the monitor stays inside the parent job and "
+            f"will be killed with it; finalization may strand, see issue #208)"),
+          file=sys.stderr)
+
+
+WMI_TIMEOUT = 15   # powershell 冷启动 + CIM 创建的富余上限（秒）
+
+
+def _wmi_interpreter():
+    """WMI 创建没有创建标志位可用：静默监控必须用无控制台的 pythonw.exe，缺失时
+    返回 None——不用 python.exe 顶替（会在交互会话闪现控制台窗，行为不能劣化，
+    宁可跳过 WMI 走树内回退）。"""
+    if not sys.executable:   # 嵌入式场景可能为空：Path("").with_name 会抛 ValueError
+        return None
+    pythonw = Path(sys.executable).with_name("pythonw.exe")
+    return str(pythonw) if pythonw.is_file() else None
+
+
+def _spawn_via_wmi(cmd):
+    """Windows 脱离式拉起：经 WMI Win32_Process.Create 创建监控（父进程是 WmiPrvSE，
+    天然不在调用方的进程树/Job 内，宿主回收与会话清理都杀不到它）。插件宿主与
+    agent/工具会话的 Job 常不允许 breakaway，树内监控实测只活几分钟，等不到
+    「客户端完全退出」的收尾窗口（issue #208）。WMI 创建的进程不继承调用方环境，
+    静默开关由监控的 --quiet 参数传达；返回新进程 PID，任何失败返回 None
+    （调用方回退 _spawn_detached 树内拉起）。powershell -EncodedCommand 承载
+    UTF-16LE base64 脚本，避开 argv→PS 字符串→argv 的三层引号嵌套。"""
+    try:
+        command_line = subprocess.list2cmdline([str(part) for part in cmd])
+        script = ("$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create "
+                  "-Arguments @{ CommandLine = '%s' }; "
+                  "if ($r.ReturnValue -ne 0) { exit 1 }; [int]$r.ProcessId"
+                  % command_line.replace("'", "''"))
+        encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+            capture_output=True, timeout=WMI_TIMEOUT,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))   # issue #221
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return int(result.stdout.decode("ascii", "replace").strip())
+    except ValueError:
+        return None
+
+
+def _spawn_survivor_monitor(epoch):
+    """WMI 脱离式拉起无窗口 --quiet 监控（静默收尾与可见监控 breakaway 被拒共用）。
+    ZUSAGE_MONITOR_NO_WMI=1 或无 pythonw.exe 时返回 None；解释器约束见 _wmi_interpreter。"""
+    if os.environ.get("ZUSAGE_MONITOR_NO_WMI"):
+        return None
+    interpreter = _wmi_interpreter()
+    if not interpreter:
+        return None
+    return _spawn_via_wmi([interpreter, str(HERE / "install_monitor.py"), "%.3f" % epoch,
+                           str(ASAR), str(RUNTIME), "--quiet"])
 
 
 def launch_monitor(epoch):
     """Windows 开新控制台窗口跑安装监控（提醒重启 + 确认生效 + .tmp 收尾）；
-    macOS/Linux 无控制台概念，后台静默跑（收尾与自动退出照常）。设 ZUSAGE_NO_MONITOR=1 可禁用。"""
+    macOS/Linux 无控制台概念，后台静默跑（收尾与自动退出照常）。设 ZUSAGE_NO_MONITOR=1 可禁用。
+    同目标已有存活监控时不再拉起（issue #120：SessionStart 每次自动安装都会走到这里，
+    不去重会随会话数线性堆积）；锁在 spawn 前释放，由监控进程自己去持有。
+    返回值：Windows 走 WMI（静默分支，或可见分支 breakaway 被拒的幸存通道）时返回新进程
+    PID，其余返回 Popen 对象或 None（当前调用方均不消费返回值；PID 供测试断言与排查用）。"""
     if os.environ.get("ZUSAGE_NO_MONITOR") and not os.environ.get("ZUSAGE_MONITOR_QUIET"):
         return
     monitor = HERE / "install_monitor.py"
     if not monitor.exists():
         return
+    with monitor_instance_lock() as acquired:
+        if not acquired:
+            if not os.environ.get("ZUSAGE_MONITOR_QUIET"):   # 静默模式服务 hook，stdout 不夹文本
+                print(L("（已有监控在值守同一目标，不再重复弹窗：完全退出 ZCode 后会自动完成替换）",
+                        "(A monitor is already watching this target, so no new window is opened: the replacement finishes automatically once ZCode quits completely)"))
+            return   # 已有同目标监控在等：复用即可，不叠加进程
+    # 试锁成功即释放，锁的长期持有者是监控进程自己；极小竞态窗口内并发双拉起
+    # 也无害——后到的监控抢锁失败会自行退出。
     cmd = [sys.executable, str(monitor), "%.3f" % epoch, str(ASAR), str(RUNTIME)]
     try:
         if os.environ.get("ZUSAGE_MONITOR_QUIET"):
             if IS_WIN:
+                # 静默收尾必须活得过会话清理：优先 WMI 脱离式拉起（issue #208）；
+                # 设 ZUSAGE_MONITOR_NO_WMI=1 可禁用（排查/测试出口）。WMI 创建不
+                # 继承本进程环境、也没有创建标志位，解释器须换同目录 pythonw.exe
+                #（无控制台；缺失时跳过 WMI 走树内回退——用 python.exe 会在交互
+                # 会话闪现控制台窗，行为不能劣化），静默开关走 --quiet 参数。
+                pid = _spawn_survivor_monitor(epoch)
+                if pid is not None:
+                    return pid
                 return _spawn_detached(cmd, subprocess.CREATE_NO_WINDOW, cwd=str(HERE),
                                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                        stderr=subprocess.DEVNULL)
@@ -199,7 +308,24 @@ def launch_monitor(epoch):
                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                     stderr=subprocess.DEVNULL)
         if IS_WIN:
-            return _spawn_detached(cmd, subprocess.CREATE_NEW_CONSOLE, cwd=str(HERE))
+            try:
+                return _spawn_detached(cmd, subprocess.CREATE_NEW_CONSOLE, fallback=False,
+                                       cwd=str(HERE))
+            except OSError as denied:
+                # breakaway 被拒：树内可见监控会在用户退出 ZCode 时随宿主回收一起消失，
+                # 手动安装就永远收不了尾（issue #208 同源）。先试 WMI 脱离的静默监控，
+                # 都不可用才回到原树内回退。注意 fallback=False 会把任意 Popen OSError
+                # 一并抛到这里（AV 拦截/磁盘故障同码 WinError 5，无法按错误码区分）：
+                # 行为只会多一次 WMI 尝试、永不劣于基线，警告标签按最常见原因措辞。
+                pid = _spawn_survivor_monitor(epoch)
+                if pid is not None:
+                    print(L("（监控窗口无法脱离 ZCode 进程组，已改为后台静默监控：没有监控窗口、"
+                            "也无需保持任何窗口，完全退出 ZCode 后会自动完成替换）",
+                            "(The monitor window cannot detach from ZCode's process group, so a silent background monitor was started instead: "
+                            "there is no window to keep open; the replacement finishes automatically once ZCode quits completely)"))
+                    return pid
+                _warn_breakaway_denied(denied)
+                return subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE, cwd=str(HERE))
         return subprocess.Popen(cmd, cwd=str(HERE),
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
@@ -216,6 +342,25 @@ def read_header(f):
     assert a == 4, f"unexpected pickle prefix {a}"
     header = json.loads(f.read(d))
     return header, 8 + b
+
+
+def read_asar_package(asar_path, pi=None):
+    """读取 asar 根目录 package.json 解析后的字典；非 asar、unpacked 外置或损坏时返回 None。"""
+    reader = read_header if pi is None else getattr(pi, "read_header", read_header)
+    try:
+        with open(asar_path, "rb") as stream:
+            header, base = reader(stream)
+            node = header.get("files", {}).get("package.json")
+            if not isinstance(node, dict) or node.get("unpacked") or "size" not in node:
+                return None
+            stream.seek(base + int(node["offset"]))
+            data = stream.read(int(node["size"]))
+        if b"\x00" in data:
+            return None
+        pkg = json.loads(data.decode("utf-8"))
+        return pkg if isinstance(pkg, dict) else None
+    except Exception:
+        return None
 
 
 def iter_files(node, path=""):
@@ -301,17 +446,23 @@ def self_check(asar_path: Path, expect=True):
 
 def syntax_check(asar_path: Path):
     """用 ZCode 自身当 node（ELECTRON_RUN_AS_NODE）对入口做语法检查；
-    找不到/无法运行 ZCode 可执行文件时跳过（自检是锦上添花，不应挡安装）。"""
-    exe = ZCODE_EXE
-    if not exe or not exe.is_file():
+    找不到/无法运行 ZCode 可执行文件时跳过（此时不挡安装；收尾校验真跑出语法错误仍 fail-closed 拒收）。"""
+    exe = ui_element_exe_for(ZCODE_EXE)
+    if not _safe_is_file(exe):
         print(L("  [check] 未找到 ZCode 可执行文件，跳过语法检查",
                 "  [check] ZCode executable not found; syntax check skipped"))
         return True
     src = entry_bytes_of(asar_path)
     env = dict(os.environ, ELECTRON_RUN_AS_NODE="1")
-    fd, name = tempfile.mkstemp(prefix=".entry-check.", suffix=".js", dir=HERE)
-    tmp_js = Path(name)
+    fd, tmp_js, r, run_err = None, None, None, ""
     try:
+        # 入口是 ESM（package.json type:module）：临时 .js 在 HERE（无 type:module 上下文）里
+        # 会被 node --check 按 CJS goal 解析，顶层 import 必报语法错误；用 .mjs 按 ESM 检查。
+        # 走 bounded_mkstemp：HERE 若位于受保护目录（无锁先行证明可写），stdlib 的
+        # tempfile.mkstemp 在 Windows 上会吞掉 PermissionError 无限换名挂起（issue #360），
+        # 根本进不了下方 except OSError 的跳过分支。
+        fd, name = bounded_mkstemp(prefix=".entry-check.", suffix=".mjs", dir=HERE)
+        tmp_js = Path(name)
         with os.fdopen(fd, "wb") as stream:
             stream.write(src)
         # Node 恒写 UTF-8：按区域编码解码，回显里的非 ASCII（中文路径/源码行）会让 Windows
@@ -322,7 +473,11 @@ def syntax_check(asar_path: Path):
         r = None
         run_err = str(e)
     finally:
-        tmp_js.unlink(missing_ok=True)
+        if tmp_js is not None:
+            try:
+                tmp_js.unlink(missing_ok=True)   # mkstemp 本身失败时无临时文件可清
+            except OSError:
+                pass
     if r is None:
         print(L(f"  [check] 语法检查无法执行（{run_err}），跳过",
                 f"  [check] syntax check failed to run ({run_err}); skipped"))
@@ -351,6 +506,14 @@ def cleanup_legacy_bak():
 
 class PendingTmpError(ValueError):
     """来源/身份不可信：立即取消收尾，保留文件供诊断，不按文件占用重试。"""
+
+
+class PendingTmpBusy(PendingTmpError):
+    """发布中 journal 的瞬时态（issue #228）：监控重试续守而非取消让位。_publish_pending
+    先写 cancelled+publishing journal、全量 hash 大包后才落终版 sidecar——这个秒级
+    窗口里轮询的旧监控若按 cancelled 退出让位，而 launch_monitor 的去重又认定
+    「已有监控在等」不拉新监控，交接就断裂成孤儿 pending（之后重启不再替换）。子类化
+    保持既有 except PendingTmpError 全部语义，监控循环按需先行捕获。"""
 
 
 # Windows 的 st_ctime 是创建时间：内容修改不会改变它（没有防篡改价值），且杀软过滤
@@ -412,6 +575,9 @@ def _load_tmp_metadata():
     try:
         if TMP_META.is_symlink():
             raise PendingTmpError("sidecar is a symlink")
+        # 有界读：sidecar 目录被写入已需特权，仍不无界读入内存（与 release_unpack 同策略）
+        if TMP_META.stat().st_size > 256 * 1024:
+            raise PendingTmpError("sidecar abnormally large")
         meta = json.loads(TMP_META.read_text(encoding="utf-8"))
         if (meta["version"] != 1 or meta["asar"] != str(ASAR.resolve()) or
                 meta["tmp_path"] != str(TMP.absolute()) or
@@ -431,7 +597,7 @@ def _load_tmp_metadata():
 
 
 def _atomic_tmp_metadata(meta):
-    fd, name = tempfile.mkstemp(prefix=TMP_META.name + ".", dir=TMP_META.parent)
+    fd, name = bounded_mkstemp(prefix=TMP_META.name + ".", dir=TMP_META.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
             json.dump(meta, stream, separators=(",", ":"))
@@ -439,12 +605,63 @@ def _atomic_tmp_metadata(meta):
             os.fsync(stream.fileno())
         os.replace(name, TMP_META)
     finally:
-        Path(name).unlink(missing_ok=True)
+        try:
+            Path(name).unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _target_lock():
     # Independent of runtime/update locks: never call runtime synchronization here.
     return file_lock(ASAR.with_name(ASAR.name + ".zusage.lock"))
+
+
+def monitor_lock_path():
+    """监控实例去重锁（issue #120）：与目标锁同目录、不同名，永久保留不删。"""
+    return ASAR.with_name(ASAR.name + ".zusage.monitor.lock")
+
+
+@contextmanager
+def monitor_instance_lock():
+    """监控实例去重锁（issue #120，非阻塞独占）：yield True=持有；False=同目标已有
+    监控在跑。锁文件与目标锁同目录、不同名，永久保留不删。不用 file_lock：去重锁
+    是纯 try-lock，没有等待与超时语义，还共用它的计时器会干扰既有测试对轮询节奏
+    的断言。锁文件无法创建或本体不可写（满盘等）时都按持有处理：去重是锦上添花，
+    不能挡住收尾主职责，更不能把去重失败变成安装失败。区域锁/flock 在句柄关闭
+    （含进程退出、被杀）时由 OS 释放，无陈锁残留。"""
+    try:
+        fd = os.open(os.fspath(monitor_lock_path()), os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError:
+        fd = None
+    if fd is None:
+        yield True
+        return
+    locked = False
+    try:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                if os.fstat(fd).st_size == 0:
+                    os.write(fd, b"\0")
+                os.lseek(fd, 0, os.SEEK_SET)
+            except OSError:
+                yield True   # 锁文件本体不可用：同上退化，不让异常打断安装/收尾链
+                return
+            try:
+                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                locked = True
+            except OSError:
+                pass
+        else:
+            import fcntl
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locked = True
+            except OSError:
+                pass
+        yield locked
+    finally:
+        os.close(fd)   # 释放即关闭句柄：显式解锁与关闭之间的窗口没有意义
 
 
 def _checked_tmp_metadata(path, source, operation):
@@ -523,13 +740,32 @@ def _publish_pending(stage, source, operation, previous):
     return meta
 
 
+STALE_STAGE_SECONDS = 600
+
+
+def _sweep_stale_stages(directory):
+    """清掉早于 STALE_STAGE_SECONDS 的本链孤儿 stage（app.asar.zusage.tmp.*.stage，
+    issue #191：重打包进程中途被杀时 finally 不执行，单次最高约 375MB 残留无人
+    清扫，可反复累积；桥链 _sweep_stale_stages 只认 .zusage-bridge-* 前缀，覆盖
+    不到这里）。调用方必须已持有 _target_lock——stage 只在锁内创建，锁内看到的
+    老 stage 必然无主；600s 阈值与桥链同策略，覆盖崩溃后立刻重跑的移交窗口。"""
+    now = time.time()
+    for stale in Path(directory).glob(TMP.name + ".*.stage"):
+        try:
+            if now - stale.stat().st_mtime > STALE_STAGE_SECONDS:
+                stale.unlink()
+        except OSError:
+            pass
+
+
 def _prepare_tmp(modify, operation="install", source=None):
     source = source if source is not None else source_fingerprint(ASAR)
     _same_stamp(ASAR, source)
+    _sweep_stale_stages(TMP.parent)
     previous = None
     if TMP.exists() or TMP.is_symlink() or TMP_META.exists() or TMP_META.is_symlink():
         previous = _owned_tmp_metadata()
-    fd, name = tempfile.mkstemp(prefix=TMP.name + ".", suffix=".stage", dir=TMP.parent)
+    fd, name = bounded_mkstemp(prefix=TMP.name + ".", suffix=".stage", dir=TMP.parent)
     os.close(fd)
     stage = Path(name)
     try:
@@ -543,7 +779,10 @@ def _prepare_tmp(modify, operation="install", source=None):
         return _publish_pending(stage, source, operation, previous)
     finally:
         # Only this invocation's exclusive name, never glob historical TMPs.
-        stage.unlink(missing_ok=True)
+        try:
+            stage.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def prepare_tmp(modify, operation="install", source=None):
@@ -561,6 +800,7 @@ def publish_external_pending(stage, source=None, operation="install"):
     stage = Path(stage)
     source = source if source is not None else source_fingerprint(ASAR)
     with _target_lock():
+        _sweep_stale_stages(TMP.parent)
         previous = None
         if TMP.exists() or TMP.is_symlink() or TMP_META.exists() or TMP_META.is_symlink():
             previous = _owned_tmp_metadata()
@@ -569,7 +809,10 @@ def publish_external_pending(stage, source=None, operation="install"):
                 raise PendingTmpError("pending remove in progress; install pending refused")
             return _publish_pending(stage, source, operation, previous)
         finally:
-            stage.unlink(missing_ok=True)
+            try:
+                stage.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def pending_operation():
@@ -582,10 +825,38 @@ def pending_operation():
         return None
 
 
+def revive_orphan_pending(pi=None, require_writable=False):
+    """检测有效待收尾包且实例锁空闲时静默补拉监控（SessionStart hook 与 MCP 启动共用）。
+    传入 pi 模块/桩对象（默认本模块自身），保持测试 mock 接缝完整。"""
+    target = sys.modules[__name__] if pi is None else pi
+    if target.pending_operation() not in ("install", "remove"):
+        return False
+    with target.monitor_instance_lock() as acquired:
+        if not acquired:
+            return False
+    if require_writable and not target.target_writable():
+        return False
+    previous = os.environ.get("ZUSAGE_MONITOR_QUIET")
+    try:
+        os.environ["ZUSAGE_MONITOR_QUIET"] = "1"
+        with contextlib.redirect_stdout(sys.stderr):
+            target.launch_monitor(time.time())
+    finally:
+        if previous is None:
+            os.environ.pop("ZUSAGE_MONITOR_QUIET", None)
+        else:
+            os.environ["ZUSAGE_MONITOR_QUIET"] = previous
+    return True
+
+
 def pending_tmp(operation="install", verify_hash=False, verified=None):
     """校验来源及 TMP；verified 是单次监控的缓存，stat/sidecar 不变才复用 hash。"""
     meta = _load_tmp_metadata()
-    if (meta["operation"] == "cancelled" or meta.get("validated") is not True or
+    if meta["operation"] == "cancelled":
+        if meta.get("publishing") is True:
+            raise PendingTmpBusy("pending publish in progress")   # 瞬时态：重试待新世代落定
+        raise PendingTmpError("pending operation/runtime is no longer authorized")
+    if (meta.get("validated") is not True or
             (operation is not None and meta["operation"] != operation) or
             (meta["operation"] == "install" and meta["runtime"] != str(RUNTIME.resolve()))):
         raise PendingTmpError("pending operation/runtime is no longer authorized")
@@ -643,10 +914,44 @@ def finalize_tmp(operation="install", client_closed=None, verified=None):
 
 
 # ---------- 安装 / 卸载 ----------
+#
+# 临时文件创建统一走 runtime_lock.bounded_mkstemp（单次快错原语，语义见其
+# docstring）：asar 同目录的 stage/写入探针一律经本模块导入名调用，不走会在
+# Windows 受保护目录上无限换名挂起的 tempfile.mkstemp（issue #360）。
+
 
 def target_writable():
-    """asar 与其所在目录都可写（/opt 等系统位置需要 root：只读目标不能再重打包）。"""
-    return os.access(ASAR, os.W_OK) and os.access(ASAR.parent, os.W_OK)
+    """asar 与其所在目录都可写（/opt 等系统位置需要 root：只读目标不能再重打包）。
+    Windows 的 os.access 看不见 ACL，对受保护目录恒报可写（issue #67/#130 实测），
+    快速判定通过后再在同目录做一次真实写入探针兜底（即建即删，判定不过会省掉
+    一次注定失败的重打包，也让 hook 场景下「无人能收尾」可被正确识别）；
+    探针走 bounded_mkstemp，不用会在 Windows 受保护目录上无限重试的
+    tempfile.mkstemp（issue #360）。"""
+    if not (os.access(ASAR, os.W_OK) and os.access(ASAR.parent, os.W_OK)):
+        return False
+    try:
+        fd, name = bounded_mkstemp(prefix=".zusage-writable-probe.", dir=ASAR.parent)
+    except OSError:
+        return False
+    os.close(fd)
+    try:
+        Path(name).unlink(missing_ok=True)
+    except OSError:
+        pass   # 已证明可写；残余探针文件无害，不为此改变判定
+    return True
+
+
+def is_elevated():
+    """本进程是否具备越过目标目录写保护的身份（Windows 管理员 / POSIX root）；
+    探测失败按无提权处理。受保护目录上提权 monitor 是唯一能收尾待替换包的进程
+    （issue #130）：hook 无提权重不了尾也重建不了它，区分两者决定提示与页脚文案。"""
+    try:
+        if IS_WIN:
+            import ctypes
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        return os.geteuid() == 0
+    except (AttributeError, OSError):
+        return False
 
 
 def sudo_hint(operation="install"):
@@ -666,8 +971,8 @@ def sudo_hint(operation="install"):
                 f"[permission] app.asar or its directory is not writable (protected locations like Program Files need an administrator): {ASAR}"))
         print(L("请以管理员身份打开终端（右键终端图标，选「以管理员身份运行」），然后执行：",
                 "Open a terminal as administrator (right-click the terminal icon, choose 'Run as administrator'), then run:"))
-        print(L('  python "{}" {}'.format(script, cmd).rstrip(),
-                '  python "{}" {}'.format(script, cmd).rstrip()))
+        print(L('  "{}" "{}" {}'.format(PYEXE, script, cmd).rstrip(),
+                '  "{}" "{}" {}'.format(PYEXE, script, cmd).rstrip()))
         return
     print(L(f"[权限] app.asar 或其所在目录不可写（Linux 上 /opt 等系统位置需要 root）：{ASAR}",
             f"[permission] app.asar or its directory is not writable (Linux system locations like /opt need root): {ASAR}"))
@@ -679,10 +984,28 @@ def sudo_hint(operation="install"):
             '  sudo env HOME="$HOME" PATH="$PATH" python3 "{}" {}'.format(script, cmd).rstrip()))
 
 
+def _reusable_pending_install(new_entry):
+    """磁盘已有「同来源、同运行时、入口与本次安装目标完全一致」的有效待收尾包时
+    判定可复用（issue #120）：pending_tmp 以 stat 级校验 sidecar 的 validated/runtime
+    与来源、TMP 的 stamp 未变——sidecar 发布时已做过整包 hash、自检与语法检查，
+    stamp 未变即内容未变；再比对 TMP 入口与本次将写入的 new_entry 逐字节一致。
+    最终替换仍走原有全量校验链。任何不确定（文件缺失、stamp 变化、结构异常）都
+    返回 False 走原有重打包路径：复用只是优化，不是新的信任边界。"""
+    try:
+        pending_tmp("install")
+        return entry_bytes_of(TMP) == new_entry
+    except (OSError, ValueError, AssertionError, KeyError, struct.error):
+        return False
+
+
 def install(finalize=False, before_publish=None):
     """Serialize install/remove/finalize; optional callback precedes a new install's publication."""
     if finalize:
         return _install(finalize=True)
+    assert LOADER.exists(), L(f"loader 缺失：{LOADER}", f"loader missing: {LOADER}")
+    if not target_writable():
+        sudo_hint()
+        return False
     try:
         with _target_lock():
             return _install(before_publish=before_publish)
@@ -704,9 +1027,6 @@ def _install(finalize=False, before_publish=None):
             cleanup_legacy_bak()
         return ok
     assert LOADER.exists(), L(f"loader 缺失：{LOADER}", f"loader missing: {LOADER}")
-    if not target_writable():
-        sudo_hint()
-        return False
     try:
         source = source_fingerprint(ASAR)  # 必须在读取待修改入口和 repack 前取得。
         entry = entry_bytes_of(ASAR)
@@ -725,22 +1045,29 @@ def _install(finalize=False, before_publish=None):
     if stripped != entry:
         print(L("检测到旧注入行（可能指向旧目录），将替换为新路径。",
                 "Old injection line detected (possibly pointing at an old directory); it will be replaced with the new path."))
-    print(L("重打包（307MB，约需十几秒）...", "repacking (307MB, takes ~10-20 seconds)..."))
-    try:
-        if before_publish is not None:
-            before_publish({"asar": str(ASAR.resolve()),
-                            "entryHash": hashlib.sha256(new_entry).hexdigest()})
-        _prepare_tmp({"/" + ENTRY: new_entry}, source=source)
-    except (OSError, PendingTmpError) as e:
-        print(L(f"待替换包生成失败，未替换：{e}", f"Pending package preparation failed; not replaced: {e}"))
-        return False
+    if _reusable_pending_install(new_entry):
+        # 客户端持续运行期间每次 SessionStart 自动安装都会走到这里：直接复用磁盘上
+        # 已排定的待收尾包，不再 307MB 重打包/重写（issue #120 的写放大）。发布时的
+        # 安装意图记录（before_publish）同样不重复。后续替换/收尾照原路径进行。
+        print(L("已有有效的待收尾包（内容一致），跳过重打包。",
+                "A valid identical pending package already exists; skipping the repack."))
+    else:
+        print(L("重打包（307MB，约需十几秒）...", "repacking (307MB, takes ~10-20 seconds)..."))
+        try:
+            if before_publish is not None:
+                before_publish({"asar": str(ASAR.resolve()),
+                                "entryHash": hashlib.sha256(new_entry).hexdigest()})
+            _prepare_tmp({"/" + ENTRY: new_entry}, source=source)
+        except (OSError, PendingTmpError) as e:
+            print(L(f"待替换包生成失败，未替换：{e}", f"Pending package preparation failed; not replaced: {e}"))
+            return False
     if client_running():
         try:
             _replace_pending("install")
             print(L("\n客户端运行中，但 asar 原子替换成功（运行中进程仍读旧数据）。",
                     "\nZCode is running, but the asar was replaced atomically (running processes keep reading the old data)."))
-            print(L("重启 ZCode 后悬浮条生效；已弹出监控窗口，确认生效后自动关闭。",
-                    "The floating bar activates after restarting ZCode; a monitor window has opened and will close itself once the load is confirmed."))
+            print(L("重启 ZCode 后悬浮条生效。若弹出了监控窗口，它会确认生效后自动关闭。",
+                    "The floating bar activates after restarting ZCode. If a monitor window opened, it confirms the result and closes automatically."))
             cleanup_legacy_bak()
             launch_monitor(time.time())
             return True
@@ -748,10 +1075,13 @@ def _install(finalize=False, before_publish=None):
             print(L(f"待替换包已失效，未替换：{e}", f"Pending package invalidated; not replaced: {e}"))
             return False
         except OSError as e:
-            print(L(f"\n运行中替换失败（{e}）。已弹出监控窗口：完全退出 ZCode 后会自动完成替换，",
-                    f"\nReplacement while running failed ({e}). A monitor window has opened: it finishes the replacement once ZCode quits completely,"))
-            print(L(f'或之后手动执行：python patch_install.py install --finalize --asar "{ASAR}" --runtime "{RUNTIME}"',
-                    f'or run manually afterwards: python patch_install.py install --finalize --asar "{ASAR}" --runtime "{RUNTIME}"'))
+            tool = RUNTIME / "patch_install.py"
+            win_why = L("Windows 下运行中的 ZCode 会锁定 app.asar，这是预期现象而非安装故障。",
+                        "On Windows a running ZCode locks app.asar; this is expected, not an install fault. ") if IS_WIN else ""
+            print(L(f"\n运行中替换失败（{e}）。{win_why}监控会在完全退出 ZCode 后自动完成替换，",
+                    f"\nReplacement while running failed ({e}). {win_why}A monitor finishes the replacement once ZCode quits completely,"))
+            print(L(f"若弹出了监控窗口请勿关闭；没有窗口或已关闭时，可手动执行：\"{PYEXE}\" \"{tool}\" install --finalize --asar \"{ASAR}\" --runtime \"{RUNTIME}\"",
+                    f"keep any monitor window open; with no window or after closing it, run manually: \"{PYEXE}\" \"{tool}\" install --finalize --asar \"{ASAR}\" --runtime \"{RUNTIME}\""))
             launch_monitor(time.time())
             return False
     try:
@@ -838,8 +1168,9 @@ def _remove():
         print(L(f"卸载待替换包已失效，未替换：{e}", f"Remove pending package invalidated; not replaced: {e}"))
         return False
     except OSError as e:
-        print(L(f'\n替换失败（{e}）。请完全退出 ZCode 后重跑 python patch_install.py remove --asar "{ASAR}"，',
-                f'\nReplacement failed ({e}). Quit ZCode completely and re-run python patch_install.py remove --asar "{ASAR}", '))
+        tool = RUNTIME / "patch_install.py"
+        print(L(f'\n替换失败（{e}）。请完全退出 ZCode 后重跑 "{PYEXE}" "{tool}" remove --asar "{ASAR}"，',
+                f'\nReplacement failed ({e}). Quit ZCode completely and re-run "{PYEXE}" "{tool}" remove --asar "{ASAR}", '))
         print(L("待替换文件保留；不要手动 move/mv 覆盖可能已升级的 app.asar。",
                 "Pending files kept; do not manually move/mv over a possibly upgraded app.asar."))
         return False
@@ -850,8 +1181,15 @@ def _remove():
 
 
 def check():
-    injected = bool(ZUSAGE_LINE_RE.search(entry_bytes_of(ASAR)))   # 宽松匹配任意目录的历史注入行（独立运行时 INJECT_LINE 指向仓库路径，精确匹配会误报未注入）
-    print("asar:", ASAR, ASAR.stat().st_size, "bytes")
+    # CLI 诊断入口：坏目标（缺文件/非 asar）给可读提示，不抛裸 traceback
+    try:
+        injected = bool(ZUSAGE_LINE_RE.search(entry_bytes_of(ASAR)))   # 宽松匹配任意目录的历史注入行（独立运行时 INJECT_LINE 指向仓库路径，精确匹配会误报未注入）
+        size = ASAR.stat().st_size
+    except (OSError, ValueError, KeyError, struct.error) as e:
+        print(L(f"[check] 读取 asar 失败（{e}）：{ASAR}",
+                f"[check] failed to read asar ({e}): {ASAR}"))
+        return 1
+    print("asar:", ASAR, size, "bytes")
     print(L("注入状态:", "Injection:"), L("已注入", "injected") if injected else L("未注入", "not injected"))
     print(L("遗留备份（机制已退役，成功安装/卸载后自动清理）:", "Legacy backup (retired; auto-removed on successful install/remove):"), BAK.exists())
     if injected:
@@ -927,4 +1265,7 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    # check 等子命令的失败退出码必须真正生效（曾裸 main() 恒 0）；bool 返回值不能直接
+    # sys.exit——True 会被当成退出码 1（失败），False 变 0（成功），成功失败颠倒。
+    result = main()
+    sys.exit(0 if result is True or result is None else (result or 1))

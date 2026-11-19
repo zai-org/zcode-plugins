@@ -1,5 +1,6 @@
 """Offline renderer bridge: pinned fingerprints, strict auto-derivation, marker strip."""
 import argparse
+import contextlib
 import copy
 import hashlib
 import json
@@ -14,15 +15,52 @@ import time
 
 import patch_install as asar
 
-WORKTREE = Path("/Users/smzdm/Projects/AI/zcode-token-usage-statusbar")
-MARKER = b"/* zusage-existing-conversation-store:v1"
-BEGIN = b"/* zusage-existing-conversation-store:v1 begin */"
-END = b"/* zusage-existing-conversation-store:v1 end */"
+# CLI 输出白名单根：脚本所在目录（仓库根或插件包根——两处都是合法的源码工作区）
+WORKTREE = Path(__file__).resolve().parent
+BRIDGE_ID = b"/* zusage-existing-conversation-store"
+BRIDGE_GEN = b"v3"   # v3：快照按底层状态引用缓存（issue #307，宿主 React #185）；v2：+acquireSubagentConversationStore
+# MARKER 取各代公共前缀：v1 补丁的升级剥离（_original_module 按标记对剥）与
+# ensure_deployed 的“是否已带桥”判定都只认前缀，不锁死代数。
+MARKER = BRIDGE_ID + b":v"
+BEGIN = BRIDGE_ID + b":" + BRIDGE_GEN + b" begin */"
+END = BRIDGE_ID + b":" + BRIDGE_GEN + b" end */"
+_BRIDGE_BEGIN_RE = re.compile(re.escape(BRIDGE_ID) + rb":v\d+ begin \*/")
+_BRIDGE_END_RE = re.compile(re.escape(BRIDGE_ID) + rb":v\d+ end \*/")
 # 多版本指纹表（新→旧）：客户端官方升级会整体换渲染器资产与混淆名，这里按
 # (版本, 资产路径, 原始 sha256, 混淆名三元组) 逐版本钉死，优先于自动推导。
 # 表内版本的资产哈希漂移仍拒绝（fail-closed）；表外版本走 derive_target 的
 # 严格结构推导——任何一项不唯一/不符即拒绝，绝不对没验证过的 bundle 做字节手术。
 HOST_TARGETS = [
+    {"version": "3.19.0", "asset": "/out/renderer/assets/styles-BpXEJYlR.js",
+     "sha256": "7ef109d5df2b1d730371a43c0d5b5705d0a90a5073b62b39605d3c1e034a8f09",
+     "names": {"key": "LEe", "topic": "Dte", "registry": "Jy"},
+     "pane": {"anchor": b'"data-testid":cw(gWe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
+    {"version": "3.18.2", "asset": "/out/renderer/assets/styles-a4AckxCl.js",
+     "sha256": "80fd7ea8d093c2e8f7da002f0eca05545ed9e302673e3fc47cd1e3465299f9cd",
+     "names": {"key": "_me", "topic": "rte", "registry": "sh"},
+     "pane": {"anchor": b'"data-testid":aC(YVe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
+    {"version": "3.18.1", "asset": "/out/renderer/assets/styles-DNV2PY7o.js",
+     "sha256": "582895c22bf600b9b9aedab4878dfd5074192c13250b127df1e1c243e1779072",
+     "names": {"key": "Ime", "topic": "rte", "registry": "Vm"},
+     "pane": {"anchor": b'"data-testid":DS(EHe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
+    {"version": "3.18.0", "asset": "/out/renderer/assets/styles-BhvI6_DD.js",
+     "sha256": "e948be1c82ff3b5af6af226b7a2d631958df3e69a2c137be40567eacfb9c6b1e",
+     "names": {"key": "pme", "topic": "ete", "registry": "oh"},
+     "pane": {"anchor": b'"data-testid":iC(GVe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
+    {"version": "3.17.2", "asset": "/out/renderer/assets/styles-Dv5E6Odo.js",
+     "sha256": "a0fa280cfbc3e132336c1b1fc9fc98caf4b73b57d588804cb661e3286645b625",
+     "names": {"key": "eme", "topic": "kee", "registry": "Jp"},
+     "pane": {"anchor": b'"data-testid":Fx(hVe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
+    {"version": "3.17.1", "asset": "/out/renderer/assets/styles-C9n_FfEX.js",
+     "sha256": "256d47bf5db876d1833adee53e439c15dd3193c51118c37d33cf8a937472c51b",
+     "names": {"key": "Kfe", "topic": "Aee", "registry": "np"},
+     "pane": {"anchor": b'"data-testid":Gb(aBe,e),"data-session-id":t??`draft`,',
+              "workspacePath": "l", "workspaceIdentity": "u", "remoteSessionId": "d", "paneId": "e"}},
     {"version": "3.16.3", "asset": "/out/renderer/assets/styles-CQuzX8si.js",
      "sha256": "f7eaccd11e350ff6f5dbbeecae15107f519e5b644f359bd1142b26d7f4f44115",
      "names": {"key": "kde", "topic": "So", "registry": "hf"},
@@ -67,8 +105,8 @@ AUTO_PANE_ATTRS = re.compile(
     rb'"data-zusage-scope-version":"1","data-zusage-workspace-path":[A-Za-z_$][\w$]*\?\?``,'
     rb'"data-zusage-workspace-identity":[A-Za-z_$][\w$]*\?\?``,'
     rb'"data-zusage-remote-session-id":[A-Za-z_$][\w$]*\?\?``,"data-zusage-pane-id":[A-Za-z_$][\w$]*,')
-# 桥代码模板：标识符占位符按目标版本的混淆名实例化（__ZU_*__ 不与 JS 语法冲突）。
-BRIDGE_TEMPLATE = rb'''
+# v1 遗留模板（升级剥离时校验桥块必须属于已知代，防桥块内容篡改）
+BRIDGE_TEMPLATE_V1 = rb'''
 /* zusage-existing-conversation-store:v1 begin */
 export function getExistingConversationStore(scope) {
   const fields = ["sessionId", "workspacePath", "workspaceIdentity", "remoteSessionId"];
@@ -185,9 +223,369 @@ if (typeof globalThis === "object" && globalThis !== null) {
 /* zusage-existing-conversation-store:v1 end */
 '''
 
-def bridge_code(target):
+
+# 遗留代 v2（v1.5.9–v1.5.17 已部署桥块的逐字识别）：升级剥离用，不再新打。
+BRIDGE_TEMPLATE_V2 = rb'''
+/* zusage-existing-conversation-store:v2 begin */
+// Only consumer reads allocate copies. Never freeze a host-owned object.
+function zuSnapshot(value, seen = new WeakMap()) {
+  if (value === null || typeof value !== "object") {
+    if (typeof value === "function" || typeof value === "symbol")
+      throw new TypeError("Unsupported snapshot value");
+    return value;
+  }
+  if (seen.has(value)) return seen.get(value);
+  const proto = Object.getPrototypeOf(value);
+  if (!Array.isArray(value) && proto !== Object.prototype && proto !== null)
+    throw new TypeError("Unsupported snapshot object");
+  const result = Array.isArray(value) ? [] : Object.create(null);
+  seen.set(value, result);
+  for (const key of Reflect.ownKeys(value)) {
+    if (Array.isArray(value) && key === "length") continue;
+    const d = Object.getOwnPropertyDescriptor(value, key);
+    if (!("value" in d)) throw new TypeError("Unsupported snapshot accessor");
+    Object.defineProperty(result, key, {
+      value: zuSnapshot(d.value, seen), enumerable: d.enumerable,
+      writable: false, configurable: false
+    });
+  }
+  if (Array.isArray(value)) result.length = value.length;
+  return Object.freeze(result);
+}
+/* Shared store wrapper (existing + acquire): a false current() self-stops;
+ * release returns the acquire lease (null for existing). off unsubscribes
+ * first, then releases; re-acquire inside the host keep-warm window is a
+ * warm refcount reuse. */
+function zuWrapStore(store, current, release) {
+  let stopped = false;
+  const cancellations = new Set();
+  const off = () => {
+    if (stopped) return;
+    stopped = true;
+    for (const cancel of [...cancellations]) cancel();
+    try { release?.(); } catch (_) {}
+  };
+  const active = () => {
+    if (stopped) return false;
+    if (current()) return true;
+    off();
+    return false;
+  };
+  return Object.freeze({
+    getState: () => active() ? zuSnapshot(store.getState()) : null,
+    subscribe: callback => {
+      if (typeof callback !== "function") throw new TypeError("Invalid callback");
+      if (!active()) return () => {};
+      let cancelled = false;
+      const cancel = () => {
+        if (cancelled) return;
+        cancelled = true;
+        cancellations.delete(cancel);
+        try { unsubscribe(); } catch (_) {}
+      };
+      const unsubscribe = store.subscribe(() => {
+        if (cancelled || !active()) return;
+        try {
+          const result = callback();
+          if (result && typeof result.then === "function")
+            Promise.resolve(result).catch(() => {});
+        } catch (_) {}
+      });
+      cancellations.add(cancel);
+      return cancel;
+    },
+    off
+  });
+}
+export function getExistingConversationStore(scope) {
+  const fields = ["sessionId", "workspacePath", "workspaceIdentity", "remoteSessionId"];
+  if (!scope || typeof scope !== "object" || Array.isArray(scope))
+    throw new TypeError("Invalid conversation scope");
+  const descriptors = Object.getOwnPropertyDescriptors(scope);
+  if (Reflect.ownKeys(descriptors).some(key => !fields.includes(key)))
+    throw new TypeError("Unknown conversation scope field");
+  const checked = Object.create(null);
+  for (const key of fields) {
+    const d = descriptors[key];
+    if (!d) continue;
+    if (!("value" in d) || typeof d.value !== "string" ||
+        !d.value.trim() || /[\x00-\x1f\x7f]/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    if ((key === "sessionId" || key === "remoteSessionId") && /\s/.test(d.value))
+      throw new TypeError("Invalid conversation identifier");
+    if (key === "remoteSessionId" && d.value === "__base__")
+      throw new TypeError("Reserved remote identifier");
+    checked[key] = d.value;
+  }
+  if (!checked.sessionId || !checked.workspacePath)
+    throw new TypeError("Missing conversation scope field");
+  const key = __ZU_KEY_FN__(checked), topic = __ZU_TOPIC_FN__(checked.sessionId);
+  const entry = __ZU_REGISTRY__.get(key), layer = entry?.layer;
+  const session = layer?.entries.get(topic), store = session?.store;
+  const current = () => !!store && __ZU_REGISTRY__.get(key) === entry && !entry.stale &&
+    !layer.disposed && layer.entries.get(topic) === session &&
+    session.store === store && !store.closed;
+  if (!current()) return null;
+  return zuWrapStore(store, current, null);
+}
+/* v2: restricted acquire for background running subagents (same
+ * SessionDataLayer.acquire path as the drilldown output preview; the
+ * directory pane never subscribes, so background subagents had no ready
+ * store - the root cause of missing live estimates). Only sess_subagent_
+ * prefix + local __base__ key; lease refcount is host-owned, wrapper off
+ * releases. All misses/failures return null (never throw) so the caller
+ * retries in 2s; never spins up a runtime for arbitrary sessions. */
+export function acquireSubagentConversationStore(scope) {
+  const fields = ["sessionId", "workspacePath", "workspaceIdentity"];
+  if (!scope || typeof scope !== "object" || Array.isArray(scope))
+    throw new TypeError("Invalid conversation scope");
+  const descriptors = Object.getOwnPropertyDescriptors(scope);
+  if (Reflect.ownKeys(descriptors).some(key => !fields.includes(key)))
+    throw new TypeError("Unknown conversation scope field");
+  const checked = Object.create(null);
+  for (const key of fields) {
+    const d = descriptors[key];
+    if (!d) continue;
+    if (!("value" in d) || typeof d.value !== "string" ||
+        !d.value.trim() || /[\x00-\x1f\x7f]/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    if (key === "sessionId" && /\s/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    checked[key] = d.value;
+  }
+  if (!checked.sessionId || !checked.sessionId.startsWith("sess_subagent_")) return null;
+  const key = __ZU_KEY_FN__(checked);
+  if (typeof key !== "string" || !key.startsWith("__base__ ")) return null;
+  const entry = __ZU_REGISTRY__.get(key), layer = entry?.layer;
+  if (!entry || entry.stale || !layer || layer.disposed ||
+      typeof layer.acquire !== "function") return null;
+  const topic = __ZU_TOPIC_FN__(checked.sessionId);
+  let lease = null;
+  try { lease = layer.acquire(checked.sessionId); } catch (_) { return null; }
+  const store = lease && lease.store;
+  if (!store || store.closed) {
+    try { lease?.release(); } catch (_) {}
+    return null;
+  }
+  const current = () => !!store && !store.closed && __ZU_REGISTRY__.get(key) === entry &&
+    !entry.stale && !layer.disposed && layer.entries.get(topic)?.store === store;
+  return zuWrapStore(store, current, () => lease.release());
+}
+if (typeof globalThis === "object" && globalThis !== null) {
+  globalThis.__zusageGetExistingConversationStore = getExistingConversationStore;
+  globalThis.__zusageAcquireConversationStore = acquireSubagentConversationStore;
+  // Read-only acceptance diagnostics: enumerate live registry keys/topics for verification.
+  globalThis.__zusageConversationDiagnostics = function () {
+    const keys = [], sessions = [];
+    for (const [key, entry] of __ZU_REGISTRY__) {
+      keys.push(key);
+      const layer = entry && entry.layer;
+      if (!layer || layer.disposed || entry.stale) continue;
+      for (const [topic, session] of layer.entries) {
+        const store = session && session.store;
+        const state = store && !store.closed && store.getState();
+        sessions.push({ key, topic, status: state ? (state.status || "unknown") : "unavailable",
+          seq: state && state.snapshot ? state.snapshot.seq : null });
+      }
+    }
+    return { keys, sessions };
+  };
+}
+/* zusage-existing-conversation-store:v2 end */
+'''
+
+# 当前代 v3：新打/升级目标模板（标识符占位符按目标版本的混淆名实例化，__ZU_*__ 不与 JS 语法冲突）。
+BRIDGE_TEMPLATE = rb'''
+/* zusage-existing-conversation-store:v3 begin */
+// Only consumer reads allocate copies. Never freeze a host-owned object.
+function zuSnapshot(value, seen = new WeakMap()) {
+  if (value === null || typeof value !== "object") {
+    if (typeof value === "function" || typeof value === "symbol")
+      throw new TypeError("Unsupported snapshot value");
+    return value;
+  }
+  if (seen.has(value)) return seen.get(value);
+  const proto = Object.getPrototypeOf(value);
+  if (!Array.isArray(value) && proto !== Object.prototype && proto !== null)
+    throw new TypeError("Unsupported snapshot object");
+  const result = Array.isArray(value) ? [] : Object.create(null);
+  seen.set(value, result);
+  for (const key of Reflect.ownKeys(value)) {
+    if (Array.isArray(value) && key === "length") continue;
+    const d = Object.getOwnPropertyDescriptor(value, key);
+    if (!("value" in d)) throw new TypeError("Unsupported snapshot accessor");
+    Object.defineProperty(result, key, {
+      value: zuSnapshot(d.value, seen), enumerable: d.enumerable,
+      writable: false, configurable: false
+    });
+  }
+  if (Array.isArray(value)) result.length = value.length;
+  return Object.freeze(result);
+}
+/* Shared store wrapper (existing + acquire): a false current() self-stops;
+ * release returns the acquire lease (null for existing). off unsubscribes
+ * first, then releases; re-acquire inside the host keep-warm window is a
+ * warm refcount reuse. */
+function zuWrapStore(store, current, release) {
+  let stopped = false;
+  const cancellations = new Set();
+  // Snapshot cache keyed by the underlying state reference: the host consumes
+  // this wrapper via useSyncExternalStore (Object.is), so the same underlying
+  // state must map to the same frozen snapshot, or the host treats every read
+  // as "the store changed during render" and re-renders forever (React #185).
+  // Host notifications invalidate the cache before forwarding, so in-place
+  // mutations become visible on the next read once announced; unannounced
+  // in-place mutations are unobservable by the subscription contract.
+  let lastRaw = null, lastSnap = null, hasSnap = false;
+  const off = () => {
+    if (stopped) return;
+    stopped = true;
+    for (const cancel of [...cancellations]) cancel();
+    try { release?.(); } catch (_) {}
+  };
+  const active = () => {
+    if (stopped) return false;
+    if (current()) return true;
+    off();
+    return false;
+  };
+  return Object.freeze({
+    getState: () => {
+      if (!active()) { hasSnap = false; return null; }
+      const raw = store.getState();
+      if (!hasSnap || raw !== lastRaw) {
+        const snap = zuSnapshot(raw);   // build first, commit after: a throw leaves the cache untouched
+        lastRaw = raw;
+        lastSnap = snap;
+        hasSnap = true;
+      }
+      return lastSnap;
+    },
+    subscribe: callback => {
+      if (typeof callback !== "function") throw new TypeError("Invalid callback");
+      if (!active()) return () => {};
+      let cancelled = false;
+      const cancel = () => {
+        if (cancelled) return;
+        cancelled = true;
+        cancellations.delete(cancel);
+        try { unsubscribe(); } catch (_) {}
+      };
+      const unsubscribe = store.subscribe(() => {
+        if (cancelled || !active()) return;
+        hasSnap = false;   // invalidate before forwarding: covers in-place mutations too
+        try {
+          const result = callback();
+          if (result && typeof result.then === "function")
+            Promise.resolve(result).catch(() => {});
+        } catch (_) {}
+      });
+      cancellations.add(cancel);
+      return cancel;
+    },
+    off
+  });
+}
+export function getExistingConversationStore(scope) {
+  const fields = ["sessionId", "workspacePath", "workspaceIdentity", "remoteSessionId"];
+  if (!scope || typeof scope !== "object" || Array.isArray(scope))
+    throw new TypeError("Invalid conversation scope");
+  const descriptors = Object.getOwnPropertyDescriptors(scope);
+  if (Reflect.ownKeys(descriptors).some(key => !fields.includes(key)))
+    throw new TypeError("Unknown conversation scope field");
+  const checked = Object.create(null);
+  for (const key of fields) {
+    const d = descriptors[key];
+    if (!d) continue;
+    if (!("value" in d) || typeof d.value !== "string" ||
+        !d.value.trim() || /[\x00-\x1f\x7f]/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    if ((key === "sessionId" || key === "remoteSessionId") && /\s/.test(d.value))
+      throw new TypeError("Invalid conversation identifier");
+    if (key === "remoteSessionId" && d.value === "__base__")
+      throw new TypeError("Reserved remote identifier");
+    checked[key] = d.value;
+  }
+  if (!checked.sessionId || !checked.workspacePath)
+    throw new TypeError("Missing conversation scope field");
+  const key = __ZU_KEY_FN__(checked), topic = __ZU_TOPIC_FN__(checked.sessionId);
+  const entry = __ZU_REGISTRY__.get(key), layer = entry?.layer;
+  const session = layer?.entries.get(topic), store = session?.store;
+  const current = () => !!store && __ZU_REGISTRY__.get(key) === entry && !entry.stale &&
+    !layer.disposed && layer.entries.get(topic) === session &&
+    session.store === store && !store.closed;
+  if (!current()) return null;
+  return zuWrapStore(store, current, null);
+}
+/* v2: restricted acquire for background running subagents (same
+ * SessionDataLayer.acquire path as the drilldown output preview; the
+ * directory pane never subscribes, so background subagents had no ready
+ * store - the root cause of missing live estimates). Only sess_subagent_
+ * prefix + local __base__ key; lease refcount is host-owned, wrapper off
+ * releases. All misses/failures return null (never throw) so the caller
+ * retries in 2s; never spins up a runtime for arbitrary sessions. */
+export function acquireSubagentConversationStore(scope) {
+  const fields = ["sessionId", "workspacePath", "workspaceIdentity"];
+  if (!scope || typeof scope !== "object" || Array.isArray(scope))
+    throw new TypeError("Invalid conversation scope");
+  const descriptors = Object.getOwnPropertyDescriptors(scope);
+  if (Reflect.ownKeys(descriptors).some(key => !fields.includes(key)))
+    throw new TypeError("Unknown conversation scope field");
+  const checked = Object.create(null);
+  for (const key of fields) {
+    const d = descriptors[key];
+    if (!d) continue;
+    if (!("value" in d) || typeof d.value !== "string" ||
+        !d.value.trim() || /[\x00-\x1f\x7f]/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    if (key === "sessionId" && /\s/.test(d.value))
+      throw new TypeError("Invalid conversation scope field");
+    checked[key] = d.value;
+  }
+  if (!checked.sessionId || !checked.sessionId.startsWith("sess_subagent_")) return null;
+  const key = __ZU_KEY_FN__(checked);
+  if (typeof key !== "string" || !key.startsWith("__base__ ")) return null;
+  const entry = __ZU_REGISTRY__.get(key), layer = entry?.layer;
+  if (!entry || entry.stale || !layer || layer.disposed ||
+      typeof layer.acquire !== "function") return null;
+  const topic = __ZU_TOPIC_FN__(checked.sessionId);
+  let lease = null;
+  try { lease = layer.acquire(checked.sessionId); } catch (_) { return null; }
+  const store = lease && lease.store;
+  if (!store || store.closed) {
+    try { lease?.release(); } catch (_) {}
+    return null;
+  }
+  const current = () => !!store && !store.closed && __ZU_REGISTRY__.get(key) === entry &&
+    !entry.stale && !layer.disposed && layer.entries.get(topic)?.store === store;
+  return zuWrapStore(store, current, () => lease.release());
+}
+if (typeof globalThis === "object" && globalThis !== null) {
+  globalThis.__zusageGetExistingConversationStore = getExistingConversationStore;
+  globalThis.__zusageAcquireConversationStore = acquireSubagentConversationStore;
+  // Read-only acceptance diagnostics: enumerate live registry keys/topics for verification.
+  globalThis.__zusageConversationDiagnostics = function () {
+    const keys = [], sessions = [];
+    for (const [key, entry] of __ZU_REGISTRY__) {
+      keys.push(key);
+      const layer = entry && entry.layer;
+      if (!layer || layer.disposed || entry.stale) continue;
+      for (const [topic, session] of layer.entries) {
+        const store = session && session.store;
+        const state = store && !store.closed && store.getState();
+        sessions.push({ key, topic, status: state ? (state.status || "unknown") : "unavailable",
+          seq: state && state.snapshot ? state.snapshot.seq : null });
+      }
+    }
+    return { keys, sessions };
+  };
+}
+/* zusage-existing-conversation-store:v3 end */
+'''
+
+def bridge_code(target, template=None):
     names = target["names"]
-    return (BRIDGE_TEMPLATE
+    return ((template or BRIDGE_TEMPLATE)
             .replace(b"__ZU_KEY_FN__", names["key"].encode())
             .replace(b"__ZU_TOPIC_FN__", names["topic"].encode())
             .replace(b"__ZU_REGISTRY__", names["registry"].encode()))
@@ -206,16 +604,34 @@ def pane_attributes(target):
 
 
 def _original_module(data, target):
-    """仅识别精确旧桥/新桥；第三方尾缀只供 remove 保留。"""
-    prefix, suffix = data, b""
-    has_bridge = MARKER in data
-    if has_bridge:
-        bridge = bridge_code(target)
-        if data.count(MARKER) != 2 or data.count(bridge) != 1:
+    """按标记对剥离任意代桥（v1 补丁由此自动升级到当前模板），剥后前缀以
+    SHA256 指纹校验原样；第三方尾缀只供 remove 保留。桥块两侧换行随模板写入
+    （transform 恒以 "\\n"+BEGIN 前置、END+"\\n" 收尾），剥离时一并吃掉才能
+    字节级复原。"""
+    m_begin, m_end = _BRIDGE_BEGIN_RE.search(data), _BRIDGE_END_RE.search(data)
+    if m_begin or m_end:
+        if (not m_begin or not m_end or m_end.start() < m_begin.start() or
+                len(_BRIDGE_BEGIN_RE.findall(data)) != 1 or
+                len(_BRIDGE_END_RE.findall(data)) != 1 or
+                data[m_begin.start() - 1:m_begin.start()] != b"\n" or
+                data[m_end.end():m_end.end() + 1] not in (b"\n", b"")):
             raise BridgeError("Bridge marker/content tampered")
-        prefix, suffix = data.split(bridge)
-    elif b"getExistingConversationStore" in data:
-        raise BridgeError("Export name collision")
+        # 桥块内容必须属于已知代（当前模板或 v1 遗留）：剥前缀只保原样，桥块内
+        # 容的篡改靠这里拦截（与旧整块匹配同强度）。模板以 \n 包裹桥块（写入时
+        # 与前后文分隔），比对时按同形还原。
+        block = data[m_begin.start():m_end.end()]
+        wrapped = b"\n" + block + b"\n"
+        if wrapped not in (bridge_code(target), bridge_code(target, BRIDGE_TEMPLATE_V2),
+             bridge_code(target, BRIDGE_TEMPLATE_V1)):
+            raise BridgeError("Bridge marker/content tampered")
+        has_bridge = True
+        prefix = data[:m_begin.start() - 1]
+        suffix = data[m_end.end() + 1:] if data[m_end.end():m_end.end() + 1] else b""
+    else:
+        has_bridge = False
+        prefix, suffix = data, b""
+        if b"getExistingConversationStore" in data or b"acquireSubagentConversationStore" in data:
+            raise BridgeError("Export name collision")
     anchor = target["pane"]["anchor"]
     patched_anchor = anchor + pane_attributes(target)
     if prefix.count(anchor) != 1:
@@ -417,11 +833,15 @@ def _resolve_target(stream, nodes, base):
 
 
 def _output_path(source, output):
-    if Path(output).is_symlink():
-        raise BridgeError("Output is a symlink")
-    source, output = Path(source).resolve(), Path(output).resolve()
+    try:
+        if Path(output).is_symlink():
+            raise BridgeError("Output is a symlink")
+        source, output = Path(source).resolve(), Path(output).resolve()
+    except OSError as error:
+        raise BridgeError(f"Output path inaccessible: {error}") from error
     roots = (WORKTREE.resolve(), Path(tempfile.gettempdir()).resolve())
-    if source == output or not any(output.is_relative_to(root) for root in roots):
+    # is_relative_to 是 3.9+ API，Python 3.8 兼容目标下用 parents 成员判定
+    if source == output or not any(output == root or root in output.parents for root in roots):
         raise BridgeError("Output must be a new worktree/temporary file, never an installation")
     # Even a copied application in the authorized roots is not an output target.
     if any(part.endswith(".app") for part in output.parts) or output.parent.name.lower() == "resources":
@@ -472,7 +892,7 @@ def rewrite_asar(source, output, operation="patch"):
             new_nodes[asset_path]["integrity"] = asar.compute_integrity(modified)
             encoded = json.dumps(new_header, ensure_ascii=False, separators=(",", ":")).encode()
             padded = (len(encoded) + 7) // 4 * 4
-            fd, name = tempfile.mkstemp(prefix=".renderer-bridge-", dir=output.parent)
+            fd, name = asar.bounded_mkstemp(prefix=".renderer-bridge-", dir=output.parent)
             stage = Path(name)
             with os.fdopen(fd, "wb") as dest:
                 dest.write(struct.pack("<4I", 4, padded + 4, padded, len(encoded)))
@@ -498,7 +918,10 @@ def rewrite_asar(source, output, operation="patch"):
         return output
     finally:
         if stage is not None:
-            stage.unlink(missing_ok=True)
+            try:
+                stage.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 STALE_STAGE_SECONDS = 600
@@ -517,6 +940,72 @@ def _sweep_stale_stages(directory):
             pass
 
 
+def _inspect_deploy(asar_path):
+    """只读检查目标 asar 的桥状态：返回 ("result", dict) 或 ("patch", tuple)。"""
+    before = asar.source_fingerprint(asar_path)
+    with asar_path.open("rb") as stream:
+        header, base = asar.read_header(stream)
+        nodes = dict(asar.iter_files(header))
+        package = json.loads(_read(stream, nodes, base, "/package.json"))
+        if (package.get("name"), package.get("type")) != ("@zcode/desktop", "module"):
+            raise BridgeError("Unknown host package")
+        version = package.get("version")
+        target = next((item for item in HOST_TARGETS if item["version"] == version), None)
+        auto = target is None
+        if not auto:
+            asset_path = target["asset"]
+            original = _read(stream, nodes, base, asset_path)
+            if MARKER not in original and _digest(original) != target["sha256"]:
+                return "result", {"status": "skipped-unknown", "version": version,
+                                  "detail": "asset hash mismatch for pinned version (host build drift)"}
+        else:
+            modules = {path: _read(stream, nodes, base, path) for path in
+                       sorted(path for path in nodes if AUTO_ASSET_RE.fullmatch(path))}
+            marked = [path for path, data in modules.items() if MARKER in data]
+            if marked:
+                if len(marked) != 1:
+                    return "result", {"status": "skipped-unknown", "version": version,
+                                      "detail": "bridged renderer asset is not unique"}
+                _verify_auto_present(modules[marked[0]])
+                # 其余资产只有在“确实可推导”时才是漏补的 live chunk；
+                # 不可推导的无关 styles-* 不能把幂等 present 变成跳过。
+                for path in modules:
+                    if path in marked:
+                        continue
+                    try:
+                        derive_target(version, modules[path], path, set(nodes))
+                    except BridgeError:
+                        continue
+                    return "result", {"status": "skipped-unknown", "version": version,
+                                      "detail": "unpatched derivable renderer asset present"}
+                return "result", {"status": "present", "version": version,
+                                  "detail": "auto-derived bridge already deployed"}
+            derived, errors = [], []
+            for path, data in modules.items():
+                if b"sourceMappingURL" in data or any(
+                        sibling in nodes for sibling in (path + ".map", path[:-3] + ".map")):
+                    errors.append(f"{path}: unverified source map layout")
+                    continue
+                try:
+                    derived.append(derive_target(version, data, path, set(nodes)))
+                except BridgeError as error:
+                    errors.append(f"{path}: {error}")
+            if not derived:
+                return "result", {"status": "skipped-unknown", "version": version,
+                                  "detail": "auto-derivation refused: " +
+                                            ("; ".join(errors) or "no renderer styles asset")}
+            if len(derived) != 1:
+                return "result", {"status": "skipped-unknown", "version": version,
+                                  "detail": "auto-derivation ambiguous across renderer assets"}
+            target = derived[0]
+            asset_path, original = target["asset"], modules[target["asset"]]
+    _original_module(original, target)
+    modified = transform_module(original, "patch", target)
+    if modified == original:
+        return "result", {"status": "present", "version": version, "detail": "bridge already deployed"}
+    return "patch", (before, base, nodes, header, version, auto, asset_path, original, modified)
+
+
 def ensure_deployed(asar_path):
     """插件安装/更新链专用：确认目标 asar 带桥，没有则就地补打。
 
@@ -524,7 +1013,10 @@ def ensure_deployed(asar_path):
     安装目录设计的：借用 patch_install 同一把 app.asar.zusage.lock 跨进程锁，
     输出临时文件在 asar 同目录后 os.replace 原子换。任何失败都不抛出——桥只是
     实时统计的增强，绝不影响安装/更新主流程。表内版本严格按指纹；表外版本
-    先走 derive_target 的严格结构推导，校验不过按 fail-closed 跳过。返回状态：
+    先走 derive_target 的严格结构推导，校验不过按 fail-closed 跳过。受保护目录
+    拿不到锁写权限时先做只读判定：确定无需写盘（present/skipped-unknown）直接
+    返回真实状态，确需写入才报 skipped-error（带 permission 标记，见 issue #67/#247）。
+    返回状态：
       {"status": "patched"|"present"|"skipped-unknown"|"skipped-error",
        "version": <客户端版本>, "detail": <说明>}
     例外是发布被系统拒绝（Windows 客户端运行中持有 asar 不带 FILE_SHARE_DELETE、
@@ -535,70 +1027,29 @@ def ensure_deployed(asar_path):
     try:
         from runtime_lock import file_lock
         asar_path = Path(asar_path)
-        with file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")):
+        with contextlib.ExitStack() as stack:
+            try:
+                stack.enter_context(file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")))
+            except PermissionError as lock_error:
+                # 受保护目录（Program Files / /opt 等）下普通用户拿不到同目录锁文件写权限：
+                # 先只读判定——若桥已在位（present）或版本未登记（skipped-unknown），
+                # 无需任何写操作，直接返回真实状态，避免提权安装后每次普通会话误报
+                # skipped-error 或吞掉未登记版本的兼容性提醒（issue #67/#247）。
+                # 检查自身失败（坏 asar、读档异常）无法证明无需写盘，按锁失败原语义
+                # 上报，保住 permission 标记供提权指引，不降级为无标记的通用错误。
+                try:
+                    kind, payload = _inspect_deploy(asar_path)
+                except Exception:
+                    raise lock_error
+                if kind == "result":
+                    return payload
+                raise lock_error
             _sweep_stale_stages(asar_path.parent)
-            before = asar.source_fingerprint(asar_path)
-            with asar_path.open("rb") as stream:
-                header, base = asar.read_header(stream)
-                nodes = dict(asar.iter_files(header))
-                package = json.loads(_read(stream, nodes, base, "/package.json"))
-                if (package.get("name"), package.get("type")) != ("@zcode/desktop", "module"):
-                    raise BridgeError("Unknown host package")
-                version = package.get("version")
-                target = next((item for item in HOST_TARGETS if item["version"] == version), None)
-                auto = target is None
-                if not auto:
-                    asset_path = target["asset"]
-                    original = _read(stream, nodes, base, asset_path)
-                    if MARKER not in original and _digest(original) != target["sha256"]:
-                        return {"status": "skipped-unknown", "version": version,
-                                "detail": "asset hash mismatch for pinned version (host build drift)"}
-                else:
-                    modules = {path: _read(stream, nodes, base, path) for path in
-                               sorted(path for path in nodes if AUTO_ASSET_RE.fullmatch(path))}
-                    marked = [path for path, data in modules.items() if MARKER in data]
-                    if marked:
-                        if len(marked) != 1:
-                            return {"status": "skipped-unknown", "version": version,
-                                    "detail": "bridged renderer asset is not unique"}
-                        _verify_auto_present(modules[marked[0]])
-                        # 其余资产只有在“确实可推导”时才是漏补的 live chunk；
-                        # 不可推导的无关 styles-* 不能把幂等 present 变成跳过。
-                        for path in modules:
-                            if path in marked:
-                                continue
-                            try:
-                                derive_target(version, modules[path], path, set(nodes))
-                            except BridgeError:
-                                continue
-                            return {"status": "skipped-unknown", "version": version,
-                                    "detail": "unpatched derivable renderer asset present"}
-                        return {"status": "present", "version": version,
-                                "detail": "auto-derived bridge already deployed"}
-                    derived, errors = [], []
-                    for path, data in modules.items():
-                        if b"sourceMappingURL" in data or any(
-                                sibling in nodes for sibling in (path + ".map", path[:-3] + ".map")):
-                            errors.append(f"{path}: unverified source map layout")
-                            continue
-                        try:
-                            derived.append(derive_target(version, data, path, set(nodes)))
-                        except BridgeError as error:
-                            errors.append(f"{path}: {error}")
-                    if not derived:
-                        return {"status": "skipped-unknown", "version": version,
-                                "detail": "auto-derivation refused: " +
-                                          ("; ".join(errors) or "no renderer styles asset")}
-                    if len(derived) != 1:
-                        return {"status": "skipped-unknown", "version": version,
-                                "detail": "auto-derivation ambiguous across renderer assets"}
-                    target = derived[0]
-                    asset_path, original = target["asset"], modules[target["asset"]]
-            _original_module(original, target)
-            modified = transform_module(original, "patch", target)
-            if modified == original:
-                return {"status": "present", "version": version, "detail": "bridge already deployed"}
-            fd, name = tempfile.mkstemp(prefix=".zusage-bridge-", dir=str(asar_path.parent))
+            kind, payload = _inspect_deploy(asar_path)
+            if kind == "result":
+                return payload
+            before, base, nodes, header, version, auto, asset_path, original, modified = payload
+            fd, name = asar.bounded_mkstemp(prefix=".zusage-bridge-", dir=str(asar_path.parent))
             stage = Path(name)
             try:
                 with os.fdopen(fd, "wb") as dest, asar_path.open("rb") as stream:
@@ -620,7 +1071,10 @@ def ensure_deployed(asar_path):
                 stage = None
             finally:
                 if stage is not None:
-                    stage.unlink(missing_ok=True)
+                    try:
+                        stage.unlink(missing_ok=True)
+                    except OSError:
+                        pass
         return {"status": "patched", "version": version,
                 "detail": "auto-derived bridge deployed" if auto else "bridge deployed"}
     except PermissionError as error:
@@ -632,45 +1086,68 @@ def ensure_deployed(asar_path):
         return {"status": "skipped-error", "version": None, "detail": str(error)}
 
 
+def _inspect_remove(asar_path):
+    """只读检查目标 asar 是否有桥待剥离：返回 ("result", dict) 或 ("remove", tuple)。"""
+    before = asar.source_fingerprint(asar_path)
+    with asar_path.open("rb") as stream:
+        header, base = asar.read_header(stream)
+        nodes = dict(asar.iter_files(header))
+        package = json.loads(_read(stream, nodes, base, "/package.json"))
+        version = package.get("version")
+        target = next((item for item in HOST_TARGETS if item["version"] == version), None)
+        auto = target is None
+        if auto:
+            bridged = []
+            for path in sorted(path for path in nodes if AUTO_ASSET_RE.fullmatch(path)):
+                data = _read(stream, nodes, base, path)
+                if MARKER in data:
+                    bridged.append((path, data))
+            if not bridged:
+                return "result", {"status": "skipped-unknown", "version": version,
+                                  "detail": "host version not pinned; nothing to remove"}
+            if len(bridged) != 1:
+                return "result", {"status": "skipped-unknown", "version": version,
+                                  "detail": "multiple bridged renderer assets"}
+            asset_path, original = bridged[0]
+            restored = _strip_auto_bridge(original)
+        else:
+            asset_path = target["asset"]
+            original = _read(stream, nodes, base, asset_path)
+            if MARKER not in original:
+                return "result", {"status": "absent", "version": target["version"], "detail": "no bridge present"}
+            restored = transform_module(original, "remove")
+    return "remove", (before, base, nodes, header, version, auto, asset_path, original, restored)
+
+
 def remove_deployed(asar_path):
     """卸载链对称清理：只剥离本项目的桥，其余内容不动。
 
     表内版本按指纹逐版本识别；表外版本（自动推导补的桥）按模板剥离桥块与
     属性串。与 ensure_deployed 同样的锁/原子替换/不抛出约定，状态 dict 同构：
-    所有读取与判定都在锁内，发布前复核 source fingerprint，避免用锁外旧布局写坏归档。"""
+    常规路径的读取与判定都在锁内（锁拿不到写权限时按只读判定放行，见
+    ensure_deployed），发布前复核 source fingerprint，避免用锁外旧布局写坏归档。"""
     try:
         from runtime_lock import file_lock
         asar_path = Path(asar_path)
-        with file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")):
-            before = asar.source_fingerprint(asar_path)
-            with asar_path.open("rb") as stream:
-                header, base = asar.read_header(stream)
-                nodes = dict(asar.iter_files(header))
-                package = json.loads(_read(stream, nodes, base, "/package.json"))
-                version = package.get("version")
-                target = next((item for item in HOST_TARGETS if item["version"] == version), None)
-                auto = target is None
-                if auto:
-                    bridged = []
-                    for path in sorted(path for path in nodes if AUTO_ASSET_RE.fullmatch(path)):
-                        data = _read(stream, nodes, base, path)
-                        if MARKER in data:
-                            bridged.append((path, data))
-                    if not bridged:
-                        return {"status": "skipped-unknown", "version": version,
-                                "detail": "host version not pinned; nothing to remove"}
-                    if len(bridged) != 1:
-                        return {"status": "skipped-unknown", "version": version,
-                                "detail": "multiple bridged renderer assets"}
-                    asset_path, original = bridged[0]
-                    restored = _strip_auto_bridge(original)
-                else:
-                    asset_path = target["asset"]
-                    original = _read(stream, nodes, base, asset_path)
-                    if MARKER not in original:
-                        return {"status": "absent", "version": target["version"], "detail": "no bridge present"}
-                    restored = transform_module(original, "remove")
-            fd, name = tempfile.mkstemp(prefix=".zusage-bridge-", dir=str(asar_path.parent))
+        with contextlib.ExitStack() as stack:
+            try:
+                stack.enter_context(file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")))
+            except PermissionError as lock_error:
+                # 受保护目录未注入时普通用户卸载无需 root（issue #15）：若桥本就不在
+                # （absent / skipped-unknown），只读确认后直接放行，不在 stderr 报锁权限错误。
+                # 检查自身失败时按锁失败原语义上报（保留 permission 标记），不降级。
+                try:
+                    kind, payload = _inspect_remove(asar_path)
+                except Exception:
+                    raise lock_error
+                if kind == "result":
+                    return payload
+                raise lock_error
+            kind, payload = _inspect_remove(asar_path)
+            if kind == "result":
+                return payload
+            before, base, nodes, header, version, auto, asset_path, original, restored = payload
+            fd, name = asar.bounded_mkstemp(prefix=".zusage-bridge-", dir=str(asar_path.parent))
             stage = Path(name)
             try:
                 with os.fdopen(fd, "wb") as dest, asar_path.open("rb") as stream:
@@ -684,9 +1161,15 @@ def remove_deployed(asar_path):
                 stage = None
             finally:
                 if stage is not None:
-                    stage.unlink(missing_ok=True)
+                    try:
+                        stage.unlink(missing_ok=True)
+                    except OSError:
+                        pass
         return {"status": "removed", "version": version,
                 "detail": "auto-derived bridge removed" if auto else "bridge removed"}
+    except PermissionError as error:
+        return {"status": "skipped-error", "version": None, "detail": str(error),
+                "permission": True}
     except Exception as error:
         return {"status": "skipped-error", "version": None, "detail": str(error)}
 

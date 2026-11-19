@@ -7,6 +7,8 @@ description: 从本机 ZCode 桌面客户端卸载悬浮用量状态条（重启
 
     python3 "<插件根目录>/overlay_install.py" remove
 
+Windows 上 `python3` 可能是 Microsoft Store 存根（静默失败），依次改用 `python`、`py -3`；macOS/Linux 用 `python3`。
+
 结果处理：
 
 - 成功（含"当前 asar 未注入"）：告知用户「重启 ZCode 后浮层消失」。卸载会写豁免标记，SessionStart hook 此后不再提示、也不再自动安装。
