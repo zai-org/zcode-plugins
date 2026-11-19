@@ -170,6 +170,7 @@ class VideoGenerationServerTest(unittest.TestCase):
         self.assertNotIn("isError", result, self.text(result))
         (submit,) = self.requests_to(SUBMIT)
         self.assertEqual(submit["headers"]["authorization"], JWT)
+        self.assertEqual(submit["headers"]["x-usage-scenario"], "seedance-video")
         self.assertTrue(submit["headers"]["idempotency-key"])
         self.assertEqual(json.loads(submit["body"]), {"query": "一只卡通小鸟飞过"})
         queries = self.requests_to(QUERY)
@@ -177,6 +178,7 @@ class VideoGenerationServerTest(unittest.TestCase):
         for query in queries:
             self.assertEqual(json.loads(query["body"]), {"task_id": "cgt-1"})
             self.assertNotIn("idempotency-key", query["headers"])
+            self.assertEqual(query["headers"]["x-usage-scenario"], "seedance-video")
         saved = Path(result["structuredContent"]["path"])
         self.assertEqual(saved.parent, self.project / "generated-videos")
         self.assertEqual(saved.suffix, ".mp4")
@@ -602,7 +604,10 @@ class VideoGenerationManifestTest(unittest.TestCase):
     def test_names_do_not_expose_the_upstream_model(self):
         for path in PLUGIN.rglob("*"):
             if path.is_file():
-                text = path.read_text(encoding="utf-8").lower()
+                # 计费场景值是服务端白名单里的固定标识，允许带上游模型名；其余内容仍不能出现。
+                text = "\n".join(
+                    line for line in path.read_text(encoding="utf-8").splitlines() if "USAGE_SCENARIO =" not in line
+                ).lower()
                 for word in ("seedream", "seedance", "volc", "doubao", "gpt-image"):
                     self.assertNotIn(word, text, f"{path.relative_to(ROOT)} mentions {word}")
 

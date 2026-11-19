@@ -1427,7 +1427,7 @@
     },
     {
       "name": "unity",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unity/icon.png",
       "description": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
       "description_i18n": {
@@ -1484,7 +1484,7 @@
         "en": "Official ZCode image generation: create an image from text, or edit one reference image, and save it to the workspace.",
         "zh-CN": "ZCode 官方生图：用文字生成图片，或按一张参考图改图，结果保存到工作区。"
       },
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -1512,7 +1512,7 @@
         "en": "Official ZCode video generation: create a short video from text, reference media, or first/last frames, and save it to the workspace.",
         "zh-CN": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。"
       },
-      "version": "0.2.0",
+      "version": "0.2.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
