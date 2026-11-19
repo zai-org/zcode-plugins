@@ -1,0 +1,20 @@
+# knowledge/v1 skeleton — copy to <id>.yaml next to this file, then uncomment
+# and fill each line. The contract is opt-in: only files whose metadata face
+# carries the uncommented `schema: knowledge/v1` header are validated; plain
+# notes are never touched. Index the new file in knowledge/README.md.
+#
+# schema: knowledge/v1
+# id: my-topic              # must equal the file stem (my-topic.yaml)
+# type: howto               # state | howto | principle | pitfall | decision | index | reference
+# status: active            # active | dormant | superseded | archived
+# topic: one-line theme
+# as_of: '2026-11-19'       # date the facts were last checked (YYYY-MM-DD)
+# updated: '2026-11-19'     # last re-verification; must not predate as_of
+# see_also: []              # inline list of other knowledge ids, e.g. [other-topic]
+# body:                     # everything below the body key is free-form content
+#   - h: Heading
+#     text: |
+#       The durable knowledge itself. One topic per file.
+#
+# `type: state` and `type: index` files carry a 90-day freshness SLA while
+# `status: active` — re-verify and bump `updated`, or set status dormant/archived.

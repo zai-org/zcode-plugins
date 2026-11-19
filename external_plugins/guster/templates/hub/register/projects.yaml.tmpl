@@ -1,0 +1,19 @@
+schema: register/v1
+kind: projects
+updated: '{{DATE}}'
+# One row per project: a top-level `- id:` list item under the `projects:` key.
+# Keys: id / status (active|pending|on-hold|stale|retired) / as_of "YYYY-MM-DD" /
+# name / desc / spec.path (relative to the hub root, or ~/ or absolute) /
+# spec.aliases / notes. spec.path must resolve to a directory that exists on
+# this machine; `./` is the legal placeholder for a row with no directory of
+# its own. Unknown keys are ignored.
+#
+# Example shape (uncomment and edit; the table may also start empty):
+# projects:
+# - id: example
+#   status: active
+#   as_of: '{{DATE}}'
+#   name: Example
+#   spec:
+#     path: ~/code/example
+#   notes: one line of free-form notes
