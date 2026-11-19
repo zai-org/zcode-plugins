@@ -1,6 +1,6 @@
 # Unattended runs (scheduled self-wakeup)
 
-Bounded unattended continuation for the experiment loop: the agent schedules its own wake-up turns with the host's `CronCreate` tool, so an experiment loop can keep iterating while the user is away. The Stop hook's 3-continuation window still applies inside every wake turn; the cron chain drives the turns across time. Source verdict and the runtime E2E gate are recorded in ADR-7 and the change design (all four gate points passed on the installed runtime: same-session wakes, exact intervals, maxRuns hard stop, MCP experiment tools visible in wake turns, Cron writes physically absent from the wake-turn tool list).
+Bounded unattended continuation for the experiment loop: the agent schedules its own wake-up turns with the host's `CronCreate` tool, so an experiment loop can keep iterating while the user is away. The Stop hook's 3-continuation window still applies inside every wake turn; the cron chain drives the turns across time. Source verdict and the runtime E2E gate are recorded in ADR-7 and the change design (all five gate points passed on the installed runtime: same-session wakes, exact intervals, maxRuns hard stop, MCP experiment tools visible in wake turns, Cron writes physically absent from the wake-turn tool list).
 
 ## Authorization comes first (hard requirement)
 
@@ -10,10 +10,12 @@ Only create a scheduled wakeup when the user explicitly asked for unattended ope
 
 Create the CronCreate task immediately after the user authorizes. Do not wait for the Stop-hook window to be nearly exhausted: the hook payload carries no continuation counter, so "the last continuation" is not reliably detectable, and creating early costs nothing (idle wakes are cheap no-ops; see the cost note below).
 
+**Clear the permission path before leaving**: an unattended run that hits a permission confirmation stalls until the user returns — in the worst case the whole night. Before creating the wakeup, confirm the benchmark can actually run hands-off: the user is in an automatic/accepted-edits permission mode, or the session permissions already allow what `.auto/measure.sh` and `checks.sh` execute. If a confirmation would fire, say so and let the user pre-approve it now.
+
 ## CronCreate parameters
 
-- Recurring schedule, not `delayMinutes`: automation turns cannot write Cron, so a one-shot chain cannot re-arm itself; recurring + maxRuns is the only self-driving form.
-- `interval`: 5 minutes is the default (one wake turn runs at most ~1-4 experiments inside the Stop window; a 2-minute interval mostly produces idle turns).
+- Finite schedule, not `delayMinutes`: automation turns cannot write Cron, so a one-shot chain cannot re-arm itself — a finite schedule (`recurring: false`) with a run cap (`maxRuns`) is the only self-driving form. Do **not** combine `recurring: true` with `maxRuns`: under the current host contract that pair is rejected (recurring means indefinite), and a silently ignored cap would turn a bounded overnight run into an unbounded one. Re-check CronCreate's current contract when you create the task; these parameters follow the 2026-11 shape.
+- `interval`: every 5 minutes is the default (one wake turn runs at most ~1-4 experiments inside the Stop window; a 2-minute interval mostly produces idle turns).
 - `maxRuns`: 24 is the default (5 min × 24 ≈ 2 hours of unattended time). Scale to the ask ("overnight" → up to ~100; confirm the arithmetic with the user).
 - Wake prompt: pass the template below as the task prompt. It must be self-contained: a wake turn may run after a compaction, so it may rely only on `.auto/` files, not on conversation memory.
 

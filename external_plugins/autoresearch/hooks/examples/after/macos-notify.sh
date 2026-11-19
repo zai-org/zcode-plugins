@@ -13,8 +13,13 @@ const run = p.run_entry;
 const session = p.session;
 const title = `autoresearch run ${run.run}: ${run.status}`;
 const body = `metric=${run.metric ?? '—'} (best=${session?.best_metric ?? '—'}) ${run.description ?? ''}`;
+// AppleScript string literal: escape backslashes FIRST (else the quote escape
+// itself gets escaped), then quotes; fold newlines — a literal newline inside
+// an AppleScript string is a syntax error.
+const esc = (s) =>
+  s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, ' ');
 try {
-  execFileSync('osascript', ['-e', `display notification "${body.replace(/"/g, '\\"')}" with title "${title.replace(/"/g, '\\"')}"`], { stdio: 'ignore' });
+  execFileSync('osascript', ['-e', `display notification "${esc(body)}" with title "${esc(title)}"`], { stdio: 'ignore' });
 } catch {
   /* no osascript (non-macOS) → silent */
 }

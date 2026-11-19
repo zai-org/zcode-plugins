@@ -99,3 +99,21 @@ test("higher direction: improvement means larger", () => {
   ];
   assert.deepEqual(validateLedger(ok, higher), []);
 });
+
+test("first keep must not be worse than the segment baseline", () => {
+  const worse = [
+    run(1, { status: "discard", metric: 42, commit: null }),
+    run(2, { status: "keep", metric: 45, commit: "b" }),
+  ];
+  const v = validateLedger(worse, cfg);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].code, "keep_without_improvement");
+  assert.equal(v[0].run, 2);
+
+  const equal = [
+    run(1, { status: "discard", metric: 42, commit: null }),
+    run(2, { status: "keep", metric: 42, commit: "b" }),
+    run(3, { status: "keep", metric: 40, commit: "c" }),
+  ];
+  assert.deepEqual(validateLedger(equal, cfg), []);
+});

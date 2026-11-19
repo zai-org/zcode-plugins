@@ -16,7 +16,7 @@ The loop runs `before` (each benchmark) and `after` (each `log_experiment`) hook
 | stdout                | returned to the agent as `before_steer` (advisory)                                                                                                                                                     | returned as `after_steer` (advisory)       |
 | constraints           | exit within 30s (killed otherwise); stdout ≤8KB; **fail-open** (errors never block the loop, but failures surface as `*_steer`, e.g. `[before hook exited 3] …` / `[before hook timed out after 30s]`) | same                                       |
 
-`session` = `{metric_name, direction, baseline_metric, best_metric, run_count}`.
+`session` = `{metric_name, direction, baseline_metric, best_metric, run_count, started_at_epoch, goal}` — `started_at_epoch` is the segment start as epoch seconds (`null` when the ledger has no config row); wall-clock budget hooks should read it from stdin instead of parsing `.auto/log.jsonl`, whose timestamps are UTC ISO-8601. `goal` is the session name set by `init_experiment` (`null` when unset) — pi contract parity, so pi example hooks reading `.session.goal` work unchanged.
 `last_run` (before) = previous run or `null`: `{run, status, metric, description, asi}`. `run_entry` (after) = the run just logged: `{run, status, metric, description, commit, asi}`. `asi` carries the Actionable Side Information the agent recorded (`hypothesis`, `next_action_hint`, `rollback`, …); mine it, don't require it.
 
 Every fire (success or failure) appends a `{type:"hook", stage, exit_code, duration_ms, stdout_bytes, timed_out}` entry to `.auto/log.jsonl` for observability.
@@ -25,7 +25,7 @@ Rules of thumb:
 
 - **Silence is the default**: print nothing unless you have something worth saying.
 - **One hook, one concern**: a reminder hook vs a journal hook are different files.
-- No environment variables; everything comes from stdin.
+- The contract is stdin, not the environment: spawn passes the server's env through, but hooks should not depend on it (the shipped `self-check` example's optional interval override is the one sanctioned exception).
 
 ## Scenario selection
 
@@ -33,8 +33,9 @@ Ask: does this hook **remind** (before, produce steer) or **do work** (after, si
 
 - remind before a run → `before`:
   - repeated failures → anti-thrash guard (see `hooks/examples/before/anti-thrash.sh`)
-  - need to try other directions → idea pool (see `idea-rotator.sh`)
+  - need to try other directions → idea pool, with a shallow-streak nudge when recent tagged hypotheses are all `[tune]`/`[ensemble]` (see `idea-rotator.sh`)
   - force a hypothesis → reflection (see `hypothesis-reflection.sh`)
+  - long session drifting into shallow work → hourly self-check on the wall clock (see `self-check.sh`)
   - external lookup before changing code → read docs/web then print a steer
 - do work after a run → `after`:
   - keep a human diary → journal (see `learnings-journal.sh`)
@@ -53,7 +54,7 @@ Ask: does this hook **remind** (before, produce steer) or **do work** (after, si
      | bash .auto/hooks/before.sh
    ```
    For an after hook, replace with an `{"event":"after","cwd":".","run_entry":{...},"session":{...}}` payload.
-5. `chmod +x .auto/hooks/before.sh` (or `after.sh`) and commit; the loop picks it up immediately.
+5. `chmod +x .auto/hooks/before.sh` (or `after.sh`); the loop picks it up immediately. Hooks live under `.auto/` — exempt from rollback and preserved by `clear_experiments` — so they survive without git; whether to commit them is the project's call (the setup guide recommends keeping `.auto/` out of git).
 
 ## Guidelines
 

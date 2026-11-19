@@ -8,7 +8,17 @@ import { join } from "node:path";
 import { resolveWorkCwd } from "../mcp/lib/paths.ts";
 
 const projectCwd = process.argv[2] || process.cwd();
-const cwd = resolveWorkCwd(projectCwd);
+let cwd: string;
+try {
+  cwd = resolveWorkCwd(projectCwd);
+} catch (err) {
+  // Invalid workingDir: fail open with a diagnostic (hook discipline), the
+  // MCP server surfaces the same misconfiguration as a hard error.
+  process.stderr.write(
+    `[autoresearch] ${err instanceof Error ? err.message : String(err)}\n`,
+  );
+  cwd = projectCwd;
+}
 const log = join(cwd, ".auto", "log.jsonl");
 if (!existsSync(log)) process.exit(0);
 
