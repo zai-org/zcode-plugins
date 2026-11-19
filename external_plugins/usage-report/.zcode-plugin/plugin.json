@@ -1,0 +1,12 @@
+{
+  "name": "usage-report",
+  "version": "0.4.1",
+  "description": "发送消息时注入真实用量统计，模型在回复末尾附上一行上轮/累计 token 消耗与耗时",
+  "author": {
+    "name": "joey"
+  },
+  "description_i18n": {
+    "en": "Injects measured token usage on every user prompt via a UserPromptSubmit hook, so the model appends one line with last-turn and cumulative input/output tokens plus pure-compute and wall-clock duration at the end of its reply.",
+    "zh-CN": "通过 UserPromptSubmit 钩子在每条用户消息时注入真实测量的用量数据，模型在自己回复末尾附上一行：上轮/累计的输入输出 tokens 与纯算耗时/墙钟跨度。"
+  }
+}
