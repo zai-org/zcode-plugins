@@ -18,7 +18,7 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "happyhorse-video";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.1.1";
 const AUTH_META_KEY = "com.zcode/official-mcp-auth";
 // 计费场景：zcode-server 把这个头透传给 ToolHub，用来按插件归类用量、在 MaaS 账单里按插件展示。
 // 值是和服务端约定的计费场景名（白名单），改动前要先和服务端对齐。

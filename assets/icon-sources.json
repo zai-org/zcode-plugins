@@ -2591,5 +2591,13 @@
     "mimeType": "image/png",
     "sha256": "4702164e7a74afb4997f1f12584d65cead8069ef43a67b8b83b001d0c4a238c5",
     "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "happyhorse-video",
+    "icon": "happyhorse-video/icon.png",
+    "source": "ZCode authored asset (https://zhipu-ai.feishu.cn/wiki/XAfLwcmTii9dAHkRXQIcxAFMnze)",
+    "mimeType": "image/png",
+    "sha256": "cdd1312d2c4581a0b78d4e2a425e1b40b8073e22a417c47c0b257587b0d5317a",
+    "transformation": "currentColor SVG rendered as #111111 glyph at 70% on a solid white 512x512 PNG; no baked corner radius"
   }
 ]

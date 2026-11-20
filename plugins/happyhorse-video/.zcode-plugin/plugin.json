@@ -1,10 +1,10 @@
 {
   "name": "happyhorse-video",
-  "version": "0.1.0",
-  "description": "ZCode 官方 HappyHorse 视频生成：用文字生成短视频，或按首帧图、参考图生成，结果保存到工作区。",
+  "version": "0.1.1",
+  "description": "根据文字或参考图片生成视频，适合制作广告、社媒短片和创意视频。",
   "description_i18n": {
-    "en": "Official ZCode HappyHorse video generation: create a short video from text, a first frame, or reference images, and save it to the workspace.",
-    "zh-CN": "ZCode 官方 HappyHorse 视频生成：用文字生成短视频，或按首帧图、参考图生成，结果保存到工作区。"
+    "en": "Generate videos from text or reference images. Create ads, social clips, and creative videos.",
+    "zh-CN": "根据文字或参考图片生成视频，适合制作广告、社媒短片和创意视频。"
   },
   "author": {
     "name": "Z.ai",
