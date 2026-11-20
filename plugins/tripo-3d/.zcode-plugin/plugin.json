@@ -1,6 +1,6 @@
 {
   "name": "tripo-3d",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
   "description_i18n": {
     "en": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",

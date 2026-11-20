@@ -1102,7 +1102,7 @@
         "en": "Generate textured 3D models from text or images, add rigging and animation, simplify meshes, and export assets for games or 3D printing. Requires a mainland China Tripo account.",
         "zh-CN": "用文字或图片生成带贴图的 3D 模型，添加骨骼与动画、精简模型面数，导出用于游戏或 3D 打印的素材。需使用 Tripo 国内站账号。"
       },
-      "version": "0.1.4",
+      "version": "0.1.5",
       "author": {
         "name": "VAST",
         "url": "https://www.tripo3d.ai"
