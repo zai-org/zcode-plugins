@@ -1501,6 +1501,34 @@
       ]
     },
     {
+      "name": "happyhorse-video",
+      "source": "./plugins/happyhorse-video",
+      "requiresPaidPlan": true,
+      "displayName": "HappyHorse",
+      "displayName_i18n": {
+        "en": "HappyHorse",
+        "zh-CN": "HappyHorse"
+      },
+      "description": "ZCode 官方 HappyHorse 视频生成：用文字生成短视频，或按首帧图、参考图生成，结果保存到工作区。",
+      "description_i18n": {
+        "en": "Official ZCode HappyHorse video generation: create a short video from text, a first frame, or reference images, and save it to the workspace.",
+        "zh-CN": "ZCode 官方 HappyHorse 视频生成：用文字生成短视频，或按首帧图、参考图生成，结果保存到工作区。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "category": "utilities",
+      "keywords": [
+        "happyhorse",
+        "video-generation",
+        "text-to-video",
+        "image-to-video",
+        "mcp"
+      ]
+    },
+    {
       "name": "rfauto",
       "source": "./external_plugins/rfauto",
       "displayName": "RFAuto",
