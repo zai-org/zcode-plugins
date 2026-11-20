@@ -1,0 +1,47 @@
+{
+  "name": "rfauto",
+  "displayName": "RFAuto",
+  "version": "0.1.0",
+  "description": "把 RFAuto 射频/微波 EDA 框架接入 ZCode 会话：提供 208 个 MCP 工具（器件综合、仿真作业、质量门、结果判读），另附一个判读裁判 agent 和 7 张器件技能卡。所有物理数字都出自 RFAuto 确定性内核与求解器，不由模型生成。",
+  "description_i18n": {
+    "en": "Drive the RFAuto RF/microwave EDA framework from any ZCode session: 208 deterministic MCP tools covering device synthesis, simulation jobs, quality gates, and result verdicts, plus a judge agent and device skill cards. Every physical number comes from the RFAuto deterministic kernel and solvers, never from the model.",
+    "zh-CN": "把 RFAuto 射频/微波 EDA 框架接入 ZCode 会话：提供 208 个 MCP 工具（器件综合、仿真作业、质量门、结果判读），另附一个判读裁判 agent 和 7 张器件技能卡。所有物理数字都出自 RFAuto 确定性内核与求解器，不由模型生成。"
+  },
+  "author": {
+    "name": "geer1895",
+    "url": "https://github.com/geer1895"
+  },
+  "homepage": "https://github.com/geer1895/rfauto",
+  "repository": "https://github.com/geer1895/rfauto",
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "rf",
+    "microwave",
+    "eda",
+    "hfss",
+    "openems",
+    "simulation",
+    "mcp",
+    "s-parameters",
+    "touchstone",
+    "RFAuto"
+  ],
+  "commands": "commands",
+  "skills": "skills",
+  "agents": "agents",
+  "mcpServers": ".mcp.json",
+  "userConfig": {
+    "pythonPath": {
+      "title": "rfauto Python 解释器",
+      "description": "装有 rfauto[mcp] 的 Python 解释器，需 3.10–3.12。留空则使用运行本启动器的解释器。安装命令：pip install \"rfauto[mcp] @ https://github.com/geer1895/rfauto/releases/download/v0.14.0/rfauto-0.14.0-source.zip#sha256=47b2a7db4a6345d1d92cd038d275d75be3edbd8f40ecd5db327a79c05b8ebe6d\"",
+      "type": "file",
+      "default": ""
+    },
+    "rfautoSrc": {
+      "title": "rfauto 源码目录（可选）",
+      "description": "指向 rfauto 检出目录下的 src/。设置后将其前置到 PYTHONPATH，以这份源码为准，不用已安装的 rfauto 包。",
+      "type": "directory",
+      "default": ""
+    }
+  }
+}

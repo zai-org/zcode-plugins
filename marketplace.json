@@ -1174,7 +1174,7 @@
         "en": "Jupyter Notebook",
         "zh-CN": "Jupyter Notebook"
       },
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./plugins/jupyter-notebook",
       "description": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。",
       "description_i18n": {
@@ -1402,7 +1402,7 @@
     },
     {
       "name": "unity",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unity/icon.png",
       "description": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
       "description_i18n": {
@@ -1444,6 +1444,95 @@
         "verification"
       ]
     },
+    {
+      "name": "image-generation",
+      "source": "./plugins/image-generation",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/image-generation/icon.png",
+      "requiresPaidPlan": true,
+      "displayName": "Seedream",
+      "displayName_i18n": {
+        "en": "Seedream",
+        "zh-CN": "Seedream"
+      },
+      "description": "ZCode 官方生图：用文字生成图片，或按一张参考图改图，结果保存到工作区。",
+      "description_i18n": {
+        "en": "Official ZCode image generation: create an image from text, or edit one reference image, and save it to the workspace.",
+        "zh-CN": "ZCode 官方生图：用文字生成图片，或按一张参考图改图，结果保存到工作区。"
+      },
+      "version": "0.1.2",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "category": "utilities",
+      "keywords": [
+        "image-generation",
+        "text-to-image",
+        "image-to-image",
+        "mcp"
+      ]
+    },
+    {
+      "name": "video-generation",
+      "source": "./plugins/video-generation",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video-generation/icon.png",
+      "requiresPaidPlan": true,
+      "displayName": "Seedance",
+      "displayName_i18n": {
+        "en": "Seedance",
+        "zh-CN": "Seedance"
+      },
+      "description": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。",
+      "description_i18n": {
+        "en": "Official ZCode video generation: create a short video from text, reference media, or first/last frames, and save it to the workspace.",
+        "zh-CN": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。"
+      },
+      "version": "0.2.1",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "category": "utilities",
+      "keywords": [
+        "video-generation",
+        "text-to-video",
+        "image-to-video",
+        "mcp"
+      ]
+    },
+    {
+      "name": "rfauto",
+      "source": "./external_plugins/rfauto",
+      "displayName": "RFAuto",
+      "description": "把 RFAuto 射频/微波 EDA 框架接入 ZCode 会话：提供 208 个 MCP 工具（器件综合、仿真作业、质量门、结果判读），另附一个判读裁判 agent 和 7 张器件技能卡。所有物理数字都出自 RFAuto 确定性内核与求解器，不由模型生成。",
+      "description_i18n": {
+        "en": "Drive the RFAuto RF/microwave EDA framework from any ZCode session: 208 deterministic MCP tools covering device synthesis, simulation jobs, quality gates, and result verdicts, plus a judge agent and device skill cards. Every physical number comes from the RFAuto deterministic kernel and solvers, never from the model.",
+        "zh-CN": "把 RFAuto 射频/微波 EDA 框架接入 ZCode 会话：提供 208 个 MCP 工具（器件综合、仿真作业、质量门、结果判读），另附一个判读裁判 agent 和 7 张器件技能卡。所有物理数字都出自 RFAuto 确定性内核与求解器，不由模型生成。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "geer1895",
+        "url": "https://github.com/geer1895"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "rf",
+        "microwave",
+        "eda",
+        "hfss",
+        "openems",
+        "simulation",
+        "mcp",
+        "s-parameters",
+        "touchstone",
+        "RFAuto"
+      ],
+      "homepage": "https://github.com/geer1895/rfauto",
+      "repository": "https://github.com/geer1895/rfauto",
+      "license": "GPL-3.0-only",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/rfauto/icon.png"
+    }
+,
     {
       "name": "zcode-token-usage-statusbar",
       "displayName": "Token Usage Statusbar",
