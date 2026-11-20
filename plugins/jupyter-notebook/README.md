@@ -19,7 +19,7 @@ You can also open the panel from the side pane "+" menu.
 ### Servers
 
 - **Running servers**: JupyterLab, Notebook 7 and `jupyter server` instances on this machine are found automatically and connect without a token. Other servers, including remote ones, connect with a URL and token (`connect_server`, or the form in the panel). The token stays inside the plugin process and is never shown to the agent or the panel.
-- **A server for the workspace**: `start_server` (or the panel's start button) runs `python -m jupyter_server` bound to `127.0.0.1` with a random token and the workspace as its root. It uses the first Python with `jupyter-server` and `ipykernel`: the plugin setting *Python interpreter*, the workspace `.venv` / `venv`, the active virtualenv or conda environment, then `python3` on PATH. Nothing is installed automatically; `start_server` with `useUv: true` runs it through `uv run --with jupyter-server --with ipykernel`. The server stops when the session ends.
+- **A server for the workspace**: `start_server` (or the panel's start button) runs `python -m jupyter_server` bound to `127.0.0.1` with a random token and the workspace as its root. It uses the first Python with `jupyter-server` and `ipykernel`: the plugin setting *Python interpreter*, the workspace `.venv` / `venv`, the active virtualenv or conda environment, then `python3` on PATH. Nothing is installed automatically; `start_server` with `useUv: true` runs it through `uv run --with jupyter-server --with ipykernel`. The server stops when the session ends, including when startup is still in progress.
 - If a notebook is already open in JupyterLab on the same server, the panel joins its kernel.
 
 ### Panel

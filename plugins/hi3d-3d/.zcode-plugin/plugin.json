@@ -1,0 +1,29 @@
+{
+  "name": "hi3d-3d",
+  "version": "0.1.0",
+  "description": "将单张或多视角图片转换为 3D 模型，支持贴图和模型拆件，便于继续编辑或制作 3D 资产。",
+  "description_i18n": {
+    "en": "Turn single or multi-view images into 3D models, add textures, and split models into parts for further editing and asset creation.",
+    "zh-CN": "将单张或多视角图片转换为 3D 模型，支持贴图和模型拆件，便于继续编辑或制作 3D 资产。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["hi3d", "3d", "image-to-3d", "texturing", "model-splitting", "mcp"],
+  "skills": "skills",
+  "mcpServers": {
+    "hi3d_3d": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 330000,
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

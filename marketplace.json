@@ -1174,7 +1174,7 @@
         "en": "Jupyter Notebook",
         "zh-CN": "Jupyter Notebook"
       },
-      "version": "0.2.0",
+      "version": "0.2.1",
       "source": "./plugins/jupyter-notebook",
       "description": "在对话侧栏打开 Jupyter Notebook：连接已有的 Jupyter Server 或为工作区启动一个，Agent 与用户一起编辑和运行 cell。",
       "description_i18n": {
@@ -1402,7 +1402,7 @@
     },
     {
       "name": "unity",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/unity/icon.png",
       "description": "Build game scenes in Unity, edit objects and assets, write C# scripts, and run and debug gameplay prototypes.",
       "description_i18n": {
