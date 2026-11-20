@@ -1,0 +1,26 @@
+{
+  "name": "a2a-mailbox",
+  "version": "0.1.0",
+  "description": "Cross-CLI agent mailbox: send and receive mail between Claude Code, Codex, Pi and ZCode agents (tmux injection / native queues / ssh federation). Mounts the mailbox MCP server from a WSL-side repo clone and ships the mailbox-watch skill.",
+  "description_i18n": {
+    "en": "Cross-CLI agent mailbox: mount the mailbox MCP server and the mailbox-watch skill, joining Claude Code / Codex / Pi / ZCode agents into one file-based federation.",
+    "zh-CN": "跨 CLI agent 信箱：挂载 mailbox MCP 六工具与信箱守望技能，把 Claude Code / Codex / Pi / ZCode 接入同一文件信箱联邦。"
+  },
+  "author": { "name": "RegretSSS" },
+  "skills": "./skills",
+  "mcpServers": {
+    "mailbox": {
+      "command": "wsl.exe",
+      "args": [
+        "-e",
+        "bash",
+        "-lc",
+        "for d in \"$HOME/a2a-mailbox\" \"$HOME/workspace/a2a-mailbox\"; do if [ -f \"$d/mcp/mailbox_mcp.py\" ]; then cd \"$d\" && exec python3 mcp/mailbox_mcp.py; fi; done; echo 'a2a-mailbox not found: git clone https://github.com/RegretSSS/a2a-mailbox into ~/a2a-mailbox or ~/workspace/a2a-mailbox (WSL)' >&2; exit 1"
+      ],
+      "env": {
+        "A2A_CLI": "zcode",
+        "WSLENV": "A2A_CLI"
+      }
+    }
+  }
+}
