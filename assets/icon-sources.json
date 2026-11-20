@@ -150,6 +150,14 @@
     "sha256": "b718dfa9b92c42535d01515da4ec6e63c7e2984f2df7ffced3c4753cf0ead5a9"
   },
   {
+    "name": "archify-panel",
+    "icon": "archify-panel/icon.png",
+    "source": "ZCode authored asset (drawn programmatically with Pillow on feat/archify-panel)",
+    "mimeType": "image/png",
+    "sha256": "c4ebeb19023761ae40cf6647d3a5049a9be499780eba7f93987a5c1d02223acd",
+    "transformation": "Flat solid-color icon drawn at 2048 and downsampled to 512x512 PNG with transparent corners; rounded-square plate baked in"
+  },
+  {
     "name": "asana",
     "icon": "asana/icon.png",
     "source": "/plugins/asana/assets/logo.png",
