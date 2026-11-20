@@ -2599,5 +2599,14 @@
     "mimeType": "image/png",
     "sha256": "cdd1312d2c4581a0b78d4e2a425e1b40b8073e22a417c47c0b257587b0d5317a",
     "transformation": "currentColor SVG rendered as #111111 glyph at 70% on a solid white 512x512 PNG; no baked corner radius"
+  },
+  {
+    "name": "meshy-3d",
+    "icon": "meshy-3d/icon.png",
+    "source": "Meshy official brand mark, supplied by product for the ZCode official Meshy plugin (https://zhipu-ai.feishu.cn/wiki/XAfLwcmTii9dAHkRXQIcxAFMnze)",
+    "homepage": "https://www.meshy.ai",
+    "mimeType": "image/png",
+    "sha256": "d40b23ef5cc3fae843fce2e26fb38122e484ca0e5207e958ae75a25c8698eb63",
+    "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
   }
 ]

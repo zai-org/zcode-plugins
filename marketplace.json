@@ -1603,6 +1603,51 @@
           "用 assets/armor-ref.png 给 https://example.com/knight.glb 重新贴一套银色盔甲"
         ]
       }
+    },
+    {
+      "name": "meshy-3d",
+      "source": "./plugins/meshy-3d",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/meshy-3d/icon.png",
+      "requiresPaidPlan": true,
+      "displayName": "Meshy",
+      "displayName_i18n": {
+        "en": "Meshy",
+        "zh-CN": "Meshy"
+      },
+      "description": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。",
+      "description_i18n": {
+        "en": "Generate 3D models from text or images, with texturing, mesh simplification, format conversion, humanoid rigging, and preset animations.",
+        "zh-CN": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "category": "游戏/3D",
+      "keywords": [
+        "meshy",
+        "3d",
+        "text-to-3d",
+        "image-to-3d",
+        "retexture",
+        "remesh",
+        "rigging",
+        "animation",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Generate a 3D cartoon knight in A-pose and texture it with silver armor and a red cape",
+        "Turn assets/robot.png into a 3D model and export it as FBX",
+        "Remesh the knight, rig it, and make it wave and walk"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成一个 A-pose 的卡通骑士 3D 模型，再贴上银色盔甲和红披风",
+          "把 assets/robot.png 做成 3D 模型，导出 FBX",
+          "给骑士减面后绑骨，让它挥手和走路"
+        ]
+      }
     }
   ]
 }
