@@ -1561,133 +1561,39 @@
       "license": "GPL-3.0-only",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/rfauto/icon.png"
     },
-    {
-      "name": "hyper3d-3d",
-      "source": "./plugins/hyper3d-3d",
-      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-3d/icon.png",
-      "requiresPaidPlan": true,
-      "displayName": "Hyper3D",
-      "displayName_i18n": {
-        "en": "Hyper3D",
-        "zh-CN": "Hyper3D"
-      },
-      "description": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。",
+{
+      "name": "frontend-slides",
+      "source": "./external_plugins/frontend-slides",
+      "description": "Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Zero dependencies, 12 curated style presets, 34 bold design systems, PPT conversion, PDF export, and Vercel deploy.",
       "description_i18n": {
-        "en": "Generate 3D models from text or reference images, create Smart Low Poly models, retexture existing models, and add rigs and preset animations for characters, props, and 3D presentations.",
-        "zh-CN": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。"
+        "en": "Create stunning, animation-rich HTML presentations from scratch or by converting PowerPoint files. Zero dependencies, 12 curated style presets, 34 bold design systems, PPT conversion, PDF export, and Vercel deploy.",
+        "zh-CN": "从零创建或从 PowerPoint 转换生成精美、带动画的 HTML 演示文稿。零依赖，12 种精选样式预设、34 套大胆设计系统，支持 PPT 转换、PDF 导出与 Vercel 部署。"
       },
-      "version": "0.1.0",
+      "version": "2.1.0",
       "author": {
-        "name": "Z.ai",
-        "url": "https://z.ai"
+        "name": "Zara Zhang",
+        "url": "https://github.com/zarazhangrui"
       },
-      "category": "游戏/3D",
+      "category": "productivity",
       "keywords": [
-        "hyper3d",
-        "3d",
-        "text-to-3d",
-        "image-to-3d",
-        "texturing",
-        "rigging",
-        "mcp"
+        "presentations",
+        "slides",
+        "html",
+        "design",
+        "powerpoint",
+        "templates",
+        "deck"
       ],
       "examplePrompts": [
-        "Generate a 3D model of a small wooden treasure chest and save it as GLB",
-        "Turn assets/hero.png into a 3D character in T-pose, then rig it with a walking animation",
-        "Retexture https://example.com/knight.glb with silver armor using assets/armor-ref.png"
+        "Create a pitch deck for my AI startup",
+        "Convert my presentation.pptx to a web slideshow",
+        "Export the deck we just built to PDF"
       ],
       "examplePrompts_i18n": {
         "zh-CN": [
-          "生成一个小木头宝箱的 3D 模型，保存成 GLB",
-          "把 assets/hero.png 做成 T 姿势的 3D 角色，再绑骨并加一个走路动画",
-          "用 assets/armor-ref.png 给 https://example.com/knight.glb 重新贴一套银色盔甲"
-        ]
-      }
-    },
-    {
-      "name": "meshy-3d",
-      "source": "./plugins/meshy-3d",
-      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/meshy-3d/icon.png",
-      "requiresPaidPlan": true,
-      "displayName": "Meshy",
-      "displayName_i18n": {
-        "en": "Meshy",
-        "zh-CN": "Meshy"
-      },
-      "description": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。",
-      "description_i18n": {
-        "en": "Generate 3D models from text or images, with texturing, mesh simplification, format conversion, humanoid rigging, and preset animations.",
-        "zh-CN": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。"
-      },
-      "version": "0.1.0",
-      "author": {
-        "name": "Z.ai",
-        "url": "https://z.ai"
-      },
-      "category": "游戏/3D",
-      "keywords": [
-        "meshy",
-        "3d",
-        "text-to-3d",
-        "image-to-3d",
-        "retexture",
-        "remesh",
-        "rigging",
-        "animation",
-        "mcp"
-      ],
-      "examplePrompts": [
-        "Generate a 3D cartoon knight in A-pose and texture it with silver armor and a red cape",
-        "Turn assets/robot.png into a 3D model and export it as FBX",
-        "Remesh the knight, rig it, and make it wave and walk"
-      ],
-      "examplePrompts_i18n": {
-        "zh-CN": [
-          "生成一个 A-pose 的卡通骑士 3D 模型，再贴上银色盔甲和红披风",
-          "把 assets/robot.png 做成 3D 模型，导出 FBX",
-          "给骑士减面后绑骨，让它挥手和走路"
-        ]
-      }
-    },
-    {
-      "name": "hi3d-3d",
-      "source": "./plugins/hi3d-3d",
-      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hi3d-3d/icon.png",
-      "requiresPaidPlan": true,
-      "displayName": "Hi3D",
-      "displayName_i18n": {
-        "en": "Hi3D",
-        "zh-CN": "Hi3D"
-      },
-      "description": "将单张或多视角图片转换为 3D 模型，支持贴图和模型拆件，便于继续编辑或制作 3D 资产。",
-      "description_i18n": {
-        "en": "Turn single or multi-view images into 3D models, add textures, and split models into parts for further editing and asset creation.",
-        "zh-CN": "将单张或多视角图片转换为 3D 模型，支持贴图和模型拆件，便于继续编辑或制作 3D 资产。"
-      },
-      "version": "0.1.0",
-      "author": {
-        "name": "Z.ai",
-        "url": "https://z.ai"
-      },
-      "category": "游戏/3D",
-      "keywords": [
-        "hi3d",
-        "3d",
-        "image-to-3d",
-        "texturing",
-        "model-splitting",
-        "mcp"
-      ],
-      "examplePrompts": [
-        "Turn assets/robot.png into a 3D model in glb format",
-        "Generate a 3D model from these front and left views, geometry only",
-        "Split the model from the last Hi3D task into character parts"
-      ],
-      "examplePrompts_i18n": {
-        "zh-CN": [
-          "把 assets/robot.png 生成一个 glb 格式的 3D 模型",
-          "用这两张正面和左侧视角图生成一个白模",
-          "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
+          "为我的 AI 创业项目做一个 pitch deck",
+          "把我的 presentation.pptx 转换成网页幻灯片",
+          "把刚做好的演示文稿导出为 PDF"
         ]
       }
     }
