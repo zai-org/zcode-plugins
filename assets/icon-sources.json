@@ -2608,5 +2608,14 @@
     "mimeType": "image/png",
     "sha256": "d40b23ef5cc3fae843fce2e26fb38122e484ca0e5207e958ae75a25c8698eb63",
     "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "hi3d-3d",
+    "icon": "hi3d-3d/icon.png",
+    "source": "Hi3D official brand mark, supplied by product for the ZCode official Hi3D plugin (https://zhipu-ai.feishu.cn/wiki/XAfLwcmTii9dAHkRXQIcxAFMnze)",
+    "homepage": "https://www.hitem3d.ai",
+    "mimeType": "image/png",
+    "sha256": "f33c29f46a1e4f8ad8afc8989f5850d3c24129cf61feb7a1ab6293bf9358c5ce",
+    "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
   }
 ]
