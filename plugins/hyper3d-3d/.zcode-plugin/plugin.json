@@ -1,0 +1,29 @@
+{
+  "name": "hyper3d-3d",
+  "version": "0.1.0",
+  "description": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。",
+  "description_i18n": {
+    "en": "Generate 3D models from text or reference images, create Smart Low Poly models, retexture existing models, and add rigs and preset animations for characters, props, and 3D presentations.",
+    "zh-CN": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["hyper3d", "3d", "text-to-3d", "image-to-3d", "texturing", "rigging", "mcp"],
+  "skills": "skills",
+  "mcpServers": {
+    "hyper3d_3d": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 330000,
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

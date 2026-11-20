@@ -1531,6 +1531,49 @@
       "repository": "https://github.com/geer1895/rfauto",
       "license": "GPL-3.0-only",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/rfauto/icon.png"
+    },
+    {
+      "name": "hyper3d-3d",
+      "source": "./plugins/hyper3d-3d",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/hyper3d-3d/icon.png",
+      "requiresPaidPlan": true,
+      "displayName": "Hyper3D",
+      "displayName_i18n": {
+        "en": "Hyper3D",
+        "zh-CN": "Hyper3D"
+      },
+      "description": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。",
+      "description_i18n": {
+        "en": "Generate 3D models from text or reference images, create Smart Low Poly models, retexture existing models, and add rigs and preset animations for characters, props, and 3D presentations.",
+        "zh-CN": "根据文字或参考图片生成 3D 模型，支持低模（Smart Low Poly）、重新贴图、骨骼绑定和预设动画，适合制作角色、道具和 3D 展示素材。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Z.ai",
+        "url": "https://z.ai"
+      },
+      "category": "游戏/3D",
+      "keywords": [
+        "hyper3d",
+        "3d",
+        "text-to-3d",
+        "image-to-3d",
+        "texturing",
+        "rigging",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Generate a 3D model of a small wooden treasure chest and save it as GLB",
+        "Turn assets/hero.png into a 3D character in T-pose, then rig it with a walking animation",
+        "Retexture https://example.com/knight.glb with silver armor using assets/armor-ref.png"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成一个小木头宝箱的 3D 模型，保存成 GLB",
+          "把 assets/hero.png 做成 T 姿势的 3D 角色，再绑骨并加一个走路动画",
+          "用 assets/armor-ref.png 给 https://example.com/knight.glb 重新贴一套银色盔甲"
+        ]
+      }
     }
   ]
 }
