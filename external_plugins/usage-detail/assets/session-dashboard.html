@@ -1,0 +1,73 @@
+<style>
+#usage-dashboard .ud-session-report{padding:8px 0 16px;}
+#usage-dashboard .ud-session-report h3{margin:0 0 12px;line-height:1.4;overflow-wrap:anywhere;}
+#usage-dashboard .ud-session-report summary{cursor:pointer;line-height:1.6;}
+#usage-dashboard .ud-session-report summary:focus-visible{outline:2px solid var(--foreground);outline-offset:4px;border-radius:2px;}
+#usage-dashboard .ud-session-report .ud-session-identity{margin-top:8px;}
+#usage-dashboard .ud-session-report #ud-session-info{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;margin:12px 0 0;}
+#usage-dashboard .ud-session-report #ud-session-selection{margin:8px 0 0;line-height:1.6;}
+#usage-dashboard .ud-session-report .ud-session-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:24px 0 16px;}
+#usage-dashboard .ud-session-report .viz-stat{padding:16px;min-width:0;}
+#usage-dashboard .ud-session-report .viz-stat-value{margin:8px 0;}
+#usage-dashboard .ud-session-report .ud-session-notes{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 16px;line-height:1.7;}
+#usage-dashboard .ud-session-report #ud-failures{font:inherit;font-size:12px;color:var(--foreground);background:none;border:0;padding:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+#usage-dashboard .ud-session-report .ud-session-section{margin-top:24px;padding-top:16px;border-top:1px solid var(--border);}
+#usage-dashboard .ud-session-report .ud-session-section>summary{font-weight:500;}
+#usage-dashboard .ud-session-report .ud-session-section>summary .text-muted{font-weight:400;margin-left:8px;}
+#usage-dashboard .ud-session-report .ud-session-content{margin-top:16px;}
+#usage-dashboard .ud-session-report .table-responsive{overflow-x:auto;}
+#usage-dashboard .ud-session-report .table{margin:0;}
+#usage-dashboard .ud-session-report td,#usage-dashboard .ud-session-report th{padding-top:12px;padding-bottom:12px;}
+#usage-dashboard .ud-session-report .viz-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:0 0 16px;}
+#usage-dashboard .ud-session-report #ud-more{margin-top:16px;}
+@media(max-width:640px){#usage-dashboard .ud-session-report .ud-session-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+</style>
+<section id="ud-session" class="ud-session-report" aria-label="当前会话用量">
+  <header>
+    <h3 id="ud-session-title"></h3>
+    <details class="ud-session-identity">
+      <summary class="text-small text-muted" id="ud-session-last">会话信息</summary>
+      <p class="text-small text-muted" id="ud-session-info"></p>
+    </details>
+    <p class="text-small text-muted" id="ud-session-selection"></p>
+  </header>
+  <div class="ud-session-stats">
+    <div class="card viz-stat"><div class="text-muted text-small">请求次数</div><div class="viz-stat-value tabular-nums" id="ud-k1">–</div><div class="text-small text-muted" id="ud-k1c"></div></div>
+    <div class="card viz-stat"><div class="text-muted text-small">输入 token</div><div class="viz-stat-value tabular-nums" id="ud-k2">–</div><div class="text-small text-muted" id="ud-k2c">含缓存命中</div></div>
+    <div class="card viz-stat"><div class="text-muted text-small">生成 token</div><div class="viz-stat-value tabular-nums" id="ud-k3">–</div><div class="text-small text-muted" id="ud-k3c">输出 + 思考</div></div>
+    <div class="card viz-stat"><div class="text-muted text-small">缓存读 token</div><div class="viz-stat-value tabular-nums" id="ud-k4">–</div><div class="text-small text-muted" id="ud-k4c"></div></div>
+  </div>
+  <div class="ud-session-notes text-small">
+    <span class="text-muted" id="ud-meta"></span>
+    <button type="button" id="ud-failures" hidden></button>
+  </div>
+  <details class="ud-session-section" id="ud-model-section">
+    <summary>模型分布<span class="text-small text-muted" id="ud-model-count"></span></summary>
+    <div class="ud-session-content table-responsive"><table class="table table-sm">
+      <thead><tr><th>模型</th><th>来源</th><th class="text-end">请求数</th><th class="text-end">输入</th><th class="text-end">生成</th><th class="text-end">缓存读</th></tr></thead>
+      <tbody id="ud-session-models"></tbody>
+    </table></div>
+  </details>
+  <details class="ud-session-section" id="ud-request-section">
+    <summary>请求明细<span class="text-small text-muted" id="ud-request-count"></span></summary>
+    <div class="ud-session-content">
+      <div class="viz-row">
+        <label class="form-label text-small text-muted" for="ud-f-stat">状态</label>
+        <select class="form-select" id="ud-f-stat">
+          <option value="-1">全部状态</option>
+          <option value="-2">失败或取消</option>
+          <option value="0">完成</option>
+          <option value="1">失败</option>
+          <option value="2">已取消</option>
+          <option value="3">进行中</option>
+        </select>
+        <span class="text-small text-muted">点击列标题可排序</span>
+      </div>
+      <div class="table-responsive"><table class="table table-sm">
+        <thead id="ud-detail-head"></thead>
+        <tbody id="ud-detail-body"></tbody>
+      </table></div>
+      <button type="button" class="btn" id="ud-more">加载更多</button>
+    </div>
+  </details>
+</section>
