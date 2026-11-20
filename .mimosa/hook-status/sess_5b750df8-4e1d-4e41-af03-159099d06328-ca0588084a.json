@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-11-04T22:12:45.504Z",
+  "sessionId": "sess_5b750df8-4e1d-4e41-af03-159099d06328",
+  "event": "PostToolUse",
+  "toolName": "Write",
+  "file": "C:\\Users\\Saraye Tell\\.zcode\\workspace\\1793817739219-f969f7f5-f09b-41b6-bbb8-59977b8fdd35\\pr-body.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 9,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}
