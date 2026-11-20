@@ -216,6 +216,7 @@ class ImageGenerationServerTest(unittest.TestCase):
         self.assertNotIn("isError", result, self.text(result))
         (request,) = self.invoke_requests()
         self.assertEqual(request["headers"]["authorization"], JWT)
+        self.assertEqual(request["headers"]["x-usage-scenario"], "seedream-image")
         self.assertTrue(request["headers"]["idempotency-key"])
         self.assertEqual(json.loads(request["body"]), {"query": "一只戴墨镜的橘猫"})
         saved = Path(result["structuredContent"]["path"])
@@ -1197,7 +1198,10 @@ class ImageGenerationManifestTest(unittest.TestCase):
     def test_names_do_not_expose_the_upstream_model(self):
         for path in PLUGIN.rglob("*"):
             if path.is_file():
-                text = path.read_text(encoding="utf-8").lower()
+                # 计费场景值是服务端白名单里的固定标识，允许带上游模型名；其余内容仍不能出现。
+                text = "\n".join(
+                    line for line in path.read_text(encoding="utf-8").splitlines() if "USAGE_SCENARIO =" not in line
+                ).lower()
                 for word in ("seedream", "seedance", "volc", "doubao", "gpt-image"):
                     self.assertNotIn(word, text, f"{path.relative_to(ROOT)} mentions {word}")
 

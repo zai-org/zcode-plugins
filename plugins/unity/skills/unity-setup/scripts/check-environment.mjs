@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir, platform, release, arch } from 'node:os';
 import { resolve, join } from 'node:path';
+import { rejectExplicitCli, resolveBareCli } from './resolve-cli.mjs';
 
 const args = process.argv.slice(2);
 let project = process.cwd();
@@ -17,8 +18,16 @@ for (let i = 0; i < args.length; i++) {
   else cli = args[i];
 }
 
+// 裸名先在 PATH 中解析为绝对路径，显式路径必须是绝对路径；两者都不接受项目目录内的文件（ZP-20261111-16）。
+const isExplicitPath = /[\\/]/.test(cli);
+const cliRejection = isExplicitPath ? rejectExplicitCli(cli, { project }) : null;
+const cliPath = isExplicitPath
+  ? (cliRejection ? null : cli)
+  : resolveBareCli(cli, { project });
+
 function probe(commandArgs) {
-  const result = spawnSync(cli, commandArgs, {
+  if (!cliPath) return { ok: false, exitCode: null, error: cliRejection ?? 'ENOENT', stdout: '', stderr: '' };
+  const result = spawnSync(cliPath, commandArgs, {
     cwd: existsSync(project) ? project : process.cwd(),
     encoding: 'utf8', timeout: 15000, maxBuffer: 1024 * 1024,
     shell: false, windowsHide: true,
@@ -76,7 +85,7 @@ if (version.ok) {
 
 console.log(JSON.stringify({
   system: { platform: os, release: release(), arch: arch() },
-  cli: { executable: cli, ...version },
+  cli: { executable: cliPath ?? cli, ...version },
   project: { path: project, valid: validProject, editorVersion, pipelineCompatible, readError: projectError },
   standardLocationEditors: editorHints,
   checks,

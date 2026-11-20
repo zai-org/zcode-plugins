@@ -17,8 +17,12 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "video-generation";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.2.1";
 const AUTH_META_KEY = "com.zcode/official-mcp-auth";
+// 计费场景：zcode-server 把这个头透传给 ToolHub，用来按插件归类用量、在 MaaS 账单里按插件展示。
+// 值是和服务端约定的计费场景名（白名单），改动前要先和服务端对齐。
+const USAGE_SCENARIO_HEADER = "X-Usage-Scenario";
+const USAGE_SCENARIO = "seedance-video";
 const GENERATE_TOOL = "generate_video";
 const RESULT_TOOL = "get_video_result";
 
@@ -342,7 +346,7 @@ async function apiRequest(call, path, { headers, body, timeoutMs }) {
   try {
     response = await fetch(call.origin + path, {
       method: "POST",
-      headers: { ...call.authHeaders, ...headers },
+      headers: { ...call.authHeaders, ...headers, [USAGE_SCENARIO_HEADER]: USAGE_SCENARIO },
       body,
       // 身份头只能发往 ZCode 自己的 origin，禁止跟随重定向。
       redirect: "manual",
