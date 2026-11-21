@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "search": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/bin/server.mjs"
+      ],
+      "env": {
+        "WEBSEARCH_ORDER": "${user_config.order}",
+        "WEBSEARCH_DISABLED": "${user_config.disabled}",
+        "WEBSEARCH_MODE": "${user_config.mode}",
+        "WEBSEARCH_LIMIT": "${user_config.limit}",
+        "WEBSEARCH_TIMEOUT_MS": "${user_config.timeout_ms}",
+        "WEBSEARCH_BING_MARKET": "${user_config.bing_market}",
+        "WEBSEARCH_SEARXNG": "${user_config.searxng_instances}",
+        "WEBSEARCH_ANYSEARCH_KEY": "${user_config.anysearch_key}",
+        "WEBSEARCH_EXA_KEY": "${user_config.exa_key}",
+        "WEBSEARCH_PARALLEL_KEY": "${user_config.parallel_key}"
+      },
+      "enabled": true,
+      "timeoutMs": 120000
+    }
+  }
+}
