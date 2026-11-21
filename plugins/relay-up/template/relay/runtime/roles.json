@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "updated_at": "<部署时填写UTC日期>",
+  "leader": {
+    "label": "leader",
+    "session_id": null,
+    "short": null,
+    "model": null,
+    "note": "领导会话在此登记（session_id/short）；登记者同时写入本项目根 relay/runtime/leader-sessions.txt（一行一个完整 session_id，防领导自动领卡）"
+  },
+  "employees": {
+    "employee-1": {
+      "session_id": null,
+      "short": null,
+      "model_hint": null,
+      "note": "员工窗口开启并首次领取后，从 claimed 文件名 .by-sess-<id8> 回填短标识"
+    }
+  },
+  "chat_address_rules": ["角色名（leader / employee-N）", "sess:<完整session_id>", "sess:<8位短标识>"]
+}
