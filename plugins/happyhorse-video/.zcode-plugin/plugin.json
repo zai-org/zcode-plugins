@@ -1,0 +1,37 @@
+{
+  "name": "happyhorse-video",
+  "version": "0.1.1",
+  "description": "根据文字或参考图片生成视频，适合制作广告、社媒短片和创意视频。",
+  "description_i18n": {
+    "en": "Generate videos from text or reference images. Create ads, social clips, and creative videos.",
+    "zh-CN": "根据文字或参考图片生成视频，适合制作广告、社媒短片和创意视频。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "happyhorse",
+    "video-generation",
+    "text-to-video",
+    "image-to-video",
+    "mcp"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "happyhorse_video": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 330000,
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}
