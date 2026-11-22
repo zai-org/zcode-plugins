@@ -1,0 +1,43 @@
+{
+  "name": "turn-lens",
+  "version": "0.11.0",
+  "description": "TurnLens: per-turn and session statistics for the current ZCode session (turns, steps, model time, tool time, TTFT, TPS, user-input and context tokens, requests, tool errors), on demand, after each turn, and in a live themed side panel.",
+  "description_i18n": {
+    "en": "TurnLens: per-turn and session statistics for the current ZCode session (turns, steps, model time, tool time, TTFT, TPS, user-input and context tokens, requests, tool errors), on demand, after each turn, and in a live themed side panel.",
+    "zh-CN": "TurnLens：在会话中展示当前 ZCode 会话的单轮与累计统计（轮数、步数、模型用时、工具调用用时、TTFT、TPS、用户输入与上下文 tokens、主轮请求与工具错误），支持按需查看、每轮结束自动展示，以及适配主题的侧栏实时面板。"
+  },
+  "author": {
+    "name": "MorganWsy",
+    "email": "shuyang@email.ncu.edu.cn"
+  },
+  "license": "MIT",
+  "skills": "skills",
+  "commands": "commands",
+  "hooks": "hooks/hooks.json",
+  "mcpServers": {
+    "turn-lens": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "turn-lens",
+        "title": {
+          "zh-CN": "TurnLens 会话统计",
+          "en-US": "TurnLens"
+        },
+        "icon": "chart-column",
+        "server": "turn-lens",
+        "resourceUri": "ui://turn-lens/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

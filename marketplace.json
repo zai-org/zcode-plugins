@@ -1690,6 +1690,43 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "turn-lens",
+      "source": "./external_plugins/turn-lens",
+      "version": "0.11.0",
+      "description": "TurnLens: per-turn and session statistics for the current ZCode session (turns, steps, model time, tool time, TTFT, TPS, user-input and context tokens, requests, tool errors), on demand, after each turn, and in a live themed side panel.",
+      "description_i18n": {
+        "en": "TurnLens: per-turn and session statistics for the current ZCode session (turns, steps, model time, tool time, TTFT, TPS, user-input and context tokens, requests, tool errors), on demand, after each turn, and in a live themed side panel.",
+        "zh-CN": "TurnLens：在会话中展示当前 ZCode 会话的单轮与累计统计（轮数、步数、模型用时、工具调用用时、TTFT、TPS、用户输入与上下文 tokens、主轮请求与工具错误），支持按需查看、每轮结束自动展示，以及适配主题的侧栏实时面板。"
+      },
+      "displayName": "TurnLens",
+      "displayName_i18n": {
+        "en": "TurnLens",
+        "zh-CN": "TurnLens 会话统计"
+      },
+      "author": {
+        "name": "MorganWsy",
+        "email": "shuyang@email.ncu.edu.cn"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "session",
+        "statistics",
+        "tokens",
+        "ttft",
+        "tps",
+        "usage",
+        "panel"
+      ],
+      "componentTypes": [
+        "skill",
+        "command",
+        "hook",
+        "mcp",
+        "ui"
+      ],
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/turn-lens/icon.png"
     }
   ]
 }
