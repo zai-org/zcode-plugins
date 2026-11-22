@@ -1,0 +1,28 @@
+# Read-only subset of rfauto configs/materials.yaml for the mline skill.
+# Source of truth: configs/materials.yaml (full provenance: source / verified_by in that file).
+# If the user's substrate is not listed here, ask for er / h /
+# tan_delta instead of guessing a key (no invented values).
+materials:
+  rogers4350b_h0.508:
+    hfss_name: Rogers RO4350 (tm)
+    epsilon_r: 3.66
+    loss_tangent: 0.0037
+    thickness_mm: 0.508
+    description: Rogers 4350B, 0.508mm, 2.4GHz 典型
+    epsilon_r_tol_abs: 0.05
+    epsilon_r_tol_source: Rogers 官方 RO4000 系列 datasheet 属性表（rogerscorp.com/advanced-electronics-solutions/ro4000-series-laminates/ro4350b-laminates，2026-09-25
+      verified-web）：process Dk 3.48±0.05 @10GHz/23°C（clamped stripline process specification）；Design
+      Dk 3.66（Rogers 推荐阻抗设计名义，本条目 epsilon_r 取此值）无官方容差发布 → 制造容差半宽取 process spec ±0.05。原登记
+      process Dk 3.66±0.08 与官方不符且无出处，2026-09-25 复核修正
+    linewidth:
+      z0_50ohm_mm: 1.11
+      z0_35ohm_mm: 1.87
+      source: 'G0 gate: skrf MLine (HJ) + Pozar + Schneider, max dev 0.45%'
+      verified_by: scripts/g0_linewidth_verification.py
+      verified_date: 2026-09
+      note: 旧值 2.20mm 实测 ~31ohm (非标称35.35ohm), -6dB plateau 部分根因
+  fr4_h1.6:
+    hfss_name: FR4_epoxy
+    epsilon_r: 4.4
+    loss_tangent: 0.02
+    thickness_mm: 1.6

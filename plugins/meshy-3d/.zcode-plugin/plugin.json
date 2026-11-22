@@ -1,0 +1,29 @@
+{
+  "name": "meshy-3d",
+  "version": "0.1.0",
+  "description": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。",
+  "description_i18n": {
+    "en": "Generate 3D models from text or images, with texturing, mesh simplification, format conversion, humanoid rigging, and preset animations.",
+    "zh-CN": "根据文字或图片生成 3D 模型，支持贴图、减面、格式转换、人形角色绑骨与预设动画，适合制作游戏资产和 3D 展示素材。"
+  },
+  "author": {
+    "name": "Z.ai",
+    "url": "https://z.ai"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["meshy", "3d", "text-to-3d", "image-to-3d", "retexture", "remesh", "rigging", "animation", "mcp"],
+  "skills": "skills",
+  "mcpServers": {
+    "meshy_3d": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/mcp/server.mjs"],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 330000,
+      "auth": {
+        "type": "zcode_official",
+        "provider": "jwt_token"
+      }
+    }
+  }
+}

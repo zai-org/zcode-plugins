@@ -71,6 +71,17 @@ class GitHubPluginTests(unittest.TestCase):
         }
         self.assertEqual(skill_dirs, EXPECTED_SKILLS)
 
+    def test_manifest_declares_packaged_skills_directory(self) -> None:
+        manifest = load_json(PLUGIN / ".zcode-plugin" / "plugin.json")
+
+        # Claude Code rejects component paths that do not start with "./".
+        self.assertEqual(manifest["skills"], "./skills")
+        skill_dirs = {
+            path.parent.name
+            for path in (PLUGIN / manifest["skills"]).glob("*/SKILL.md")
+        }
+        self.assertEqual(skill_dirs, EXPECTED_SKILLS)
+
     def test_skill_frontmatter_and_namespaced_examples(self) -> None:
         bare_command = re.compile(
             r"^/(?:codespace|commit|gist|issue|pr|release|repo|"
