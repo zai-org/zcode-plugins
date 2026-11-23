@@ -1,0 +1,19 @@
+[skill]
+name = "terraphim-grep"
+version = "1.0.3"
+description = "Search local source code and documentation with the installed terraphim-grep CLI. Use for bounded text or knowledge-graph-assisted retrieval inside a project; do not use it for internet search or file-name-only lookup."
+tier = "community"
+author = "terraphim"
+license = "Apache-2.0"
+repository = "https://github.com/terraphim/terraphim-cursor-plugin"
+
+[files]
+"SKILL.md" = "4bf3d3721c831953a99cfd7301e76182a392408c6f77529e042aae326921ebc1"
+"references/command-guide.md" = "95548ee723a3dd508c0f5b45b8c47fcc4f84259921931f1690c1128343a53bd6"
+"references/risk-concern.knowledge-graph.json" = "83f089bacf0236cd3127a2d27272ef4fa39f72b56a83a4134e2c6909a666f153"
+"references/workflows.md" = "2b4a2146de020ccc210478c26c91be8a83d483aa9c182acd72cf7dd813648a39"
+
+[signature]
+public_key = "261c6820525270bfe2a5daaa5bf3f581bd9bc193e1a0148010e870a3a63ad959"
+signature = "e8c202cd3a4edfc66f4bd10651532dd1390623517ea2bcadac3835035b1a62ed4120f5a4415cf65f4e8c72c2d4fe7afb9c3821a793e8b5776f204d2e61480f00"
+timestamp = "1792004380Z"
