@@ -17,7 +17,7 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
 const SERVER_NAME = "video-generation";
-const SERVER_VERSION = "0.2.1";
+const SERVER_VERSION = "0.3.0";
 const AUTH_META_KEY = "com.zcode/official-mcp-auth";
 // 计费场景：zcode-server 把这个头透传给 ToolHub，用来按插件归类用量、在 MaaS 账单里按插件展示。
 // 值是和服务端约定的计费场景名（白名单），改动前要先和服务端对齐。
@@ -85,7 +85,8 @@ const MATERIAL_DESCRIPTION =
 const GENERATE = {
   name: GENERATE_TOOL,
   description:
-    "根据文字描述生成一段短视频；可带参考图 / 参考视频 / 参考音频，或指定首帧（和尾帧）。" +
+    "用 Seedance 模型根据文字描述生成一段短视频；可带参考图 / 参考视频 / 参考音频，或指定首帧（和尾帧）。" +
+    "调用前先用 AskUserQuestion 问用户是否需要声音（单选：需要 / 不需要），用户原话已说清时不用问。" +
     "生成通常需要几分钟。每次调用都会提交一个新任务并消耗额度：本工具等不完时会返回 task_id，" +
     "请改用 get_video_result 继续等待，不要重复调用本工具。",
   inputSchema: {
@@ -106,6 +107,14 @@ const GENERATE = {
         description:
           `可选，画幅（宽高比）：${RATIOS.join(" / ")}。不传默认 16:9；adaptive 由模型按内容自动适配。` +
           "用了 first_frame 时画幅跟随首帧图，只能不传或传 adaptive。",
+      },
+      generate_audio: {
+        type: ["boolean", "string"],
+        description:
+          "可选，输出视频是否带声音（人声、音效、背景音乐）：true 有声，false 无声。" +
+          "调用前先用 AskUserQuestion 问用户是否需要声音（单选，选项「需要」「不需要」），选「需要」传 true、选「不需要」传 false；" +
+          "用户在请求里已经说清要不要声音时不用再问，直接按原话传。用户跳过不答时不传，由服务端决定（默认有声）。" +
+          "与 audios 无关：audios 是输入的参考音频，不决定输出有没有声音。",
       },
       images: {
         type: "array",
@@ -450,6 +459,16 @@ function ratioArg(value, hasFirstFrame) {
   return ratio;
 }
 
+function generateAudioArg(value) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  const text = typeof value === "string" ? value.trim().toLowerCase() : undefined;
+  if (text === "") return undefined;
+  if (text === "true") return true;
+  if (text === "false") return false;
+  throw new ToolError("generate_audio 只能是 true 或 false，不确定时请不传。");
+}
+
 /** 本次调用和首次提交不一致的字段；参数非法时按「已修改」处理，不在重放路径里报错。 */
 function replayDiffers(pending, prompt, args) {
   const changed = [];
@@ -463,6 +482,7 @@ function replayDiffers(pending, prompt, args) {
   };
   if (!sameOr(durationArg, args.duration, pending.duration)) changed.push("时长");
   if (!sameOr((v) => ratioArg(v, false), args.ratio, pending.ratio)) changed.push("画幅");
+  if (!sameOr(generateAudioArg, args.generate_audio, pending.generate_audio)) changed.push("是否出声");
   return changed;
 }
 
@@ -478,9 +498,11 @@ async function buildSubmitBody(call, args, prompt) {
   }
   const duration = durationArg(args.duration);
   const ratio = ratioArg(args.ratio, Boolean(firstFrame));
+  const generateAudio = generateAudioArg(args.generate_audio);
   const body = { query: prompt };
   if (duration !== undefined) body.duration = duration;
   if (ratio !== undefined) body.ratio = ratio;
+  if (generateAudio !== undefined) body.generate_audio = generateAudio;
   if (firstFrame) {
     body.first_frame = await resolveMaterial(call, firstFrame, "image");
     if (lastFrame) body.last_frame = await resolveMaterial(call, lastFrame, "image");
@@ -695,7 +717,13 @@ async function generateVideo(args, meta) {
   if (pending) {
     const changed = replayDiffers(pending, prompt, args);
     if (changed.length) {
-      const original = [`提示词：${pending.query}`, `时长：${pending.duration ?? "默认"}`, `画幅：${pending.ratio ?? "默认"}`].join("，");
+      const audio = pending.generate_audio === undefined ? "默认" : pending.generate_audio ? "是" : "否";
+      const original = [
+        `提示词：${pending.query}`,
+        `时长：${pending.duration ?? "默认"}`,
+        `画幅：${pending.ratio ?? "默认"}`,
+        `是否出声：${audio}`,
+      ].join("，");
       result.content[0].text =
         `注意：按 request_id 重放的是首次提交的内容（${original}），本次修改的${changed.join("、")}没有生效。\n` +
         result.content[0].text;

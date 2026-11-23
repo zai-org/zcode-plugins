@@ -153,6 +153,7 @@ class VideoGenerationServerTest(unittest.TestCase):
         self.assertEqual(
             [t["name"] for t in replies[2]["result"]["tools"]], ["generate_video", "get_video_result"]
         )
+        self.tools = replies[2]["result"]["tools"]
         return replies[3]["result"]
 
     def text(self, result):
@@ -237,6 +238,100 @@ class VideoGenerationServerTest(unittest.TestCase):
             json.loads(self.requests_to(SUBMIT)[0]["body"]),
             {"query": "竖屏短片", "duration": 8, "ratio": "9:16"},
         )
+
+    def test_generate_audio_is_sent_as_a_boolean(self):
+        for value, expected in [
+            (True, True),
+            (False, False),
+            ("true", True),
+            ("FALSE", False),
+            (" True ", True),
+        ]:
+            with self.subTest(value=value):
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [submitted()]
+                FakeZCode.script[QUERY] = [self.finished()]
+
+                result = self.call({"prompt": "小猫", "generate_audio": value})
+
+                self.assertNotIn("isError", result, self.text(result))
+                self.assertEqual(
+                    json.loads(self.requests_to(SUBMIT)[0]["body"]),
+                    {"query": "小猫", "generate_audio": expected},
+                )
+
+    def test_empty_generate_audio_leaves_it_to_the_service(self):
+        for value in (None, "", "  "):
+            with self.subTest(value=value):
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [submitted()]
+                FakeZCode.script[QUERY] = [self.finished()]
+
+                result = self.call({"prompt": "小猫", "generate_audio": value})
+
+                self.assertNotIn("isError", result, self.text(result))
+                self.assertEqual(json.loads(self.requests_to(SUBMIT)[0]["body"]), {"query": "小猫"})
+
+    def test_invalid_generate_audio_fails_before_any_request(self):
+        for value in ("yes", "需要", 1, 0, ["true"], {"on": True}):
+            with self.subTest(value=value):
+                result = self.call({"prompt": "x", "generate_audio": value})
+                self.assertTrue(result["isError"])
+                self.assertIn("generate_audio", self.text(result))
+        self.assertEqual(FakeZCode.requests, [])
+
+    def test_generate_audio_rides_along_with_first_frame(self):
+        FakeZCode.script[SUBMIT] = [submitted()]
+        FakeZCode.script[QUERY] = [self.finished()]
+
+        result = self.call({"prompt": "动起来", "first_frame": "https://a/1.png", "generate_audio": False})
+
+        self.assertNotIn("isError", result, self.text(result))
+        self.assertEqual(
+            json.loads(self.requests_to(SUBMIT)[0]["body"]),
+            {"query": "动起来", "generate_audio": False, "first_frame": "https://a/1.png"},
+        )
+
+    def test_replay_keeps_the_first_generate_audio_and_reports_a_change(self):
+        for arguments, warned in [
+            ({"prompt": "cat", "generate_audio": False}, False),
+            ({"prompt": "cat", "generate_audio": "false"}, False),
+            ({"prompt": "cat", "generate_audio": True}, True),
+            ({"prompt": "cat"}, True),
+            ({"prompt": "cat", "generate_audio": "maybe"}, True),
+        ]:
+            with self.subTest(arguments=arguments):
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [ok({"state": "UNKNOWN"})]
+                result = self.call({"prompt": "cat", "generate_audio": False})
+                self.assertTrue(result["isError"])
+                first = self.requests_to(SUBMIT)[0]
+                key = first["headers"]["idempotency-key"]
+                self.assertEqual(json.loads(first["body"])["generate_audio"], False)
+
+                FakeZCode.requests = []
+                FakeZCode.script[SUBMIT] = [ok({"state": "SUCCEEDED", "replayed": True, "upstream_req_id": "cgt-8"})]
+                FakeZCode.script[QUERY] = [self.finished("cgt-8")]
+                result = self.call({**arguments, "request_id": key})
+
+                self.assertNotIn("isError", result, self.text(result))
+                self.assertEqual(self.requests_to(SUBMIT)[0]["body"], first["body"])
+                if warned:
+                    self.assertIn("本次修改的是否出声没有生效", self.text(result))
+                    self.assertIn("是否出声：否", self.text(result))
+                else:
+                    self.assertNotIn("没有生效", self.text(result))
+
+    def test_tool_and_skill_tell_the_agent_about_sound_and_the_model(self):
+        self.call({"prompt": "x", "generate_audio": "yes"})
+        tools = {tool["name"]: tool for tool in self.tools}
+        generate = tools["generate_video"]
+        self.assertIn("Seedance", generate["description"])
+        self.assertIn("AskUserQuestion", generate["description"])
+        self.assertEqual(generate["inputSchema"]["properties"]["generate_audio"]["type"], ["boolean", "string"])
+        skill = (PLUGIN / "skills" / "generate-video" / "SKILL.md").read_text(encoding="utf-8")
+        for phrase in ("Seedance", "AskUserQuestion", "generate_audio: true", "`false`", "需要", "不需要"):
+            self.assertIn(phrase, skill)
 
     def test_model_chosen_duration_and_adaptive_first_frame(self):
         FakeZCode.script[SUBMIT] = [submitted()]
@@ -601,14 +696,16 @@ class VideoGenerationManifestTest(unittest.TestCase):
         manifest = json.loads((PLUGIN / ".zcode-plugin" / "plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(entry["version"], manifest["version"])
 
-    def test_names_do_not_expose_the_upstream_model(self):
+    def test_names_do_not_expose_the_upstream_vendor(self):
+        # 插件在市场里就叫 Seedance，工具说明里写明模型名，Agent 才能把「用 Seedance 生成」对上这个插件；
+        # 其余上游厂商、接口和别的模型名仍不能出现。
         for path in PLUGIN.rglob("*"):
             if path.is_file():
                 # 计费场景值是服务端白名单里的固定标识，允许带上游模型名；其余内容仍不能出现。
                 text = "\n".join(
                     line for line in path.read_text(encoding="utf-8").splitlines() if "USAGE_SCENARIO =" not in line
                 ).lower()
-                for word in ("seedream", "seedance", "volc", "doubao", "gpt-image"):
+                for word in ("seedream", "volc", "doubao", "gpt-image"):
                     self.assertNotIn(word, text, f"{path.relative_to(ROOT)} mentions {word}")
 
 
