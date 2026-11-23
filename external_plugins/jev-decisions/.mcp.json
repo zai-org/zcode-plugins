@@ -5,7 +5,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@jkudish/jev-mcp@0.10.0"
+        "@jkudish/jev-mcp@0.15.0"
       ],
       "env": {
         "TYPESAFE_API_KEY": "${user_config.typesafeApiKey}"
