@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-Browser Bridge 让 ZCode 连接你日常使用的 Chrome，保留已有登录态。15 个 MCP 工具支持列出标签页、读取正文、截图、导航、点击、滚动、输入和执行网页 JavaScript。**正式版 0.6.0** 包含 **Chrome 扩展 0.3.0**，支持后台操作与运行标签。
+Browser Bridge 让 ZCode 连接你日常使用的 Chrome，保留已有登录态。15 个 MCP 工具支持列出标签页、读取正文、截图、导航、点击、滚动、输入和执行网页 JavaScript。**正式版 0.6.1** 包含 **Chrome 扩展 0.3.1**，支持后台操作与运行标签。
 
 ## 依赖与安装
 
@@ -15,9 +15,11 @@ Browser Bridge 让 ZCode 连接你日常使用的 Chrome，保留已有登录态
 3. 在 Chrome 打开 `chrome://extensions`，开启**开发者模式**，点**加载已解压的扩展程序**，选择引导显示的目录，通常为 `~/.browser-bridge/extension`；Windows 对应 `%USERPROFILE%\.browser-bridge\extension`。macOS 在文件选择窗口按 Cmd+Shift+G 粘贴路径，Windows 使用地址栏或 Ctrl+L。
 4. 等待扩展显示已连接，然后回到 ZCode 说：**列出我当前 Chrome 中的标签页。** 收到真实工具结果才表示客户端到浏览器的链路通过；引导页显示已连接不代表客户端调用已经通过。
 
-Chrome 扩展以源码随包提供，通过 Chrome 的「加载已解压的扩展程序」安装。引导成功打开后单独记录「已展示」，此后新会话或升级沿用这个记录。扩展已经连接时也会跳过自动引导。打开失败会按有界退避重试，`/cc-browser-setup` 始终允许主动重开。
+正式 ZIP 还提供顶层的 `Chrome-Extension` 文件夹。手动安装时完整解压 ZIP，在 Chrome 的「加载已解压的扩展程序」里选择该文件夹，里面直接包含 `manifest.json`。
 
-升级时先禁用旧版 ZCode 插件，安装并启用 0.6.0，新建一个 ZCode 会话同步扩展文件。在 `chrome://extensions` 给 Browser Bridge 点「重新加载」，核对版本为 0.3.0。如果旧扩展从其他目录加载，禁用该副本，再加载引导页显示的目录。若客户端报告后台仍在运行旧版桥接，可按下文核实并停止旧进程，或重启电脑。
+引导成功打开后单独记录「已展示」，此后新会话或升级沿用这个记录。扩展已经连接时也会跳过自动引导。打开失败会按有界退避重试，`/cc-browser-setup` 始终允许主动重开。
+
+升级时先禁用旧版 ZCode 插件，安装并启用 0.6.1，新建一个 ZCode 会话同步扩展文件。在 `chrome://extensions` 给 Browser Bridge 点「重新加载」，核对版本为 0.3.1。旧扩展如果来自上次解压的 ZIP，先禁用该副本，再加载新版的 `Chrome-Extension` 文件夹或引导显示的稳定目录。若客户端报告后台仍在运行旧版桥接，可按下文核实并停止旧进程，或重启电脑。
 
 ## 使用示例与控制
 
@@ -53,7 +55,7 @@ Chrome 扩展弹窗可查看连接状态、修改桥接地址和暂停浏览器�
 
 在插件目录运行 `node --test tests/*.test.js`。包内冒烟测试使用隔离目录和端口；打开浏览器的回归使用 macOS 假 `open` 命令，在其他平台跳过。
 
-0.6.0 从包内 MCP 入口连到隔离的 Chrome，验证了后台点击、输入、截图和运行标签。此前 macOS/ZCode 版本已验证原生引导和真实浏览器工具。此包在 ZCode 的原生安装和升级，以及 Windows 实机验收仍待完成。具体检查结果见投稿 PR。
+已在隔离的 Chrome 中验证包内 MCP、扩展、后台点击、输入、截图和运行标签。此前 macOS/ZCode 版本已验证原生引导和真实浏览器工具。此包在 ZCode 的原生安装和升级，以及 Windows 实机验收仍待完成。具体检查结果见投稿 PR。
 
 ## 许可证与来源
 

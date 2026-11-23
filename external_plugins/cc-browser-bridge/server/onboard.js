@@ -23,7 +23,7 @@ const { rmOwnedSync } = require("./fsutil");
 const platformActions = require("./platform-actions");
 const endpoint = require("./endpoint");
 
-const VERSION = "0.6.0";
+const { version: VERSION } = require("./package.json");
 const SERVICE = "cc-browser-onboard";
 const DEFAULT_PORT = Number(process.env.ONBOARD_PORT || 8791);
 const PORT_SPAN = 10;

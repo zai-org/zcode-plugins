@@ -9,6 +9,7 @@ const { spawn } = require('node:child_process');
 const WebSocket = require('../server/vendor/ws');
 const launcher = require('../server/launcher');
 const onboard = require('../server/onboard');
+const version = require('../.zcode-plugin/plugin.json').version;
 const root = path.resolve(__dirname, '..');
 const home = fs.mkdtempSync(path.join(os.tmpdir(), 'browser-bridge-package-'));
 let port;
@@ -63,7 +64,7 @@ test.after(() => {
 test('published package resolves its vendored dependency and plugin layout', () => {
   assert.equal(require('../server/vendor/ws/package.json').version, '8.22.0');
   assert.equal(onboard.resolveLayout(path.join(root, 'server')).mode, 'plugin');
-  assert.equal(onboard.VERSION, require('../.zcode-plugin/plugin.json').version);
+  assert.equal(onboard.VERSION, version);
 });
 
 test('stdio initialize and tool discovery use pure JSON-RPC without launching a browser', async () => {
@@ -73,14 +74,16 @@ test('stdio initialize and tool discovery use pure JSON-RPC without launching a 
   ]);
   assert.equal(result.code, 0);
   const messages = result.stdout.trim().split('\n').map(JSON.parse);
-  assert.equal(messages.find((m) => m.id === 1).result.serverInfo.name, 'cc-browser-bridge');
+  assert.deepEqual(messages.find((m) => m.id === 1).result.serverInfo, { name: 'cc-browser-bridge', version });
   assert.equal(messages.find((m) => m.id === 2).result.tools.length, 15);
 });
 
 test('launcher starts the packaged bridge and copies complete extension assets into an isolated home', async () => {
   const result = await launcher.ensureReady({ home, port, layoutRoot: root, noOnboarding: true, env: env() });
   assert.equal(result.ok, true, result.reason);
-  assert.equal((await request('GET', '/status')).ok, true);
+  const status = await request('GET', '/status');
+  assert.equal(status.ok, true);
+  assert.equal(status.service.version, version);
   for (const file of ['manifest.json', 'background.js', 'popup.js', 'icons/icon128.png']) {
     assert.ok(fs.statSync(path.join(home, 'extension', file)).isFile());
   }

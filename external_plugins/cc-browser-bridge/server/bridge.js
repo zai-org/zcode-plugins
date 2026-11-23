@@ -50,7 +50,7 @@ function deny(res, status, msg) {
   res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
   res.end(JSON.stringify({ ok: false, error: msg }));
 }
-const SERVER_INFO = { name: "cc-browser-bridge", version: "0.1.0" };
+const SERVER_INFO = { name: "cc-browser-bridge", version: require("./package.json").version };
 const SUPPORTED_PROTOCOLS = ["2024-11-05", "2025-03-26", "2025-06-18"];
 
 // ---------- 扩展连接与命令路由 ----------

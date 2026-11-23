@@ -4,7 +4,7 @@
 
 const DEFAULT_SERVER = "ws://127.0.0.1:8765/ws";
 const HEARTBEAT_MS = 20000;
-const VERSION = chrome.runtime.getManifest?.().version || "0.3.0";
+const VERSION = chrome.runtime.getManifest?.().version || "0.3.1";
 
 let ws = null;
 let connected = false;

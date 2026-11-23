@@ -2,7 +2,7 @@
 
 [中文](README_CN.md)
 
-Browser Bridge connects ZCode to the Chrome session you already use. Its 15 MCP tools can list tabs, read page text, take screenshots, navigate, click, scroll, type, and run page JavaScript while keeping your existing sign-in state. **Version 0.6.0** includes Chrome extension **0.3.0** with background tab control and activity labels.
+Browser Bridge connects ZCode to the Chrome session you already use. Its 15 MCP tools can list tabs, read page text, take screenshots, navigate, click, scroll, type, and run page JavaScript while keeping your existing sign-in state. **Version 0.6.1** includes Chrome extension **0.3.1** with background tab control and activity labels.
 
 ## Requirements and installation
 
@@ -15,9 +15,11 @@ Browser Bridge connects ZCode to the Chrome session you already use. Its 15 MCP 
 3. In Chrome, open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select the extension directory shown by the guide, normally `~/.browser-bridge/extension`. On Windows this is `%USERPROFILE%\.browser-bridge\extension`. On macOS, use Cmd+Shift+G in the file picker to paste the path; on Windows, use the address bar or Ctrl+L.
 4. Wait for the extension's connected indicator. In ZCode, ask: **List the tabs in my Chrome browser.** A real tool response confirms the client-to-browser path. A connected setup page alone does not confirm the client call.
 
-The extension is included as source and installed using Chrome's **Load unpacked** option. A successful guide opening is remembered separately from user completion. The record carries over to new sessions and upgrades. An already connected extension also skips the guide. Failed opening attempts use bounded retry backoff. Use `/cc-browser-setup` to reopen it.
+The release ZIP also provides a top-level `Chrome-Extension` folder. For a manual install from the ZIP, fully extract it and choose that folder in Chrome's **Load unpacked** dialog. The selected folder must contain `manifest.json` directly.
 
-For an upgrade, disable the previous ZCode plugin, install and enable 0.6.0, and start a new ZCode session to synchronize the extension files. In `chrome://extensions`, reload Browser Bridge and check that its version is 0.3.0. If the current extension was loaded from another directory, disable that copy and load the directory shown by the setup guide. If the client reports an old bridge still running, stop the verified Browser Bridge process as described below or restart the computer.
+A successful guide opening is remembered separately from user completion. The record carries over to new sessions and upgrades. An already connected extension also skips the guide. Failed opening attempts use bounded retry backoff. Use `/cc-browser-setup` to reopen it.
+
+For an upgrade, disable the previous ZCode plugin, install and enable 0.6.1, and start a new ZCode session to synchronize the extension files. In `chrome://extensions`, reload Browser Bridge and check that its version is 0.3.1. If the current extension was loaded from an earlier ZIP, disable that copy, then load the new ZIP's `Chrome-Extension` folder or the managed directory shown by the setup guide. If the client reports an old bridge still running, stop the verified Browser Bridge process as described below or restart the computer.
 
 ## Examples and controls
 
@@ -53,7 +55,7 @@ If setup is interrupted, run `/cc-browser-setup`. If Node is missing, install No
 
 Run `node --test tests/*.test.js` from this plugin directory. Package smoke checks use isolated homes/ports. Browser-opening regressions use a fake `open` command on macOS and are skipped on other platforms.
 
-Version 0.6.0 was exercised in an isolated Chrome profile through the packaged MCP entry, including background clicks, keyboard input, screenshots, and activity labels. Earlier macOS/ZCode builds exercised the native guide and real browser tools. Native installation and upgrade of this exact package in ZCode, and verification on Windows, remain pending. See the PR for the current results.
+The packaged MCP entry and extension were exercised in an isolated Chrome profile, including background clicks, keyboard input, screenshots, and activity labels. Earlier macOS/ZCode builds exercised the native guide and real browser tools. Native installation and upgrade of this exact package in ZCode, and verification on Windows, remain pending. See the PR for the current results.
 
 ## License and provenance
 

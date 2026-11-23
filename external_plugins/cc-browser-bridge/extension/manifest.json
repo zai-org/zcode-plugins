@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Browser Bridge",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "让 ZCode 等兼容客户端中的 AI 查看和操作你正在使用的 Chrome：读网页/标签页、截图、点击、填写（保留登录态）",
   "minimum_chrome_version": "116",
   "icons": {

@@ -1705,7 +1705,7 @@
         "en": "Connect ZCode to your existing Chrome session to read, click, type, and take screenshots in a selected background tab, with visible activity status.",
         "zh-CN": "连接 ZCode 与日常 Chrome，在指定后台标签页读取网页、点击、输入和截图，并显示操作状态。"
       },
-      "version": "0.6.0",
+      "version": "0.6.1",
       "author": {
         "name": "lihytaihe-lang",
         "url": "https://github.com/lihytaihe-lang"
