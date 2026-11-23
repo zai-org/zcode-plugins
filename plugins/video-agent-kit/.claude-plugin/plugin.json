@@ -1,7 +1,7 @@
 {
   "name": "video-agent-kit",
-  "version": "0.4.3",
-  "description": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。",
+  "version": "0.5.0",
+  "description": "一体化视频插件：视频理解与检索研究、剪辑、字幕、口播精简、电影解说与足球/篮球/英雄联盟赛事解说、单集与连续剧视频创作、人物替换，以及从录屏复刻网站/游戏/全栈应用；语音识别、配音与生成服务均通过已登录的 ZCode 账号调用 ZCode ToolHub，全部能力共享一套媒体工具与证据。",
   "author": {
     "name": "Z.ai",
     "url": "https://z.ai"
@@ -10,20 +10,19 @@
   "keywords": [
     "video-editing",
     "video-agent",
-    "visual-inspection",
+    "video-understanding",
+    "subtitles",
+    "tts",
+    "movie-recap",
+    "video-creation",
+    "video2code",
     "timeline",
     "ffmpeg"
   ],
   "userConfig": {
-    "speech_mcp_url": {
-      "title": "Speech MCP URL",
-      "description": "Optional remote HTTP MCP server URL for paid speech tools.",
-      "type": "string",
-      "default": ""
-    },
-    "speech_mcp_token": {
-      "title": "Speech MCP token",
-      "description": "Optional bearer token for the remote speech MCP server.",
+    "tts_voice": {
+      "title": "TTS default voice",
+      "description": "VE_TTS_VOICE: default preset voice id for tts_generate and narration. Leave empty for the built-in default.",
       "type": "string",
       "default": ""
     },
@@ -37,12 +36,12 @@
       "title": "Max inline images",
       "description": "Maximum images inlined in one MCP tool result before remaining paths are listed for Read.",
       "type": "number",
-      "default": 16
+      "default": 64
     }
   },
   "description_i18n": {
-    "en": "Automated video editing toolkit: standard cloud speech transcription and synthesis, full video frame extraction and understanding, local re-inspection, timeline, preview rendering, QC, and TTS.",
-    "zh-CN": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。"
+    "en": "Unified video plugin: understanding and research, editing, subtitles, talking-head condensing, narrated movie and soccer/basketball/LoL match recaps, standalone and serial video creation, person replacement, and replicating websites/games/full-stack apps from screen recordings; speech recognition, voiceover and generation run through ZCode ToolHub on the signed-in ZCode account, and every capability shares one set of media tools and evidence.",
+    "zh-CN": "一体化视频插件：视频理解与检索研究、剪辑、字幕、口播精简、电影解说与足球/篮球/英雄联盟赛事解说、单集与连续剧视频创作、人物替换，以及从录屏复刻网站/游戏/全栈应用；语音识别、配音与生成服务均通过已登录的 ZCode 账号调用 ZCode ToolHub，全部能力共享一套媒体工具与证据。"
   },
   "mcpServers": {
     "video-edit": {
@@ -54,12 +53,20 @@
       "cwd": "${CLAUDE_PROJECT_DIR}",
       "env": {
         "VE_PLUGIN_ROOT": "${CLAUDE_PLUGIN_ROOT}",
-        "VE_SPEECH_MCP_URL": "${user_config.speech_mcp_url}",
-        "VE_SPEECH_MCP_TOKEN": "${user_config.speech_mcp_token}",
+        "VE_TTS_VOICE": "${user_config.tts_voice}",
         "VE_BGM_DIR": "${user_config.bgm_dir}",
         "VE_MAX_INLINE_IMAGES": "${user_config.max_inline_images}"
       },
       "timeoutMs": 900000
+    },
+    "runtime": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/runtime_server.py"
+      ],
+      "cwd": "${CLAUDE_PROJECT_DIR}",
+      "timeoutMs": 600000
     }
   }
 }

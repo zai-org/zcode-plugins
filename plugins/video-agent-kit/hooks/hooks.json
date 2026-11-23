@@ -6,9 +6,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/env_check.py\"",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/env_check.py\"",
             "timeout": 30,
             "statusMessage": "video-agent-kit environment check..."
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
+            "timeout": 15
           }
         ]
       }
@@ -18,7 +27,61 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_video_input.py\"",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/check_video_input.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.*video-edit__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/session_clock.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
             "timeout": 15
           }
         ]
@@ -29,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/check_closeout.py\"",
+            "command": "python3 \"${ZCODE_PLUGIN_ROOT}/hooks/replicate/dispatch.py\"",
             "timeout": 15
           }
         ]

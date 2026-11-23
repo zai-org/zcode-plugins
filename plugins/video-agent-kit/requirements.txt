@@ -1,19 +1,20 @@
-# server_common.py uses the 1.x Server.list_tools/call_tool decorator API.
-mcp>=1.0.0,<2.0.0
+# Shared MCP, video understanding, editing, creation and movie-recap dependencies.
+mcp>=1.22.0,<2.0.0
 requests>=2.31.0
-pillow>=10.0.0
-# headless build: the plugin only encodes/decodes frames, and mixing
-# opencv-python with opencv-python-headless corrupts the shared cv2 package.
-opencv-python-headless>=4.8.0,<5.0.0
-numpy>=1.24.0
-# Chinese word segmentation + POS tags for subtitle_build.
+curl_cffi>=0.7
+yt-dlp>=2025.1.1
+numpy>=1.26
+pillow>=10.0
+fonttools>=4.50
+# Shot detection (detect_shots / build_film_index) on headless OpenCV.
+opencv-python-headless>=4.10,<5
+click>=8.0,!=8.3.0,<9
+platformdirs
+tqdm
+# Chinese word segmentation + POS tags: subtitle line breaking (subtitle_build) and
+# talking-head topic terms (speech_index). Without it both fall back to per-character
+# splitting with worse breaks.
 jieba>=0.42.1
-# Reads resolved font cmap so subtitle_build can fail before rendering tofu boxes.
-fonttools>=4.40.0
-# PySceneDetect declares opencv-python as a dependency. Runtime bootstrap installs
-# scenedetect with --no-deps so it reuses opencv-python-headless instead of
-# pulling GUI OpenCV. For manual setup, run after this requirements file:
-#   python3 -m pip install --no-deps "scenedetect>=0.6"
-click>=8.0
-platformdirs>=3.0
-tqdm>=4.0
+# scenedetect is NOT listed here: it declares desktop opencv-python, which overwrites the
+# headless cv2 above. It lives in requirements-nodeps.txt and must be installed with
+#   python3 -m pip install --no-deps -r requirements-nodeps.txt

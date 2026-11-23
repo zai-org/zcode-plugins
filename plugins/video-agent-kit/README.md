@@ -1,216 +1,221 @@
 # video-agent-kit
 
-`video-agent-kit` 是自动化视频剪辑工具包。它把视频剪辑需要的特殊能力封装成 MCP 工具和 CLI：媒体探查、标准云端语音转录与合成、完整视频抽帧观察、局部高 fps 复看、基础视频操作、timeline 校验、预览渲染、QC 和可审计修复。
+`video-agent-kit` uses `video-agent` as the general controller for video tasks and calls domain skills per task. Integrated so far: video understanding, shared speech tools, multi-material editing, single-file processing, subtitles, talking-head condensing, movie recaps, video creation, person replacement and screen-recording replication. The `video-edit` MCP server and the CLI share the same tools.
 
-## 设计边界
+## First use (environment setup)
 
-- 不假设主模型可以直接接收视频文件；视频会先按固定规则抽帧并拼成带时间戳的 contact sheet，再通过 MCP 图片结果返回给 Claude Code 主 Agent。
-- 不依赖任何插件目录之外的脚本：抽帧索引逻辑完整内置在 `mcp/ve_tools/video_observe.py`，本工具包不会构造 `image_url` 请求，也不会在工具内部调用任何外部推理服务。
-- 当前只处理用户提供的视频/音频素材，不处理素材库检索，也不做图像/视频生成。
-- 自动化造数据场景下不等待用户澄清或确认。
+After installing ZCode and this plugin on a new computer, run `/setup-guide` first (the [setup-guide](skills/setup-guide/SKILL.md) skill). It checks and installs what the plugin needs: Python 3.10+ with the packages in `requirements.txt`, ffmpeg with libx264/aac/libass, Chinese fonts, Node.js for web replication and Blender for 3D animation (optional). It probes pip, npm, Homebrew, conda-forge and the installers' Chinese mirrors in parallel and uses the fastest one that answers. Python packages are installed automatically; system software is installed after the user agrees, and steps that need a password or manual action come with a command to copy. At session start `hooks/env_check.py` reports gaps from the same checklist. It can also be run directly:
 
-## MCP 工具
+```bash
+python3 skills/setup-guide/scripts/env_doctor.py          # check
+python3 skills/setup-guide/scripts/env_doctor.py --fix    # check and install the Python dependencies
+```
 
-- `inspect_media`：ffprobe 媒体探查；总体时长优先读 format duration，缺失时回退到 stream duration；`NaN` / `Infinity` 不会被当成有效时长。
-- `speech_transcribe`：标准语音转录工具。配置 `VE_SPEECH_MCP_URL` 时调用远端 HTTP MCP；未配置时，在 ZCode 中优先使用宿主随 `tools/call` 注入身份的官方通道，其他宿主回退到本地兼容后端。对外统一为 `cloud_asr`，不会暴露内部服务商名称。并发限制、限流、网络和服务端瞬时错误默认额外重试 3 次，可用 `retries` / `retry_count` 和 `retry_backoff_seconds` 覆盖；缺凭据、provider 不可用、输入/参数错误不会重试。长媒体会自动拆成最多 `chunk_seconds` 秒的重叠块（默认不超过 1700s）分别转写并合并，块级结果缓存可断点续跑；分块说话人标签带 `p{chunk}_` 前缀，跨块同一人物可能有不同标签。毫秒时间戳会归一成秒；静音音频返回带 `silent_audio` 标注的有效空转录。`transcribe` 保留为兼容 alias。
-- `video_ingest`：完整视频抽帧并返回 contact sheet，必须先跑；Claude Code 主 Agent 自己看图并形成理解。显式传入的 `transcript_path` 必须存在；不传 transcript 才表示允许无转录观察；在同一个 MCP 会话里，如果重新观察此前已绑定过 transcript 的同一视频指纹，会复用该视频对应的 transcript。同一路径的视频文件如果被覆盖或替换，必须重新调用 `video_ingest`。只有成功产出 observation package 后，工具才会把该视频记为已 full-ingest；抽帧失败不会推进会话状态。
-- `video_watch_segment`：局部高 fps 复看；单窗口用 `start_time/end_time/fps`，多窗口用 `segments=[{start,end}, ...]` + `fps`，返回片段 contact sheet 和匹配转录。显式传 `video_path` 可直接复看任意存在的视频，不要求先跑完整 `video_ingest`。不带 `video_path` 时默认使用会话里的 active video；如果 active 文件被覆盖或替换，隐式复看会报错并要求显式传当前 `video_path` 或重新 `video_ingest`。显式传入的 `transcript_path` 必须存在；在同一个 MCP 会话里，如果显式传入此前已绑定过 transcript 的同一视频指纹且未传 transcript 参数，会复用该视频对应的 transcript。非数字时间参数会返回结构化错误；明显超过视频时长的窗口会报错，不会静默截断成较短观察。窗口台账按 `(start, end, fps)` 判重：只有时间和 fps 都相同的窗口才会被跳过，换一个 fps 重看同一窗口是新的观察；确有需要时可传 `force=true` 跳过判重。只有成功产出新 contact sheet 后，局部复看才会更新 active-video 会话状态；抽帧失败或 `skipped_duplicate` 不算新的视觉证据，多窗口部分失败时整体结果会带 `[ERROR]` 前缀汇总。
-- `video_basic_operation`：OpenChatCut 风格的确定性基础操作封装，支持 `trim`、`splice`、`speed`、`crop`、`scale`、`rotate`、`flip`、`freeze_frame`。它适合源素材预处理或单步变换；timeline 成片仍应走 `validate_timeline` / `render_preview`。
-- `speech_synthesize`：标准语音合成工具。配置 `VE_SPEECH_MCP_URL` 时调用远端 HTTP MCP；未配置时，在 ZCode 中优先使用宿主注入身份的官方通道，其他宿主回退到本地兼容后端。对外统一为 `cloud_tts`；`allowed_providers` 提供时是硬白名单。并发限制、限流、网络和服务端瞬时错误默认额外重试 3 次，可用 `retries` / `retry_count` 和 `retry_backoff_seconds` 覆盖；参数错误、缺凭据、格式不支持不会重试。`speed` 会映射为 `speech_rate`，也可显式传 `speech_rate` / `pitch_rate` / `loudness_rate` / `sample_rate` / `output_format`，本工具只暴露可被 ffprobe 稳定校验的 `wav` / `mp3` / `ogg_opus` 输出，并拒绝 `output_path` 后缀与 `output_format` 不一致。`tts_generate` 保留为兼容 alias。
-- `validate_timeline`：校验 timeline 项目 JSON；依赖 ffprobe 检查源素材时长边界，时长优先读 format duration，缺失时回退到 stream duration，且同一源文件的时长探测会缓存。除了旧版线性 `clips[]`，也支持更接近剪辑软件项目文件的 `project` / `sequence` / `output_canvas` / `assets` / `tracks` / `markers` / `transitions` / clip effects 元数据校验。`tracks[]` timeline 中非视频轨的 clip（字幕 / overlay / callout 计划）可以用非空 `text` 代替媒体 `source`；视频 / main 轨 clip 和顶层 `clips[]` 仍必须有 `source`。
-- `render_preview`：用 FFmpeg / ffprobe 渲染预览；render report 会记录 timeline hash 和 output hash。顶层 `clips[]` 仍按 legacy/debug 线性拼接渲染；项目式 `tracks[]` 会按 sequence 画布和 `timeline_start` 编译成基础多轨预览：主视频铺到画布并在片尾补少量末帧降低边界闪帧，源视频音频与 `audio/music/voiceover` 轨先烘焙成全片长度、已按时间线定位的 wav bed，再非归一化混音，`subtitle/text` 轨用 `drawtext` 烧录，`overlay/image` 轨按启用窗口叠加。父轨道没有 `type/name/track_type` 时不会被默认当作主视频轨；未知 track 类型会记录到 render plan 的 unsupported tracks 中，而不是声称完整渲染。
-- `qc_preview`：硬性质量检查，包括容器、黑帧、短编辑边界黑帧、静音、冻结帧、音量、音频覆盖时长和空文件；媒体探测失败或显式传入的 `timeline_path` 不存在时直接报错，黑帧 / 静音 / 冻结 / 音量扫描失败会作为 QC error 写入报告。静音和音量扫描只在存在音轨时运行；完全没有音轨的成片会记一条 warning（整片无声），不会静默通过。
-- `timeline_diff`：记录或应用 timeline 修复；`patch` 必须是 JSON object，`apply` 必须是 boolean。支持 `set_timeline_fields`、`set_track_fields`、`add_assets`、`update_assets`、`remove_asset_indices`、`add_tracks`、`insert_tracks`、`replace_tracks`、`remove_track_indices`、`update_clips`、`replace_clips`、`remove_clip_indices`、`move_clips`、`insert_clips` 和 `add_clips`。`update_clips` 是浅层字段合并，字段值为 `null` 表示删除该字段；`set_timeline_fields` 可改项目元数据但不能直接改 `clips/tracks`。`replace/update/remove/move` 索引按补丁前扁平 clip 顺序解释，asset/track 操作用各自数组内的索引解释；结构性 track 操作（add/insert/replace/remove tracks）不能和 clip 操作混在同一个 patch，必须拆成两次 `timeline_diff`。`move_clips` 每次 patch 最多一条，不能与删除操作混用，也不能指向同一个 patch 新插入的 clip。工具会先校验 patch 操作本身和 patch 后的 timeline。`apply=true` 遇到越界 index、非对象 clip/fields、空 patch、多条 move、结构性 track 操作和 clip 操作混用等非法操作时只写 diff 报告，不修改原 timeline。
+Speech recognition, voiceover, image, video and 3D generation are provided through the signed-in ZCode account (ZCode ToolHub); users do not need their own accounts or keys.
 
-默认文件契约为 `out/media.json`、`out/transcript.json`、源素材 `video_ingest` 观察包、`out/timeline.json`、`out/timeline_validation.json`、`out/preview.mp4`、`out/preview_qc_report.json` 和 `out/report.md`。其中 `out/transcript.json` 是 cloud ASR 可用时的预期产物；如果 cloud ASR 不可用，应在 `out/report.md` 记录限制并继续完成其余闭环。单素材任务可使用 `out/video_ingest.json`；多素材任务可以显式传 `output_json` 写到 `out/ingest/*.json` 或 `out/video_ingest_<source>.json`，并在 `out/media.json` 汇总。
+## MCP tools
 
-`video-recap-workflows` 覆盖完整电影、足球、LoL 和篮球解说剪辑。电影解说使用 `detect_shots` / `arrange_footage` / `synthesize_narration` / `bind_narration` / `render_narrated`；足球使用 `soccer_ingest` / `soccer_arrange` / `soccer_tts` / `soccer_render`；LoL 与篮球复用 `lol_ingest` / `lol_arrange` / `lol_tts` / `lol_render`。这些流程通常产出 `out/final.mp4` 和 workflow-specific QC，而不是通用 `out/preview.mp4`。
+- `transcribe`: transcribes a local video/audio file and outputs timed text.
+- `tts_generate`: generates narration or dubbing audio with a preset voice; one character always uses the same voice id.
+- `video_observe`: the single observation entry point for local/remote videos and images; returns per-frame images, contact sheets or transcript evidence for a time window.
+- `video_search`: searches videos across the supported sites; returns candidates, paging and failure information.
+- `video_metadata`: reads local media properties or remote source metadata.
+- `video_download`: saves a complete remote video and returns the local path.
+- `video_compare`: helps compare footage using perceptual hashes and temporal alignment.
+- `timeline_validate` / `timeline_patch`: validate a timeline; preview or apply structured changes.
+- `subtitle_layout` / `subtitle_build`: observe the subtitle region and suggest a layout; build editable cues and ASS/SRT from the current transcript.
+- `speech_index` / `speech_plan`: build an index of speech units; turn the main agent's selection into a condensing plan, a continuous script and a plan transcript.
+- `speaker_audit` / `speaker_relabel`: find risky speaker labels; write a corrected copy for verified time ranges.
+- `video_render`: `kind=timeline/subtitles/speech/narrated` share one rendering entry point; `narrated` renders a narration EDL (voiceover, sentence-level subtitles, optional BGM, residual-frame check at cut points). `kind=match` is also accepted (see Match recaps).
+- `video_qc`: `kind=video/subtitles/speech` checks the technical state, subtitles or joins and returns suitable image evidence.
+- `detect_shots` / `build_film_index`: cut the whole film into shots (PySceneDetect, frame-level refinement); the film index chains probing, transcription, shot detection and the dialogue axis, and produces a viewing plan.
+- `arrange_footage`: dialogue axis, outline-driven footage arrangement (reel/brief), narration anchoring, and re-arrangement against the measured voiceover.
+- `synthesize_narration`: batch-synthesizes per-segment voiceover from the narration script, with caching, a sentence-level timeline and ASR back-verification.
+- `bind_narration`: binds voiceover sentences to source-film shots and outputs an EDL; `fit_mode=whole_shot` (default: whole-shot picture fitting with a review queue) or `legacy` (tape DP).
+- `produce_film`: orchestrates movie-recap production (preflight, voiceover, picture fitting, rendering and QC, with per-stage caching).
+- `swap_scan`, `swap_plan`, `swap_storyboards`, `swap_generate`, `swap_assemble`, `swap_verify`: the person-replacement pipeline (`swap` tool group), documented in [video-swap](skills/video-swap/SKILL.md).
 
-`out/media.json` 保留给源素材探测。`qc_preview` 和 `tts_generate` 内部做媒体探测时会写 `out/preview_media.json`、`out/tts_*_media.json` 这类 sidecar，不覆盖源素材 metadata。`validate_timeline` 和 `qc_preview` 会在报告中写入文件 hash；Stop hook 会拒绝已经过期的 validation / QC report。
+Screen-recording replication gets `deploy_website` through the `runtime` MCP client (serves a build at a stable local URL); opening, screenshotting, interacting with and recording pages all go through the ZCode built-in browser (the official `control-browser` skill, see `skills/video2code/references/browser-checks.md`), and the plugin does not start Playwright/Chromium. `preview_build` and `browser_capture` are offered only when a hosted runtime endpoint (`.v2c/runtime/endpoint.json`) exists in the workspace; in a normal ZCode session the `runtime` server provides `deploy_website` only.
 
-`schemas/video_observation.schema.json` 对应工具真实落盘的 observation package，即 `video_ingest` / `video_watch_segment` 生成的帧清单、sheet 清单、媒体元数据、抽帧参数和匹配转录。模型读图后的主观摘要、候选片段和风险判断应写入 `out/report.md` 或后续独立的 review 文件，不写回这个工具产物 schema。
+## Skills
 
-## 插件使用
-
-把本目录作为 Claude plugin 使用时，`.mcp.json` 会启动 `mcp/video_edit_server.py`。命令入口在：
+Controller entry point:
 
 ```text
-commands/video-edit.md
-commands/env-check.md
-skills/env-setup/SKILL.md
-skills/video-edit-agent/SKILL.md
-skills/video-edit-assembly/SKILL.md
-skills/video-speech-workflows/SKILL.md
-skills/video-recap-workflows/SKILL.md
+skills/video-agent/SKILL.md
 ```
 
-`video-edit-agent` 是总控入口，负责素材发现、任务分类、通用文件契约、timeline
-验证、渲染、QC 和修复闭环；`video-edit-assembly` 是多素材组装成片子流程，
-用于多段视频/音频/图片素材的分组、选择、去重、排序和成片结构规划；
-`video-speech-workflows` 处理单源语音压缩和字幕；`video-recap-workflows`
-处理完整电影/赛事/比赛回放的解说剪辑；`env-setup` 只管环境（体检 + 装依赖，
-跨 macOS / Windows / Linux），不碰剪辑任务。
+The controller organizes the flow by task:
 
-首次使用前装环境（推荐走体检脚本，它跨 macOS / Windows / Linux 且默认用国内镜像）：
+- **video general understanding**: relook, deep research.
+- **video edition**: subtitles, multi-material editing, long-video editing.
+- **video creation**: standalone works and serial episodes; duration, aspect ratio and genre are configured by the project.
+- **video-to-code**: replicate a web page, game or full-stack application from a screen recording.
+
+The flow is chosen from the task and the capabilities actually available; each domain's detailed method is read on demand. The controller owns the shared source, evidence, time-base and routing rules; domain entry points, workflows and references own their own methods. Checking and repair run through every main line; creation duration is set by the task, and standalone works and serial episodes are not divided by duration. Movie, soccer, basketball and LoL recaps are all integrated. Match recaps reuse `arrange_footage mode=match`, `synthesize_narration mode=match` and `video_render kind=match`, and share the existing MCP/CLI and speech services.
+
+The plugin provides the following skills. `video-agent` is the controller for every video task, and the compatibility `/video-edit` command also points to it.
+
+| Skill | Responsibility |
+| --- | --- |
+| [video-agent](skills/video-agent/SKILL.md) | Controller and shared evidence rules |
+| [video-edit-agent](skills/video-edit-agent/SKILL.md) | Local processing of one existing video/audio file (trim, transcode, compress, GIF, resize, speed, audio-track changes, masking, ffmpeg retouching) |
+| [video-understanding](skills/video-understanding/SKILL.md) | Video relook and deep research |
+| [video-edit-assembly](skills/video-edit-assembly/SKILL.md) | Multi-material editing |
+| [video-speech-workflows](skills/video-speech-workflows/SKILL.md) | Subtitles and talking-head condensing |
+| [video-creation](skills/video-creation/SKILL.md) | Standalone works and serial episodes |
+| [video-recap-workflows](skills/video-recap-workflows/SKILL.md) | Movie and match recaps |
+| [video2code](skills/video2code/SKILL.md) | General method for screen-recording replication |
+| [video2game](skills/video2game/SKILL.md) | Game interaction and verification |
+| [video2fullstack](skills/video2fullstack/SKILL.md) | Full-stack interaction and backend verification |
+| [web-replicate](skills/web-replicate/SKILL.md) | Optional web project templates |
+
+On the ZCode desktop there is also [setup-guide](skills/setup-guide/SKILL.md): the environment check and installation for first use on a new computer.
+
+`skills/` also contains two skills that the table above does not list. The controller in `skills/video-agent/SKILL.md` routes person replacement to the first; the other is entered directly: [video-swap](skills/video-swap/SKILL.md) (whole-person replacement in an existing video, using the `swap_*` tools) and [code2video](skills/code2video/SKILL.md) (builds a 2D or 3D animation from a text brief and renders it to video, using `image_generate` / `model3d_generate`).
+
+`agents/` holds seven subagent definitions: `recap-observer`, `recap-text-reviewer` and `recap-final-reviewer` (movie recap, see Movie recap tools), `creation-verifier` (judges one candidate take for `video-creation`), `v2c-verifier` (compares a source recording with a build), and `c2v-reviewer` / `c2v-3d-reviewer` (visual review of `code2video` renders and 3D motion recordings).
+
+## Match recaps
+
+Soccer arranges footage by event window and then voices it; basketball and LoL pick footage according to the actual voiceover duration. All three are routed through `video-recap-workflows`. Complete source files are registered by half, quarter or game, and observation and transcription reuse the shared tools.
+
+- `arrange_footage mode=match action=ingest/dialogue/arrange`: source ingestion, commentary axis, match footage arrangement.
+- `synthesize_narration mode=match`: per-sentence voiceover on the shared TTS, keeping actual durations and script/audio digests.
+- `video_render kind=match`: keeps the action alignment and original-audio mixing of the soccer/basketball/LoL kernels; outputs a 1280×720, 25 fps cut plus same-named `.qc.json`, `.placement.json` and `.render_report.json`.
+
+Action placement uses an explicit `event_t`; across quarters and games, ordering is by segment and in-segment time. Long narration gaps are leads for a viewing recheck; conflicting arrangements and stale scripts or audio raise errors. After technical QC, the picture, action completeness and actual sound still have to be checked. For parameters and examples see [Shared notes for match workflows](skills/video-recap-workflows/references/match-editing.md).
+
+## Observation and research
+
+Video Q&A first locates by the question, then watches a shortened window densely; deep research combines input observation, search, candidate verification and evidence organization. All observation uses `video_observe`; there is no need to choose between local and remote tools. Transcription continues to reuse the shared implementation.
+
+The `video-edit` MCP returns `structuredContent`, `isError` and the actual images. `image_delivery` lists the images that were returned, omitted for budget, or failed to read/decode; `image_delivery_status=partial` means delivery is incomplete. Broken images are not returned as ImageContent, and the MIME type comes from the actually decoded format. Transcripts and creation quotes keep the source's original wording; service diagnostics use neutral names. The CLI outputs the same business status and data, with images given as paths for local viewing. Time parameters are always in seconds; `fps` and `num_frames` are mutually exclusive. Frame labels and `time_s` correspond to the source time of the actually decoded frame (error within one source frame). The whole-file recognition for `include_transcript` is cached under `.video_agent/observe_transcripts/` by source bytes and language, so later windows on the same source do not run recognition again; when several windows of the same source are observed in parallel, they wait for the same recognition to finish. `video_compare`'s `crop` accepts only `default` or an arithmetic expression of the form `w:h[:x[:y]]`.
+
+The plugin hooks include a startup environment check, a media-path hint and a session clock for long creation runs; screen-recording replication tasks additionally enable dedicated hooks. For replication, the final build must pass, and visual and interaction quality still has to be verified separately.
+
+The review sub-agents (`c2v-reviewer`, `c2v-3d-reviewer`, `v2c-verifier`) have boundaries: no MCP calls or delegation, writes only under `out/reviews/`, and a round budget. Hooks enforce these only under Claude Code and the task harness, which report sub-agent events and the agent identity to hooks. ZCode does not send `SubagentStart`/`SubagentStop` or `agent_id`/`agent_type`, so under ZCode these boundaries are instructions in the agent prompts rather than enforced limits. The reviewers keep `Bash` because they crop and enlarge images with PIL.
+
+## Long tasks and recovery
+
+Over MCP, the first call to `transcribe`, `tts_generate`, `image_generate`, `video_generate`, `video_render`, `detect_shots`, `build_film_index`, `synthesize_narration`, `produce_film`, `model3d_generate`, `swap_storyboards` or `swap_generate` returns `data.job_id` and the job state immediately. At that point only the submission is done; no final media exists yet. Query with `job_action=status, job_id=...` on the same tool; once the job has finished, this returns the full business result and the actual images. The job's terminal state is at `data.job.status`; the state of the first submission is at `data.status`, and a same-named field in the business result is not the job's terminal state. `job_action=list` lists this project's jobs for that tool; each row has only `job_id`, `status` and the `job` state, and the business result is still collected with `status`. `job_action=cancel` marks the job cancelled: a call in progress cannot be stopped, it runs to its end in the background and its result is discarded. Other tools wait for completion by default and can also be submitted explicitly with `job_action=submit`.
+
+Jobs run on background threads inside the MCP server process: no child worker processes and no `/proc`, so Linux, macOS and Windows behave the same. Job records live in `.video_agent/jobs/`; a running job writes a heartbeat every 5 seconds, and other processes (the CLI, a restarted MCP server) use it to tell whether the job is still running; a heartbeat older than 30 seconds is reported as `interrupted`. Restarting the MCP server interrupts running jobs: call again with the same arguments; video takes, 3D, TTS and person-replacement windows resume their submitted tasks from their own records, while images and ASR run again. Each project runs at most 2 long jobs at once (`VE_MCP_WORKERS`); when the limit is reached, a new long tool call or explicit `submit` queues for a free slot for up to `VE_MCP_QUEUE_SECONDS` (default 120) before returning `project job worker limit reached`. Short tools run inline on a thread and take no job slot. The command line is a one-shot process: `job_action=submit` there runs to completion. 900 seconds is the limit for a single MCP request; generation/ASR/render waits run inside background jobs.
+
+The tool `inputSchema` sent to MCP clients is a plain object at the root (no `anyOf`/`oneOf`/`allOf`, and no root-level `required`); `job_action` and `job_id` are ordinary optional properties. Required business arguments are written in the tool description and validated by the server: `status`/`cancel` accept only `job_id` (passing business arguments together with them is rejected with `job controls cannot include business arguments`), `list` accepts no other argument, and a new call cannot carry `job_id`. A violation returns a single-line `invalid arguments: ...` or the corresponding exclusivity error.
+
+
+The CLI runs synchronously by default. A business failure or an argument reading/validation failure prints a structured error and exits 1; success exits 0. Arguments that the schema declares as strings (such as `--query 2024`, `--source 12345`, `--job-id`) keep their literal text and are not converted to numbers. `--job-action submit/status/list/cancel` uses the same job protocol. An interruption does not automatically create a new request: a video candidate that has a task id is resumed with the original take_id; when the task id is missing or the upstream result cannot be confirmed, the take stays reserved/interrupted and the server-side record must be checked first. Image and speech interfaces that have no resumable task id likewise need manual reconciliation; cancelling the local wait does not cancel server-side billing.
+
+The ASR derived-audio cache is bound to the source SHA, the conversion parameters and the actual audio SHA; old caches that have no binding or were modified are extracted again. The bytes actually uploaded are frozen and checked against the binding. The output contains `asr_audio_sha256` and the pre-recognition source SHA-256; the source is checked again when recognition finishes, and if it changed, the old output is kept and an error is raised. The subtitle and speech indexes reject transcripts that lack digests or are stale; an old transcript requires recognition to be run again on the current source. Default ASR output uses a separate directory; explicitly overlapping outputs are protected by file locks. A final subtitled cut can be traced through the render provenance chain to the timeline, the original cut, the transcript and the cues, and can go directly into `creation_review`.
+
+In the current creation plan, keyframes go into generation automatically when the request does not specify them explicitly; a square canvas uses 1:1. Re-reviewing existing takes after the directing goals change requires `creation_verify action=prepare reassess=true`; the original generation recipe is kept, and evidence and verdicts are stored per revision. Voiceover that is too long or conflicts fails explicitly; a wrong image aspect ratio does not trigger a second submission automatically.
+
+Derived audio and chained references in the submission ledger can only be reused read-only by their original SHA; when a reference is damaged or changed, restore the original bytes or create a new candidate. Do not delete the ledger and retry. Audio that was actually padded with silence is bound by source/output SHA and checked against the limits by its final duration at submission time. When the compiler is upgraded, if the rest of the request identity is exactly the same, the original submitted task can still be collected and no new request is created automatically.
+
+Budgeting uses one project, one candidate directory and one fixed set of caps; generation and editing share the reservation, and resuming an original task does not reserve again. When there is only one old candidate ledger it can be adopted automatically; with several ledgers, the cumulative reservation and the server-side tasks must be reconciled first. An independent production budget uses an independent project; moving the plan or changing the output directory cannot reset the budget.
+
+When old review evidence lacks the revision/voice-SHA binding, or an evidence dependency has changed, prepare/record must be run again; an old passing verdict cannot be carried over. `unavailable`, `skipped` or `excluded_thin` does not prove that the voice is consistent, that the audio is silent or that there is no dialogue. A unit ID cannot contain an absolute path, path separators or control characters.
+
+
+## Compatibility and known limits
+
+- File locks, staging and rollback handle ordinary exceptions; they do not guarantee atomic publication of several files as a whole under SIGKILL or power loss. Recovery still checks SHA and source binding.
+- verdict/evidence signatures are for detecting stale or mismatched evidence and cannot prevent malicious forgery; structural validation and local regression tests also do not prove that content, aesthetic or voice judgments are correct.
+- Timeline audio rendering still builds a full-length audio bed for each sound track; the resource cost on long, multi-track projects needs dedicated stress testing and optimization.
+
+## Environment variables
+
+The public ASR provider is `asr`, using the speech recognition service of the signed-in ZCode account, with no key: local audio is uploaded first (mp3/wav up to 10 MiB each; other formats or larger files are first extracted to 16 kHz mono mp3) and then submitted for recognition; material longer than 30 minutes is recognized in chunks of about 28 minutes and merged. The service has no language parameter; `language` is only recorded. TTS uses the voiceover service of the signed-in ZCode account (WAV 24 kHz), with no key: `VE_TTS_VOICE` sets the default voice (default `zixinnansheng`), and 12 preset voices are available, listed in the `tts_generate` description. The service takes no style instructions, so `style_instructions` is recorded but has no effect; speech rate is adjusted locally with ffmpeg. Long text is split by sentence, synthesized piece by piece and joined. Reusing a voice does not mean that cloning a voice from a supplied sample is supported. TTS requests are ledgered by content: an identical request reuses the recorded audio.
+
+Configuration is read from process environment variables and `.env` files. Precedence is: process environment > project-directory `.env` > plugin-directory `.env`. The ZCode service origin (`ZCODE_BASE_URL`) is injected by the host and never read from `.env`. The plugin has no built-in proxy; network proxying comes from the process environment. The template is `.env.example`.
+
+Common ones:
+
+- `VE_TTS_VOICE`: default voiceover voice
+- `VE_NARRATION_TTS_RATE`: speech-rate override for movie-recap voiceover (the voice always comes from `VE_TTS_VOICE`)
+- `VE_BGM_DIR`: music library for `video_render kind=narrated`
+- `VE_PROJECT_DIR`
+- `VE_MCP_WORKERS`: per-project limit of long jobs running at once (default 2)
+- `VE_MCP_QUEUE_SECONDS`: how long a long job waits for a free slot when the limit is reached (default 120 seconds)
+- `VE_OBSERVE_MAX_FRAMES` / `VE_OBSERVE_FRAME_WIDTH`
+- `VE_MAX_INLINE_IMAGES` / `VE_MAX_INLINE_IMAGE_BYTES`
+- `VE_VIDEOSITES_MEDIA_DIR`
+- `VE_FONT_DIRS` / `VIDEO_EDIT_FONT_DIRS`: font directories, separated by the operating system's path separator
+
+## CLI
+
+The CLI and MCP share the same implementation:
 
 ```bash
-# 只体检：逐项报"要什么 / 缺了挂哪个能力 / 本平台怎么装"
-python3 video-agent-kit/skills/env-setup/scripts/env_doctor.py
-# 体检 + 自动装可自动装的 pip 包（清华源）
-python3 video-agent-kit/skills/env-setup/scripts/env_doctor.py --fix
+python plugins/video-agent-kit/cli/video_agent_tool.py transcribe --input_path input.mp4 --language zh --pretty
+python plugins/video-agent-kit/cli/video_agent_tool.py tts_generate --text "旁白文本" --voice zixinnansheng --output_path out/narration.wav --pretty
 ```
 
-会话里也可以直接用 `/env-check`（对应 `env-setup` skill）。体检结论落在
-`.video_agent/env_report.json`，不必每轮重跑。
-
-它查的不止"包在不在"：ffmpeg 有没有带 `libx264` / `aac` / `libmp3lame` 与
-`libass`（缺了字幕烧录必挂，但只在渲染最后一步才炸）、本机中文字体的 cmap 是不是
-真覆盖中文（`fc-match` 对着没装的中文族会返回 DejaVu，烧出来是豆腐块而 ffmpeg
-退出码 0）、以及语音走的是哪条通道（在 ZCode 里就是"官方通道，本地无需 key"，不会催你配凭据）。
-
-也可以手工只装 Python 依赖（注意 `scenedetect` 必须 `--no-deps`，否则会把 GUI 版
-opencv 盖到 `opencv-python-headless` 的 `cv2` 上，两个包一起坏）：
+Observation and search examples:
 
 ```bash
-python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r video-agent-kit/requirements.txt
-python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --no-deps "scenedetect>=0.6"
+python plugins/video-agent-kit/cli/video_agent_tool.py video_observe --source input.mp4 --start-s 10 --end-s 20 --fps 2 --layout frames --pretty
+python plugins/video-agent-kit/cli/video_agent_tool.py video_search --query "waterfall landscape" --pretty
 ```
 
-字体不在标准目录时不用改代码，把目录塞给 `VE_FONT_DIRS`（多个目录用
-`os.pathsep` 分隔）即可；查找顺序见 `mcp/ve_tools/fonts.py`：`VE_FONT_DIRS` →
-`/root/.fonts`、`/usr/share/fonts` → 本平台系统字体目录（macOS 苹方 / Windows
-微软雅黑，所以这两个平台通常不需要装字体）→ `fc-list :lang=zh`。
-
-MCP 工具调用的 `arguments` 顶层必须是 JSON object；如果入口传入数组、字符串等非对象参数，server 会直接返回结构化错误，不把异常泄漏成工具 traceback。
-
-插件启动时会通过 `hooks/env_check.py` 做一次非阻塞环境检查（只跑毫秒级项，清单直接从 `skills/env-setup/scripts/env_doctor.py` 的 cheap 检查项取，不在 hook 里另写一份），提示缺失的 `ffmpeg`、`ffprobe`、MCP SDK、抽帧依赖，并报出语音走哪条通道（ZCode 下即"官方通道，本地无需 key"）；要做全量体检（ffmpeg 编码器与 libass 滤镜、中文字体真覆盖、直连兼容端点连通性）走 `/env-check`。TTS 调用依赖按需懒加载；缺 TTS 依赖只应影响 `speech_synthesize` / `tts_generate`，不应影响媒体探测、抽帧、timeline、渲染和 QC。用户 prompt 出现本地视频路径时，`hooks/check_video_input.py` 会提示标准流程：先 `speech_transcribe` 产出 `out/transcript.json`，再带 `transcript_path` 调 `video_ingest`；只有当剪辑流水线产物（`out/timeline.json`、`out/timeline_validation.json`、`out/preview.mp4` 或 `out/preview_qc_report.json`）出现后，`hooks/check_closeout.py` 才会在停止前检查 `out/media.json`（或任一 `*media.json` sidecar）、`out/transcript.json`（仅当 cloud ASR 可用时要求）、源素材 `video_ingest` 观察包（单素材 `out/video_ingest.json`，多素材 `out/ingest/*.json` 或 `out/video_ingest_<source>.json`）、`out/timeline.json`、`out/timeline_validation.json`、`out/preview.mp4`、`out/preview_qc_report.json` 和非空 `out/report.md` 是否闭环；当 recap 后期产物（如 `out/reel.json`、`out/edl.json`、`out/final.mp4`、`out/qc.json`）出现后，同一个 hook 会改查 recap 合同：最终视频、绑定/QC 报告、TTS 忠实度失败、句画抽查和 `out/report.md`。单步任务（如只做 `inspect_media` 或 `speech_transcribe`）不会触发契约。闭环 strike 计数按会话隔离，最多拦 3 次后放行并记录 violation。QC 报告必须由 `qc_preview(video_path="out/preview.mp4", timeline_path="out/timeline.json")` 生成，否则缺少 timeline hash 会被视为未闭环。
-
-推荐工作流：
-
-```text
-video-edit-agent classify
-  -> video-edit-assembly       # 多素材组装成片任务
-  -> video-speech-workflows    # 单源语音压缩、说话人字幕、speech pipeline
-  -> video-recap-workflows     # 电影/足球/LoL/篮球解说剪辑
-  -> inspect_media
-  -> transcribe
-  -> video_ingest           # 一次性把完整视频变成可看的 contact sheet，附带完整转录
-  -> video_watch_segment    # 只在需要时局部高 fps 复看；多个疑点应批量传 segments
-  -> 生成 timeline.json
-  -> validate_timeline
-  -> render_preview
-  -> qc_preview             # 传 video_path=out/preview.mp4 和 timeline_path=out/timeline.json
-  -> 内容自检               # 如需看 preview，video_ingest 写到 out/preview_ingest.json，不覆盖源视频 out/video_ingest.json
-  -> timeline_diff 修复 loop
-```
-
-注意：对 `out/preview.mp4` 调用 `video_ingest` 或显式 `video_watch_segment(video_path="out/preview.mp4", ...)` 后，后续不带 `video_path` 的 `video_watch_segment` 默认会复看 preview。若修复时还需要回看原始素材，应显式传原始 `video_path`；在同一个 MCP 会话里，工具会按视频指纹复用此前绑定过的源素材 transcript。如果某个 active video 路径上的文件内容被重新渲染、覆盖或替换，隐式局部复看会拒绝继续使用旧 active 状态；显式传当前 `video_path` 可直接复看当前文件，完整 `video_ingest` 只在需要全片 contact sheet 时再跑。CLI 每次调用都是新进程，不共享这份会话记忆，因此 CLI 直接复看时应显式传 `transcript_path` 或 `transcript_text`。
-
-## 环境变量
-
-所有配置统一走 `.env` 配置文件（KEY=VALUE），不需要在启动 shell 里手动 export。加载优先级：
-
-1. 进程环境变量（最高，用于临时覆盖）；
-2. 项目目录 `.env`（按项目覆盖）；
-3. 插件根目录 `.env`（插件级默认值）。
-
-完整可配置项参考 `.env.example`。SessionStart 环境检查会打印实际加载了哪些 `.env` 文件。
-
-**语音在 ZCode 里不需要任何配置。** `speech_transcribe` / `speech_synthesize` 默认走官方通道，
-身份由宿主随每次 `tools/call` 注入，没有 key 可配、也没有端点要指。下面这些只对非 ZCode 宿主有意义，
-`/env-check` 里这两项也永远是 soft，不是硬缺口。
-
-必须或高价值配置：
-
-- `VE_SPEECH_MCP_URL` / `VE_SPEECH_MCP_TOKEN`：Claude Code 等非 ZCode 宿主可配置的远端 HTTP MCP 语音服务，也是这类宿主的推荐做法（付费能力与凭据都留在服务端）。ZCode 清单不暴露这两个用户配置。显式设置 URL 时远端 MCP 优先级最高；`VE_SPEECH_MCP_ASR_TRANSFER=auto|path|base64` 控制 ASR 媒体传输，默认对 localhost/shared-storage 走路径，对非本机远端抽取压缩音频后 base64 上传。
-- `VE_ASR_PROVIDER`：`speech_transcribe` / `transcribe` 的 provider 选择，`auto`（默认）/ `cloud_asr`。
-- 直连 HTTP 兼容后端（legacy escape hatch，自带语音服务时才用）：插件不内置任何服务地址、模型名或资源标识，全部由部署方提供。
-  - `VE_SPEECH_ASR_ENDPOINT` / `VE_SPEECH_TTS_ENDPOINT` **只从进程环境读，不吃 `.env`**：项目级 `.env` 是不可信输入，若它能指定端点，仓库里的一个 `.env` 就能把带着 API key 的请求导向攻击者主机。请在启动 server 的地方 export。
-  - `VE_SPEECH_ASR_RESOURCE_ID`（必填）、`VE_SPEECH_ASR_FLASH_RESOURCE_ID`（可选，同步回退资源）。
-  - `VE_SPEECH_ASR_API_KEY`，或 `VE_SPEECH_ASR_APP_KEY` + `VE_SPEECH_ASR_ACCESS_KEY`。
-  - `VE_SPEECH_TTS_MODEL`（必填）、`VE_SPEECH_TTS_API_KEY`（未配置时复用 ASR key）、`VE_SPEECH_TTS_VOICE`。
-- `VE_NARRATION_TTS_PROVIDER` / `VE_NARRATION_TTS_VOICE` / `VE_NARRATION_TTS_RATE`：`synthesize_narration` 的用户级默认 cloud TTS 后端、音色和语速。
-- `VE_LOL_TTS_PROVIDER` / `VE_LOL_TTS_VOICE`：`lol_tts` 的默认 cloud TTS 后端和音色。
-- `VE_SOCCER_TTS_PROVIDER` / `VE_SOCCER_TTS_VOICE`：`soccer_tts` 的默认 cloud TTS 后端和音色。
-- `VE_BGM_DIR`：`render_narrated` 可选 BGM 曲库目录；当前 movie-recap skill 默认 `bgm=false`，未配置时不会阻塞无 BGM 成片。
-
-`speech_transcribe` 和 `speech_synthesize` 都支持 `retries` / `retry_count` 表示瞬时错误的额外重试次数，默认 3，范围 0~10；`retry_backoff_seconds` 是指数退避初始秒数，`speech_transcribe` 默认 30 秒，`speech_synthesize` 默认 3 秒。只重试网络、timeout、429/5xx、服务端错误、并发/限流等瞬时失败；缺 key、provider 不可用、输入/参数错误不会重试。
-
-`speech_synthesize` 的 `preferred_provider` 必须是 `auto`、`cloud` 或 `cloud_tts`；未知值会直接返回结构化错误。`allowed_providers` 是硬白名单，提供时只能包含通用 cloud TTS provider；错误类型或未知 provider name 会直接返回结构化错误。`sample_mode` 提供时必须是 boolean，不能用字符串 `"false"` / `"true"` 代替。`speed` 必须是有限正数。TTS 额外参数中，`speech_rate` 必须在 `[-50,100]`，`pitch_rate` 必须在 `[-12,12]`，`loudness_rate` 必须在 `[-50,100]`，`sample_rate` 必须是接口支持的采样率，`output_format` 必须是 `wav` / `mp3` / `ogg_opus`。TTS 音频生成后必须能被 `ffprobe` 探测到有效正数时长，否则工具会返回错误，避免把未知时长的旁白写进 timeline。
-
-## CLI 使用
-
-CLI 和 MCP 共用同一套实现：
+Editing examples:
 
 ```bash
-python video-agent-kit/cli/video_agent_tool.py inspect_media --input_path input.mp4 --pretty
-python video-agent-kit/cli/video_agent_tool.py transcribe --input_path input.mp4 --language zh --pretty
-python video-agent-kit/cli/video_agent_tool.py video_ingest --args-file video-agent-kit/examples/video_ingest_args.json --pretty
-python video-agent-kit/cli/video_agent_tool.py video_watch_segment --video_path input.mp4 --start_time 12 --end_time 16 --fps 6 --pretty
-python video-agent-kit/cli/video_agent_tool.py video_basic_operation --operation trim --input_path input.mp4 --start_time 3 --end_time 8 --output_path out/trim.mp4 --pretty
-python video-agent-kit/cli/video_agent_tool.py video_basic_operation --operation splice --args-json '{"clips":[{"source":"input.mp4","start":0,"end":3},{"source":"input.mp4","start":8,"end":12}],"output_path":"out/splice.mp4"}' --pretty
-python video-agent-kit/cli/video_agent_tool.py validate_timeline --timeline_path out/timeline.json --pretty
-python video-agent-kit/cli/video_agent_tool.py render_preview --timeline_path out/timeline.json --output_path out/preview.mp4 --pretty
-# 可选：显式指定预览画布，适合横竖屏或不同分辨率素材混剪
-python video-agent-kit/cli/video_agent_tool.py render_preview --timeline_path out/timeline.json --output_width 1080 --output_height 1920 --pretty
-python video-agent-kit/cli/video_agent_tool.py qc_preview --video_path out/preview.mp4 --timeline_path out/timeline.json --pretty
+python plugins/video-agent-kit/cli/video_agent_tool.py timeline_validate --timeline-path out/timeline.json --pretty
+python plugins/video-agent-kit/cli/video_agent_tool.py video_render --kind timeline --timeline-path out/timeline.json --output-path out/preview.mp4 --pretty
+python plugins/video-agent-kit/cli/video_agent_tool.py video_qc --source out/preview.mp4 --timeline-path out/timeline.json --pretty
 ```
 
-CLI 的 `--args-json` / `--args-file` 必须是合法 JSON，且顶层必须是 JSON object；非法 JSON 或数组 / 字符串等非对象参数会在入口处直接报错。`--key value` 简写会自动解析 JSON object / array 字符串，所以可以直接传结构化 patch，例如 `--patch '{"add_clips":[...]}'`；复杂参数仍推荐使用 `--args-file`。
+The shared renderer currently outputs MP4. Timeline rendering supports multiple video/audio/text/image tracks, position, speed change, volume, opacity and clip fade-in/fade-out (on video, image-overlay and audio-track clips). The canvas comes from `sequence.width/height` (or `output_canvas`); the dimensions of the first video source are used only when neither is declared. Effect arrays on clips or tracks, global transitions, transition types other than fade/crossfade/dissolve, transitions on text clips, enabled tracks of an unknown type, and audio tracks that point at a source with no audio are all rejected rather than silently ignored. Speech (talking-head) rendering reuses timeline execution; it currently uses hard cuts, keeps the source frame rate, and outputs a `.transcript.json` bound to the actual cut and plan. The subtitle stage uses the returned `output_transcript`. partial units must be corrected and verified, or the cut must be transcribed again.
 
-## 基础视频操作
+Subtitles support burn/soft/both; soft file names carry `_softsubs`, so read the actual path from the result. Rendering rebuilds the sidecars from the `ass_path`/`srt_path` recorded in the subtitle package; the paths in the report are the published files. Backslashes and braces in cue text are displayed literally; the language tag of a soft-subtitle track is written on the newly added track (two-letter codes are converted to ISO 639-2). Sources with rotation metadata are laid out by their display size. Soft-subtitle QC checks the actual timed-text track, but the display still has to be checked in a player. Ordinary video technical QC, subtitle F/T and condensing S/A/V content checks follow the domain workflows; images and waveforms are not the same as having listened to the audio.
 
-`video_basic_operation` 是 OpenChatCut 风格的单步基础操作工具，所有操作都通过 FFmpeg 落成可检查的视频文件，并写同名 `.basic_operation.json` 报告。当前支持：
+By default every call uses its own artifact directory (a default directory with nothing written to it is cleaned up, and render staging files are deleted after publication). Over MCP, long tools run as background jobs inside the MCP server process (see Long tasks and recovery; a direct CLI call runs in the CLI process itself), and output paths are protected by cross-process file locks: a later call that writes the same output concurrently fails immediately with `output is owned by another active job`, and the caller should switch to a different path or retry serially. Rendering publishes the cut after validating the input snapshot; QC rejects changes to the recorded source files, plans, cues or cuts, and when it checks subtitle data only, it likewise verifies the transcript and source recorded in the subtitle package. Failing conclusions from `timeline_validate` and `video_qc`, and rejected `timeline_patch` diffs, are written to `output_json` and kept (the result is also marked as failed); only execution errors roll back to the files as they were before the call. A report path cannot point to an existing non-JSON file. Dependency files need to be kept with the project; once inputs are moved away, old reports can no longer re-prove the complete binding.
 
-- `trim`：`input_path` + `start_time` + `end_time` / `duration`，剪出一个时间范围。
-- `splice`：`clips=[{"source","start","end"}]`，把多个片段归一到同一画布后拼接。
-- `speed`：`speed=0.1..8.0`，可选 `reverse=true`；音频用 `atempo` 链同步变速。
-- `crop` / `scale` / `rotate` / `flip`：基础构图和方向调整；`scale.mode` 支持 `fit`、`fill`、`stretch`。
-- `freeze_frame`：`at_time` + `duration`，从某一帧生成静帧视频。
+Install dependencies:
 
-这个工具适合素材预处理、局部变换验证和构造中间素材。正式剪辑决策仍应写入 `out/timeline.json`，再走 `validate_timeline`、`render_preview`、`qc_preview`。
-
-## 抽帧默认参数
-
-这些是内置抽帧索引逻辑的默认值：
-
-- `video_fps=2.0`
-- `video_t_patch_size=2`
-- `video_sampling_mode=prod`
-- `max_video_frames=600`
-- `video_frame_normalize_jpeg_quality=90`
-- `video_label_mode=timestamp`
-- `sheet_cols=4`
-- `sheet_max_cells=24`
-- `sheet_width=1568`
-- `jpeg_quality=85`
-
-输出形态是带时间戳的 contact sheet 图片。MCP 会内联前 16 张图片；如果更多，工具结果会列出剩余图片路径，Claude Code 主 Agent 必须继续读取这些图片。sheet 上的时间戳始终按实际帧索引换算成源视频时间（能读到解码器 PTS 时优先用 PTS，兼容可变帧率素材）；局部复看也不改成片段内相对时间。`video_ingest` 会复用相同视频、时间范围、prompt、转录和抽帧设置的既有 sheet，但不会按空白、近重复内容或重复 frame index 折叠采样帧；视频剪辑任务需要尽量完整地看到固定采样覆盖到的画面。`video_watch_segment` 会按源视频路径、大小和修改时间生成独立窗口台账，按 `(start, end, fps)` 跳过同一源视频的精确重复复看窗口（换 fps 重看不算重复，`force=true` 可强制重看）；被跳过的重复窗口不会产生新的 contact sheet，工具会返回 `skipped_duplicate` 状态，且不会把这次调用当成新的视觉观察来更新 active video。重叠但不精确相同的窗口会提示已覆盖范围；这个台账只管理时间窗，不折叠帧内容。active video 也使用同一类指纹保护，避免源文件被覆盖后继续沿用旧 transcript 或旧全片观察结论。
-
-抽帧读取视频元数据时优先使用 OpenCV / python_vali；ffprobe 兜底路径会同时读取 stream duration 和 format duration，避免只有容器时长或只有流时长的视频无法采样。
-
-## Timeline 项目格式
-
-见 `examples/timeline_minimal.json`、`examples/timeline_project_rich.json` 和 `schemas/timeline.schema.json`。Pipeline 输出的 timeline 根节点必须是 JSON object，并且必须包含非空 `project`、`assets[]`、`tracks[]`，还必须包含 `sequence` 或 `output_canvas`。顶层 `clips[]` 只保留给 legacy/debug 兼容，不能满足项目文件契约。track 和 clip 都必须是 object；每个 clip 必须有 `start`、`reason`，并且必须提供 `end` 或 `duration`。视频 / main 轨的 clip 必须有 `source`；`tracks[]` 中非视频轨的 clip 可以用非空 `text` 代替 `source` 来记录字幕 / overlay 计划。如果同时提供 `end` 和 `duration`，`duration` 必须与 `end - start` 一致。所有时间值必须是有限数字，不能是 `NaN`、`Infinity` 或布尔值。
-
-推荐新任务尽量写成项目文件，而不是只有裸 `clips[]`：`project` 记录任务和假设，`sequence` / `output_canvas` 记录分辨率、fps、时基和平台目标，`assets[]` 记录源素材清单，`tracks[]` 表达主视频、BGM、旁白、字幕、overlay、callout 等轨道计划，`markers[]` 记录关键节拍，`transitions[]` 或 clip 级 `transition_in/out` 记录转场计划，clip / track 可带 `effects[]`、`timeline_start`、`volume`、`opacity`、`enabled` 等编辑软件常见元数据。Validation 会校验这些字段的基本类型、数值边界、资产引用、轨内重叠和 sequence 时长边界。
-
-`render_preview` 现在是基础项目渲染器：`tracks[]` 中父级 track 的 `type/name/track_type` 明确为 `video` / `main` / `primary` / `footage` 等主视频含义时，会按 `timeline_start` 放到 sequence 画布上并在片尾补少量末帧以降低边界闪帧；原视频音频与 `audio` / `music` / `voiceover` 等音频轨会先烘焙成全片长度、已按时间线定位的 wav bed，再用非归一化混音合成；`subtitle` / `text` 等文字轨会通过 `drawtext` 烧录；`overlay` / `image` 轨会按启用时间窗叠加静态图片。渲染后会额外写 `preview.render_plan.json` 和 `preview.edit_decisions.json`，方便检查 timeline 如何被编译成输出。
-
-这个 renderer 仍不是完整 NLE：复杂关键帧、遮罩、任意转场曲线、嵌套序列、复杂调色、动态贴纸和多层高级合成仍应作为项目计划记录，不能声称已完整渲染。未知 track 类型会记录到 render plan 的 unsupported tracks 中。
-
-```json
-{
-  "version": "1.0",
-  "clips": [
-    {
-      "source": "input.mp4",
-      "start": 0.0,
-      "end": 5.0,
-      "reason": "开场信息完整"
-    }
-  ]
-}
+```bash
+python3 -m pip install -r plugins/video-agent-kit/requirements.txt
+python3 -m pip install --no-deps -r plugins/video-agent-kit/requirements-nodeps.txt
 ```
 
-`timeline_diff` 对 `clips[]` 和 `tracks[].clips[]` 都会原地修改对应 clip 容器，不会为了修复 tracks timeline 而额外生成顶层 `clips`。`patch` 必须是 JSON object，`apply` 必须是 boolean。可用操作包括：`set_timeline_fields`、`set_track_fields`、`add_assets`、`update_assets`、`remove_asset_indices`、`add_tracks`、`insert_tracks`、`replace_tracks`、`remove_track_indices`、`update_clips`、`replace_clips`、`remove_clip_indices`、`move_clips`、`insert_clips`、`add_clips`。`replace/update/remove/move` 索引按补丁前的扁平 clip 顺序解释；asset/track 操作用各自数组内的索引解释；结构性 track 操作（add/insert/replace/remove tracks）会改变 clip 容器，不能和 clip 操作混在同一个 patch，必须拆成两次 `timeline_diff`。`move_clips` 每次 patch 最多一条，移动已有 clip，随后才执行 `insert_clips` / `add_clips`；多次重排必须拆成多次 `timeline_diff`。对 `tracks[]` timeline 使用 `add_clips` 时，会优先加入第一个视频 / main 轨；`insert_clips` 和 `move_clips` 可传 `track_index` 指定目标轨道。重复索引、越界索引、非对象 clip/fields、空 `apply=true` patch、多条 move、结构性 track 操作和 clip 操作混用都会被校验拒绝。
+The second command installs shot detection (`scenedetect>=0.7`). It must use `--no-deps`: scenedetect declares desktop `opencv-python`, which would overwrite the `opencv-python-headless` build that the plugin uses. `/setup-guide` already installs it this way. Chinese narration subtitles need a CJK font, which can be supplied through `VE_FONT_DIRS`.
+
+## Aggregated subdirection tools
+
+MCP and the CLI both read the tool catalog in `mcp/ve_tools/catalog.py`. The catalog currently contains the `speech`, `understanding`, `editing`, `creation`, `model3d`, `recap` and `swap` tool groups, and both entry points read the same tool set by default. New implementations should reuse shared capabilities first; tools with similar functions should have their semantics, parameters and names unified before they are registered.
+
+When integrating another subdirection, organize the compared schemas and implementations as a `ToolGroup` and register it in `TOOL_GROUPS` in `catalog.py`. Registration checks that schema and implementation names match and that implementations are callable, and rejects same-named tools in different groups; same-named capabilities must be deduplicated or given a compatible name before they are registered.
+
+After adding a capability, update the related skill, command, hooks, environment configuration and dependency notes together.
+
+## Creation tools and configuration
+
+`creation_plan_validate`, `image_generate`, `image_crop`, `video_generate`, `creation_verify`, `creation_timeline_build`, `creation_review` and `voice_compare` are the public creation interfaces. The `creation` group also registers `title_cards` (`action=plan|render`), which composites name/place cards onto a rendered cut. `video_generate` generates or edits immutable candidates depending on `action`; `creation_verify` prepares or records candidate evidence, status or extra diagnostics depending on `action`; `creation_review` prepares real cut-point images and validates whole-film verdicts. ASR/TTS, observation, timeline validation, rendering and QC share the existing tools.
+
+Images and videos come from the generation services of the signed-in ZCode account and need no configuration (video 4–30 s, 480p, no audio track). No private gateway, credentials, songs or automatically downloaded face models are included. Ordinary proxying is controlled by HTTP(S)_PROXY/NO_PROXY. Projects are isolated through `VE_PROJECT_DIR`; creation operations in the same project are mutually exclusive.
+
+Candidate generation requires a v2/v3/v4 plan and a fixed cumulative budget; failures and interruptions count toward the reservation, and submitted tasks are not resubmitted automatically. Candidates, review images and plans are bound to the current reference bytes; only source spans with a current review approval can enter the creation timeline. In-clip subtitles need real transcript timing; a failure or an exhausted budget keeps the unfinished state. Structural validation does not prove that content or aesthetic judgments are correct.
+
+Core dependencies stay in the shared requirements. The voice-card check of creation uses CAM++ by default: a mounted ONNX graph (`VE_SPEAKER_MODELS_DIR`) is used when present, otherwise the same official weights from ModelScope run in numpy and are downloaded automatically on first use (about 28 MB, cached in `~/.video_agent/models`), with nothing to install. The optional `requirements-voice.txt` (librosa) is only for the older mfcc_f0 / resemblyzer scorers. The optional `requirements-face.txt` together with ONNX models in an explicit `VE_FACEQC_DIR` provides face-reference diagnostics. When these are not installed the capability is explicitly missing; review by actual observation and listening, and do not treat skipped as pass.
+
+## 3D asset tools
+
+`model3d_generate` (the `model3d` tool group) calls the 3D generation service of the signed-in ZCode account. `operation` selects one step: `generate` (front, left, back and right views, or one image → textured GLB), `rig` (automatic rigging; `rig_type=auto` first runs a free riggability check), `animate` (applies up to 5 preset animations to a rig result). Each call creates only one task; the artifacts are in `out/model3d/<output_name>/` (`model.glb`, `preview`, `task.json`), and later steps reference the previous step by its `output_name`.
+
+No key is needed. Before a submission the request key and body are recorded, so after an interruption a repeated call with the same arguments recovers the original task with the original key; once the task id is on disk, a repeated call with the same arguments reuses the finished files or collects the task that is still running, without creating a new task; a different request under the same name needs a new name or `force`. Usage within the project is recorded in `.video_agent/model3d_usage.json`; once it reaches the project limit `VE_MODEL3D_USAGE_CAP` (default 1000), new calls are refused.
+
+## Movie recap tools
+
+The `recap` tool group is provided by the same `video-edit` MCP server and CLI: `detect_shots` → `build_film_index` → `arrange_footage` (dialogue/arrange/anchor) → `synthesize_narration` → `bind_narration` → `video_render kind=narrated` → `video_qc` (`timeline_path` points to shots.json, to check the render provenance), or `produce_film` orchestrates the whole flow. Shot detection, arrangement and binding call no model; voiceover calls TTS; back-verification and indexing call ASR. The fill shots and long-shot portions that `bind_narration fit_mode=whole_shot` adds wait in `data.needs_review` for an actual review against the preview, and are handled through `produce_film approve_segments` or `avoid_shot_ids_by_seg`.
+
+Text review, picture checks and final-cut spot checks for movie recaps are done by the runtime's subagents (`recap-observer`, `recap-text-reviewer` and `recap-final-reviewer` under the plugin's `agents/`): the stage scripts under `recap/` write task files and validate the reports the subagents write. They do not call a separate review model and are not exposed as MCP tools. For the method see [video-recap-workflows](skills/video-recap-workflows/SKILL.md).
+
+## Third-party code and licenses
+
+The plugin is licensed under the MIT License ([LICENSE](LICENSE)). Third-party material is listed with its license and modifications in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md):
+
+- `mcp/ve_tools/campplus_net.py` and `campplus_numpy.py`: the CAM++ speaker-verification network from ModelScope (Apache-2.0, full text in [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt)), trimmed and re-implemented in NumPy.
+- CAM++ weights (`iic/speech_campplus_sv_zh-cn_16k-common`, Apache-2.0): not bundled; downloaded once from ModelScope on first use of the voice-card check.
+- `skills/web-replicate/templates/*/template/src/components/ui/*`: shadcn/ui components (MIT).

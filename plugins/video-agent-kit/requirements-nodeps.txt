@@ -1,0 +1,7 @@
+# Install with --no-deps ONLY:
+#   python3 -m pip install --no-deps -r requirements-nodeps.txt
+# scenedetect declares desktop opencv-python as a dependency; installing it normally would
+# overwrite the opencv-python-headless build from requirements.txt and break the shared cv2
+# package. Its real runtime dependencies (click, platformdirs, tqdm, numpy) are already in
+# requirements.txt.
+scenedetect>=0.7

@@ -1,0 +1,10 @@
+# Opt-in Subtitle Content and Styles
+
+`subtitle_build` accepts `style`; the renderer regenerates ASS/SRT from the package's `cues[]`.
+
+- **Speakers**: `style.speaker_labels=true`, top-level `speaker_names={"label":"display name"}`. Review identity evidence first; without evidence keep neutral labels. speaker_relabel corrects time-range labels and any necessary segmentation, and preserves the words.
+- **Word-level highlighting (karaoke)**: `style.karaoke=true`. Inspect each word's real start/end; without word-level times the implementation estimates the distribution, so do not claim precise sync. Energy pauses under music cannot reliably infer speech boundaries; usually choose plain subtitles or record the downgrade.
+- **Bilingual**: the main Agent translates and writes each cue's translation into the `translation_lines` array, adding no unsourced facts. Display follows each cue's translation array; `style.bilingual_scale` and `bilingual_colour` control size and colour. After adding lines/font size/safe area, check reading speed and full-frame occlusion. The tool handles layout; it does not translate automatically.
+- **Term notes**: after verifying the necessary terms, the main Agent adds separate `role="annotation"` cues with their own text and start/end, displayed at the top position; limit length and observe the actual line count. Omit when the user wants only the original dialogue.
+
+Available styles are defined by the implementation's validation: colours use ASS `&HBBGGRR`/`&HAABBGGRR`; `karaoke` and `speaker_labels` must be booleans; `bilingual_scale` is in (0, 3]; `speaker_colours` is an object mapping labels to colours, or `"auto"`. Invalid values raise errors at build or render time. After editing a cue's text, the old word-level highlighting may be cleared; rebuild and verify it. When editing `lines` to force line breaks, keep them consistent in meaning with text. Each additional content layer occupies more of the frame; re-verify reading speed and safe areas.

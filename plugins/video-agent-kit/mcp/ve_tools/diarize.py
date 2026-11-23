@@ -1,6 +1,6 @@
 """Speaker-attribution repair for transcripts whose diarization collapsed.
 
-Cloud ASR transcribes the WORDS accurately but, on remote-mixed or
+ASR transcribes the WORDS accurately but, on remote-mixed or
 noisy multi-speaker audio, its built-in diarization can collapse two or more
 distinct speakers onto one label — verified on a 3-way podcast where an
 interviewer's questions and the guest's answers were all tagged speaker "1".
@@ -41,7 +41,7 @@ from . import condense_lang as lang
 from .result import ToolResult
 from .run_context import RunContext
 from .timeline import file_sha256
-from .transcript import collect_segments, coerce_float, first_present, load_transcript_data
+from .transcript import collect_segments, coerce_float, first_present, load_transcript_data, read_transcript_text
 
 # First-person / second-person / naming cues, used only to decide whether an
 # adjacent pair of same-labelled utterances *reads* like two people.
@@ -194,17 +194,17 @@ def _implausible_same_speaker(prev: dict[str, Any], nxt: dict[str, Any], languag
     nxt_q = lang._is_question(nt, language)
     # Question → first-person answer: the classic interviewer/interviewee merge.
     if prev_q and not nxt_q and _starts_first_person(nt, language):
-        return f"上一句是提问、下一句是第一人称回答，却同属 {prev['speaker']}"
+        return f"a question followed by a first-person answer, both labelled {prev['speaker']}"
     # Third/second-person address that is a question → first-person reply.
     if prev_q and _addresses_other(pt, language) and _starts_first_person(nt, language):
-        return f"上一句在问“对方”、下一句以第一人称答，却同属 {prev['speaker']}"
+        return f"a question to the other person followed by a first-person reply, both labelled {prev['speaker']}"
     # Call-and-response: two short utterances, one a greeting/imperative, the
     # next a thanks/acknowledgement — almost never the same mouth.
     pn, nn = _norm(pt), _norm(nt)
     if len(pn) <= 8 and len(nn) <= 8:
         greet = ("加油", "欢迎", "来", "请", "谢谢", "谢", "对", "好", "哦", "嗯", "耶")
         if any(g in pn for g in ("加油", "欢迎", "请", "来吧")) and any(g in nn for g in ("谢谢", "谢", "好的", "好", "对")):
-            return f"一喊一应（“{pt}”→“{nt}”）却同属 {prev['speaker']}"
+            return f"a call and its response (“{pt}” → “{nt}”) both labelled {prev['speaker']}"
     return None
 
 
@@ -260,7 +260,7 @@ def _turn_candidate_windows(units: list[dict[str, Any]], cap: int) -> list[dict[
         if windows and lo <= windows[-1]["end"] + 1.0:
             windows[-1]["end"] = round(max(windows[-1]["end"], hi), 2)
         else:
-            windows.append({"start": round(lo, 2), "end": round(hi, 2), "reasons": ["turn candidate (标签退化，全片需重新归属)"]})
+            windows.append({"start": round(lo, 2), "end": round(hi, 2), "reasons": ["turn candidate (labels collapsed; the whole video needs re-attribution)"]})
     return windows
 
 
@@ -343,7 +343,12 @@ def diarize_audit(args: dict, ctx: RunContext) -> ToolResult:
     # windows (the acoustic gaps where a turn could change) so the model can look
     # REGARDLESS of the soft verdict — generously when a collapse looks likely, a
     # few spot-checks otherwise. A clean-looking brief is never a certificate.
-    flag_windows = _merge_windows(flags, pad=float(args.get("window_pad") or 1.5), gap=float(args.get("window_gap") or 2.0))
+    pad_raw, gap_raw = args.get("window_pad"), args.get("window_gap")
+    pad = 1.5 if pad_raw is None else coerce_float(pad_raw)
+    gap = 2.0 if gap_raw is None else coerce_float(gap_raw)
+    if pad is None or gap is None or pad < 0 or gap < 0:
+        return ToolResult(text="[ERROR] window_pad and window_gap must be numbers >= 0")
+    flag_windows = _merge_windows(flags, pad=pad, gap=gap)
     hard_cap = int(args.get("max_windows") or 40)
     turn_cap = hard_cap if likely_collapsed else 6
     turn_windows = _turn_candidate_windows(units, cap=turn_cap) if labelled else []
@@ -351,22 +356,25 @@ def diarize_audit(args: dict, ctx: RunContext) -> ToolResult:
 
     if not labelled:
         verdict = "no_speaker_labels"
-        note = "转录没有说话人标签，无可审计。"
+        note = "The transcript has no speaker labels; there is nothing to audit."
     elif likely_collapsed:
         verdict = "likely_collapsed"
         note = (
-            f"一个标签（{max(share_pct, key=share_pct.get)}）占了 {top_share:.0%} 的时长，"
-            "但内容里既有提问又有第一人称回答——像是把一段对话并到了一个人身上。"
-            "标签很可能不可信，建议按下面的窗口看画面重新归属。"
+            f"One label ({max(share_pct, key=share_pct.get) if share_pct else speakers[0]}) holds {top_share:.0%} of the "
+            "speaking time, yet the content has both questions and first-person answers, as if a conversation "
+            "was merged into one person. The labels are probably unreliable; re-attribute the speakers by "
+            "watching the windows below."
         )
     elif flags:
         verdict = "worth_checking"
-        note = f"有 {len(flags)} 处相邻同标签读起来像两个人（见 suspect_flags），其余大体一致。"
+        note = (f"{len(flags)} adjacent same-label pair(s) read like two different people (see suspect_flags); "
+                "the rest is broadly consistent.")
     else:
         verdict = "no_obvious_conflict"
         note = (
-            "文本层面未见标签与内容明显冲突——但这只是从文字做的推断，不是免检。"
-            "谁在说话最终以画面为准；若这段的去留取舍依赖说话人身份，仍应抽查窗口。"
+            "The text shows no obvious conflict between labels and content, but this is an inference from the "
+            "words only, not a clearance. Who is speaking is settled by the picture; if keeping or cutting a "
+            "passage depends on the speaker's identity, still spot-check the windows."
         )
 
     report = {
@@ -391,43 +399,51 @@ def diarize_audit(args: dict, ctx: RunContext) -> ToolResult:
     win_txt = "\n".join(
         f"  {w['start']:.1f}-{w['end']:.1f}s  {w['reasons'][0]}"
         for w in windows[:20]
-    ) or "  （无）"
+    ) or "  (none)"
     roster_txt = "\n".join(
-        "  标签 {}（占 {:.0%}）：去 {} 看这是谁".format(
+        "  label {} ({:.0%} of the speaking time): watch {} to see who this is".format(
             r["label"], r["share"],
-            "、".join(f"{w['start']:.1f}-{w['end']:.1f}s" for w in r["sample_windows"]) or "（无干净样本）",
+            ", ".join(f"{w['start']:.1f}-{w['end']:.1f}s" for w in r["sample_windows"]) or "(no clean sample)",
         )
         for r in roster[:8]
-    ) or "  （无既有标签）"
+    ) or "  (no existing labels)"
     cue_txt = "\n".join(
-        "  {:.1f}s [{}] 名字候选「{}」← “{}”；到 {:.1f}-{:.1f}s 看那时谁在说来核对".format(
+        "  {:.1f}s [{}] name candidate \"{}\" from “{}”; watch {:.1f}-{:.1f}s to see who is speaking then".format(
             c["at"], c["kind"], c["name_guess"], c["quote"],
             c["verify_window"]["start"], c["verify_window"]["end"],
         )
         for c in name_cues[:12]
-    ) or "  （文本里没有自我介绍/点名之类的姓名线索）"
+    ) or "  (the text has no self-introduction or hand-off that names anyone)"
     return ToolResult(
         text=(
-            f"Diarization 证据简报（不是裁决，判断权在你）：{verdict} — {note}\n"
-            f"说话人时长占比：{share_pct}\n\n"
-            f"【人物表】既有标签各去哪看清是谁（先建这张表，再谈归属）：\n{roster_txt}\n\n"
-            f"【姓名线索】文本里的候选，去各自的核对窗确认（念到的名字未必是画面里正在说话的人）：\n{cue_txt}\n\n"
-            f"【待看窗口】值得确认“谁在说”的地方（在这些地方看即可，不必全片）：\n{win_txt}\n\n"
-            "下一步：①先对【人物表】每个标签的样本窗各看一次，记下每个人的画框位置/长相/角标名，建成一张"
-            "『这段视频里有谁』的对照表；②再看【待看窗口】，判断每个窗里说话的人是不是对照表里已有的某位——"
-            "是就复用那个标签/名字（别给同一个人起两个名），只有对不上任何人才新建；③名字候选只有在其核对窗里"
-            "对上了正在说话的人才用，对不上宁可用 A/B/C。把每段 {start,end,speaker} 收集好调 diarize_relabel "
-            "写回。全程不改文字——文字是准的。\n\n"
-            "怎么看：video_watch_segment(video_path=..., fps=4, segments=[...])，多个窗合成一次调用，"
-            "不需要先 video_ingest，只按窗口计费。**fps 至少 4**——2 fps 下说话的嘴和打哈欠的嘴长得一样。"
-            "判据不是「嘴张开了」（听的人也会笑、会喘气、会点头应一声「嗯」），而是"
-            "**整个窗里几乎每一帧口型都在变**，而且**变化的时长要对得上本窗的文字**"
-            "（中文约每秒 4–6 字；若某人只在开头一秒动嘴而这句有 5 秒，那就不是他）。"
-            "若整窗没有任何人在动嘴，别硬选：说话人可能不在画面里，或这里是配音的插播画面。"
-            "窗口尽量卡在**换人处**——一张嘴停、另一张嘴起，一次看出两个结论。"
-            "画面若有平台的「当前说话人」高亮框，它比口型更硬。要读角标/名牌上的字请改用 "
-            "video_read_frames(region=\"name_plate\", upscale=2)，contact sheet 的分辨率会让你把名字猜错。"
-            "看完仍分不清就保留中性标签并在 brief 里写明——错误归属会悄悄污染下游每一处 speaker_change 检查。"
+            f"Diarization evidence brief (not a ruling; the judgment is yours): {verdict} — {note}\n"
+            f"Share of speaking time per label: {share_pct}\n\n"
+            f"[ROSTER] where to look to see who each existing label is (build this table first, attribute after):\n{roster_txt}\n\n"
+            f"[NAME CUES] candidates found in the text; confirm each in its check window (a name that is spoken is "
+            f"not necessarily the person speaking on screen):\n{cue_txt}\n\n"
+            f"[WINDOWS TO WATCH] places worth confirming who speaks (these are enough; no need to watch the whole "
+            f"video):\n{win_txt}\n\n"
+            "Next steps: (1) watch each label's sample windows in the ROSTER once and note each person's position in "
+            "frame, looks and on-screen name tag, so you have a table of who is in this video; (2) then watch the "
+            "WINDOWS TO WATCH and decide whether the speaker in each is someone already in that table — if so reuse "
+            "that label/name (never give one person two names), and create a new one only when nobody matches; "
+            "(3) use a name candidate only when its check window shows that person speaking, otherwise prefer "
+            "A/B/C. Collect every {start,end,speaker} span and write them back with diarize_relabel. The correction "
+            "tool keeps the wording; check transcript accuracy separately against the original audio.\n\n"
+            "How to watch: video_observe(source=..., start_s=..., end_s=..., fps=4, layout=\"frames\"), one call per "
+            "relevant window; no need to sample the whole video first. **Use at least 4 fps** — at 2 fps a talking "
+            "mouth and a yawning mouth look the same. The test is not that a mouth is open (listeners also laugh, "
+            "breathe and nod along with a short \"mm\"); it is that **the mouth shape changes in almost every frame "
+            "of the window** and that **the time it moves matches the words of this window** (Chinese runs about "
+            "4-6 characters per second; someone whose mouth moves only in the first second of a 5-second sentence "
+            "is not the speaker). If nobody's mouth moves in the whole window, do not force a choice: the speaker "
+            "may be off screen, or this is cutaway footage under a voice-over. Place windows on the **change of "
+            "speaker** where you can — one mouth stops and another starts, two conclusions from one look. A "
+            "platform's \"current speaker\" highlight frame, when present, is stronger evidence than mouth shapes. "
+            "To read a name tag or caption, use video_observe(layout=\"frames\") and inspect the detail at the "
+            "frame's own resolution; do not guess names from a low-resolution contact sheet. If it is still "
+            "unclear after watching, keep a neutral label and say so in the brief — a wrong attribution quietly "
+            "corrupts every downstream speaker_change check."
         ),
         data=report,
         artifacts=[str(output_json)],
@@ -488,7 +504,10 @@ def _split_segment_by_speaker(seg: dict, words: list[dict]) -> list[dict] | None
 
     Returns None when there is nothing to split or the split cannot be done safely.
     """
-    labels = [w.get("speaker") for w in words]
+    # A word without its own label (providers that only label segments) keeps
+    # the segment's speaker; otherwise every such word would read as a distinct
+    # "None" speaker and the original label would be lost in the split.
+    labels = [w.get("speaker") if w.get("speaker") is not None else seg.get("speaker") for w in words]
     if len(set(map(str, labels))) <= 1:
         return None
 
@@ -517,7 +536,7 @@ def _split_segment_by_speaker(seg: dict, words: list[dict]) -> list[dict] | None
         piece = dict(seg)
         piece["start"] = start
         piece["end"] = end
-        piece["speaker"] = chunk[0].get("speaker")
+        piece["speaker"] = labels[lo]
         # Each new segment keeps its own word slice. Dropping `words` here would
         # make condense_index report "no word-level timestamps" for the WHOLE
         # transcript and fall back to interpolated timing everywhere.
@@ -556,17 +575,29 @@ def diarize_relabel(args: dict, ctx: RunContext) -> ToolResult:
             return ToolResult(text=f"[ERROR] invalid assignment (need start<end and non-empty speaker): {a}")
         ranges.append((s, e, str(spk)))
     ranges.sort()
+    snap_raw = args.get("snap_seconds")
+    snap = 0.4 if snap_raw is None else coerce_float(snap_raw)  # 0 = no snapping at all
+    if snap is None or snap < 0:
+        return ToolResult(text=f"[ERROR] snap_seconds must be a number >= 0, got {snap_raw!r}")
 
-    def assign(mid: float, fallback: Any) -> Any:
+    def assign(start: float, end: float, fallback: Any) -> Any:
+        mid = (start + end) / 2.0
         best = None
         for s, e, spk in ranges:
             if s <= mid <= e:
                 return spk  # explicit range wins
-            d = min(abs(mid - s), abs(mid - e))
-            if best is None or d < best[0]:
-                best = (d, spk)
+            # Distance is judged from the item's edges, not its midpoint: a long
+            # segment whose edge sits 0.2s from a range is "close", its midpoint
+            # is not. Overlapping ranges are at distance 0; the largest overlap wins.
+            overlap = min(end, e) - max(start, s)
+            key = (max(0.0, -overlap), -max(0.0, overlap))
+            if best is None or key < best[0]:
+                best = (key, spk)
         # Only snap to the nearest range if it is genuinely close; else keep old.
-        if best is not None and best[0] <= float(args.get("snap_seconds") or 0.4):
+        # snap_seconds=0 means "explicit midpoint hits only": an edge overlap of a
+        # few ms (distance 0) must not relabel a whole segment whose midpoint lies
+        # outside every range.
+        if snap > 0 and best is not None and best[0][0] <= snap:
             return best[1]
         return fallback
 
@@ -607,7 +638,7 @@ def diarize_relabel(args: dict, ctx: RunContext) -> ToolResult:
                         ws = coerce_float(first_present(w, ["start", "start_time", "begin"]))
                         we = coerce_float(first_present(w, ["end", "end_time", "finish"]))
                         if ws is not None and we is not None:
-                            w["speaker"] = assign((ws + we) / 2.0, w.get("speaker"))
+                            w["speaker"] = assign(ws, we, w.get("speaker"))
                 usable = [w for w in words if isinstance(w, dict) and _word_text(w)]
                 if len(usable) == len(words):
                     parts = _split_segment_by_speaker(it, words)
@@ -619,13 +650,14 @@ def diarize_relabel(args: dict, ctx: RunContext) -> ToolResult:
                                     f"{p['speaker']} {p['start']:.1f}-{p['end']:.1f}s" for p in parts
                                 )
                             )
-                        for p in parts:
-                            if p.get("speaker") != original_speaker:
-                                changed += 1
+                        # `total` counts source segments, so a split segment counts
+                        # as changed at most once (otherwise "Relabeled 5/3")
+                        if any(p.get("speaker") != original_speaker for p in parts):
+                            changed += 1
                         out.extend(parts)
                         continue
 
-            new = assign((s + e) / 2.0, original_speaker)
+            new = assign(s, e, original_speaker)
             if new != original_speaker:
                 it["speaker"] = new
                 changed += 1
@@ -643,13 +675,14 @@ def diarize_relabel(args: dict, ctx: RunContext) -> ToolResult:
                     ws = coerce_float(first_present(w, ["start", "start_time", "begin"]))
                     we = coerce_float(first_present(w, ["end", "end_time", "finish"]))
                     if ws is not None and we is not None:
-                        w["speaker"] = assign((ws + we) / 2.0, w.get("speaker"))
+                        w["speaker"] = assign(ws, we, w.get("speaker"))
         data["speaker_relabeled"] = True
         data["n_speakers"] = len({str(r[2]) for r in ranges})
     elif isinstance(data, list):
         data = relabel_list(data)
 
     output_path = ctx.resolve(args.get("output_path") or str(transcript_path))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     speakers = sorted({r[2] for r in ranges})
     split_txt = ""

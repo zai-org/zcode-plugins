@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
-from .ffproc import run_proc
 import time
 from pathlib import Path
 
-from .media import inspect_media
+from .observation_media import probe
 from .render import source_has_audio, source_has_video
 from .result import ToolResult
 from .run_context import RunContext
-from .timeline import file_sha256, load_timeline, normalize_track_type, timeline_clips, VIDEO_TRACK_TYPES
+from .timeline import (
+    VIDEO_TRACK_TYPES, clip_is_rendered, file_sha256, load_timeline, normalize_track_type, timeline_clips,
+)
 
 
 def qc_preview(args: dict, ctx: RunContext) -> ToolResult:
@@ -29,12 +31,11 @@ def qc_preview(args: dict, ctx: RunContext) -> ToolResult:
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         return ToolResult(text="[ERROR] ffmpeg/ffprobe not found on PATH")
     started = time.time()
-    media_result = inspect_media({
-        "input_path": str(video_path),
-        "output_json": str(ctx.output_dir / f"{video_path.stem}_media.json"),
-    }, ctx)
-    if media_result.text.startswith("[ERROR]"):
-        return ToolResult(text=f"[ERROR] media probe failed during QC: {media_result.text}", data=media_result.data)
+    try:
+        info = probe(video_path)
+        media_result = ToolResult("Media metadata", data={**info, "duration_seconds": info["duration"]})
+    except Exception as exc:
+        return ToolResult(text=f"[ERROR] media probe failed during QC: {exc}")
     issues = []
     if video_path.stat().st_size == 0:
         issues.append({"severity": "error", "message": "output file is empty"})
@@ -47,22 +48,33 @@ def qc_preview(args: dict, ctx: RunContext) -> ToolResult:
             "severity": "error",
             "message": "no video stream detected; the QC target is not a playable video (black frame scan is meaningless)",
         })
-    black, black_error = run_filter_scan(video_path, "blackdetect=d=0.2:pix_th=0.10", filter_kind="video")
-    short_black, short_black_error = run_filter_scan(video_path, "blackdetect=d=0.025:pix_th=0.10", filter_kind="video")
-    freeze, freeze_error = run_filter_scan(video_path, "freezedetect=n=-60dB:d=1.0", filter_kind="video")
+    # 全片解码扫描的超时按片长自适应: 固定 600s 对 1-2 小时成片必超时 -> 误判 fail
+    scan_timeout = max(600.0, 4.0 * (safe_float(media_result.data.get("duration_seconds")) or 0.0))
+    black, black_error = run_filter_scan(video_path, "blackdetect=d=0.2:pix_th=0.10", filter_kind="video", timeout=scan_timeout)
+    short_black, short_black_error = run_filter_scan(video_path, "blackdetect=d=0.025:pix_th=0.10", filter_kind="video", timeout=scan_timeout)
+    freeze, freeze_error = run_filter_scan(video_path, "freezedetect=n=-60dB:d=1.0", filter_kind="video", timeout=scan_timeout)
     # Probe audio existence explicitly: some ffmpeg builds silently ignore -af
     # on audio-less inputs, which would make a fully silent (no-audio-track)
     # output pass the silence scan without any finding.
     has_audio = source_has_audio(video_path)
     if has_audio:
-        silence, silence_error = run_filter_scan(video_path, "silencedetect=n=-35dB:d=0.5", filter_kind="audio")
-        volume, volume_error = run_filter_scan(video_path, "volumedetect", filter_kind="audio")
+        silence, silence_error = run_filter_scan(video_path, "silencedetect=n=-35dB:d=0.5", filter_kind="audio", timeout=scan_timeout)
+        volume, volume_error = run_filter_scan(video_path, "volumedetect", filter_kind="audio", timeout=scan_timeout)
     else:
         silence, silence_error = "", ""
         volume, volume_error = "", ""
         issues.append({
             "severity": "warning",
             "message": "no audio stream detected; the output is fully silent and the silence scan was skipped",
+        })
+    decode_errors = count_decode_errors(black)
+    if decode_errors:
+        # 截断/损坏的 mp4: ffmpeg 打印 corrupt/Invalid NAL/partial file 却仍 exit 0,
+        # 只看 returncode 会让残片 QC pass
+        issues.append({
+            "severity": "error",
+            "message": f"decoder reported {decode_errors} corruption/decoding error line(s) while scanning the output",
+            "evidence": "\n".join(l for l in black.splitlines() if DECODE_ERROR_RE.search(l))[-2000:],
         })
     if black_error:
         issues.append({"severity": "error", "message": "black frame scan failed", "evidence": black_error})
@@ -107,8 +119,11 @@ def qc_preview(args: dict, ctx: RunContext) -> ToolResult:
     timeline_expectations = {}
     if timeline_path is not None:
         timeline_sha = file_sha256(timeline_path)
-        issues.extend(render_binding_issues(video_path, video_sha, timeline_sha))
+        binding_issues = render_binding_issues(video_path, video_sha, timeline_sha)
+        issues.extend(binding_issues)
         timeline_expectations = expected_from_timeline(timeline_path)
+        if not binding_issues:
+            timeline_expectations.update(requested_output_size(video_path, timeline_sha))
         issues.extend(timeline_expectation_issues(media_result.data, timeline_expectations))
         issues.extend(edit_boundary_black_issues(timeline_path, short_black))
     status = "pass" if not any(i["severity"] == "error" for i in issues) else "fail"
@@ -146,62 +161,43 @@ def render_binding_issues(video_path: Path, video_sha: str, timeline_sha: str) -
     """preview 与 timeline 的渲染绑定校验。
 
     QC 报告里的 timeline_sha256 只是 QC 时刻 timeline 的哈希 — 渲染后改
-    timeline 不重渲染, validation/QC/Stop hook 的哈希检查全部照过, 陈旧
+    timeline 不重渲染, validation/QC 的哈希检查全部照过, 陈旧
     preview 会混过收尾契约。render_preview 落的 render_report 记录了渲染
     时刻的 timeline_sha256/output_sha256。带 timeline_path 的 QC 是 pipeline
     收尾门禁, 必须证明 preview 来自 render_preview 和当前 timeline；report
     缺失、损坏或描述的不是当前文件都应拦截。"""
-    report_path = video_path.with_suffix(".render_report.json")
+    from .render_provenance import verify_render
+    from .run_context import RunContext
     try:
-        render_report = json.loads(report_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return [{
-            "severity": "error",
-            "message": "render report is missing or unreadable; run render_preview before qc_preview",
-            "evidence": f"{report_path.name}: {exc}",
-        }]
-    if not isinstance(render_report, dict):
-        return [{
-            "severity": "error",
-            "message": "render report is malformed; rerun render_preview",
-            "evidence": f"{report_path.name} root is not an object",
-        }]
-    if render_report.get("output_sha256") != video_sha:
-        return [{
-            "severity": "error",
-            "message": "render report does not describe the current preview; rerun render_preview before QC",
-            "evidence": (
-                f"{report_path.name}: output_sha256 {render_report.get('output_sha256')} "
-                f"!= current preview sha256 {video_sha}"
-            ),
-        }]
-    rendered_timeline_sha = render_report.get("timeline_sha256")
-    if not rendered_timeline_sha:
-        return [{
-            "severity": "error",
-            "message": "render report does not record timeline_sha256; rerun render_preview",
-            "evidence": report_path.name,
-        }]
-    if rendered_timeline_sha != timeline_sha:
-        return [{
-            "severity": "error",
-            "message": (
-                "preview was rendered from a different timeline than timeline_path; "
-                "re-run render_preview on the current timeline before QC"
-            ),
-            "evidence": (
-                f"{report_path.name}: rendered timeline_sha256 {rendered_timeline_sha} "
-                f"!= current timeline sha256 {timeline_sha}"
-            ),
-        }]
+        files = verify_render(video_path, RunContext())
+        base_reports = [json.loads(Path(path).read_text(encoding="utf-8"))
+                        for path in files if path.endswith(".render_report.json")]
+        if not any(report.get("timeline_sha256") == timeline_sha for report in base_reports):
+            raise ValueError("rendered timeline differs from the current timeline")
+        if __import__("hashlib").sha256(video_path.read_bytes()).hexdigest() != video_sha:
+            raise ValueError("output changed during QC")
+    except (ValueError, OSError, KeyError) as exc:
+        return [{"severity": "error", "message": "render provenance invalid; rerun video_render", "evidence": str(exc)}]
     return []
 
 
-def run_filter_scan(video_path: Path, filter_expr: str, filter_kind: str) -> tuple[str, str]:
+DECODE_ERROR_RE = re.compile(
+    r"corrupt|Invalid NAL unit|partial file|Error while decoding|Decoding error|"
+    r"Invalid data found when processing input|moov atom not found|concealing \d+ DC",
+    re.IGNORECASE,
+)
+
+
+def count_decode_errors(log: str) -> int:
+    return sum(1 for line in (log or "").splitlines() if DECODE_ERROR_RE.search(line))
+
+
+def run_filter_scan(video_path: Path, filter_expr: str, filter_kind: str,
+                    timeout: float = 600.0) -> tuple[str, str]:
     filter_arg = "-af" if filter_kind == "audio" else "-vf"
-    cmd = ["ffmpeg", "-v", "info", "-i", str(video_path), filter_arg, filter_expr, "-f", "null", "-"]
+    cmd = ["ffmpeg", "-nostdin", "-v", "info", "-i", str(video_path), filter_arg, filter_expr, "-f", "null", "-"]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=600)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except Exception as exc:
         return "", str(exc)
     output = (proc.stderr or "") + (proc.stdout or "")
@@ -340,6 +336,20 @@ def parse_db_value(line: str) -> float | None:
         return None
 
 
+def requested_output_size(video_path: Path, timeline_sha: str) -> dict:
+    """video_render output_width/output_height override the timeline canvas; the render
+    report bound to this file and timeline says so, and then its size is the expectation."""
+    try:
+        report = json.loads(video_path.with_suffix(".render_report.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if (not isinstance(report, dict) or report.get("output_size_source") != "render_args"
+            or report.get("timeline_sha256") != timeline_sha):
+        return {}
+    width, height = safe_int(report.get("output_width")), safe_int(report.get("output_height"))
+    return {"width": width, "height": height} if width and height else {}
+
+
 def expected_from_timeline(timeline_path: Path) -> dict:
     try:
         data = load_timeline(timeline_path)
@@ -359,6 +369,12 @@ def expected_from_timeline(timeline_path: Path) -> dict:
         width = width or safe_int(candidate.get("width"))
         height = height or safe_int(candidate.get("height"))
         fps = fps or safe_float(candidate.get("fps"))
+    # render.even_dimension 会把奇数画布向下取偶 (yuv420p 要求), QC 期望值必须同口径,
+    # 否则 1081 宽的合法画布渲成 1080 后恒报分辨率不匹配
+    if width and width >= 2 and width % 2:
+        width -= 1
+    if height and height >= 2 and height % 2:
+        height -= 1
     duration = None
     if isinstance(data.get("sequence"), dict):
         duration = safe_float(data["sequence"].get("duration"))
@@ -383,24 +399,33 @@ def timeline_duration(data: dict) -> float | None:
             for clip in track["clips"]:
                 if not isinstance(clip, dict):
                     continue
+                if not clip_is_rendered(track_type, track, clip):
+                    # 与 render 同口径: muted/disabled/invisible/未知轨的 clip 不进成片时长
+                    continue
                 start = safe_float(clip.get("start", clip.get("start_time", clip.get("in", 0)))) or 0.0
                 end = safe_float(clip.get("end", clip.get("end_time", clip.get("out"))))
                 duration = safe_float(clip.get("duration"))
+                timeline_start = safe_float(clip.get("timeline_start", clip.get("position")))
+                if timeline_start is None:
+                    timeline_start = cursor
+                source = clip.get("source") or clip.get("input_path") or clip.get("src")
+                timeline_end = safe_float(clip.get("timeline_end"))
                 if end is not None:
                     source_duration = max(0.0, end - start)
                 elif duration is not None:
                     source_duration = duration
+                elif not source and timeline_end is not None and timeline_end > timeline_start:
+                    # 与 render.normalize_project_clip 同口径: 无源的 text/title clip 可只
+                    # 给 timeline_start/timeline_end, 否则 QC 期望时长漏掉它, 成片时长
+                    # 校验必报 error, 合法流程永远闭不了环
+                    source_duration = timeline_end - timeline_start
                 else:
                     continue
                 speed = safe_float(clip.get("speed")) or 1.0
                 render_duration = source_duration / speed if speed > 0 else source_duration
-                timeline_start = safe_float(clip.get("timeline_start", clip.get("position")))
-                if timeline_start is None:
-                    timeline_start = cursor
                 timeline_end = timeline_start + render_duration
                 cursor = max(cursor, timeline_end)
-                if track_type in VIDEO_TRACK_TYPES or track_type:
-                    max_end = max(max_end, timeline_end)
+                max_end = max(max_end, timeline_end)
     else:
         cursor = 0.0
         for clip in timeline_clips(data):

@@ -9,15 +9,16 @@ from __future__ import annotations
 
 import functools
 import math
+import os
 import re
 import shutil
 import subprocess
-from .ffproc import run_proc
+import sys
 import unicodedata
 from pathlib import Path
 from typing import Any
 
-from .fonts import covers_cjk, family_of_file, find_cjk_font, override_dirs
+from .run_context import clean_env, project_dir
 
 # Preset defaults are expressed as ratios of the video height/width so one
 # preset works for 1080x1920 shorts and 1920x1080 landscape alike.
@@ -151,18 +152,66 @@ SPEAKER_PALETTE = [
 # also sets explicitly still wins over the macro.
 READABILITY_MODES = ("outline", "heavy_outline", "box", "opaque_box")
 
-# Weight name -> the font files we ship/expect, best match first.
+# Weight name -> the font files we ship/expect, best match first. These are the
+# Linux batch-image files the presets are tuned against; keep them first so an
+# already-provisioned box resolves to the same file (and the same measured line
+# breaks) as before.
 _FONT_FILE_HINTS = {
     "black": ["NotoSansSC-900.ttf"],
     "bold": ["NotoSansSC-700.ttf"],
     "medium": ["NotoSansSC-500.ttf"],
     "regular": ["NotoSansSC-400.ttf", "PingFang.ttf"],
 }
-# Dirs the shipped weights live in on the Linux images. Everything else
-# (VE_FONT_DIRS, the platform's own font dirs) is handled by `fonts.py` —
-# see resolve_font_file for why the order below is kept as-is.
 _FONT_DIRS = [Path("/root/.fonts"), Path("/usr/share/fonts")]
 
+# --- platform font dirs -----------------------------------------------------
+# macOS only has fontconfig if the user installed it by hand (and a conda
+# fontconfig on PATH typically knows *no* fonts at all, so `fc-match` answers
+# with an empty string); Windows has none. Both ship perfectly good CJK faces
+# that the Linux-only lookup above never looked at, so `subtitle_build` failed
+# with "no font file found for family 'Noto Sans SC'" on a machine with
+# PingFang / 微软雅黑 sitting right there.
+_OS = "macos" if sys.platform == "darwin" else "windows" if os.name == "nt" else "linux"
+
+
+def _windows_font_dirs() -> list[Path]:
+    dirs = [Path(os.environ.get("SystemRoot") or r"C:\Windows") / "Fonts"]
+    local = os.environ.get("LOCALAPPDATA")
+    if local:  # per-user installs (Windows 10+ "Install for me only")
+        dirs.append(Path(local) / "Microsoft" / "Windows" / "Fonts")
+    return dirs
+
+
+_PLATFORM_FONT_DIRS: dict[str, list[Path]] = {
+    "linux": [Path("/usr/local/share/fonts"), Path.home() / ".fonts", Path.home() / ".local/share/fonts"],
+    "macos": [Path("/System/Library/Fonts"), Path("/System/Library/Fonts/Supplemental"),
+              Path("/Library/Fonts"), Path.home() / "Library/Fonts"],
+    "windows": _windows_font_dirs(),
+}
+
+# Stock CJK faces per weight on macOS / Windows (plus the distro Noto/Source Han
+# packages), best first. Only consulted after the shipped hints and fontconfig
+# have failed, so Linux resolution order is unchanged. .ttc collections hold
+# every weight; libass picks the closest face to the requested Bold flag.
+_PLATFORM_FONT_FILES = {
+    "black": ["NotoSansCJK-Black.ttc", "NotoSansCJKsc-Black.otf", "SourceHanSansSC-Heavy.otf",
+              "PingFang.ttc", "Hiragino Sans GB.ttc", "STHeiti Medium.ttc", "msyhbd.ttc", "simhei.ttf"],
+    "bold": ["NotoSansCJK-Bold.ttc", "NotoSansCJKsc-Bold.otf", "SourceHanSansSC-Bold.otf",
+             "PingFang.ttc", "Hiragino Sans GB.ttc", "STHeiti Medium.ttc", "msyhbd.ttc", "simhei.ttf"],
+    "medium": ["NotoSansCJK-Medium.ttc", "NotoSansCJKsc-Medium.otf", "SourceHanSansSC-Medium.otf",
+               "PingFang.ttc", "Hiragino Sans GB.ttc", "STHeiti Medium.ttc", "msyh.ttc", "simhei.ttf"],
+    "regular": ["NotoSansCJK-Regular.ttc", "NotoSansCJKsc-Regular.otf", "NotoSansSC-Regular.otf",
+                "SourceHanSansSC-Regular.otf", "PingFang.ttc", "Hiragino Sans GB.ttc",
+                "STHeiti Light.ttc", "msyh.ttc", "simhei.ttf", "simsun.ttc", "Deng.ttf",
+                "wqy-microhei.ttc", "wqy-zenhei.ttc", "DroidSansFallbackFull.ttf"],
+}
+
+# A libass `fontsdir=` is read file-by-file into memory. Beyond this much font
+# data (or this many files) the directory is a platform font dir, not one of
+# ours, and the selected font gets linked into a private dir instead — see
+# libass_fontsdir.
+_FONTSDIR_MAX_BYTES = 96 * 1024 * 1024
+_FONTSDIR_MAX_FILES = 32
 
 STRONG_PUNCT = "。！？!?…."
 WEAK_PUNCT = "，、；：,;:—～~"
@@ -211,6 +260,7 @@ def resolve_style(
     # but only fills fields the caller did not set by hand.
     _apply_readability(style, explicit)
 
+    _validate_style_fields(style)
     style["font_size"] = int(style["font_size"])
     style["outline"] = float(style["outline"])
     style["shadow"] = float(style["shadow"])
@@ -219,6 +269,10 @@ def resolve_style(
     style["max_lines"] = int(style["max_lines"])
     style["max_chars_per_line"] = int(style.get("max_chars_per_line") or 0)
 
+    if style.get("font_file") and not Path(str(style["font_file"])).is_file():
+        # 此前不存在的 font_file 也能 build 成功 (cmap 读不到当 "未知=通过"), render 时
+        # libass 用 fontconfig 兜底画别的字体, Style 行却写着请求的家族名
+        raise ValueError(f"style.font_file does not exist: {style['font_file']}")
     font_file = style.get("font_file") or resolve_font_file(style["font_family"], style.get("font_weight"))
     if not font_file:
         raise ValueError(
@@ -226,7 +280,15 @@ def resolve_style(
             "install a CJK font or pass style.font_file explicitly"
         )
     style["font_file"] = str(font_file)
-    style["font_family_resolved"] = font_family_of(Path(font_file)) or style["font_family"]
+    # font_face reads nameID 16/1 via fontTools — of the Simplified-Chinese face
+    # when the file is a collection (PingFang.ttc opens with "PingFang HK",
+    # STHeiti with "Heiti TC"); the fc-scan route glued every face of a .ttc
+    # together ("AR PL UMing CNAR PL UMing HK...") and libass then silently
+    # dropped the whole subtitle track. The face index keeps PIL measuring the
+    # same face libass will draw.
+    face_index, family = font_face(str(font_file))
+    style["font_family_resolved"] = family or style["font_family"]
+    style["font_face_index"] = face_index
     style["video_width"] = int(video_width)
     style["video_height"] = int(video_height)
     # Horizontal room a line may occupy before it collides with the margins.
@@ -276,80 +338,226 @@ def _apply_readability(style: dict[str, Any], explicit: set[str]) -> None:
         put("shadow", round(max(float(style["shadow"]), font_size * 0.03), 2))
 
 
+_ASS_COLOUR_RE = re.compile(r"^&H[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
+_NUMERIC_FIELDS = {
+    # 字段: (最小值, 最大值 或 None, 是否整数)
+    "font_size": (8, 400, True),
+    "outline": (0, 100, False),
+    "shadow": (0, 100, False),
+    "margin_l": (0, 4000, True),
+    "margin_r": (0, 4000, True),
+    "margin_v": (0, 4000, True),
+    "max_lines": (1, 6, True),
+    "max_chars_per_line": (0, 200, True),
+    "alignment": (1, 9, True),
+    "border_style": (1, 4, True),
+    "max_cps": (1, 60, False),
+    "min_duration": (0, 30, False),
+}
+_COLOUR_FIELDS = ("primary_colour", "outline_colour", "back_colour", "secondary_colour",
+                  "karaoke_sung_colour", "karaoke_unsung_colour", "bilingual_colour", "annotation_colour")
+_BOOLEAN_FIELDS = ("karaoke", "speaker_labels")
+
+
+def _validate_style_fields(style: dict[str, Any]) -> None:
+    """范围/类型校验并带字段名报错: 此前 font_size=0、max_lines=0、alignment=99、
+    primary_colour="red" 都能 build 成功并产出异常 ASS; "big" 这类字符串只得到裸的
+    `invalid literal for int()`。"""
+    for key, (lo, hi, is_int) in _NUMERIC_FIELDS.items():
+        if key not in style or style[key] is None:
+            continue
+        value = style[key]
+        if isinstance(value, bool):
+            raise ValueError(f"style.{key} must be a number, not a boolean")
+        try:
+            num = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"style.{key} must be a number, got {value!r}") from None
+        if not math.isfinite(num):
+            raise ValueError(f"style.{key} must be finite")
+        if is_int and num != int(num):
+            raise ValueError(f"style.{key} must be an integer, got {value!r}")
+        if num < lo or (hi is not None and num > hi):
+            raise ValueError(f"style.{key} must be in [{lo}, {hi}], got {value!r}")
+        style[key] = int(num) if is_int else num
+    for key in _COLOUR_FIELDS:
+        if style.get(key) is None:
+            continue
+        if not isinstance(style[key], str) or not _ASS_COLOUR_RE.match(style[key].strip()):
+            raise ValueError(f"style.{key} must be an ASS colour like &HAABBGGRR, got {style[key]!r}")
+        style[key] = style[key].strip().upper().replace("&H", "&H", 1)
+    # These values are written into ASS Style lines / override blocks verbatim.
+    for key in _BOOLEAN_FIELDS:
+        if style.get(key) is not None and not isinstance(style[key], bool):
+            raise ValueError(f"style.{key} must be a boolean, got {style[key]!r}")
+    scale = style.get("bilingual_scale")
+    if scale is not None:
+        if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not math.isfinite(scale) or not 0 < scale <= 3:
+            raise ValueError(f"style.bilingual_scale must be a number in (0, 3], got {scale!r}")
+    colours = style.get("speaker_colours")
+    if isinstance(colours, dict):
+        for speaker, colour in colours.items():
+            if not isinstance(colour, str) or not _ASS_COLOUR_RE.match(colour.strip()):
+                raise ValueError(f"style.speaker_colours[{speaker!r}] must be an ASS colour like &HBBGGRR, got {colour!r}")
+    elif colours is not None and colours != "auto":
+        raise ValueError("style.speaker_colours must be an object of ASS colours or \"auto\"")
+
+
+def _find_font_named(name: str, dirs: list[Path]) -> str | None:
+    """Locate one filename: direct child first, then a recursive walk (distro
+    packages bury the file under truetype/noto/..., the batch images drop it
+    flat into /root/.fonts). Unreadable dirs are skipped, never raised."""
+    for directory in dirs:
+        candidate = directory / name
+        if candidate.is_file():
+            return str(candidate)
+        if directory.is_dir():
+            try:
+                hit = next(directory.rglob(name), None)
+            except OSError:
+                continue
+            if hit is not None and hit.is_file():
+                return str(hit)
+    return None
+
+
+def _platform_font_dirs() -> list[Path]:
+    """VE_FONT_DIRS -> this platform's font dirs -> the legacy Linux dirs, deduplicated."""
+    seen: set[str] = set()
+    out: list[Path] = []
+    for d in [*font_dirs_from_env(), *_PLATFORM_FONT_DIRS[_OS], *_SYSTEM_FONT_DIRS, *_FONT_DIRS]:
+        if str(d) not in seen:
+            seen.add(str(d))
+            out.append(d)
+    return out
+
+
+def _platform_cjk_font(weight: str) -> str | None:
+    """The platform's own CJK face for `weight`, falling through to the regular
+    list (a machine with one CJK face should still render bold text — libass
+    synthesises the weight — rather than fail), then to the cmap-verified scan."""
+    names = list(_PLATFORM_FONT_FILES.get(weight) or [])
+    names += [n for n in _PLATFORM_FONT_FILES["regular"] if n not in names]
+    dirs = _platform_font_dirs()
+    for name in names:
+        hit = _find_font_named(name, dirs)
+        if hit and font_covers_text(hit, CJK_PROBE_TEXT):
+            return hit
+    found = find_cjk_font()
+    return None if found.startswith("[ERROR]") else found
+
+
 def resolve_font_file(family: str, weight: str | None = None) -> str | None:
     """Locate a concrete font file: shipped weight hints first (so we pick the
     intended weight rather than whatever fontconfig aliases to), then fc-match,
     then the platform's own CJK faces.
 
     The last step is what makes this work off Linux: macOS only has fontconfig
-    if the user installed it, Windows never does, and both ship a perfectly good
-    CJK font that the first two steps cannot see. Order is deliberate — an
-    already-provisioned Linux box still resolves through the hints/fc-match it
-    always did, so measured line breaks do not shift under existing traces.
-    """
-    for name in _FONT_FILE_HINTS.get((weight or "regular").lower(), []):
-        for directory in [*override_dirs(), *_FONT_DIRS]:
-            candidate = directory / name
-            if candidate.is_file():
-                return str(candidate)
+    if the user installed it, Windows never does, and both ship a CJK font the
+    first two steps cannot see. The order is deliberate — an already-provisioned
+    Linux box still resolves through the hints/fc-match it always did, so the
+    measured line breaks do not shift under existing traces."""
+    weight_key = (weight or "regular").lower()
+    for name in _FONT_FILE_HINTS.get(weight_key, []):
+        hit = _find_font_named(name, [*font_dirs_from_env(), *_FONT_DIRS])
+        if hit:
+            return hit
     if shutil.which("fc-match"):
         query = f"{family}:weight={weight}" if weight else family
         try:
-            proc = run_proc(
+            proc = subprocess.run(
                 ["fc-match", "-f", "%{file}", query], capture_output=True, text=True, timeout=15
             )
             path = proc.stdout.strip()
         except Exception:
             path = ""
         # fc-match never fails: ask for an uninstalled Chinese family and it
-        # hands back DejaVu Sans, which has no CJK glyphs at all. Every preset
-        # here is a Chinese subtitle preset, so a zero-CJK answer is not an
-        # answer — take a real CJK face over it when the machine has one.
-        # (`uncovered_characters` would still catch this later, but only as a
-        # hard failure at build time, which is not a better outcome.)
+        # hands back DejaVu Sans, which has no CJK glyphs at all (a conda
+        # fontconfig with no fonts answers with nothing). Every preset here is
+        # a Chinese subtitle preset, so a zero-CJK answer only stands when the
+        # machine has no CJK face at all.
         if path and Path(path).is_file():
-            if covers_cjk(path) is not False:
+            if font_covers_text(path, CJK_PROBE_TEXT):
                 return path
-            fallback = find_cjk_font(weight or "regular")
-            return fallback or path
-    return find_cjk_font(weight or "regular")
+            return _platform_cjk_font(weight_key) or path
+    return _platform_cjk_font(weight_key)
 
 
 def font_family_of(font_file: Path) -> str | None:
-    """Family name libass should be asked for, for this file.
+    if not shutil.which("fc-scan"):
+        return None
+    try:
+        proc = subprocess.run(
+            ["fc-scan", "-f", "%{family[0]}\n", str(font_file)], capture_output=True, text=True, timeout=15
+        )
+    except Exception:
+        return None
+    # One line per face for a .ttc; the first face is the one libass matches.
+    first = proc.stdout.strip().splitlines()[:1]
+    return first[0].strip() if first and first[0].strip() else None
 
-    Goes into the ASS `Style:` line verbatim, so it has to be *one* family:
-    `fc-scan` applies the format once per face, and a `.ttc` collection has
-    several (PingFang.ttc, uming.ttc, msyh.ttc are all collections), which
-    without a separator comes back as "AR PL UMing CNAR PL UMing HK…" —
-    a name that resolves to nothing and silently renders in libass's default
-    font. Hence the `\\n` and taking the first line.
 
-    Falls back to the filename→family map when there is no fontconfig at all
-    (Windows, bare macOS); returning None there would leave the caller asking
-    libass for the preset's `Noto Sans SC`, which is not installed on those
-    machines either.
-    """
-    if shutil.which("fc-scan"):
+def _dir_font_load(directory: Path) -> tuple[int, int]:
+    """(file count, total bytes) of the font files libass would read from
+    `directory` as a fontsdir (direct children only, like libass itself)."""
+    count = total = 0
+    try:
+        with os.scandir(directory) as it:
+            for entry in it:
+                if entry.name.startswith(".") or not entry.is_file():
+                    continue
+                if Path(entry.name).suffix.lower() not in _FONT_SUFFIXES:
+                    continue
+                count += 1
+                total += entry.stat().st_size
+    except OSError:
+        return 0, 0
+    return count, total
+
+
+def libass_fontsdir(font_file: str | Path) -> str:
+    """Directory to hand libass as `fontsdir=` so it can see `font_file`.
+
+    libass reads *every* file in that directory into memory. That is fine for
+    the kit's private font dirs (a handful of Noto weights) but not for a
+    platform font dir: /System/Library/Fonts is ~470 MB in 80 files — measured
+    at 1.9 s and 1 GB RSS per ffmpeg run — and C:\\Windows\\Fonts is larger.
+    For a heavy directory the font is linked (copied where links are not
+    allowed, e.g. Windows without developer mode) into
+    <project>/.video_agent/fonts/<stem>/ and that directory is returned.
+    Never raises: on any failure the parent directory is returned as before."""
+    font = Path(font_file)
+    parent = font.parent
+    count, total = _dir_font_load(parent)
+    if count <= _FONTSDIR_MAX_FILES and total <= _FONTSDIR_MAX_BYTES:
+        return str(parent)
+    try:
+        safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", font.stem).strip("_") or "font"
+        private = project_dir() / ".video_agent" / "fonts" / safe_stem
+        private.mkdir(parents=True, exist_ok=True)
+        link = private / font.name
+        target = font.resolve()
+        if link.is_symlink() and link.resolve() == target:
+            return str(private)
+        if link.exists() and not link.is_symlink() and link.stat().st_size == target.stat().st_size:
+            return str(private)
+        if link.exists() or link.is_symlink():
+            link.unlink()
         try:
-            proc = run_proc(
-                ["fc-scan", "-f", "%{family[0]}\\n", str(font_file)],
-                capture_output=True, text=True, timeout=15,
-            )
-            first = next((ln.strip() for ln in proc.stdout.splitlines() if ln.strip()), "")
-        except Exception:
-            first = ""
-        if first:
-            return first
-    return family_of_file(font_file)
+            os.symlink(target, link)
+        except OSError:
+            shutil.copy2(target, link)
+        return str(private)
+    except Exception:
+        return str(parent)
 
 
 @functools.lru_cache(maxsize=16)
-def _pil_font(font_file: str, size: int):
+def _pil_font(font_file: str, size: int, index: int = 0):
     try:
         from PIL import ImageFont
 
-        return ImageFont.truetype(font_file, size)
+        return ImageFont.truetype(font_file, size, index=index)
     except Exception:
         return None
 
@@ -359,7 +567,7 @@ def text_width_px(text: str, style: dict[str, Any]) -> float:
     draws outside the glyph box on both sides."""
     if not text:
         return 0.0
-    font = _pil_font(str(style["font_file"]), int(style["font_size"]))
+    font = _pil_font(str(style["font_file"]), int(style["font_size"]), int(style.get("font_face_index") or 0))
     if font is not None:
         try:
             glyph_width = float(font.getlength(text))
@@ -412,10 +620,22 @@ def ass_timestamp(seconds: float) -> str:
     return f"{hours:d}:{minutes:02d}:{secs:02d}.{cs:02d}"
 
 
+# libass skips U+2060 (word joiner) when shaping, so it separates a literal backslash
+# from the character that would otherwise complete a control sequence.
+_WORD_JOINER = "\u2060"
+
+
 def ass_escape(text: str) -> str:
-    """Escape dialogue text: braces start override blocks, backslashes start
-    escape codes, and a leading space would be swallowed."""
-    text = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+    """Escape dialogue text: braces start override blocks, a backslash before
+    N/n/h is a line break or hard space, and a leading space would be swallowed.
+
+    libass has no escaped backslash: "\\\\" printed two backslashes and still turned
+    "C:\\New" into "C:\\" + line break + "ew". A literal backslash is kept as typed and
+    only detached from a following N/n/h/brace."""
+    # A trailing backslash is detached too: callers append override blocks ("{\\kf..}"
+    # between karaoke words) and "\\{" would turn that block into literal text.
+    text = re.sub(r"\\(?=[Nnh{}]|$)", lambda _: "\\" + _WORD_JOINER, text)
+    text = text.replace("{", "\\{").replace("}", "\\}")
     text = text.replace("\r", "").replace("\n", "\\N")
     if text.startswith(" "):
         text = "\\h" + text[1:]
@@ -495,7 +715,7 @@ def _band_dialogue(cue: dict[str, Any], style: dict[str, Any]) -> str | None:
     MarginV. Drawn with ASS vector graphics so the edges are always a clean
     rectangle — unlike BorderStyle 3, which hugs the glyphs and looks ragged.
     """
-    caption_lines = _as_lines(cue)
+    caption_lines = _as_lines(cue, style)
     if not any(str(l).strip() for l in caption_lines):
         return None
     fs = int(style["font_size"])
@@ -556,14 +776,16 @@ def _band_dialogue(cue: dict[str, Any], style: dict[str, Any]) -> str | None:
 def _dialogue_line(cue: dict[str, Any], style: dict[str, Any], karaoke_on: bool) -> str:
     start, end = ass_timestamp(cue["start"]), ass_timestamp(cue["end"])
     if str(cue.get("role") or "") == "annotation":
-        body = ass_escape("\n".join(_as_lines(cue)))
+        body = ass_escape("\n".join(_as_lines(cue, style)))
         return f"Dialogue: 0,{start},{end},Note,,0,0,0,,{body}"
 
-    caption_lines = _as_lines(cue)
+    caption_lines = _as_lines(cue, style)
     # Karaoke sweep replaces the plain caption text when timing units are present.
-    if karaoke_on and cue.get("karaoke"):
-        text = _karaoke_text(cue["karaoke"])
+    karaoke = cue.get("karaoke")
+    if karaoke_on and karaoke and _squash_ws("".join(str(u.get("text") or "") for u in karaoke)) == _squash_ws("".join(caption_lines)):
+        text = _karaoke_text(karaoke)
     else:
+        # Also the path for a hand-edited `text` whose karaoke units are stale.
         text = ass_escape("\n".join(caption_lines))
 
     prefix = ""
@@ -574,7 +796,9 @@ def _dialogue_line(cue: dict[str, Any], style: dict[str, Any], karaoke_on: bool)
     # Speaker tint applies to the whole cue (prefix + words).
     colour = cue.get("speaker_colour")
     if colour:
-        prefix += "{\\c%s}" % colour
+        if not isinstance(colour, str) or not _ASS_COLOUR_RE.match(colour.strip()):
+            raise ValueError(f"cue {cue.get('index')} speaker_colour must be an ASS colour like &HBBGGRR, got {colour!r}")
+        prefix += "{\\c%s}" % colour.strip()
     # Speaker name tag, rendered bold ahead of the words.
     tag = str(cue.get("speaker_prefix") or "").strip()
     if tag:
@@ -599,11 +823,27 @@ def _dialogue_line(cue: dict[str, Any], style: dict[str, Any], karaoke_on: bool)
     return f"Dialogue: 0,{start},{end},Default,,0,0,0,,{prefix}{text}"
 
 
-def _as_lines(cue: dict[str, Any]) -> list[str]:
+def _as_lines(cue: dict[str, Any], style: dict[str, Any] | None = None) -> list[str]:
+    text = str(cue.get("text") or "")
     lines = cue.get("lines")
     if isinstance(lines, list) and lines:
-        return [str(l) for l in lines]
-    return [str(cue.get("text") or "")]
+        lines = [str(l) for l in lines]
+        # `lines` is a cache of the wrapped `text`. When someone hand-edits
+        # `text` in subtitles.json the cache is stale; re-wrap from the text
+        # (or fall back to it) so the edit actually reaches the screen.
+        if not text or _squash_ws(text) == _squash_ws("".join(lines)):
+            return lines
+        if style is not None and style.get("usable_width_px") and style.get("font_file"):
+            try:
+                return wrap_lines(text, style)
+            except Exception:
+                return [text]
+        return [text]
+    return [text]
+
+
+def _squash_ws(text: str) -> str:
+    return "".join(text.split())
 
 
 def _karaoke_text(units: list[dict[str, Any]]) -> str:
@@ -629,7 +869,15 @@ def srt_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
 
-def build_srt(cues: list[dict[str, Any]]) -> str:
+def _srt_literal(line: str) -> str:
+    """Keep cue text literal for SRT readers that honour ASS syntax (ffmpeg's decoder and
+    many players turn "{\\...}" into an override tag and "\\N"/"\\h" into a break/space, which
+    dropped or rewrote the words in the muxed track)."""
+    line = re.sub(r"\\(?=[Nnh])", lambda _: "\\" + _WORD_JOINER, str(line))
+    return line.replace("{\\", "{" + _WORD_JOINER + "\\")
+
+
+def build_srt(cues: list[dict[str, Any]], style: dict[str, Any] | None = None) -> str:
     """Plain SRT: no colour/karaoke (SRT cannot express them), but the speaker
     tag and the translation line are kept as plain text so the sidecar is still
     a faithful readable transcript."""
@@ -639,20 +887,240 @@ def build_srt(cues: list[dict[str, Any]]) -> str:
         if str(cue.get("role") or "") == "annotation":
             continue  # notes are an on-screen overlay, not part of the dialogue track
         idx += 1
-        body_lines = _as_lines(cue)
+        body_lines = _as_lines(cue, style)
         tag = str(cue.get("speaker_prefix") or "").strip()
         if tag and body_lines:
             body_lines = [f"{tag} {body_lines[0]}"] + body_lines[1:]
         if cue.get("translation_lines"):
             body_lines = body_lines + [str(l) for l in cue["translation_lines"]]
-        body = "\n".join(body_lines)
+        body = "\n".join(_srt_literal(line) for line in body_lines)
         blocks.append(f"{idx}\n{srt_timestamp(cue['start'])} --> {srt_timestamp(cue['end'])}\n{body}\n")
     return "\n".join(blocks)
 
 
 def ffmpeg_filter_escape(path: str) -> str:
-    """Escape a path for use as an ffmpeg filter argument value."""
-    return path.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'").replace(",", "\\,")
+    """Escape a path (or any option value) for use *unquoted* inside an ffmpeg
+    filter graph, e.g. ``ass=filename=<esc>:fontsdir=<esc>``.
+
+    ffmpeg unescapes twice: once when the graph parser splits filters
+    (``\\ ' [ ] , ;`` are special) and once when the filter's option parser
+    splits ``key=value:key=value`` (``\\ ' :`` are special). A single layer is
+    therefore not enough — ``/tmp/colon:dir`` came out as ``dir`` ("Unable to
+    parse option value") and ``/tmp/apos'dir`` lost its apostrophe ("Could not
+    create a libass track"). Do not wrap the result in quotes: inside ``'...'``
+    the graph parser copies backslashes literally, which re-introduces the bug.
+    """
+    level1 = re.sub(r"([\\':])", r"\\\1", path)          # option-value layer
+    return re.sub(r"([\\'\[\],;])", r"\\\1", level1)   # filter-graph layer
+
+
+def drawtext_escape(text: str) -> str:
+    """Escape free text for ``drawtext=text=<esc>`` (use unquoted).
+
+    Three layers, innermost first: drawtext's own text expansion (``%`` must
+    start ``%{...}`` and ``\\`` escapes, so a literal ``%`` is ``\\%``), then the
+    two ffmpeg layers of :func:`ffmpeg_filter_escape`. A bare ``'`` in a quoted
+    ``text='...'`` closes the quote early: "45'" merged two drawtext filters
+    into one and "it's" rendered as "its".
+    """
+    level0 = text.replace("\\", "\\\\").replace("%", "\\%")      # drawtext expansion layer
+    level1 = re.sub(r"([\\':])", r"\\\1", level0)                  # option-value layer
+    return re.sub(r"([\\'\[\],;])", r"\\\1", level1)            # filter-graph layer
+
+
+# --- CJK font discovery -----------------------------------------------------
+#
+# Shared by the drawtext-based recap tools (soccer/lol) and the libass-based
+# narrated render: one lookup order, one coverage check, one error string.
+
+CJK_PROBE_TEXT = "中文字幕测试全场结束"
+_FONT_SUFFIXES = {".ttf", ".ttc", ".otf", ".otc"}
+# Filename fragments that usually mean "has Han glyphs"; used to pick likely
+# files when scanning system font dirs (fc-match is not trustworthy, see below).
+_CJK_FILE_HINTS = ("cjk", "sourcehan", "source-han", "wqy", "wenquanyi", "uming", "ukai",
+                   "droidsansfallback", "simsun", "simhei", "simkai", "simfang", "msyh", "msjh",
+                   "yahei", "deng", "fangsong", "kaiti", "pingfang", "hiragino", "stheiti",
+                   "songti", "hei", "song", "arialunicode", "arial unicode", "unifont")
+_CJK_KNOWN_FILES = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/source-han-sans/SourceHanSansSC-Regular.otf",
+    "/usr/share/fonts/opentype/source-han-sans/SourceHanSans-Regular.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/wqy-microhei/wqy-microhei.ttc",
+    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+    "/usr/share/fonts/truetype/droid/DroidSansFallback.ttf",
+    "/usr/share/fonts/truetype/arphic/uming.ttc",
+    "/usr/share/fonts/truetype/arphic/ukai.ttc",
+    # macOS stock faces (Sonoma ships real files here, not stubs)
+    "/System/Library/Fonts/PingFang.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/System/Library/Fonts/STHeiti Light.ttc",
+    "/System/Library/Fonts/STHeiti Medium.ttc",
+    "/System/Library/Fonts/Supplemental/Songti.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+] + ([
+    # Windows stock faces (微软雅黑 / 黑体 / 宋体 / 等线), under %SystemRoot%\Fonts
+    str(_PLATFORM_FONT_DIRS["windows"][0] / name)
+    for name in ("msyh.ttc", "msyhbd.ttc", "simhei.ttf", "simsun.ttc", "Deng.ttf", "msjh.ttc")
+] if _OS == "windows" else [])
+_SYSTEM_FONT_DIRS = [Path("/root/.fonts"), Path.home() / ".fonts", Path("/usr/local/share/fonts"),
+                     Path("/usr/share/fonts"), *_PLATFORM_FONT_DIRS[_OS]]
+
+
+def _is_han(ch: str) -> bool:
+    return "一" <= ch <= "鿿" or "㐀" <= ch <= "䶿" or "豈" <= ch <= "﫿"
+
+
+def font_dirs_from_env() -> list[Path]:
+    """Font directories injected by the pipeline (VE_FONT_DIRS / VIDEO_EDIT_FONT_DIRS,
+    os.pathsep separated); read through clean_env so .env layers work too."""
+    raw = clean_env("VE_FONT_DIRS", "VIDEO_EDIT_FONT_DIRS") or ""
+    return [Path(p.strip()) for p in raw.split(os.pathsep) if p.strip()]
+
+
+def _fc_query(args: list[str]) -> list[str]:
+    if not shutil.which(args[0]):
+        return []
+    try:
+        proc = subprocess.run(args, capture_output=True, text=True, timeout=15)
+    except Exception:
+        return []
+    return [ln.strip() for ln in proc.stdout.splitlines() if ln.strip()]
+
+
+def cjk_font_candidates() -> list[str]:
+    """Candidate font files in lookup order: pipeline font dirs -> fontconfig
+    (fc-match / fc-list :lang=zh) -> well-known Noto/Source Han/WenQuanYi/arphic
+    files -> name-hinted files under the system font dirs. Existing files only."""
+    seen: set[str] = set()
+    out: list[str] = []
+
+    def add(path: str | Path) -> None:
+        try:
+            p = Path(path)
+            if p.suffix.lower() not in _FONT_SUFFIXES or not p.is_file():
+                return
+            key = str(p.resolve())
+        except OSError:
+            return
+        if key not in seen:
+            seen.add(key)
+            out.append(str(p))
+
+    for d in font_dirs_from_env():
+        if d.is_dir():
+            for f in sorted(d.rglob("*")):
+                add(f)
+    for line in _fc_query(["fc-match", "-f", "%{file}\n", ":lang=zh"]):
+        add(line)
+    for line in _fc_query(["fc-list", ":lang=zh", "file"]):
+        add(line.rstrip(":").strip())
+    for f in _CJK_KNOWN_FILES:
+        add(f)
+    for d in _SYSTEM_FONT_DIRS:
+        if not d.is_dir():
+            continue
+        try:
+            files = sorted(d.rglob("*"))
+        except OSError:
+            continue
+        for f in files:
+            if any(h in f.name.lower() for h in _CJK_FILE_HINTS):
+                add(f)
+    return out
+
+
+def font_covers_text(font_file: str, text: str) -> bool:
+    """True when the font's cmap has a glyph for every Han character in `text`.
+    Degrades to a plain existence check when fontTools cannot read the font
+    (or is not installed) — coverage is then unknown rather than false."""
+    han = {ch for ch in text if _is_han(ch)}
+    charset = _font_charset(str(font_file))
+    if charset is None:
+        return Path(font_file).is_file()
+    return all(ord(ch) in charset for ch in han)
+
+
+_CJK_FONT_CACHE: dict[str, str] = {}   # han-set -> font file; misses are not cached
+
+
+def find_cjk_font(text: str = CJK_PROBE_TEXT) -> str:
+    """Path of the first candidate font whose cmap covers every Han character in
+    `text` (a probe string is used when `text` has none). Never raises: when
+    nothing qualifies, returns a ``"[ERROR] no CJK-capable font ..."`` string
+    (the MCP tool convention), so callers can pass it straight through.
+
+    `fc-match :lang=zh` is consulted but not trusted — with no CJK font installed
+    it happily answers with Noto Sans / DejaVu, which is why every candidate is
+    checked against its cmap instead of taken at face value.
+    """
+    han = "".join(sorted({ch for ch in text if _is_han(ch)})) or CJK_PROBE_TEXT
+    hit = _CJK_FONT_CACHE.get(han)
+    if hit and Path(hit).is_file():
+        return hit
+    candidates = cjk_font_candidates()
+    for cand in candidates:
+        if font_covers_text(cand, han):
+            _CJK_FONT_CACHE[han] = cand
+            return cand
+    env_dirs = [str(d) for d in font_dirs_from_env()]
+    platform_dirs = [str(d) for d in _PLATFORM_FONT_DIRS[_OS]]
+    return (f"[ERROR] no CJK-capable font found covering {len(han)} Han characters "
+            f"(sample: {han[:12]}); checked {len(candidates)} font file(s) from "
+            f"VE_FONT_DIRS/VIDEO_EDIT_FONT_DIRS={env_dirs or 'unset'}, fontconfig (:lang=zh) and "
+            f"the {_OS} font dirs {platform_dirs}. Install e.g. Noto Sans CJK SC or point VE_FONT_DIRS at a "
+            f"directory containing a .ttf/.ttc/.otf with Han glyphs.")
+
+
+@functools.lru_cache(maxsize=32)
+def font_face(font_file: str) -> tuple[int, str | None]:
+    """(face index, family name) libass/fontconfig should be asked for.
+
+    Family is the typographic family (nameID 16) if present, else nameID 1.
+    For a collection the Simplified-Chinese face is preferred over face 0:
+    PingFang.ttc opens with "PingFang HK", STHeiti with "Heiti TC", Noto's
+    CJK TTC with the JP face — every preset here is a Chinese subtitle preset,
+    and libass matches the family name we write into the Style line, so the
+    name decides which regional glyph shapes land on the frame. Falls back to
+    (0, fc-scan family), then (0, None)."""
+    try:
+        from fontTools.ttLib import TTCollection, TTFont
+
+        def _family(font) -> str | None:
+            name = font["name"]
+            for nid in (16, 1):
+                val = name.getDebugName(nid)
+                if val:
+                    return str(val).strip()
+            return None
+
+        if Path(font_file).suffix.lower() in {".ttc", ".otc"}:
+            with TTCollection(font_file, lazy=True) as collection:
+                faces = [(i, _family(f)) for i, f in enumerate(collection.fonts)]
+            for idx, fam in faces:
+                if fam and not fam.startswith(".") and re.search(r"\bSC\b", fam):
+                    return idx, fam
+            if faces and faces[0][1]:
+                return faces[0]
+        else:
+            with TTFont(font_file, fontNumber=0, lazy=True) as font:
+                fam = _family(font)
+            if fam:
+                return 0, fam
+    except Exception:
+        pass
+    return 0, font_family_of(Path(font_file))
+
+
+def font_family_name(font_file: str) -> str | None:
+    """Family name libass/fontconfig will match for `font_file` — see font_face."""
+    return font_face(font_file)[1]
 
 
 @functools.lru_cache(maxsize=8)

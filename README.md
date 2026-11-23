@@ -26,7 +26,6 @@ Use this repository to browse available plugins, install the marketplace in comp
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI workflows for docs, sheets, Base, calendar, messaging, and other SaaS resources with guided setup and OAuth login. |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | DingTalk Workspace CLI workflows with OAuth/device authorization, profile checks, and optional upstream Skills. |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | WeCom CLI workflows for messages, docs, sheets, mail, calendar, meetings, contacts, and todos with QR authentication. |
-| [**video2code**](./plugins/video2code) | `productivity` | Replicate a webpage from a screen recording or URL: record with the built-in WebView, observe frames, scaffold a React app, and verify against the source. |
 
 ### UI plugins
 
@@ -78,7 +77,7 @@ The `category` field in [`marketplace.json`](./marketplace.json) keeps discovery
 | Category | Use it for | Current plugins |
 | --- | --- | --- |
 | `developer-tools` | Development, code quality, Git, CI, and engineering workflows | `cloudbase-skills`, `mimosa`, `github`, `gitlab`, `alibaba-cloud-cli` |
-| `productivity` | Planning, knowledge work, and personal workflow automation | `video2code` |
+| `productivity` | Planning, knowledge work, and personal workflow automation | `video-agent-kit` |
 | `utilities` | General-purpose helpers that do not fit another category | `lark-cli` |
 | `finance` | Finance-domain workflows: markets, accounting, risk, and fintech integrations | `write-research`, `read-macro`, `assess-credit`, `pick-funds`, `watch-positions`, `model-deals`, `vet-companies`, `find-clients`, `run-fpa`, `accounting-and-reporting` |
 | `guides` | Documentation, learning, and reference-only plugins | — |

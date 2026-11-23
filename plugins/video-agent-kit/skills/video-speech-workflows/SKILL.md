@@ -1,30 +1,20 @@
 ---
 name: video-speech-workflows
-description: Consolidated single-source voiced-video workflows for speech condensing, talking-head subtitles, and end-to-end caption/edit orchestration. Use when video-edit-agent routes a single voiced video to mode=speech-condense, mode=talking-head-subtitles, or mode=video-pipeline.
+description: Use for transcription, narration/dubbing with preset TTS voices, creating or repairing subtitles for speech videos, condense talking-head/interview/podcast recordings, and combine post-edit subtitle pipelines. Covers subtitle layout, speaker labels, word-level highlighting (karaoke), bilingual subtitles and long talking-head selections; assemble multiple materials into a final video first.
 ---
 
-# Video Speech Workflows
+# Speech Video Editing
 
-This skill contains the specialized single-source speech/video workflows that sit beside `video-edit-assembly`.
+Read the workflow the task needs:
 
-## Route Modes
+| Task | Workflow |
+| --- | --- |
+| Condense, shorten or tidy a long talking-head/interview | [speech-condense](workflows/speech-condense.md) |
+| Subtitle generation, timing repair, layout and burn-in | [talking-head-subtitles](workflows/talking-head-subtitles.md) |
+| Combine editing/condensing with subtitles or translation | [video-pipeline](workflows/video-pipeline.md) |
 
-Choose exactly one mode from the caller's args, then read and follow the matching workflow document:
+For a transcript only, call `transcribe` on the file and check the result against the requested language and coverage. For narration or dubbing audio, call `tts_generate` with a preset voice. Lay the audio onto the video with [video-edit-agent](../video-edit-agent/references/deterministic.md#audio-tracks) for one file, or as an audio track in [video-edit-assembly](../video-edit-assembly/SKILL.md) for a multi-material cut, and check sync against the picture.
 
-| Mode | Workflow |
-|---|---|
-| `speech-condense` | [workflows/speech-condense.md](workflows/speech-condense.md) |
-| `talking-head-subtitles` | [workflows/talking-head-subtitles.md](workflows/talking-head-subtitles.md) |
-| `video-pipeline` | [workflows/video-pipeline.md](workflows/video-pipeline.md) |
+Subtitles target the current final video; for a bundle of materials use [video-edit-assembly](../video-edit-assembly/SKILL.md) first. For local subtitle/identity checks, call `video_observe` directly on the relevant window; no dense full-video scan is needed. Observation calls return only images and an optional transcript; actually listening requires host audio/player capability. When you cannot listen, keep those items marked unverified.
 
-If the args do not name a mode, infer the narrowest matching one:
-
-- Use `speech-condense` for one long unscripted recording that must be shortened, tightened, or cut to a target length.
-- Use `talking-head-subtitles` for straight captioning, subtitle repair, speaker-labelled captions, karaoke highlighting, bilingual lines, or subtitle placement/legibility work on one rendered video.
-- Use `video-pipeline` when a single voiced video needs an end-to-end stage plan that may combine condensing/editing with captions, speaker differentiation, karaoke, translation, or terminology notes.
-
-## Boundaries
-
-- Multi-material source packs stay in `video-edit-assembly` or the common `video-edit-agent` workflow first. Subtitle the rendered output afterward so cue times match the final video.
-- The selected workflow's file contract and verification rules are authoritative for its own outputs.
-- `video_watch_segment(video_path=...)` can directly inspect tight windows without a prior full `video_ingest`; reserve full ingest for workflows that genuinely need dense whole-video contact sheets.
+Tool file parameters resolve relative to the project directory.

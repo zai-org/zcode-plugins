@@ -27,10 +27,10 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
-from .ffproc import run_proc, require_ffmpeg
 import time
 from pathlib import Path
 from typing import Any
@@ -38,6 +38,11 @@ from typing import Any
 from . import condense_lang as lang
 from .result import ToolResult
 from .run_context import RunContext
+from .observation_media import probe
+
+def _shared_fps(path):
+    return probe(path).get("fps") or 30.0
+
 from .subtitle import (
     detect_pauses,
     load_timed_segments,
@@ -201,10 +206,10 @@ def visual_survey(
         path = work_dir / f"survey_{idx:02d}.jpg"
         cmd = [
             "ffmpeg", "-y", "-v", "error", "-ss", f"{moment:.3f}", "-i", str(video_path),
-            "-frames:v", "1", "-vf", f"scale={SURVEY_TILE_WIDTH}:-2", "-q:v", "4", str(path),
+            "-frames:v", "1", "-vf", f"scale={SURVEY_TILE_WIDTH}:-2", "-q:v", "4", "-update", "1", str(path),
         ]
         try:
-            run_proc(cmd, capture_output=True, text=True, timeout=120)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         except Exception:
             continue
         if path.is_file():
@@ -215,7 +220,7 @@ def visual_survey(
     if not tiles:
         return {"performed": False, "reason": "could not sample any frame from the video"}
 
-    stability = _motion_baseline(video_path, [t for t, _ in tiles], work_dir, _probe_fps(video_path))
+    stability = _motion_baseline(video_path, [t for t, _ in tiles], work_dir, _shared_fps(video_path))
     columns = min(4, len(tiles))
     rows = (len(tiles) + columns - 1) // columns
     tile_h = max(img.height for _, img in tiles) + 18
@@ -301,10 +306,10 @@ def _motion_baseline(video_path: Path, timestamps: list[float], work_dir: Path, 
             path = work_dir / f"motion_{idx:02d}_{slot}.jpg"
             cmd = [
                 "ffmpeg", "-y", "-v", "error", "-ss", f"{max(0.0, moment + offset):.4f}",
-                "-i", str(video_path), "-frames:v", "1", "-vf", "scale=96:-2", "-q:v", "4", str(path),
+                "-i", str(video_path), "-frames:v", "1", "-vf", "scale=96:-2", "-q:v", "4", "-update", "1", str(path),
             ]
             try:
-                run_proc(cmd, capture_output=True, text=True, timeout=60)
+                subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             except Exception:
                 break
             if not path.is_file():
@@ -356,7 +361,7 @@ def condense_index(args: dict, ctx: RunContext) -> ToolResult:
     if not transcript_path.is_file():
         return ToolResult(
             text=f"[ERROR] transcript not found: {transcript_path}. Run transcribe first — "
-            "condensing needs timestamped text, and cloud_asr may provide word-level times "
+            "condensing needs timestamped text, and word timestamps allow finer boundaries "
             "that let cut points land between words instead of inside one."
         )
 
@@ -496,6 +501,7 @@ def condense_index(args: dict, ctx: RunContext) -> ToolResult:
 
     table_rows = int(_positive(args.get("max_table_rows"), DEFAULT_TABLE_ROWS))
     table_md = ctx.resolve(args.get("output_table") or "out/speech_index.md")
+    table_md.parent.mkdir(parents=True, exist_ok=True)
     table_md.write_text(_unit_table_markdown(report), encoding="utf-8")
 
     return ToolResult(
@@ -782,7 +788,7 @@ def _index_text(report: dict[str, Any], table_rows: int, table_path: str) -> str
         if report["timing_source"] == "word_timestamps" else
         "No word-level timestamps (this transcript is segment-timed only), so every cut time inside a unit is "
         "INTERPOLATED. Boundaries will be snapped to detected silences, but filler excision is unsafe and each "
-        "cut needs a listening check. Re-run speech_transcribe(provider=\"cloud_asr\") if you need word timing."
+        "cut needs a listening check. Re-run transcribe if you need word timing."
     )
     candidates = report["trim_candidates"]
     cand_text = "\n".join(
@@ -929,7 +935,12 @@ def _parse_keep(keep: object, by_id: dict[str, dict[str, Any]], units: list[dict
                 errors.append(f"raw keep entry needs finite start < end: {entry}")
                 continue
             covered = [u["index"] for u in units if u["end"] > start and u["start"] < end]
-            intervals.append({"unit_indices": covered, "raw": (start, end), "source": f"{start:.2f}-{end:.2f}s"})
+            # A raw range is its own span (resolved in _resolve_spans); the units it
+            # touches are recorded for bookkeeping but NOT added to the kept set,
+            # otherwise the range would widen to whole sentences — or, worse,
+            # narrow every id-selected span it happens to overlap.
+            intervals.append({"unit_indices": [], "covered": covered, "raw": (start, end),
+                              "source": f"{start:.2f}-{end:.2f}s"})
             continue
         errors.append(f"keep entries must be strings or objects, got {type(entry).__name__}")
     return intervals, errors
@@ -940,12 +951,43 @@ def _resolve_spans(
     units: list[dict[str, Any]],
     drop_ids: set[str],
 ) -> list[dict[str, Any]]:
-    """Collapse the keep-list into source-contiguous spans of kept units."""
+    """Collapse the keep-list into source-contiguous spans of kept units.
+
+    Unit ids/ranges become spans bounded by the units' own start/end. An explicit
+    {start,end} entry becomes a span bounded by exactly those times (a hand-picked
+    in/out point is honoured as-is, minus any dropped unit inside it). The two
+    kinds are then unioned: a raw range overlapping an id span merges into it
+    rather than narrowing it, so `keep:["u001-u004",{"start":3,"end":3.5}]`
+    still yields all of u001-u004."""
     kept: set[int] = set()
-    raw_ranges: list[tuple[float, float]] = []
+    raw_spans: list[dict[str, Any]] = []
     for interval in intervals:
         if interval.get("raw"):
-            raw_ranges.append(interval["raw"])
+            lo, hi = interval["raw"]
+            covered = [i for i in interval.get("covered", []) if units[i]["id"] not in drop_ids]
+            # Carve dropped units out of the range: `drop` always wins.
+            pieces: list[tuple[float, float]] = [(lo, hi)]
+            for i in interval.get("covered", []):
+                if units[i]["id"] not in drop_ids:
+                    continue
+                cut: list[tuple[float, float]] = []
+                for a, b in pieces:
+                    if units[i]["end"] <= a or units[i]["start"] >= b:
+                        cut.append((a, b))
+                        continue
+                    if units[i]["start"] > a:
+                        cut.append((a, units[i]["start"]))
+                    if units[i]["end"] < b:
+                        cut.append((units[i]["end"], b))
+                pieces = cut
+            for a, b in pieces:
+                inside = [i for i in covered if units[i]["end"] > a and units[i]["start"] < b]
+                # A hand-picked range is honoured even when no unit overlaps it
+                # (_script_markdown labels such clips); dropping it silently would
+                # lose footage the caller explicitly asked to keep.
+                if b > a:
+                    raw_spans.append({"unit_indices": inside, "start": a, "end": b})
+            continue
         for index in interval["unit_indices"]:
             kept.add(index)
     kept = {i for i in kept if units[i]["id"] not in drop_ids}
@@ -957,20 +999,20 @@ def _resolve_spans(
             continue
         spans.append({"unit_indices": [index]})
     for span in spans:
-        first = units[span["unit_indices"][0]]
-        last = units[span["unit_indices"][-1]]
-        span["start"] = first["start"]
-        span["end"] = last["end"]
-        # An explicit {start,end} entry may narrow a unit's own boundaries; honour
-        # the tighter of the two so a hand-picked in/out point is not widened
-        # back out to the whole sentence.
-        for lo, hi in raw_ranges:
-            if lo <= span["start"] and hi >= span["end"]:
-                continue
-            if hi > span["start"] and lo < span["end"]:
-                span["start"] = max(span["start"], min(lo, span["start"])) if lo <= span["start"] else max(span["start"], lo)
-                span["end"] = min(span["end"], hi) if hi < span["end"] else span["end"]
-    return [s for s in spans if s["end"] > s["start"]]
+        # min/max, not first/last: an interjection that starts later but ends earlier
+        # than the unit it overlaps would otherwise truncate that unit mid-word.
+        span["start"] = min(units[i]["start"] for i in span["unit_indices"])
+        span["end"] = max(units[i]["end"] for i in span["unit_indices"])
+
+    # Union of id spans and raw spans, in source order.
+    merged: list[dict[str, Any]] = []
+    for span in sorted(spans + raw_spans, key=lambda s: (s["start"], s["end"])):
+        if merged and span["start"] <= merged[-1]["end"]:
+            merged[-1]["end"] = max(merged[-1]["end"], span["end"])
+            merged[-1]["unit_indices"] = sorted(set(merged[-1]["unit_indices"]) | set(span["unit_indices"]))
+            continue
+        merged.append({"unit_indices": list(span["unit_indices"]), "start": span["start"], "end": span["end"]})
+    return [s for s in merged if s["end"] > s["start"]]
 
 
 # --- condense_plan --------------------------------------------------------
@@ -1007,6 +1049,12 @@ def condense_plan(args: dict, ctx: RunContext) -> ToolResult:
     if keep_errors:
         return ToolResult(text="[ERROR] " + "; ".join(keep_errors))
 
+    if source_duration > 0:
+        outside = [i["source"] for i in intervals
+                   if i.get("raw") and (i["raw"][0] >= source_duration - 1e-3 or i["raw"][1] <= 0)]
+        if outside:
+            return ToolResult(text=f"[ERROR] keep range outside the {source_duration:.2f}s source: {', '.join(outside)}")
+
     tighten = _bool(args.get("tighten_pauses"), True)
     if tighten is None:
         return ToolResult(text="[ERROR] tighten_pauses must be a boolean")
@@ -1034,10 +1082,12 @@ def condense_plan(args: dict, ctx: RunContext) -> ToolResult:
 
     raw_clips, removed = _split_spans(spans, units, tighten=bool(tighten), max_gap=max_gap, fillers_mode=fillers_mode)
     words = _all_words(units)
+    selected = {uid for c in raw_clips for uid in c["unit_ids"]}
     clips, edge_notes = _apply_edges(
         raw_clips, pauses, words,
         lead_in=lead_in, lead_out=lead_out, snap_window=snap_window,
         duration=source_duration,
+        blocked=[(u["start"], u["end"]) for u in units if u["id"] not in selected],
     )
     del edge_notes  # recomputed after merge-and-prune, where the clip list is final
     clips, short_dropped = _merge_and_prune(clips, min_clip=min_clip)
@@ -1080,7 +1130,7 @@ def condense_plan(args: dict, ctx: RunContext) -> ToolResult:
         "joins": joins,
         "removed": removed | {
             "short_clips_dropped": short_dropped,
-            "kept_unit_count": sum(len(c["unit_ids"]) for c in clips),
+            "kept_unit_count": len({uid for c in clips for uid in c["unit_ids"]}),
             "dropped_unit_count": len(units) - len({uid for c in clips for uid in c["unit_ids"]}),
         },
         "edge_notes": edge_notes,
@@ -1090,20 +1140,22 @@ def condense_plan(args: dict, ctx: RunContext) -> ToolResult:
     }
 
     output_json = ctx.resolve(args.get("output_json") or "out/condense_plan.json")
-    output_json.parent.mkdir(parents=True, exist_ok=True)
-    output_json.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
-
     timeline_path = ctx.resolve(args.get("timeline_json") or "out/condense_timeline.json")
-    timeline_path.write_text(json.dumps(_as_timeline(plan, video_path, ctx), ensure_ascii=False, indent=2), encoding="utf-8")
-
     script_path = ctx.resolve(args.get("script_md") or "out/condense_script.md")
-    script_path.write_text(_script_markdown(plan, units), encoding="utf-8")
-
     transcript_path = ctx.resolve(args.get("output_transcript") or "out/condensed_transcript.json")
-    transcript_path.write_text(json.dumps(_remapped_transcript(plan, units, index), ensure_ascii=False, indent=2), encoding="utf-8")
-
     redline_path = ctx.resolve(args.get("redline_json") or "out/condense_redline.json")
-    redline_path.write_text(json.dumps(build_redline(plan, units), ensure_ascii=False, indent=2), encoding="utf-8")
+    # Build every artefact before writing any: a failure halfway through would
+    # otherwise leave a fresh condense_plan.json next to a stale transcript/redline,
+    # and condense_render would happily render a plan whose call reported [ERROR].
+    payloads = [
+        (output_json, json.dumps(plan, ensure_ascii=False, indent=2)),
+        (timeline_path, json.dumps(_as_timeline(plan, video_path, ctx), ensure_ascii=False, indent=2)),
+        (script_path, _script_markdown(plan, units)),
+        (transcript_path, json.dumps(_remapped_transcript(plan, units, index), ensure_ascii=False, indent=2)),
+        (redline_path, json.dumps(build_redline(plan, units), ensure_ascii=False, indent=2)),
+    ]
+    for path, text in payloads:
+        _write_text_atomic(path, text)
 
     return ToolResult(
         text=_plan_text(plan, ctx.virtualize(script_path), ctx.virtualize(output_json)),
@@ -1189,7 +1241,7 @@ def _resolve_filler_mode(value: object, index: dict[str, Any]) -> tuple[str, str
             "drop_fillers needs word-level timestamps, but this transcript is segment-timed "
             f"(timing_source={index.get('timing_source')!r}). Interpolated filler boundaries clip the "
             "neighbouring word's consonant, which is more audible than the filler. Re-run "
-            'speech_transcribe(provider="cloud_asr") for word times, or leave drop_fillers off and drop whole units instead.'
+            'transcribe for word times, or leave drop_fillers off and drop whole units instead.'
         )
     return mode, None
 
@@ -1232,12 +1284,17 @@ def _split_spans(
 
     clips: list[dict[str, Any]] = []
     pause_removed = 0.0
+    applied_excisions: list[dict[str, Any]] = []
     for span in spans:
         cuts: list[tuple[float, float, str]] = []
         if tighten:
             indices = span["unit_indices"]
+            reached = float("-inf")
             for prev, nxt in zip(indices, indices[1:]):
-                gap_start = units[prev]["end"]
+                # Speech heard so far, so a short overlapped unit cannot open a "pause"
+                # inside the longer unit that is still speaking.
+                reached = max(reached, units[prev]["end"])
+                gap_start = reached
                 gap_end = units[nxt]["start"]
                 gap = gap_end - gap_start
                 if gap <= max_gap:
@@ -1250,8 +1307,12 @@ def _split_spans(
         for excision in excisions:
             if excision["start"] >= span["start"] and excision["end"] <= span["end"]:
                 cuts.append((excision["start"], excision["end"], "filler"))
+                applied_excisions.append(excision)
         cuts.sort()
         cursor = span["start"]
+        # `in_reason` mirrors `out_reason` for the boundary a clip *starts* on, so
+        # edge expansion knows a pause-tightened boundary already carries its breath.
+        in_reason = "span_start"
         for cut_start, cut_end, kind in cuts:
             if cut_start <= cursor:
                 cursor = max(cursor, cut_end)
@@ -1259,23 +1320,35 @@ def _split_spans(
             clips.append({
                 "start": cursor, "end": cut_start,
                 "unit_ids": _units_in(units, span["unit_indices"], cursor, cut_start),
+                "in_reason": in_reason,
                 "out_reason": kind,
             })
             cursor = cut_end
+            in_reason = kind
         if cursor < span["end"]:
             clips.append({
                 "start": cursor, "end": span["end"],
                 "unit_ids": _units_in(units, span["unit_indices"], cursor, span["end"]),
+                "in_reason": in_reason,
                 "out_reason": "span_end",
             })
     clips = [c for c in clips if c["end"] > c["start"]]
+    # Report only the excisions that actually became cuts: a raw {start,end} keep
+    # entry that half-covers a unit leaves that unit's outside excisions unapplied.
     removed = {
         "pause_seconds": round(pause_removed, 3),
-        "filler_count": sum(1 for e in excisions if e["kind"] == "filler"),
-        "filler_seconds": round(sum(e["end"] - e["start"] for e in excisions), 3),
-        "filler_phrases": [e["phrase"] for e in excisions][:40],
+        "filler_count": sum(1 for e in applied_excisions if e["kind"] == "filler"),
+        "filler_seconds": round(sum(e["end"] - e["start"] for e in applied_excisions), 3),
+        "filler_phrases": [e["phrase"] for e in applied_excisions][:40],
     }
     return clips, removed
+
+
+def _write_text_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def _units_in(units: list[dict[str, Any]], indices: list[int], start: float, end: float) -> list[str]:
@@ -1307,6 +1380,7 @@ def _apply_edges(
     lead_out: float,
     snap_window: float,
     duration: float,
+    blocked: list[tuple[float, float]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Move each clip boundary outward into real silence, keeping a little breath.
 
@@ -1325,22 +1399,35 @@ def _apply_edges(
     snapped_in = snapped_out = 0
     for clip in clips:
         raw_start, raw_end = clip["start"], clip["end"]
-        pause_in = _pause_at(pauses, raw_start, snap_window)
-        if pause_in is not None and pause_in[0] < raw_start:
-            new_start = max(pause_in[0], raw_start - lead_in)
-            snapped_in += 1
-            in_kind = "snapped_to_silence"
+        # A pause-tightened boundary already sits `max_gap/2` into detected silence
+        # (see _split_spans). Expanding it again by lead_in/lead_out would restore
+        # up to lead_in+lead_out of the pause and, for gaps below
+        # max_gap+lead_in+lead_out, let _merge_and_prune glue the two clips back
+        # together — undoing the tightening the plan reports as removed.
+        if clip.get("in_reason") == "pause":
+            new_start = raw_start
+            in_kind = "pause_reserved"
         else:
-            new_start = max(0.0, raw_start - lead_in * 0.5)
-            in_kind = "no_silence_nearby"
-        pause_out = _pause_at(pauses, raw_end, snap_window)
-        if pause_out is not None and pause_out[1] > raw_end:
-            new_end = min(pause_out[1], raw_end + lead_out)
-            snapped_out += 1
-            out_kind = "snapped_to_silence"
+            pause_in = _pause_at(pauses, raw_start, snap_window)
+            if pause_in is not None and pause_in[0] < raw_start:
+                new_start = max(pause_in[0], raw_start - lead_in)
+                snapped_in += 1
+                in_kind = "snapped_to_silence"
+            else:
+                new_start = max(0.0, raw_start - lead_in * 0.5)
+                in_kind = "no_silence_nearby"
+        if clip.get("out_reason") == "pause":
+            new_end = raw_end
+            out_kind = "pause_reserved"
         else:
-            new_end = raw_end + lead_out * 0.5
-            out_kind = "no_silence_nearby"
+            pause_out = _pause_at(pauses, raw_end, snap_window)
+            if pause_out is not None and pause_out[1] > raw_end:
+                new_end = min(pause_out[1], raw_end + lead_out)
+                snapped_out += 1
+                out_kind = "snapped_to_silence"
+            else:
+                new_end = raw_end + lead_out * 0.5
+                out_kind = "no_silence_nearby"
         new_start = max(0.0, min(new_start, duration))
         new_end = max(new_start + 0.02, min(new_end, duration))
         # Never let the outward expansion enter a word. Snapping aims the boundary
@@ -1359,6 +1446,19 @@ def _apply_edges(
                 new_end = max(raw_end, out_upper)
                 out_kind = "clamped_to_word_edge"
             new_end = max(new_start + 0.02, new_end)
+        # Units that were not selected are off limits to the outward expansion. Word
+        # clamping above cannot protect them when the transcript is segment-timed, and
+        # the lead would pull a dropped sentence (or all of it) back into the cut while
+        # the plan and redline still report it as removed.
+        for blocked_start, blocked_end in blocked or ():
+            if blocked_end <= blocked_start:
+                continue
+            if blocked_start >= raw_end - 1e-6 and new_end > blocked_start:
+                new_end = max(raw_end, blocked_start)
+                out_kind = "clamped_to_dropped_unit"
+            if blocked_end <= raw_start + 1e-6 and new_start < blocked_end:
+                new_start = min(raw_start, blocked_end)
+                in_kind = "clamped_to_dropped_unit"
         out.append({
             **clip,
             "start": round(new_start, 3),
@@ -1387,13 +1487,18 @@ def _recount_edges(clips: list[dict[str, Any]]) -> dict[str, Any]:
     snap ratio — the one figure that says how trustworthy the boundary times are
     — useless.
     """
-    snapped_in = sum(1 for c in clips if c.get("in_edge") == "snapped_to_silence")
-    snapped_out = sum(1 for c in clips if c.get("out_edge") == "snapped_to_silence")
+    snapped_in = sum(1 for c in clips if c.get("in_edge") in ("snapped_to_silence", "pause_reserved"))
+    snapped_out = sum(1 for c in clips if c.get("out_edge") in ("snapped_to_silence", "pause_reserved"))
+    # pause_reserved: the boundary already sits max_gap/2 inside a transcript gap
+    # (see _split_spans/_apply_edges); it is in silence by construction, so count it
+    # as snapped rather than letting the ratio drop for every tightened pause
+    pause_reserved = sum(1 for c in clips for key in ("in_edge", "out_edge") if c.get(key) == "pause_reserved")
     clamped = sum(1 for c in clips for key in ("in_edge", "out_edge") if c.get(key) == "clamped_to_word_edge")
     return {
         "clips": len(clips),
         "in_edges_snapped_to_silence": snapped_in,
         "out_edges_snapped_to_silence": snapped_out,
+        "edges_pause_reserved": pause_reserved,
         "edges_clamped_to_word_edge": clamped,
         "snap_ratio": round((snapped_in + snapped_out) / max(1, 2 * len(clips)), 3),
     }
@@ -1453,13 +1558,19 @@ def _build_joins(
     """
     by_id = {u["id"]: u for u in units}
     language = index.get("language") or "zh"
+    kept_ids = {uid for c in clips for uid in c["unit_ids"]}
     joins: list[dict[str, Any]] = []
     output_cursor = clips[0]["duration"] if clips else 0.0
     for left, right in zip(clips, clips[1:]):
+        gap_start = left.get("speech_end", left["end"])
+        gap_end = right.get("speech_start", right["start"])
+        # Any unselected unit with speech between the two kept runs was dropped at this
+        # join, including one whose edges touch the clips.
         dropped_ids = [
             u["id"] for u in units
-            if u["start"] >= left["end"] - 0.05 and u["end"] <= right["start"] + 0.05
-            and u["id"] not in left["unit_ids"] and u["id"] not in right["unit_ids"]
+            if u["id"] not in kept_ids
+            and ((u["start"] >= left["end"] - 0.05 and u["end"] <= right["start"] + 0.05)
+                 or min(u["end"], gap_end) - max(u["start"], gap_start) > 0.01)
         ]
         last_unit = by_id.get(left["unit_ids"][-1]) if left["unit_ids"] else None
         next_unit = by_id.get(right["unit_ids"][0]) if right["unit_ids"] else None
@@ -1473,7 +1584,7 @@ def _build_joins(
         flags = _continuity_flags(
             last_unit, next_unit, dropped_ids, by_id, units, language,
             left=left, right=right, words=words, pauses=pauses, snap_window=snap_window,
-            kind=kind,
+            kind=kind, kept_ids=kept_ids,
         )
         joins.append({
             "index": len(joins),
@@ -1507,6 +1618,7 @@ def _continuity_flags(
     pauses: list[tuple[float, float]],
     snap_window: float,
     kind: str = "content",
+    kept_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     flags: list[dict[str, Any]] = []
 
@@ -1605,7 +1717,7 @@ def _continuity_flags(
     if next_unit is not None and next_unit.get("enum_later") and not next_unit.get("enum_first"):
         # "第一天封神，第二天骨折" carries both halves of its own enumeration; it
         # needs no earlier opener.
-        earlier_kept = _kept_before(units, next_unit, left, right)
+        earlier_kept = _kept_before(units, next_unit, left, right, kept_ids)
         if not any(u.get("enum_first") for u in earlier_kept):
             add(
                 "enumeration_gap", "warning",
@@ -1638,9 +1750,16 @@ def _kept_before(
     next_unit: dict[str, Any],
     left: dict[str, Any],
     right: dict[str, Any],
+    kept_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
+    """Units before `next_unit` that survive in the plan. Without the kept filter a
+    dropped 首先 would still satisfy the enumeration check for a kept 其次."""
     limit = next_unit.get("index", 0)
-    return [u for u in units if u.get("index", 0) < limit and u["end"] <= left["end"] + 0.05]
+    return [
+        u for u in units
+        if u.get("index", 0) < limit and u["end"] <= left["end"] + 0.05
+        and (kept_ids is None or u["id"] in kept_ids)
+    ]
 
 
 def _flag_counts(joins: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1678,6 +1797,8 @@ def _target_verdict(args: dict, source: float, output: float, index: dict[str, A
         elif 1 < ratio <= 100:
             target = source * ratio / 100.0
             basis = f"caller-specified ratio {ratio:.0f}% of source"
+        else:
+            basis = f"caller-specified ratio {requested_ratio!r} ignored (must be in (0, 1] or (1, 100])"
     floor = _number((index.get("budget") or {}).get("lossless_floor_seconds"), 0.0)
     verdict: dict[str, Any] = {
         "basis": basis,
@@ -1856,8 +1977,14 @@ def _remapped_transcript(plan: dict[str, Any], units: list[dict[str, Any]], inde
             hi = min(unit["end"], clip["end"])
             if hi - lo < 0.05:
                 continue
+            # Clamp straddling words to the clip: a word that begins before the
+            # first clip's start would otherwise get a negative output time.
             words = [
-                {"text": w["text"], "start": round(w["start"] + offset, 3), "end": round(w["end"] + offset, 3)}
+                {
+                    "text": w["text"],
+                    "start": round(max(w["start"], clip["start"]) + offset, 3),
+                    "end": round(min(w["end"], clip["end"]) + offset, 3),
+                }
                 for w in (unit.get("words") or [])
                 if w["end"] > clip["start"] and w["start"] < clip["end"]
             ]
@@ -1927,7 +2054,7 @@ def _plan_text(plan: dict[str, Any], script_path: str, plan_path: str) -> str:
         if plan.get("timing_source") == "word_timestamps" else
         "\nNOTE: this transcript has no word-level timestamps, so the mid-word-cut check COULD NOT RUN. "
         "A clean error count here does not mean the boundaries avoid syllables — it means nothing was measured. "
-        "Every cut needs a listening check, or re-run speech_transcribe(provider=\"cloud_asr\") for word timing and re-plan."
+        "Every cut needs a listening check, or re-run transcribe for word timing and re-plan."
     )
     header = (
         f"[ERROR-LEVEL FLAGS: {errors}] " if errors else ""
@@ -1968,339 +2095,11 @@ def _plan_text(plan: dict[str, Any], script_path: str, plan_path: str) -> str:
     )
 
 
-# --- condense_render ------------------------------------------------------
-
-DEFAULT_DISSOLVE = 0.16
-MAX_DISSOLVE_CLIPS = 40
-
-
-def condense_render(args: dict, ctx: RunContext) -> ToolResult:
-    started = time.time()
-    if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
-        return ToolResult(text="[ERROR] ffmpeg/ffprobe not found on PATH")
-    # Fail fast: condense dissolves clips with xfade; a build without it dies
-    # deep into a long render.
-    cap_err = require_ffmpeg(encoders=("libx264", "aac"), filters=("xfade",))
-    if cap_err:
-        return ToolResult(text=cap_err)
-    plan_path = ctx.resolve(args.get("plan_path") or "out/condense_plan.json")
-    if not plan_path.is_file():
-        return ToolResult(text=f"[ERROR] plan not found: {plan_path}. Run condense_plan first.")
-    try:
-        plan = json.loads(plan_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return ToolResult(text=f"[ERROR] could not read plan: {exc}")
-    clips = plan.get("clips")
-    if not isinstance(clips, list) or not clips:
-        return ToolResult(text="[ERROR] plan has no clips[]")
-
-    video_path = ctx.resolve(args.get("video_path") or plan.get("video_path") or "")
-    if not video_path.is_file():
-        return ToolResult(text=f"[ERROR] video not found: {video_path}")
-    if plan.get("video_sha256") and file_sha256(video_path) != plan["video_sha256"]:
-        return ToolResult(
-            text="[ERROR] the video no longer matches the one the plan was built on. Every clip time would be "
-            "wrong. Re-run condense_index and condense_plan against the current file."
-        )
-
-    join_mode = str(args.get("join") or "hard").strip().lower()
-    if join_mode not in {"hard", "dissolve"}:
-        return ToolResult(text="[ERROR] join must be 'hard' or 'dissolve'")
-    dissolve = _positive(args.get("dissolve_seconds"), DEFAULT_DISSOLVE)
-    crf = int(_positive(args.get("crf"), 18))
-
-    shortest = min(c["duration"] for c in clips)
-    if join_mode == "dissolve":
-        if len(clips) > MAX_DISSOLVE_CLIPS:
-            return ToolResult(
-                text=f"[ERROR] dissolve joins are built as one {len(clips)}-input xfade chain, which is beyond the "
-                f"{MAX_DISSOLVE_CLIPS}-clip limit this tool will attempt. Use join='hard' for a cut with this many "
-                "clips."
-            )
-        if shortest <= dissolve * 2:
-            return ToolResult(
-                text=f"[ERROR] shortest clip is {shortest:.2f}s but dissolve_seconds is {dissolve:.2f}s; a "
-                "cross-dissolve needs clips at least twice its length. Lower dissolve_seconds, raise min_clip in "
-                "condense_plan, or use join='hard'."
-            )
-
-    try:
-        target_width, target_height = _resolve_canvas(args, video_path)
-    except RuntimeError as exc:
-        return ToolResult(text=f"[ERROR] {exc}")
-    fps = _probe_fps(video_path)
-
-    output_path = ctx.resolve(args.get("output_path") or "out/condensed.mp4")
-    work_dir = ctx.resolve(args.get("work_dir") or f".video_agent/condense/{plan_path.stem}")
-    work_dir.mkdir(parents=True, exist_ok=True)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    for stale in work_dir.glob("seg_*.mp4"):
-        stale.unlink()
-
-    segments: list[dict[str, Any]] = []
-    for idx, clip in enumerate(clips):
-        seg_path = work_dir / f"seg_{idx:04d}.mp4"
-        error = _cut_segment(
-            video_path, clip, seg_path,
-            width=target_width, height=target_height, fps=fps, crf=crf,
-        )
-        if error:
-            return ToolResult(
-                text=f"[ERROR] ffmpeg failed cutting clip {idx + 1} ({clip['start']:.2f}-{clip['end']:.2f}s): {error}",
-                data={"clip_index": idx, "clip": clip},
-            )
-        segments.append({
-            "index": idx,
-            "path": str(seg_path),
-            "source_start": clip["start"],
-            "source_end": clip["end"],
-            "duration": clip["duration"],
-        })
-
-    if join_mode == "hard":
-        error = _concat_hard(segments, output_path, crf=crf)
-        expected = sum(s["duration"] for s in segments)
-        join_times = _cumulative_joins(segments, overlap=0.0)
-    else:
-        error = _concat_dissolve(segments, output_path, dissolve=dissolve, crf=crf, fps=fps)
-        expected = sum(s["duration"] for s in segments) - dissolve * (len(segments) - 1)
-        join_times = _cumulative_joins(segments, overlap=dissolve)
-    if error:
-        return ToolResult(text=f"[ERROR] ffmpeg failed joining segments: {error}")
-    if not output_path.is_file() or output_path.stat().st_size == 0:
-        return ToolResult(text="[ERROR] render produced no output file")
-
-    measured = media_duration_seconds(output_path)
-    report = {
-        "plan_path": str(plan_path),
-        "plan_sha256": file_sha256(plan_path),
-        "video_path": str(video_path),
-        "output_path": str(output_path),
-        "output_sha256": file_sha256(output_path),
-        "join": join_mode,
-        "dissolve_seconds": dissolve if join_mode == "dissolve" else 0.0,
-        "output_width": target_width,
-        "output_height": target_height,
-        "fps": fps,
-        "crf": crf,
-        "clip_count": len(segments),
-        "expected_duration": round(expected, 3),
-        "measured_duration": round(measured, 3) if measured else None,
-        "output_join_times": [round(t, 3) for t in join_times],
-        "segments": segments,
-        "elapsed_seconds": round(time.time() - started, 3),
-    }
-    report_path = output_path.with_suffix(".render_report.json")
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    return ToolResult(
-        text=(
-            f"Rendered {ctx.virtualize(output_path)}: {len(segments)} clip(s), {join_mode} joins, "
-            f"{target_width}x{target_height} @ {fps:g} fps.\n"
-            f"Expected duration {expected:.2f}s, measured "
-            f"{f'{measured:.2f}s' if measured else 'unknown'}.\n"
-            "Joins are straight cuts, so each one is a visible jump if the speaker's pose differs across it. "
-            "condense_qc samples frames either side of every join; read them to judge whether that is acceptable "
-            "for this material, or keep longer consecutive runs (fewer cuts) if not.\n"
-            "A successful encode proves the filter graph ran. It proves nothing about whether the cut sounds like a "
-            f"person talking — run condense_qc(plan_path, video_path=\"{ctx.virtualize(output_path)}\") next and read "
-            "the join evidence."
-        ),
-        data=report,
-        artifacts=[str(output_path), str(report_path)],
-        video_paths=[str(output_path)],
-    )
-
-
-def _resolve_canvas(args: dict, video_path: Path) -> tuple[int, int]:
-    width_arg = args.get("output_width")
-    height_arg = args.get("output_height")
-    if width_arg is None and height_arg is None:
-        from .render import probe_video_size
-
-        return probe_video_size(video_path)
-    if width_arg is None or height_arg is None:
-        raise RuntimeError("output_width and output_height must be provided together")
-    if isinstance(width_arg, bool) or isinstance(height_arg, bool):
-        raise RuntimeError("output_width/output_height must be integers, not booleans")
-    try:
-        width, height = int(width_arg), int(height_arg)
-    except Exception as exc:
-        raise RuntimeError("output_width/output_height must be integers") from exc
-    if width <= 0 or height <= 0:
-        raise RuntimeError("output_width/output_height must be positive")
-    return width - width % 2, height - height % 2
-
-
-def _probe_fps(video_path: Path) -> float:
-    cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", str(video_path),
-    ]
-    try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=30)
-        num, _, den = (proc.stdout or "").strip().partition("/")
-        value = float(num) / float(den or 1)
-    except Exception:
-        return 30.0
-    return value if 1.0 <= value <= 240.0 else 30.0
-
-
-def _cut_segment(
-    video_path: Path,
-    clip: dict[str, Any],
-    output_path: Path,
-    *,
-    width: int,
-    height: int,
-    fps: float,
-    crf: int,
-) -> str | None:
-    """One normalized segment, re-encoded so the joiner can rely on it.
-
-    Every segment is forced to the same size, sar, pixel format and frame rate:
-    the concat demuxer tolerates nothing else, and xfade misbehaves without it.
-    The 8 ms audio declick at each end is not cosmetic — a raw splice at a
-    non-zero sample value is an audible click even when the cut sits in silence.
-    """
-    duration = float(clip["end"]) - float(clip["start"])
-    if duration <= 0:
-        return f"invalid clip duration {duration}"
-    from .render import source_has_audio
-
-    has_audio = source_has_audio(video_path)
-    filters = [
-        f"scale={width}:{height}:force_original_aspect_ratio=decrease",
-        f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2",
-        "setsar=1",
-    ]
-    filters.append("format=yuv420p")
-    cmd = [
-        "ffmpeg", "-y", "-v", "error",
-        "-ss", f"{float(clip['start']):.6f}", "-t", f"{duration:.6f}", "-i", str(video_path),
-    ]
-    if has_audio:
-        cmd += ["-map", "0:v:0", "-map", "0:a:0"]
-    else:
-        cmd += [
-            "-f", "lavfi", "-t", f"{duration:.6f}",
-            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
-            "-map", "0:v:0", "-map", "1:a:0",
-        ]
-    cmd += ["-vf", ",".join(filters), "-r", f"{fps:.6f}"]
-    if has_audio:
-        # 8 ms declick, not a 30 ms fade to silence. Measured: the old 30 ms fade
-        # carved ~22 ms of extra room tone off each boundary for no benefit, so a
-        # shorter declick is a strictly-better default that keeps pauses at their
-        # natural floor. NB it does NOT fix an intrinsically-quiet join: where the
-        # source itself decays to near-silence right at the cut (speaker ran two
-        # sentences together and the breath fell in the removed span), the beat
-        # before the incoming word stays quiet no matter the fade — that
-        # abruptness is a property of the edit point, surfaced by QC's in_speech /
-        # no_silence signals, not something a boundary fade can smooth.
-        fade = 0.008
-        cmd += ["-af", f"afade=t=in:st=0:d={fade},afade=t=out:st={max(0.0, duration - fade):.6f}:d={fade}"]
-    cmd += [
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(crf),
-        "-c:a", "aac", "-ar", "48000", "-ac", "2",
-        "-shortest", "-avoid_negative_ts", "make_zero",
-        str(output_path),
-    ]
-    try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=1800)
-    except Exception as exc:
-        return str(exc)
-    return None if proc.returncode == 0 else (proc.stderr or "").strip()[-1200:]
-
-
-def _concat_hard(segments: list[dict[str, Any]], output_path: Path, *, crf: int) -> str | None:
-    concat_file = Path(segments[0]["path"]).parent / "concat.txt"
-    concat_file.write_text(
-        "".join(f"file '{Path(s['path']).as_posix()}'\n" for s in segments),
-        encoding="utf-8",
-    )
-    cmd = [
-        "ffmpeg", "-y", "-v", "error",
-        "-f", "concat", "-safe", "0", "-i", str(concat_file),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(crf),
-        "-c:a", "aac", "-movflags", "+faststart",
-        str(output_path),
-    ]
-    try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=7200)
-    except Exception as exc:
-        return str(exc)
-    return None if proc.returncode == 0 else (proc.stderr or "").strip()[-1500:]
-
-
-def _concat_dissolve(
-    segments: list[dict[str, Any]],
-    output_path: Path,
-    *,
-    dissolve: float,
-    crf: int,
-    fps: float,
-) -> str | None:
-    """Chain xfade/acrossfade so each join is a short cross-dissolve.
-
-    The offset arithmetic is the whole trick: each xfade consumes `dissolve`
-    seconds of overlap, so the accumulated timeline shortens by that much at
-    every join and the next offset must be computed from the *shortened*
-    accumulator, not from the raw source durations.
-    """
-    cmd: list[str] = ["ffmpeg", "-y", "-v", "error"]
-    for seg in segments:
-        cmd += ["-i", seg["path"]]
-    steps: list[str] = []
-    v_label, a_label = "0:v", "0:a"
-    accumulated = segments[0]["duration"]
-    for idx in range(1, len(segments)):
-        offset = accumulated - dissolve
-        v_out, a_out = f"v{idx}", f"a{idx}"
-        steps.append(
-            f"[{v_label}][{idx}:v]xfade=transition=fade:duration={dissolve:.4f}:offset={offset:.4f}[{v_out}]"
-        )
-        steps.append(f"[{a_label}][{idx}:a]acrossfade=d={dissolve:.4f}:c1=tri:c2=tri[{a_out}]")
-        v_label, a_label = v_out, a_out
-        accumulated += segments[idx]["duration"] - dissolve
-    cmd += [
-        "-filter_complex", ";".join(steps),
-        "-map", f"[{v_label}]", "-map", f"[{a_label}]",
-        "-r", f"{fps:.6f}",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(crf),
-        "-c:a", "aac", "-movflags", "+faststart",
-        str(output_path),
-    ]
-    try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=7200)
-    except Exception as exc:
-        return str(exc)
-    return None if proc.returncode == 0 else (proc.stderr or "").strip()[-1500:]
-
-
-def _cumulative_joins(segments: list[dict[str, Any]], *, overlap: float) -> list[float]:
-    times: list[float] = []
-    cursor = 0.0
-    for idx, seg in enumerate(segments):
-        cursor += seg["duration"]
-        if idx < len(segments) - 1:
-            cursor -= overlap
-            # For a dissolve the join is the midpoint of the overlap, which is
-            # where the two shots are equally visible.
-            times.append(cursor + overlap / 2.0 if overlap else cursor)
-    return times
-
-
-# --- condense_qc ----------------------------------------------------------
+# --- speech QC ------------------------------------------------------------
 
 DEFAULT_EVIDENCE_JOINS = 8
-# Bounds runtime on a pathological plan (each join costs two short ffmpeg reads
-# for audio and four more for the jump ratio). Raised from 60 after a real
-# 37-minute run produced 66 cuts and silently measured only the first 60 — a cap
-# that hides what it dropped reads as "everything checked out".
 MAX_MEASURED_JOINS = 120
 CHOPPY_CUTS_PER_MINUTE = 20.0
-
 
 def condense_qc(args: dict, ctx: RunContext) -> ToolResult:
     started = time.time()
@@ -2495,7 +2294,7 @@ def condense_qc(args: dict, ctx: RunContext) -> ToolResult:
                     join_index=idx,
                 )
 
-    render_fps = _number(render_report.get("fps"), 0.0) or _probe_fps(video_path)
+    render_fps = _number(render_report.get("fps"), 0.0) or _shared_fps(video_path)
     visual_jumps = measure_visual_jumps(video_path, join_times, work_dir, render_fps, limit=measured_cap) if join_times else []
     for jump in visual_jumps:
         if jump["verdict"] == "severe":
@@ -2525,7 +2324,7 @@ def condense_qc(args: dict, ctx: RunContext) -> ToolResult:
         try:
             frame_sheet = _build_join_frame_sheet(
                 video_path, sampled, plan_joins, work_dir,
-                _number(render_report.get("fps"), 0.0) or _probe_fps(video_path),
+                _number(render_report.get("fps"), 0.0) or _shared_fps(video_path),
             )
             if frame_sheet:
                 images.append(str(frame_sheet))
@@ -2597,7 +2396,7 @@ def _extract_audio(video_path: Path, wav_path: Path) -> str | None:
         "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(wav_path),
     ]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     except Exception as exc:
         return str(exc)
     return None if proc.returncode == 0 and wav_path.is_file() else (proc.stderr or "").strip()[-500:]
@@ -2609,7 +2408,7 @@ def _window_db(wav_path: Path, start: float, duration: float) -> float | None:
         "-i", str(wav_path), "-af", "volumedetect", "-f", "null", "-",
     ]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=120)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     except Exception:
         return None
     match = _MEAN_VOLUME.search((proc.stderr or "") + (proc.stdout or ""))
@@ -2743,22 +2542,22 @@ def _build_join_frame_sheet(
     from PIL import Image, ImageDraw
 
     offsets = _frame_offsets(fps)
-    rows: list[tuple[dict[str, Any], list[Path]]] = []
+    rows: list[tuple[dict[str, Any], list[tuple[int, Path]]]] = []
     for record in sampled:
-        frames: list[Path] = []
+        frames: list[tuple[int, Path]] = []
         for slot, offset in enumerate(offsets):
             moment = max(0.0, record["output_time"] + offset)
             frame_path = work_dir / f"join{record['index']:03d}_{slot}.jpg"
             cmd = [
                 "ffmpeg", "-y", "-v", "error", "-ss", f"{moment:.4f}", "-i", str(video_path),
-                "-frames:v", "1", "-q:v", "3", str(frame_path),
+                "-frames:v", "1", "-q:v", "3", "-update", "1", str(frame_path),
             ]
             try:
-                run_proc(cmd, capture_output=True, text=True, timeout=120)
+                subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             except Exception:
                 continue
             if frame_path.is_file():
-                frames.append(frame_path)
+                frames.append((slot, frame_path))
         if frames:
             rows.append((record, frames))
     if not rows:
@@ -2766,16 +2565,16 @@ def _build_join_frame_sheet(
 
     tile_width = 300
     label_height = 34
-    tiles: list[tuple[dict[str, Any], list[Any]]] = []
+    tiles: list[tuple[dict[str, Any], list[tuple[int, Any]]]] = []
     for record, frames in rows:
         images = []
-        for path in frames:
+        for slot, path in frames:
             img = Image.open(path).convert("RGB")
             scale = tile_width / img.width
-            images.append(img.resize((tile_width, max(1, int(img.height * scale))), Image.LANCZOS))
+            images.append((slot, img.resize((tile_width, max(1, int(img.height * scale))), Image.LANCZOS)))
         tiles.append((record, images))
-    row_height = max(max(i.height for i in imgs) for _, imgs in tiles) + label_height
-    columns = max(len(imgs) for _, imgs in tiles)
+    row_height = max(max(i.height for _, i in imgs) for _, imgs in tiles) + label_height
+    columns = len(offsets)
     sheet = Image.new("RGB", (tile_width * columns, row_height * len(tiles)), (12, 12, 12))
     draw = ImageDraw.Draw(sheet)
     font = _qc_font(15)
@@ -2797,7 +2596,9 @@ def _build_join_frame_sheet(
             f"…{record.get('outgoing_tail') or ''}  ┃  {record.get('incoming_head') or ''}…",
             fill=(180, 220, 255), font=small,
         )
-        for col, img in enumerate(images):
+        # Tiles sit in their slot column even when a grab failed, so an AFTER
+        # frame is never captioned/marked as BEFORE.
+        for col, img in images:
             x = col * tile_width
             sheet.paste(img, (x, top + label_height))
             offset = offsets[col]
@@ -2809,7 +2610,7 @@ def _build_join_frame_sheet(
             box = draw.textbbox((x + 5, top + label_height + 3), caption, font=small)
             draw.rectangle([box[0] - 3, box[1] - 2, box[2] + 3, box[3] + 2], fill=(0, 0, 0))
             draw.text((x + 5, top + label_height + 3), caption, fill=(255, 150, 150), font=small)
-            if col == len(images) // 2:
+            if col == len(offsets) // 2:
                 draw.line([x, top + label_height, x, top + row_height], fill=(255, 60, 60), width=3)
         draw.line([0, top + row_height - 1, sheet.width, top + row_height - 1], fill=(70, 70, 70))
     sheet_path = work_dir / "join_frames.jpg"
@@ -2838,10 +2639,10 @@ def _build_waveform_sheet(wav_path: Path, sampled: list[dict[str, Any]], work_di
             # flat line on a linear amplitude scale, which hides the very trough
             # this image exists to show.
             "-filter_complex", f"showwavespic=s={width}x{height}:colors=0x8fd6ff:scale=cbrt",
-            "-frames:v", "1", str(png),
+            "-frames:v", "1", "-update", "1", str(png),
         ]
         try:
-            run_proc(cmd, capture_output=True, text=True, timeout=120)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         except Exception:
             continue
         if png.is_file():
@@ -2929,10 +2730,10 @@ def measure_visual_jumps(
         path = work_dir / f"jump_{tag}.jpg"
         cmd = [
             "ffmpeg", "-y", "-v", "error", "-ss", f"{max(0.0, moment):.4f}", "-i", str(video_path),
-            "-frames:v", "1", "-vf", "scale=192:-2", "-q:v", "4", str(path),
+            "-frames:v", "1", "-vf", "scale=192:-2", "-q:v", "4", "-update", "1", str(path),
         ]
         try:
-            run_proc(cmd, capture_output=True, text=True, timeout=60)
+            subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         except Exception:
             return None
         if not path.is_file():
@@ -3045,5 +2846,3 @@ def _qc_text(report: dict[str, Any], sampled: list[dict[str, Any]], report_path:
     else:
         lines.append("\nNo cuts to sample (single-clip output), so there are no join artefacts to inspect.")
     return "\n".join(lines)
-
-
