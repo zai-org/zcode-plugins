@@ -194,6 +194,8 @@ def _maybe_repatch(log) -> None:
         return
     if w.zcode_running():
         return
+    if not w.patcher_available():
+        return
     rd = w.resources_dir()
     if not rd or w.asar_has_marker(rd / "app.asar"):
         return

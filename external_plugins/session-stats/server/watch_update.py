@@ -112,9 +112,22 @@ def _probe():
     return "patched" if asar_has_marker(rd / "app.asar") else "missing"
 
 
+_no_patcher_logged = False
+
+
+def patcher_available() -> bool:
+    """纯插件安装（市场源）的机器没有 asar 重打器——只提示一次，别每轮刷日志。"""
+    global _no_patcher_logged
+    if PATCHER.exists():
+        return True
+    if not _no_patcher_logged:
+        _no_patcher_logged = True
+        _log("未部署 asar 重打器（纯插件安装）：仅 CDP 注入路径生效，更新后需从快捷方式重启一次")
+    return False
+
+
 def run_patcher():
-    if not PATCHER.exists():
-        _log("patcher 缺失: %s（重新运行一次 apply-patch.cmd 可修复部署）" % PATCHER)
+    if not patcher_available():
         return
     try:
         r = subprocess.run(

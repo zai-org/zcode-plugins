@@ -1,6 +1,6 @@
 {
   "name": "session-stats",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",
   "description_i18n": {
     "en": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",

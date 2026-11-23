@@ -19,16 +19,22 @@ def main() -> None:
             w._log("watch_once: CDP 注入 %d 个页面" % n)
     except Exception as e:  # noqa: BLE001
         w._log("watch_once: 注入异常 %r" % (e,))
-    state = w._probe()
     import time as _t
-    if _t.localtime().tm_min == 0:  # 每小时整点心跳一行——出问题时日志里看得见
-        w._log("watch_once 心跳: %s" % state)
-    if state == "missing":
-        w.run_patcher()
-        w._log("watch_once: missing → 重打后 %s" % w._probe())
-    elif state == "unknown":
-        w._log("watch_once: unknown（定位不到 ZCode resources，本轮跳过）")
-    # running / patched：静默，不刷日志
+    for attempt in range(24):  # 最多 ~8 分钟：计划任务 ExecutionTimeLimit 是 10 分钟
+        state = w._probe()
+        if attempt == 0 and _t.localtime().tm_min == 0:  # 每小时整点心跳一行
+            w._log("watch_once 心跳: %s" % state)
+        if state == "missing" and w.patcher_available():
+            w.run_patcher()
+            after = w._probe()
+            w._log("watch_once: missing → 重打后 %s（第 %d 次）" % (after, attempt + 1))
+            if after == "patched":
+                return
+            _t.sleep(20)  # 更新器可能还在分步写包：等一小会儿再试
+        elif state == "unknown":
+            _t.sleep(10)  # asar 短暂不存在（换包中），等它出现
+        else:
+            return  # running / patched：本轮回结束
 
 
 if __name__ == "__main__":

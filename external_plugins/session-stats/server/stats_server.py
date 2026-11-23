@@ -572,6 +572,22 @@ def main() -> None:
         pass
     log(f"started; plugin_root={PLUGIN_ROOT}")
     start_http_service()
+    # 首启自装 + CDP 注入器：后台线程，不阻塞 MCP 协议。
+    # 自装幂等（快捷方式带调试端口参数/计划任务/常驻服务/登录自启），
+    # 注入器让输入框统计条在窗口出现 ~2 秒内挂上（不依赖 asar 补丁）。
+    def _background_setup() -> None:
+        try:
+            import installer  # noqa: PLC0415
+            installer.ensure_installed()
+        except Exception as e:  # noqa: BLE001
+            log(f"首启自装异常(不影响插件): {e!r}")
+        try:
+            import injector  # noqa: PLC0415
+            injector.start_injector()
+        except Exception as e:  # noqa: BLE001
+            log(f"注入器启动异常(不影响插件): {e!r}")
+
+    threading.Thread(target=_background_setup, name="ss-setup", daemon=True).start()
     for line in sys.stdin:
         line = line.strip()
         if not line:
