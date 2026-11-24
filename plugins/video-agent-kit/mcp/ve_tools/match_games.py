@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .result import ToolResult
 from .run_context import RunContext
-from .subtitle_style import find_cjk_font, drawtext_escape, ffmpeg_filter_escape, libass_fontsdir
+from .subtitle_style import find_cjk_font, find_drawtext_cjk_font, drawtext_escape, ffmpeg_filter_escape, libass_fontsdir
 
 # ---------------- 剪辑常量 ----------------
 KIND_WINDOWS = {          # 每类事件默认 (前摇, 事件后) 秒; 事件后放长, 让画面把事情演完再切
@@ -55,7 +55,9 @@ CJK_FONT_CANDIDATES = [
 
 
 def _font() -> str:
-    return find_cjk_font()
+    # drawtext loads face 0 only: prefer a font whose first face is Simplified Chinese.
+    # Keeps the find_cjk_font contract: a path, or an "[ERROR] ..." string.
+    return find_drawtext_cjk_font() or find_cjk_font()
 
 
 def _dur_of(p) -> float:

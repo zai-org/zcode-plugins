@@ -408,16 +408,19 @@ def _find_font_named(name: str, dirs: list[Path]) -> str | None:
     packages bury the file under truetype/noto/..., the batch images drop it
     flat into /root/.fonts). Unreadable dirs are skipped, never raised."""
     for directory in dirs:
-        candidate = directory / name
-        if candidate.is_file():
-            return str(candidate)
-        if directory.is_dir():
-            try:
-                hit = next(directory.rglob(name), None)
-            except OSError:
+        # stat() raises PermissionError (not False) under an unreadable parent such
+        # as /root for a non-root user: that directory simply has no fonts for us.
+        try:
+            candidate = directory / name
+            if candidate.is_file():
+                return str(candidate)
+            if not directory.is_dir():
                 continue
+            hit = next(directory.rglob(name), None)
             if hit is not None and hit.is_file():
                 return str(hit)
+        except OSError:
+            continue
     return None
 
 
@@ -432,19 +435,70 @@ def _platform_font_dirs() -> list[Path]:
     return out
 
 
-def _platform_cjk_font(weight: str) -> str | None:
-    """The platform's own CJK face for `weight`, falling through to the regular
-    list (a machine with one CJK face should still render bold text — libass
-    synthesises the weight — rather than fail), then to the cmap-verified scan."""
+def _font_file_index(dirs: list[Path], names: set[str]) -> dict[str, str]:
+    """{file name: path} for `names` under `dirs`, in one walk per directory.
+
+    Same precedence as calling _find_font_named per name: earlier directories win,
+    and within a directory a direct child wins over a nested file. Unreadable
+    directories are skipped."""
+    found: dict[str, str] = {}
+    for directory in dirs:
+        try:
+            if not directory.is_dir():
+                continue
+            direct = {p.name: p for p in directory.iterdir() if p.name in names}
+            nested = {}
+            for p in directory.rglob("*"):
+                if p.name in names and p.name not in direct:
+                    nested.setdefault(p.name, p)
+        except OSError:
+            continue
+        for name, path in {**nested, **direct}.items():
+            try:
+                if name not in found and path.is_file():
+                    found[name] = str(path)
+            except OSError:
+                continue
+    return found
+
+
+def _platform_cjk_hits(weight: str) -> list[str]:
+    """Covering platform CJK font files for `weight`, best first, falling through
+    to the regular list (a machine with one CJK face should still render bold text
+    — libass synthesises the weight — rather than fail)."""
     names = list(_PLATFORM_FONT_FILES.get(weight) or [])
     names += [n for n in _PLATFORM_FONT_FILES["regular"] if n not in names]
-    dirs = _platform_font_dirs()
-    for name in names:
-        hit = _find_font_named(name, dirs)
-        if hit and font_covers_text(hit, CJK_PROBE_TEXT):
-            return hit
+    index = _font_file_index(_platform_font_dirs(), set(names))
+    return [index[n] for n in names if n in index and font_covers_text(index[n], CJK_PROBE_TEXT)]
+
+
+def _platform_cjk_font(weight: str) -> str | None:
+    """The platform's own CJK face for `weight`, then the cmap-verified scan."""
+    hits = _platform_cjk_hits(weight)
+    if hits:
+        return hits[0]
     found = find_cjk_font()
     return None if found.startswith("[ERROR]") else found
+
+
+def find_drawtext_cjk_font() -> str | None:
+    """CJK font for ffmpeg drawtext: the first one whose face 0 is the Simplified
+    (or only) Chinese face; None when no CJK font is installed.
+
+    drawtext's ``fontfile=`` always loads face 0 of a collection, unlike libass,
+    which selects a face by family name (see font_face). PingFang.ttc opens with
+    PingFang HK, STHeiti with Heiti TC and Noto CJK with JP, so for Simplified text
+    those collections are used only when nothing else covers it.
+    """
+    regional: str | None = None
+    for hit in _platform_cjk_hits("regular"):
+        if font_face(hit)[0] == 0:
+            return hit
+        regional = regional or hit
+    found = find_cjk_font()
+    if not found.startswith("[ERROR]") and font_face(found)[0] == 0:
+        return found
+    return regional or (None if found.startswith("[ERROR]") else found)
 
 
 def resolve_font_file(family: str, weight: str | None = None) -> str | None:
@@ -1014,9 +1068,12 @@ def cjk_font_candidates() -> list[str]:
             out.append(str(p))
 
     for d in font_dirs_from_env():
-        if d.is_dir():
-            for f in sorted(d.rglob("*")):
-                add(f)
+        try:
+            files = sorted(d.rglob("*")) if d.is_dir() else []
+        except OSError:
+            continue
+        for f in files:
+            add(f)
     for line in _fc_query(["fc-match", "-f", "%{file}\n", ":lang=zh"]):
         add(line)
     for line in _fc_query(["fc-list", ":lang=zh", "file"]):
@@ -1024,9 +1081,9 @@ def cjk_font_candidates() -> list[str]:
     for f in _CJK_KNOWN_FILES:
         add(f)
     for d in _SYSTEM_FONT_DIRS:
-        if not d.is_dir():
-            continue
         try:
+            if not d.is_dir():
+                continue
             files = sorted(d.rglob("*"))
         except OSError:
             continue

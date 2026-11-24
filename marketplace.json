@@ -97,7 +97,7 @@
         "en": "Unified video plugin: understanding and research, editing, subtitles, talking-head condensing, narrated movie and soccer/basketball/LoL match recaps, standalone and serial video creation, person replacement, and replicating websites/games/full-stack apps from screen recordings; speech recognition, voiceover and generation run through ZCode ToolHub on the signed-in ZCode account, and every capability shares one set of media tools and evidence.",
         "zh-CN": "一体化视频插件：视频理解与检索研究、剪辑、字幕、口播精简、电影解说与足球/篮球/英雄联盟赛事解说、单集与连续剧视频创作、人物替换，以及从录屏复刻网站/游戏/全栈应用；语音识别、配音与生成服务均通过已登录的 ZCode 账号调用 ZCode ToolHub，全部能力共享一套媒体工具与证据。"
       },
-      "version": "0.5.0",
+      "version": "0.5.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"

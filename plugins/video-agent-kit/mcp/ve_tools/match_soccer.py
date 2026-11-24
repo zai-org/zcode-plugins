@@ -12,7 +12,7 @@ from pathlib import Path
 from .result import ToolResult
 from .match_games import _normalize_mix, filter_script_args
 from .run_context import RunContext
-from .subtitle_style import find_cjk_font, drawtext_escape, ffmpeg_filter_escape, libass_fontsdir
+from .subtitle_style import find_cjk_font, find_drawtext_cjk_font, drawtext_escape, ffmpeg_filter_escape, libass_fontsdir
 
 # ---------------- 剪辑常量 (v0.7 定型) ----------------
 GOAL_PRE_DEFAULT, GOAL_POST = 14, 18
@@ -40,7 +40,9 @@ CJK_FONT_CANDIDATES = [
 
 
 def _font() -> str:
-    return find_cjk_font()
+    # drawtext loads face 0 only: prefer a font whose first face is Simplified Chinese.
+    # Keeps the find_cjk_font contract: a path, or an "[ERROR] ..." string.
+    return find_drawtext_cjk_font() or find_cjk_font()
 
 
 def _dur_of(p: Path | str) -> float:

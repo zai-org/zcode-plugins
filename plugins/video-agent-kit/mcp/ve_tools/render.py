@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import json
 import math
 import os
@@ -909,6 +910,7 @@ def _stderr_tail(text: str | None, limit: int = 1200) -> str:
     return tail[-limit:]
 
 
+@functools.lru_cache(maxsize=16)
 def _font_charset(font_file: str) -> frozenset[int] | None:
     """cmap codepoints of the font (first face of a .ttc); None = unknown (no fontTools)."""
     try:
@@ -965,17 +967,22 @@ def _fc_match_font(text: str) -> str | None:
 def find_fontfile(text: str = "") -> str | None:
     """Pick a font for drawtext. Candidates: VE_FONT_DIRS / VIDEO_EDIT_FONT_DIRS,
     fontconfig (by text language), then well-known paths. The first candidate whose
-    cmap covers ``text`` wins; without fontTools the first existing file wins."""
+    cmap covers ``text`` wins; if none covers it, the platform's own CJK font
+    whose first face is Simplified Chinese (Hiragino Sans GB, Microsoft YaHei, ...) is
+    tried (see _drawtext_cjk_font). Without fontTools the first existing file wins."""
     candidates: list[str] = []
     from .run_context import clean_env
     font_dirs = clean_env("VE_FONT_DIRS", "VIDEO_EDIT_FONT_DIRS") or ""
     for raw_dir in [p for p in font_dirs.split(os.pathsep) if p.strip()]:
         font_dir = Path(raw_dir)
-        if font_dir.is_dir():
-            candidates.extend(
-                str(p) for p in sorted(font_dir.iterdir())
-                if p.is_file() and p.suffix.lower() in {".ttf", ".ttc", ".otf"}
-            )
+        try:  # an unreadable directory raises PermissionError from stat(): skip it
+            if font_dir.is_dir():
+                candidates.extend(
+                    str(p) for p in sorted(font_dir.iterdir())
+                    if p.is_file() and p.suffix.lower() in {".ttf", ".ttc", ".otf"}
+                )
+        except OSError:
+            continue
     fc = _fc_match_font(text)
     if fc:
         candidates.append(fc)
@@ -989,13 +996,45 @@ def find_fontfile(text: str = "") -> str | None:
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
     ])
     existing = [c for c in candidates if Path(c).is_file()]
-    if not existing:
-        return None
     if text.strip():
         for candidate in existing:
             if not font_uncovered_characters(candidate, text):
                 return candidate
-    return existing[0]
+        # macOS and Windows keep their CJK faces where neither the paths above nor
+        # fontconfig reach them (Homebrew's fc-match answers :lang=zh with Verdana),
+        # so fall back to the platform lookup the subtitle renderer already uses.
+        platform = _platform_cjk_fontfile()
+        if platform and not font_uncovered_characters(platform, text):
+            return platform
+    return existing[0] if existing else None
+
+
+_PLATFORM_CJK_CACHE: dict[str, str] = {}   # VE_FONT_DIRS value -> font file; misses are not cached
+
+
+def _platform_cjk_fontfile() -> str | None:
+    """The platform's own CJK font for drawtext (Hiragino Sans GB / PingFang / STHeiti,
+    Microsoft YaHei, Noto).
+
+    Only hits are cached, keyed by the VE_FONT_DIRS value the lookup reads: a font
+    installed while the MCP server runs (for example by /setup-guide) is found on the
+    next call, as with subtitle_style.find_cjk_font. The lookup never raises.
+    """
+    from .run_context import clean_env
+    key = clean_env("VE_FONT_DIRS", "VIDEO_EDIT_FONT_DIRS") or ""
+    hit = _PLATFORM_CJK_CACHE.get(key)
+    if hit and Path(hit).is_file():
+        return hit
+    found = _drawtext_cjk_font()
+    if found:
+        _PLATFORM_CJK_CACHE[key] = found
+    return found
+
+
+def _drawtext_cjk_font() -> str | None:
+    """See subtitle_style.find_drawtext_cjk_font (drawtext loads face 0 only)."""
+    from .subtitle_style import find_drawtext_cjk_font
+    return find_drawtext_cjk_font()
 
 
 def public_render_plan(plan: dict) -> dict:
