@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "bulk-image-resizer": {
+      "type": "http",
+      "url": "https://bulk-image-resizer.pages.dev/zcode/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    }
+  }
+}
