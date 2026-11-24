@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "bugx": {
+      "type": "stdio",
+      "command": "bugx",
+      "args": [
+        "mcp",
+        "serve",
+        "--root",
+        "${ZCODE_PROJECT_DIR}"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 120000
+    }
+  }
+}
