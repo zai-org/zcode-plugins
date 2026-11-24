@@ -2609,5 +2609,16 @@
     "mimeType": "image/png",
     "sha256": "f33c29f46a1e4f8ad8afc8989f5850d3c24129cf61feb7a1ab6293bf9358c5ce",
     "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "ob2h",
+    "icon": "ob2h/icon.png",
+    "source": "OB2H project logo (an elephant with a terminal prompt), the project's own artwork published with the plugin source: https://github.com/Pofium/ob2h/blob/main/docs/assets/ob2h-logo.png",
+    "matchedBy": "original-artwork",
+    "homepage": "https://github.com/Pofium/ob2h",
+    "license": "MIT",
+    "mimeType": "image/png",
+    "sha256": "dc8f84309d56fbeb8910777549179f48b705ca4a058850ae080e9738acf1bef2",
+    "transformation": "815x815 PNG downscaled to 512x512 PNG with transparent background; no baked corner radius"
   }
 ]
