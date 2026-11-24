@@ -1673,6 +1673,52 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "ob2h",
+      "displayName": "OB2H",
+      "displayName_i18n": {
+        "en": "OB2H",
+        "zh-CN": "OB2H 记忆与代码图谱"
+      },
+      "source": "./external_plugins/ob2h",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/ob2h/icon.png",
+      "description": "Long-term memory, knowledge graph and AST code graph for coding agents: a local MCP server with 57 tools to recall past decisions, save new facts, analyze project architecture and estimate refactor blast radius. Data stays on your machine.",
+      "description_i18n": {
+        "en": "Long-term memory, knowledge graph and AST code graph for coding agents: a local MCP server with 57 tools to recall past decisions, save new facts, analyze project architecture and estimate refactor blast radius. Data stays on your machine.",
+        "zh-CN": "为编程智能体提供长期记忆、知识图谱与 AST 代码图谱：本地 MCP 服务器，包含 57 个工具，用于回忆过往决策、保存新事实、分析项目架构并评估重构影响范围。数据保存在你的本机。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Pofium",
+        "url": "https://github.com/Pofium"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "ob2h",
+        "memory",
+        "long-term-memory",
+        "knowledge-graph",
+        "code-graph",
+        "ast",
+        "blast-radius",
+        "mcp"
+      ],
+      "homepage": "https://github.com/Pofium/ob2h",
+      "repository": "https://github.com/Pofium/ob2h",
+      "license": "MIT",
+      "examplePrompts": [
+        "What do you remember about me and my projects?",
+        "Remember that I prefer tabs and Rust edition 2021.",
+        "Show the architecture of this project and what depends on src/main.rs."
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "你记得关于我和我的项目的哪些信息？",
+          "记住：我偏好使用 Tab 缩进和 Rust 2021 版。",
+          "展示这个项目的架构，以及哪些代码依赖 src/main.rs。"
+        ]
+      }
     }
   ]
 }
