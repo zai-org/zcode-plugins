@@ -1,0 +1,26 @@
+{
+  "name": "png-sprite-tools",
+  "version": "0.1.0",
+  "description": "Browser tools for game and UI PNG assets: trim transparent padding from one PNG or a batch (with exact padding), and slice a sprite sheet into individual PNG frames, then wire the results into your project.",
+  "description_i18n": {
+    "en": "Browser tools for game and UI PNG assets: trim transparent padding from one PNG or a batch (with exact padding), and slice a sprite sheet into individual PNG frames, then wire the results into your project.",
+    "zh-CN": "面向游戏与界面 PNG 素材的浏览器工具：裁掉单张或批量 PNG 的透明边并加精确留白，把精灵图切成单帧 PNG，再把结果接入你的项目。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "homepage": "https://sprite-sheet-slicer.chajian.workers.dev",
+  "license": "MIT",
+  "keywords": [
+    "png",
+    "transparent",
+    "trim",
+    "sprite-sheet",
+    "game-assets",
+    "icons",
+    "alpha",
+    "mcp"
+  ],
+  "commands": "commands"
+}
