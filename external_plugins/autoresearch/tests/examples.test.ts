@@ -2,18 +2,25 @@
 // (copy-and-run contract), staying silent when there is nothing to say.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  mkdirSync,
+  readFileSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { RunLike } from "../mcp/lib/types.ts";
+import { resolveBash } from "../mcp/lib/bash.ts";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const EX = join(ROOT, "hooks", "examples");
 
 function runExample(name: string, cwd: string, stdin: string): string {
-  return execFileSync("bash", [join(EX, name)], {
+  return execFileSync(resolveBash(), [join(EX, name)], {
     input: stdin,
     encoding: "utf8",
   });
@@ -46,7 +53,7 @@ const afterPayload = (
   session: Record<string, unknown> = {},
 ) => JSON.stringify({ event: "after", cwd, run_entry: run, session });
 
-test("anti-thrash: suggests a rethink after 3 consecutive non-keeps, silent otherwise", () => {
+test("anti-thrash: suggests a rethink after 3 consecutive failures, silent otherwise", () => {
   const cwd = tempCwd();
   seedLedger(
     cwd,
@@ -58,12 +65,27 @@ test("anti-thrash: suggests a rethink after 3 consecutive non-keeps, silent othe
     })),
   );
   const out = runExample("before/anti-thrash.sh", cwd, beforePayload(cwd));
-  assert.match(out, /consecutive non-keep/);
+  assert.match(out, /consecutive failed results/);
   // single failure → silent
   seedLedger(cwd, [{ type: "run", run: 1, status: "discard", metric: 1 }]);
   assert.equal(
     runExample("before/anti-thrash.sh", cwd, beforePayload(cwd)),
     "",
+  );
+  // noop breaks the failure chain (guardrails spec: noop is not a failure)
+  seedLedger(
+    cwd,
+    ["discard", "crash", "noop", "discard", "crash"].map((s) => ({
+      type: "run",
+      run: 1,
+      status: s,
+      metric: 1,
+    })),
+  );
+  assert.equal(
+    runExample("before/anti-thrash.sh", cwd, beforePayload(cwd)),
+    "",
+    "noop must break the streak: tail is only 2 consecutive failures",
   );
 });
 
@@ -126,8 +148,10 @@ test("learnings-journal: appends one markdown line per run", () => {
 test("auto-tag-winners: tags a new best, silent otherwise", () => {
   const cwd = tempCwd();
   execFileSync("git", ["init", "-q"], { cwd, stdio: "ignore" });
-  // CI runners have no global git identity — commits need a local one
+  // CI runners have no global git identity — commits need a local one — and
+  // Windows runners default core.autocrlf=true, which checkout would apply
   for (const a of [
+    ["config", "core.autocrlf", "false"],
     ["config", "user.email", "t@t"],
     ["config", "user.name", "t"],
   ]) {
@@ -178,4 +202,112 @@ test("macos-notify: silent side effect (no steer output)", () => {
     ),
   );
   assert.equal(out, "");
+});
+
+test("idea-rotator: warns on a shallow streak (recent tagged hypotheses all tune/ensemble)", () => {
+  const cwd = tempCwd();
+  seedLedger(cwd, [
+    {
+      type: "run",
+      run: 1,
+      status: "keep",
+      metric: 1,
+      asi: { hypothesis: "[tune] raise lr" },
+    },
+    {
+      type: "run",
+      run: 2,
+      status: "discard",
+      metric: 2,
+      asi: { hypothesis: "[ensemble] seed sweep" },
+    },
+    {
+      type: "run",
+      run: 3,
+      status: "keep",
+      metric: 3,
+      asi: { hypothesis: "[tune] weight decay 0.05" },
+    },
+  ] as RunLike[]);
+  assert.match(
+    runExample("before/idea-rotator.sh", cwd, beforePayload(cwd)),
+    /shallow streak/,
+  );
+  // a [struct] hypothesis in the window → no warning (rotation advice unaffected)
+  seedLedger(cwd, [
+    {
+      type: "run",
+      run: 1,
+      status: "keep",
+      metric: 1,
+      asi: { hypothesis: "[struct] replace scheduler with early stopping" },
+    },
+    {
+      type: "run",
+      run: 2,
+      status: "keep",
+      metric: 2,
+      asi: { hypothesis: "[tune] raise lr" },
+    },
+    {
+      type: "run",
+      run: 3,
+      status: "keep",
+      metric: 3,
+      asi: { hypothesis: "[ensemble] seed sweep" },
+    },
+  ] as RunLike[]);
+  assert.doesNotMatch(
+    runExample("before/idea-rotator.sh", cwd, beforePayload(cwd)),
+    /shallow streak/,
+  );
+  // fewer than 3 tagged hypotheses in the window → silent
+  seedLedger(cwd, [
+    {
+      type: "run",
+      run: 1,
+      status: "keep",
+      metric: 1,
+      asi: { hypothesis: "[tune] raise lr" },
+    },
+  ] as RunLike[]);
+  assert.equal(
+    runExample("before/idea-rotator.sh", cwd, beforePayload(cwd)),
+    "",
+  );
+});
+
+test("self-check: hourly checklist on the wall clock, silent within the interval", () => {
+  const cwd = tempCwd();
+  mkdirSync(join(cwd, ".auto"), { recursive: true });
+  const epoch = Math.floor(Date.now() / 1000);
+  const out = runExample(
+    "before/self-check.sh",
+    cwd,
+    beforePayload(cwd, { session: { run_count: 0, started_at_epoch: epoch } }),
+  );
+  assert.match(out, /self-check/);
+  assert.match(out, /structural work/);
+  // the check is recorded so the next run within the interval stays silent
+  assert.ok(
+    Number(readFileSync(join(cwd, ".auto", "selfcheck.state"), "utf8")) > 0,
+  );
+  assert.equal(
+    runExample(
+      "before/self-check.sh",
+      cwd,
+      beforePayload(cwd, {
+        session: { run_count: 1, started_at_epoch: epoch },
+      }),
+    ),
+    "",
+  );
+  // no started_at_epoch (older ledger) → silent, no state file
+  const bare = tempCwd();
+  mkdirSync(join(bare, ".auto"), { recursive: true });
+  assert.equal(
+    runExample("before/self-check.sh", bare, beforePayload(bare)),
+    "",
+  );
+  assert.equal(existsSync(join(bare, ".auto", "selfcheck.state")), false);
 });
