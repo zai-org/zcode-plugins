@@ -2609,5 +2609,14 @@
     "mimeType": "image/png",
     "sha256": "f33c29f46a1e4f8ad8afc8989f5850d3c24129cf61feb7a1ab6293bf9358c5ce",
     "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "viralkey",
+    "icon": "viralkey/icon.png",
+    "source": "Official Viralkey white-background black mark (https://viralkey.ai/brand/app-icon-1024-fullbleed.png)",
+    "homepage": "https://viralkey.ai",
+    "mimeType": "image/png",
+    "sha256": "92546107f68657125ecb9b7e098442432c90d7ee33c3904dd359833830c89c47",
+    "transformation": "Original 1024x1024 full-bleed square PNG (white background, black mark; no baked corner radius)"
   }
 ]
