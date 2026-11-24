@@ -1,0 +1,21 @@
+{
+  "name": "mcptender",
+  "version": "1.0.0",
+  "description": "Research public Russian procurement records, source documents and published contract suppliers.",
+  "description_i18n": {
+    "en": "Research public Russian procurement records, source documents and published contract suppliers.",
+    "zh-CN": "查询俄罗斯公开采购记录、来源文件及已公布合同的供应商。"
+  },
+  "author": {
+    "name": "Aleks Tartik"
+  },
+  "homepage": "https://mcptender.ru",
+  "repository": "https://github.com/pixelligue/mcptender-plugins",
+  "license": "MIT",
+  "keywords": [
+    "procurement",
+    "mcp",
+    "documents"
+  ],
+  "skills": "./skills/"
+}
