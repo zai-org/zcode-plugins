@@ -22,26 +22,26 @@ Works across **Cursor**, **Google Antigravity**, **GitHub Copilot**, **ZCode**, 
 
 ### Google Antigravity
 ```bash
-agy plugin install https://github.com/Twin-sk/viralkey-plugin
+agy plugin install https://github.com/viralkey-ai/viralkey-plugin
 ```
 
 ### Cursor
 Install from the Cursor Marketplace (search **Viralkey**) or add this repository as a plugin source in Cursor Settings → Plugins.
 
 ### GitHub Copilot
-Add `Twin-sk/viralkey-plugin` as a plugin marketplace repository (reads `.github/plugin/marketplace.json`).
+Add `viralkey-ai/viralkey-plugin` as a plugin marketplace repository (reads `.github/plugin/marketplace.json`).
 
 ### ZCode
-Install **viralkey** from ZCode's Public Marketplace, or add `https://github.com/Twin-sk/viralkey-plugin` under **Settings → Plugins → Personal**.
+Install **viralkey** from ZCode's Public Marketplace, or add `https://github.com/viralkey-ai/viralkey-plugin` under **Settings → Plugins → Personal**.
 
 ### Claude Code / OpenAI Codex
 ```bash
 # Claude Code
-claude plugin marketplace add Twin-sk/viralkey-plugin
+claude plugin marketplace add viralkey-ai/viralkey-plugin
 claude plugin install viralkey@viralkey-plugins
 
 # OpenAI Codex
-codex plugin marketplace add Twin-sk/viralkey-plugin
+codex plugin marketplace add viralkey-ai/viralkey-plugin
 ```
 
 ## Authentication & Billing

@@ -22,26 +22,26 @@
 
 ### Google Antigravity
 ```bash
-agy plugin install https://github.com/Twin-sk/viralkey-plugin
+agy plugin install https://github.com/viralkey-ai/viralkey-plugin
 ```
 
 ### Cursor
 在 Cursor Marketplace 搜索 **Viralkey** 安装，或在 Cursor Settings → Plugins 中添加本仓库地址。
 
 ### GitHub Copilot
-将 `Twin-sk/viralkey-plugin` 添加为插件市场仓库（自动读取 `.github/plugin/marketplace.json`）。
+将 `viralkey-ai/viralkey-plugin` 添加为插件市场仓库（自动读取 `.github/plugin/marketplace.json`）。
 
 ### ZCode
-在 ZCode 官方 Public 插件市场搜索 **viralkey** 安装，或在 **设置 → 插件 → Personal** 中添加 `https://github.com/Twin-sk/viralkey-plugin`。
+在 ZCode 官方 Public 插件市场搜索 **viralkey** 安装，或在 **设置 → 插件 → Personal** 中添加 `https://github.com/viralkey-ai/viralkey-plugin`。
 
 ### Claude Code / OpenAI Codex
 ```bash
 # Claude Code
-claude plugin marketplace add Twin-sk/viralkey-plugin
+claude plugin marketplace add viralkey-ai/viralkey-plugin
 claude plugin install viralkey@viralkey-plugins
 
 # OpenAI Codex
-codex plugin marketplace add Twin-sk/viralkey-plugin
+codex plugin marketplace add viralkey-ai/viralkey-plugin
 ```
 
 ## 鉴权与计费说明
