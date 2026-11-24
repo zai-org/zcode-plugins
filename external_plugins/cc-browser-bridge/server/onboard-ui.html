@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>连接 Chrome · 首次使用引导</title>
+<style>
+
+:root{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#222725;background:#fafbf9;font-size:15px}*{box-sizing:border-box}body{margin:0}button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #8bc9ab;outline-offset:4px}header{height:80px;border-bottom:1px solid #e6e9e4;display:flex;align-items:center;justify-content:space-between;padding:0 6vw;background:white}.brand{display:flex;align-items:center;gap:12px;font-weight:650}.logo{display:grid;place-items:center;background:#244e3e;color:white;width:34px;height:34px;border-radius:10px;font-size:20px}.badge{font-size:12px;color:#607168;background:#edf4ee;padding:5px 10px;border-radius:30px}.review{padding:14px 6vw;background:#f0f2ef;display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:#68726c}.review button{font-size:12px;border:1px solid transparent;border-radius:6px;background:transparent;padding:7px 10px;color:#5d6861}.review button.active{background:white;border-color:#d4ddd6;color:#214f3b}.review span{margin-right:12px}main{max-width:1050px;margin:58px auto 40px;padding:0 32px}.eyebrow{color:#668071;font-size:12px;letter-spacing:2px}h1{font-size:36px;font-weight:620;letter-spacing:-1px;margin:15px 0}p{color:#717973;line-height:1.8;margin:0}.steps{display:flex;gap:32px;padding:29px 0 25px;border-bottom:1px solid #e0e5df;margin-bottom:36px;color:#929b94;font-size:13px}.steps span{display:flex;align-items:center;gap:9px}.steps b{border:1px solid #d6ded7;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px}.steps .current{color:#285d43}.steps .current b{color:white;background:#285d43;border-color:#285d43}.content{display:grid;grid-template-columns:1fr 1.12fr;gap:56px;align-items:center;min-height:320px}h2{font-size:23px;font-weight:600;margin:0 0 15px}.primary{background:#285d43;color:white;border:0;border-radius:8px;padding:13px 22px;margin-top:27px;font-weight:550}.secondary{background:none;border:0;color:#52725f;padding:10px 0;margin:8px 20px 0 0;font-size:13px}.micro{font-size:12px;margin-top:13px;color:#90978f}.mock{border:1px solid #dce2dc;border-radius:12px;overflow:hidden;background:white;box-shadow:0 14px 35px #22352a08;position:relative}.chrome-bar{padding:12px;background:#f0f2ef;border-bottom:1px solid #e1e5e0;font-size:11px;color:#8a928a}.dots{letter-spacing:3px;margin-right:15px}.browser-head{padding:22px 20px;display:flex;justify-content:space-between;align-items:center;font-size:15px}.dev{font-size:11px;display:flex;align-items:center;gap:7px}.toggle{width:29px;height:17px;border-radius:20px;background:#315fc0;display:inline-block;position:relative}.toggle:after{content:'';position:absolute;width:13px;height:13px;right:2px;top:2px;border-radius:50%;background:white}.highlight{outline:2px solid #528e68;outline-offset:7px;border-radius:3px}.load{font-size:11px;border:1px solid #cbd5e7;color:#305ba3;border-radius:5px;padding:8px 12px;margin:5px 20px 25px;display:inline-block}.folder{margin:0 20px 22px;background:#f3f6f1;border-radius:7px;padding:18px;font-size:13px;display:flex;gap:12px;align-items:center}.folder-icon{font-size:29px;color:#6d9bdf}.annotation{padding:12px 20px;background:#f7f9f5;color:#74836e;font-size:11px;border-top:1px solid #e6ebe2}.instruction{display:flex;gap:14px;margin:24px 0}.number{flex-shrink:0;font-size:12px;background:#edf2eb;border-radius:50%;width:25px;height:25px;display:grid;place-items:center;color:#3f6448}.instruction strong{font-size:15px;font-weight:550}.instruction p{font-size:13px;margin-top:4px}.status{margin-top:30px;padding:17px 0;border-top:1px solid #e0e5df;font-size:13px;color:#66756a;display:flex;align-items:center;gap:10px}.pulse{height:7px;width:7px;background:#ba9951;border-radius:50%}.success{padding:30px 0 22px;text-align:center}.check{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#e9f2e9;color:#2d6747;font-size:30px;margin:0 auto 25px}.success h2{font-size:29px}.example{margin:25px auto 0;max-width:410px;padding:16px;background:#f0f4ed;border-radius:8px;color:#4d6754;font-size:14px}.footer{display:flex;justify-content:space-between;font-size:12px;color:#92998f;border-top:1px solid #e2e7df;padding-top:20px;margin-top:35px}.toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#263c30;color:white;padding:12px 22px;border-radius:8px;font-size:13px;box-shadow:0 5px 20px #0002}.hidden{display:none}@media(max-width:760px){header{padding:0 22px}.review{padding:12px 20px}main{margin-top:30px;padding:0 23px}.content{grid-template-columns:1fr;gap:28px}.steps{gap:14px;font-size:11px}h1{font-size:29px}.footer{gap:20px;line-height:1.7}}
+
+/* Explanatory motion: separate from real connection status. */
+main{margin-top:32px}.steps{margin-bottom:26px}.success{padding:6px 0 18px}.success h2{font-size:27px}.visual{margin:26px 0;text-align:left}.visual-top{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#7a877c;margin-bottom:16px}.visual-top button{border:0;background:none;color:#54735e;font-size:12px;padding:5px 0}.architecture{display:grid;grid-template-columns:1fr 45px 1fr 45px 1fr;align-items:center}.node{border:1px solid #dde5da;background:white;border-radius:12px;padding:20px 13px;min-height:155px;transition:border-color .4s,background .4s,box-shadow .4s;text-align:center}.node-icon{font-size:22px;color:#427352;margin-bottom:12px}.node strong{display:block;font-size:15px}.node small{display:block;font-size:11px;color:#879084;margin-top:8px}.wire{height:2px;background:#dce5d9;position:relative}.wire:after{content:'›';position:absolute;right:-1px;top:-13px;color:#76927c;font-size:20px}.packet{position:absolute;width:7px;height:7px;top:-3px;left:0;border-radius:50%;background:#3a8055;opacity:0;animation:travel 2.8s linear infinite}.call-demo .wire .packet{animation:none;opacity:0}.call-demo[data-flow="1"] .wire:nth-child(2) .packet,.call-demo[data-flow="2"] .wire:nth-child(4) .packet{animation:travel 2.6s linear infinite}.return-packet{position:absolute;right:0;bottom:-4px;width:7px;height:7px;border-radius:50%;background:#3a8055;opacity:0}.call-demo[data-flow="3"] .return-packet{animation:returnTravel 2.6s linear infinite}@keyframes returnTravel{0%{right:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{right:100%;opacity:0}}.return-path{border:1px dashed #bed0b8;border-top:0;border-radius:0 0 16px 16px;height:25px;margin:0 16%;position:relative}.return-path span{position:absolute;top:15px;left:50%;transform:translateX(-50%);background:#fafbf9;padding:0 10px;white-space:nowrap;font-size:11px;color:#7d9078}.scene{margin-top:35px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.scene-panel{background:#eff4eb;padding:17px;border-radius:8px;font-size:13px;min-height:115px}.scene-panel small{font-size:10px;color:#7e8d77;display:block;margin-bottom:10px;letter-spacing:1px}.scene-panel p{font-size:13px;color:#385d45}.phase-nav{display:flex;gap:6px;flex-wrap:wrap;margin:17px 0}.phase-nav button{background:transparent;border:0;color:#909a8d;font-size:11px;padding:6px 9px;border-radius:5px}.phase-nav button.selected{color:#315d40;background:#e8f0e1}.node.selected{border-color:#74a47e;background:#f6faf1;box-shadow:0 0 0 3px #eaf2e5}.phase-caption{color:#4e6f56;font-size:12px;min-height:24px}.install-demo .highlight{outline-color:transparent;transition:outline-color .3s}.install-demo[data-phase="0"] .dev,.install-demo[data-phase="1"] .load,.install-demo[data-phase="2"] .folder{outline:2px solid #528e68;outline-offset:6px;border-radius:4px}.install-demo .toggle{background:#b8c0b5}.install-demo .toggle:after{right:14px;transition:right .35s}.install-demo[data-phase="1"] .toggle,.install-demo[data-phase="2"] .toggle{background:#315fc0}.install-demo[data-phase="1"] .toggle:after,.install-demo[data-phase="2"] .toggle:after{right:2px}.install-demo .folder{transition:transform .4s,background .4s}.install-demo[data-phase="2"] .folder{transform:translateY(-4px);background:#e8f1e0}.install-route{font-size:12px;display:flex;align-items:center;gap:9px;color:#54705c;margin-bottom:20px;flex-wrap:wrap}.install-route b{font-weight:500;background:#edf2e8;padding:7px;border-radius:5px}.trial{display:flex;align-items:center;justify-content:space-between;gap:18px;border-top:1px solid #e0e6da;padding-top:20px;text-align:left}.trial p{font-size:12px}.trial .primary{margin-top:0;font-size:13px;flex-shrink:0}.motion-paused .packet,.motion-paused .return-packet{animation-play-state:paused!important}@keyframes travel{0%{left:0;opacity:0}12%{opacity:1}85%{opacity:1}100%{left:95%;opacity:0}}@media(prefers-reduced-motion:reduce){.packet,.return-packet{animation:none!important}.node,.install-demo .highlight,.install-demo .folder,.install-demo .toggle:after{transition:none}}@media(max-width:760px){.architecture{grid-template-columns:1fr 22px 1fr 22px 1fr}.node{padding:17px 7px;min-height:139px}.node strong{font-size:12px}.node small{font-size:10px}.trial{align-items:flex-start;flex-direction:column}.scene{gap:9px}.success h2{font-size:24px}.visual{margin:22px 0}.content{gap:20px}}
+
+main{max-width:940px;margin-top:28px}.content{gap:32px;min-height:0}.steps{padding:20px 0;margin-bottom:25px}.visual{margin:12px 0}.focus-demo{background:#f0f4ed;border-radius:12px;padding:22px}.demo-toolbar{display:flex;justify-content:space-between;align-items:center;color:#7d8978;font-size:11px;margin-bottom:18px}.demo-toolbar button{border:0;background:none;color:#52725f;font-size:12px}.launch-items{display:grid;grid-template-columns:1fr 1fr;gap:14px}.launch-item{background:#fff;border:1px solid #dce5d8;border-radius:9px;padding:20px 12px;text-align:center;transition:transform .4s,border-color .4s}.launch-item strong{display:block;margin:12px 0 5px;font-size:13px}.launch-item small{color:#8b9485;font-size:11px}.launch-symbol{font-size:30px;color:#437459}.focus-demo[data-phase="0"] .launch-item:first-child,.focus-demo[data-phase="1"] .launch-item:last-child{transform:translateY(-4px);border-color:#5d9568}.launch-note{font-size:12px;color:#53705a;text-align:center;margin-top:17px}.install-demo .mock{min-height:235px}.install-demo[data-phase="0"] .dev{transform:scale(1.08);transform-origin:right center}.install-demo[data-phase="1"] .load{transform:scale(1.08);transform-origin:left center}.install-demo .dev,.install-demo .load{transition:transform .4s,outline-color .4s}.install-route{display:none}.directory{padding:14px;background:#edf2e7;border-radius:8px;margin-top:16px}.directory strong{font-size:13px}.directory code{display:block;overflow-wrap:anywhere;font-size:11px;line-height:1.6;margin-top:8px;color:#6d7e67}.directory small{font-size:10px;color:#819078}.directory .secondary{margin:4px 14px 0 0;padding:6px 0}.preview-next{border-top:1px dashed #d5ddcf;padding-top:15px;margin-top:20px;display:flex;align-items:center;gap:15px}.preview-next button{margin:0;font-size:13px}.preview-next span{font-size:11px;color:#8a9584}.verify-chain{display:flex;align-items:center;justify-content:center;gap:15px;margin:32px 0 24px}.verify-stop{flex:1;text-align:center;padding:17px 6px;border-bottom:2px solid #cbd7c4}.verify-stop strong{display:block;font-size:14px}.verify-stop small{display:block;font-size:11px;margin-top:10px;color:#84917e}.verify-stop.pending{border-bottom-style:dashed}.verify-stop.active{border-color:#4c8157}.scan{width:15px;height:15px;border-radius:50%;border:2px solid #d6e1cf;border-top-color:#487a53;display:inline-block;vertical-align:middle;margin-right:6px;animation:spin 1.2s linear infinite}.verify-summary{padding:19px;background:#eff4e9;border-radius:9px;text-align:left}.verify-summary strong{font-size:14px}.verify-summary p{font-size:12px;margin-top:5px}.chat-demo{max-width:620px;margin:24px auto;background:white;border:1px solid #dce4d6;border-radius:12px;text-align:left;overflow:hidden}.chat-top{background:#f0f4eb;padding:12px 18px;font-size:12px;color:#66805c;display:flex;justify-content:space-between}.chat-top button{border:0;background:none;color:#52725f;font:inherit;cursor:pointer}.chat-body{padding:22px}.bubble{background:#eaf1e4;padding:12px 15px;border-radius:12px 12px 3px 12px;margin-left:35px;font-size:14px;color:#355c3c}.reply{padding:17px 0 0;display:flex;gap:10px;font-size:13px;color:#72856a;min-height:72px}.reply-icon{color:#3d7650}.chat-demo[data-phase="0"] .reply{opacity:.7}.chat-demo[data-phase="1"] .reply{opacity:.85}.reply{transition:opacity .4s}.capabilities{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin:18px 0;font-size:12px;color:#6b7d61}.success .check{width:38px;height:38px;font-size:21px;margin-bottom:12px}.motion-paused .scan{animation-play-state:paused}@keyframes spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.scan{animation:none}.launch-item,.reply,.install-demo .dev,.install-demo .load{transition:none}}@media(max-width:760px){main{margin-top:22px}.content{gap:20px}.verify-chain{gap:8px}.verify-stop strong{font-size:12px}.preview-next{align-items:flex-start;flex-direction:column}.chat-body{padding:18px}.focus-demo{padding:18px}h1{font-size:27px}}
+
+</style>
+<style>
+/* 正式引导补充样式（原型未覆盖的失败框 / 详情块） */
+.hidden{display:none!important}
+.errbox{background:#f7efe3;border:1px solid #e5d5b8;color:#8a6a33;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:14px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.errbox b{font-weight:600}
+.errbox .secondary{margin:2px 0 0;padding:6px 12px}
+details.tech{margin-top:14px;font-size:12px;color:#717973}
+details.tech summary{cursor:pointer;color:#52725f}
+details.tech code{overflow-wrap:anywhere;background:#eef2ea;padding:1px 6px;border-radius:4px}
+.status span{vertical-align:middle}
+/* 安装路径步骤与文件选择窗口示意（install-path UX） */
+.stepslist{margin:6px 0 0;padding-left:20px;font-size:14px;color:#3d453f;line-height:1.95}
+.stepslist li{margin:7px 0}
+.stepslist b{color:#285d43}
+kbd{display:inline-block;min-width:14px;padding:1px 5px;border:1px solid #cfd8d0;border-bottom-width:2px;border-radius:5px;background:#fff;font:11px/1.5 -apple-system,"PingFang SC",sans-serif;color:#41524a;text-align:center;margin:0 1px}
+.fdialog{margin:10px 0 4px;background:#fff;border:1px solid #cfd8d0;border-radius:8px;padding:10px 12px;transition:transform .4s,border-color .4s}
+.fdialog-title{font-size:11px;color:#7d8a7f}
+.fdialog-hint{font-size:11px;color:#53705a;margin:6px 0 5px}
+.fdialog-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px;font-size:11px;align-items:center}
+.fdialog-actions .confirm{background:#285d43;color:#fff;border-radius:5px;padding:3px 12px}
+.fdialog-actions .cancel{color:#8a9584}
+.pathline,.pathcode{display:block;overflow-wrap:anywhere;white-space:normal;word-break:break-all;font:11px/1.6 ui-monospace,Menlo,monospace;background:#eef2ea;border-radius:5px;padding:5px 7px;color:#51604f;user-select:text}
+.install-demo[data-phase="2"] .fdialog{transform:scale(1.04);border-color:#5d9568}
+.install-demo[data-phase="3"] .fdialog-actions .confirm{outline:2px solid #3a8055;outline-offset:2px}
+.dir-details{margin-top:12px}
+.dir-details summary{cursor:pointer;color:#52725f;font-size:12px}
+.dir-details small{display:block;margin:6px 0 0;color:#819078;font-size:10px}
+.dir-details>div{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.content>*{min-width:0}.browser-head{gap:20px}.browser-head strong,.dev{flex-shrink:0}.fdialog{margin:10px 20px 18px}.install-demo[data-phase="2"] .fdialog{transform:none;box-shadow:0 0 0 2px #dcebdc}.toast{max-width:calc(100vw - 32px);width:max-content;line-height:1.6}
+</style>
+<header><div class="brand"><span class="logo">↗</span>Browser Bridge <span class="badge">免费插件</span></div><span style="font-size:13px;color:#7b857c">首次使用引导</span></header>
+<main><div class="eyebrow">让 AI 连接你正在使用的浏览器</div><h1 id="page-title">为客户端连接 Chrome</h1><p id="page-subtitle">首次设置一次，以后直接在 ZCode 等客户端聊天中调用浏览器。</p><div class="steps"><span id="s1"><b>1</b>打开安装页面</span><span id="s2"><b>2</b>加载 Chrome 扩展</span><span id="s3"><b>3</b>验证与试用</span></div><section id="view"></section><div class="footer"><span>适用于 ZCode 等支持此插件的客户端</span><span>正式引导 · 真实检测本机连接状态</span></div></main><div id="toast" class="toast hidden" role="status"></div>
+<script src="onboard-state.js"></script>
+<script>
+"use strict";
+const TOKEN=new URLSearchParams(location.search).get("t");
+const view=document.querySelector("#view");
+let info=null,toastTimer;
+
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function notice(m){const el=document.querySelector("#toast");el.textContent=m;el.classList.remove("hidden");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.add("hidden"),3200)}
+
+async function pageApi(path,opts={}){
+  const sep=path.includes("?")?"&":"?";
+  let res;
+  try{
+    res=await fetch(path+sep+"t="+encodeURIComponent(TOKEN),{method:opts.method||"GET",headers:opts.body?{"Content-Type":"application/json"}:{},body:opts.body,signal:AbortSignal.timeout(15000)});
+  }catch(e){throw new Error("network")}
+  if(res.status===403)throw new Error("expired");
+  if(!res.ok)throw new Error("http"+res.status);
+  return res.json();
+}
+
+/* ---------- 演示动画（示意，与真实状态无关；支持暂停与 reduced-motion） ---------- */
+let demoPhase=0,motionPaused=matchMedia("(prefers-reduced-motion: reduce)").matches,demoTimer;
+function motionButton(){return `<button data-action="motion">${motionPaused?"播放演示":"暂停演示"}</button>`}
+const isMac=()=>!!(info&&info.platform==="darwin");
+const manualChrome=()=>!!(info&&info.platform==="win32");
+function chromeAddress(){return `<div class="directory"><strong>在 Chrome 地址栏粘贴以下地址并回车</strong><code id="chrome-address" class="pathcode">chrome://extensions/</code><button class="secondary" data-action="copy-chrome">复制管理页地址</button></div>`}
+async function copyChrome(){
+  const text="chrome://extensions/";
+  try {
+    if(!navigator.clipboard||!navigator.clipboard.writeText)throw new Error("unavailable");
+    await navigator.clipboard.writeText(text);return true;
+  } catch(e) {
+    const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();return ok;
+  }
+}
+function mock(){const mac=isMac();return `<div class="visual install-demo" data-phase="0"><div class="visual-top"><span>安装操作演示 · 不代表安装进度</span>${motionButton()}</div><div class="install-route"><b>开开发者模式</b>→<b>点加载</b>→<b>${mac?"⌘⇧G 粘贴路径":"Ctrl+L 粘贴路径"}</b>→<b>${mac?"选择":"选择文件夹"}</b></div><div class="mock" aria-label="Chrome 扩展安装动态示意"><div class="chrome-bar"><span class="dots">● ● ●</span>Chrome / 扩展程序</div><div class="browser-head"><strong>扩展程序</strong><div class="dev highlight">开发者模式 <i class="toggle"></i></div></div><span class="load highlight">加载已解压的扩展程序</span><div class="fdialog"><div class="fdialog-title">文件选择窗口${mac?"（⌘⇧G 前往文件夹）":"（Ctrl+L 定位路径）"}</div><div class="fdialog-hint">${mac?`按 <kbd>⌘</kbd><kbd>⇧</kbd><kbd>G</kbd> 后粘贴路径，回车`:`按 <kbd>Ctrl</kbd><kbd>L</kbd> 或点击地址栏 → 粘贴已复制路径 → 回车`}</div><code class="pathline">${esc(info&&info.ext_dir||"…/extension")}</code><div class="fdialog-actions"><span class="confirm">${mac?"选择":"选择文件夹"}</span><span class="cancel">取消</span></div></div><div class="annotation">${mac?"⌘⇧G 在弹出的文件选择窗口内使用（不是 Finder）":"Ctrl+L 在弹出的文件选择窗口内使用（不是资源管理器）"}；路径由引导复制，无需手输</div></div><div class="phase-nav"><button data-phase-select="0">① 开开发者模式</button><button data-phase-select="1">② 点加载</button><button data-phase-select="2">③ ${mac?"⌘⇧G 粘贴路径":"Ctrl+L 粘贴路径"}</button><button data-phase-select="3">④ ${mac?"确认「选择」":"「选择文件夹」"}</button></div><div class="phase-caption" data-caption></div></div>`}
+function launchDemo(){return `<div class="focus-demo" data-phase="0"><div class="demo-toolbar"><span>点击后会发生什么 · 动画示意</span>${motionButton()}</div><div class="launch-items"><div class="launch-item"><span class="launch-symbol">▣</span><strong>Chrome 扩展管理页</strong><small>自动打开</small></div><div class="launch-item"><span class="launch-symbol">▰</span><strong>extension 文件夹</strong><small>自动定位</small></div></div><div class="launch-note">一次点击，准备好安装所需的两个窗口。</div></div>`}
+function trialDemo(){return `<div class="chat-demo" data-phase="0"><div class="chat-top"><span>ZCode 等客户端 · 试用示意</span>${motionButton()}</div><div class="chat-body"><div class="bubble">列出我当前 Chrome 中的标签页</div><div class="reply"><span class="reply-icon">✦</span><span data-chat-result>发送指令后，AI 会调用浏览器工具。</span></div></div></div>`}
+function paintDemo(){document.querySelectorAll("[data-phase-select]").forEach(b=>b.classList.toggle("selected",Number(b.dataset.phaseSelect)===demoPhase));const install=document.querySelector(".install-demo");if(install)install.dataset.phase=demoPhase;const launch=document.querySelector(".focus-demo");if(launch)launch.dataset.phase=demoPhase;const chat=document.querySelector(".chat-demo");if(chat){chat.dataset.phase=demoPhase;const r=document.querySelector("[data-chat-result]");if(r)r.textContent=["发送指令后，AI 会调用浏览器工具。","正在调用 browser_tabs，读取 Chrome 标签页……","示例结果：找到 2 个标签页：项目文档、示例网站。"][demoPhase]||""}const cap=document.querySelector("[data-caption]");if(cap)cap.textContent=demoCaptions()[demoPhase]||"";document.querySelectorAll('[data-action="motion"]').forEach(b=>b.textContent=motionPaused?"播放演示":"暂停演示");view.classList.toggle("motion-paused",motionPaused)}
+function demoCaptions(){return isMac()?["在 chrome://extensions 右上角开启开发者模式。","点击左上角「加载已解压的扩展程序」。","弹出的是文件选择窗口（不是 Finder）：按 ⌘⇧G 打开「前往文件夹」，粘贴第②步复制的路径，回车。","点「选择」确认加载；回到本页等待连接（扩展角标变 ● 自动继续）。"]:["在 chrome://extensions 右上角开启开发者模式。","点击左上角「加载已解压的扩展程序」。","弹出的是文件选择窗口：按 Ctrl+L（或点击顶部地址栏），粘贴第②步复制的路径，回车。","点「选择文件夹」确认加载；回到本页等待连接（扩展角标变 ● 自动继续）。"]}
+function startDemo(){clearInterval(demoTimer);demoPhase=0;paintDemo();if(!document.querySelector(".install-demo,.focus-demo,.chat-demo"))return;demoTimer=setInterval(()=>{if(motionPaused||document.hidden)return;const mod=document.querySelector(".focus-demo")?2:(document.querySelector(".chat-demo")?3:4);demoPhase=(demoPhase+1)%mod;paintDemo()},2600)}
+
+/* ---------- 视图渲染 ---------- */
+function directoryBox(open){
+  const p=esc(info&&info.ext_dir||"");
+  return `<details class="tech dir-details" id="dir-details"${open?" open":""}><summary>扩展完整路径（复制 / 排障用）</summary><code id="extpath" class="pathcode">${p}</code><small>路径来自本机实际安装位置；选择窗口里粘贴的就是它</small><div><button class="secondary" data-action="copy-path">复制路径</button><button class="secondary" data-action="folder">显示扩展文件夹 ↗</button></div></details>`
+}
+function chainStop(title,small,cls){return `<div class="verify-stop ${cls||""}"><strong>${title}</strong><small>${small}</small></div>`}
+function renderChecking(t,bridge){
+  const b=bridge||{};
+  let summary;
+  if(t.state==="fail")summary=`<div class="verify-summary"><strong>浏览器访问检查未通过</strong><p style="color:#8a6a33">${esc(t.error||"未知错误")}</p><button class="primary" style="margin-top:14px" data-action="retry-check">重新检测</button></div>`;
+  else summary=`<div class="verify-summary"><strong><i class="scan"></i>正在尝试只读读取浏览器标签页</strong><p>浏览器访问通过后，再回到客户端完成首次调用。</p></div>`;
+  view.innerHTML=`<div class="success"><h2>正在检查浏览器是否可调用</h2><p>这一步自动完成，无需在 Chrome 中继续操作。</p><div class="verify-chain">${chainStop("客户端 MCP","待回客户端实际验证","pending")}<span>→</span>${chainStop("本地桥接服务",b.up?"✓ 运行中":"✗ 未运行",b.up?"active":"")}<span>→</span>${chainStop("Chrome 扩展",b.extension_connected?"✓ 已连接":"○ 未连接",b.extension_connected?"active":"")}</div>${summary}<p class="micro">真实检测：执行只读标签页检查，页面仅显示数量，不展示标题和网址。</p></div>`;
+}
+function render(state,payload){
+  const p=payload||{};
+  if(state==="checking"){renderChecking(p.tabs||{state:"pending"},p.bridge);return}
+  if(state==="loading")view.innerHTML=`<div class="success"><h2>正在检查当前连接状态…</h2><p>确认桥接服务与 Chrome 扩展的状态，稍等。</p></div>`;
+  else if(state==="start"&&manualChrome()&&info.ext_dir_exists)view.innerHTML=`<div class="content"><div><h2>先准备 Chrome 扩展管理页</h2><p>${info.chrome_found===false?"未找到 Google Chrome，请先确认已安装并打开 Chrome。<br>":""}点击下方按钮复制地址并打开扩展文件夹，再到 Chrome 地址栏粘贴、回车。</p>${chromeAddress()}<button class="primary" data-action="open">复制管理页地址并打开文件夹</button><p class="micro">管理页需要在 Chrome 中手动进入。</p><div id="start-err" class="errbox hidden"></div><button class="secondary" data-action="check-now">之前装过？直接检查连接 →</button></div>${mock()}</div>`;
+  else if(state==="start"&&info&&info.open_supported)view.innerHTML=`<div class="content"><div><h2>先打开安装所需的窗口</h2><p>我们会打开 Chrome 管理页，<br>同时定位需要加载的扩展文件夹。</p><button class="primary" data-action="open">打开 Chrome 安装页面 ↗</button><p class="micro">无需输入网址，也不用自己查找目录。</p><div id="start-err" class="errbox hidden"></div><button class="secondary" style="margin-top:14px" data-action="check-now">之前装过？直接检查连接 →</button></div>${launchDemo()}</div>`;
+  else if(state==="start"){
+    const winNoChrome=info&&info.platform==="win32"&&info.chrome_found===false;
+    const knownDesktop=isMac()||(info&&info.platform==="win32");
+    const manualHint=winNoChrome
+      ?"未找到 Google Chrome：自动打开需要 Chrome 安装在标准位置。<br>请手动打开 <b>chrome://extensions</b>，并加载下面的文件夹："
+      :(knownDesktop
+        ?"自动打开暂不可用（未找到扩展目录）。<br>请手动打开 <b>chrome://extensions</b>，并加载下面的文件夹："
+        :"自动打开目前支持 macOS 与 Windows。<br>请手动打开 <b>chrome://extensions</b>，并加载下面的文件夹：");
+    view.innerHTML=`<div class="content"><div><h2>手动准备两个窗口</h2><p style="font-size:14px">${manualHint}</p>${directoryBox(true)}<div style="margin-top:14px"><button class="secondary" data-action="copy-chrome">复制 chrome://extensions 地址</button><button class="primary" style="margin-top:0" data-action="manual-next">我已打开，开始等待连接 →</button></div><button class="secondary" style="margin-top:14px" data-action="check-now">之前装过？直接检查连接 →</button></div>${mock()}</div>`;
+  }
+  else if(state==="install")view.innerHTML=`<div class="content"><div><h2>跟着演示完成加载</h2>${manualChrome()?chromeAddress():""}<ol class="stepslist"><li>在 Chrome 扩展管理页右上角开启<b>开发者模式</b></li><li><button class="primary" style="margin:2px 8px 2px 0;padding:7px 14px" data-action="copy-path">复制扩展路径 ⧉</button>复制后切回 Chrome</li><li>点 Chrome 左上角<b>加载已解压的扩展程序</b></li><li>${isMac()?`在弹出的文件选择窗口按 <kbd>⌘</kbd><kbd>⇧</kbd><kbd>G</kbd>，粘贴路径，回车，点<b>「选择」</b>确认`:`在弹出的文件选择窗口按 <kbd>Ctrl</kbd><kbd>L</kbd> 或点击地址栏，粘贴已复制的路径，回车后点<b>「选择文件夹」</b>`}</li></ol><p class="micro">${isMac()?"文件选择窗口 ≠ Finder：⌘⇧G 是窗口内的「前往文件夹」，无需逐层找目录；路径由系统提供，不用手动输入。":"文件选择窗口 ≠ 资源管理器：按 Ctrl+L（或点击地址栏）粘贴已复制的路径即可，无需逐层找目录；复制只把路径放进剪贴板，导航需在窗口内完成。"}</p>${directoryBox(false)}${info&&info.open_supported&&!manualChrome()?`<button class="secondary" data-action="reopen">重新打开 Chrome 管理页 ↗</button>`:`<button class="secondary" data-action="copy-chrome">复制 chrome://extensions 地址</button>`}</div>${mock()}</div><div class="status"><i class="pulse"></i><span id="waitline">等待 Chrome 扩展连接…（扩展图标角标变 ● 后自动继续）</span></div>`;
+  else if(state==="success")view.innerHTML=`<div class="success"><div class="check">✓</div><h2>最后一步，回到客户端试一次</h2><p>${p.reentry?"浏览器端已是连接状态，之前安装的扩展继续可用。":"浏览器端已就绪。让 ZCode 中的 AI 发起第一次浏览器调用。"}</p>${trialDemo()}<div class="capabilities"><span>读取网页</span><span>点击与填写</span><span>网页截图</span></div><button class="primary" style="margin-top:5px" data-action="copy-prompt">复制这句指令，去客户端试用</button><p class="micro">新开或重启客户端会话，再粘贴发送。<br>收到真实标签页列表，才表示客户端调用已成功。</p><p class="micro">「客户端 MCP」一栏在你真实试用成功前保持「待验证」，引导不会替你宣告成功。</p><button class="secondary" data-action="done">完成引导</button></div>`;
+  else if(state==="offline")view.innerHTML=`<div class="success"><div class="check" style="background:#f4eee1;color:#9a7840">↔</div><h2>与 Chrome 的连接断开了</h2><p>请确认 Chrome 已打开，且扩展处于启用状态。<br>恢复后会自动重新验证，无需重复安装。</p><button class="primary" data-action="retry-check">重新检测</button><br>${info&&info.open_supported&&!manualChrome()?`<button class="secondary" data-action="reopen">打开扩展管理页面 ↗</button>`:""}</div>`;
+  else if(state==="paused")view.innerHTML=`<div class="success"><div class="check">Ⅱ</div><h2>已连接，控制已暂停</h2><p>在 Chrome 中打开 Browser Bridge 扩展面板，<br>关闭「暂停」开关后，即可继续使用。</p><button class="primary" data-action="retry-check">重新检测</button><p class="micro">引导不会自动解除你的暂停设置。</p></div>`;
+  else if(state==="svcdown"){
+    const home=info&&info.bridge_home?info.bridge_home:"~/.browser-bridge";
+    const port=info&&info.bridge_port?info.bridge_port:8765;
+    view.innerHTML=`<div class="success"><div class="check" style="background:#f4eee1;color:#9a7840">⚠</div><h2>本地桥接服务未运行</h2><p>桥接服务负责转发工具调用，引导会尝试自动启动。<br>仍失败时请检查端口 ${port} 是否被其他程序占用。</p><button class="primary" data-action="ensure">再次尝试启动桥接服务</button><details class="tech"><summary>排障详情</summary><div>日志：<code>${esc(home)}/logs/bridge-${port}.log</code><br>Browser Bridge 需要可用的 Node.js。若客户端支持托管运行时，可在其配置中启用；否则需本机安装 Node.js。引导不会下载或安装任何运行时。</div></details></div>`;
+  }
+  else if(state==="offlineNet")view.innerHTML=`<div class="success"><div class="check" style="background:#f4eee1;color:#9a7840">◍</div><h2>与引导服务的连接中断</h2><p>引导服务可能已退出（空闲 30 分钟自动关闭）或正在重启。<br>正在自动重试连接；也可以重跑 <b>/cc-browser-setup</b>${isMac()?" 或双击 <b>setup.command</b> 打开新页面":"，请手动运行上述命令重开"}。</p><button class="primary" data-action="retry-poll">立即重试</button></div>`;
+  else if(state==="expired")view.innerHTML=`<div class="success"><div class="check" style="background:#f4eee1;color:#9a7840">!</div><h2>引导会话不可用</h2><p>页面令牌缺失或已过期（引导服务可能已重启）。<br>请重新运行 <b>/cc-browser-setup</b>${isMac()?"，或在 Finder 双击 <b>setup.command</b>，使用新打开的页面":"，请手动运行上述命令，使用新打开的页面"}。</p></div>`;
+  else if(state==="done")view.innerHTML=`<div class="success"><div class="check">✓</div><h2>引导完成</h2><p>可以关闭此页面。回到客户端发送「列出我当前 Chrome 中的标签页」，<br>收到真实结果即完成最终验证。</p></div>`;
+}
+
+/* ---------- 状态机（onboard-state.js）接线 ---------- */
+const m=OnboardState.createStateMachine({
+  setTitles(t){document.querySelector("#page-title").textContent=t.title;document.querySelector("#page-subtitle").textContent=t.subtitle;for(let n=1;n<=3;n++)document.querySelector("#s"+n).classList.toggle("current",n===t.step)},
+  render(next,payload){render(next,payload);startDemo()},
+  installWaitSlow(){const el=document.querySelector("#waitline");if(el)el.textContent="等待较久：请确认已开启开发者模式，并选择了正确的 extension 文件夹；加载成功后会自动继续，本页会一直检测。"},
+  notice,
+  showPrepareError(msg){const box=document.querySelector("#start-err");if(!box)return;box.classList.remove("hidden");box.innerHTML=`<b>打开失败：</b><span>${esc(msg)}</span><button class="secondary" data-action="retry-open">重试</button>`},
+  ensureBridge(){pageApi("/api/action",{method:"POST",body:JSON.stringify({action:"ensure_bridge"})}).catch(()=>{})},
+  setInfo(i){info=i},
+  isHidden(){return document.hidden},
+  request:pageApi,
+});
+
+async function doAction(btn,action,okMsg){
+  btn.disabled=true;
+  try{const r=await pageApi("/api/action",{method:"POST",body:JSON.stringify({action})});r&&r.ok?notice(okMsg):notice("操作失败："+((r&&r.reason)||"未知原因"))}catch(e){notice("操作失败，请重试或手动打开管理页 / 文件夹")}
+  btn.disabled=false;
+}
+function copy(text,okMsg,failMsg){
+  const done=()=>notice(okMsg),fail=()=>{
+    const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}
+    ta.remove();notice(ok?okMsg:failMsg);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,fail);
+  else fail();
+}
+/* 复制扩展路径：任何一步失败都自动展开路径区并选中真实文本供手动复制，绝不虚报成功 */
+function copyPath(){
+  const text=info&&info.ext_dir||"";
+  const done=()=>notice(isMac()
+    ?"路径已复制（仅表示已进剪贴板）：回到 Chrome 的选择窗口，先 ⌘⇧G 前往文件夹，再 ⌘V 粘贴、回车"
+    :"路径已复制（仅表示已进剪贴板）：回到 Chrome 的选择窗口，按 Ctrl+L 或点击地址栏，粘贴路径，回车后选择文件夹");
+  const manual=()=>{
+    const d=document.querySelector("#dir-details");if(d)d.open=true;
+    const el=document.querySelector("#extpath");
+    if(el&&window.getSelection){const r=document.createRange();r.selectNodeContents(el);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}
+    notice("自动复制失败：已展开并选中路径文本，请手动复制（⌘C / Ctrl+C）");
+  };
+  const fallback=()=>{
+    const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}
+    ta.remove();ok?done():manual();
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done,fallback);
+  else fallback();
+}
+async function ensureFromPage(){
+  try{await pageApi("/api/action",{method:"POST",body:JSON.stringify({action:"ensure_bridge"})})}catch(e){}
+  setTimeout(()=>m.poll(true),1500);
+}
+document.addEventListener("click",async(e)=>{
+  const b=e.target.closest("button");if(!b||b.disabled)return;
+  if(b.dataset.phaseSelect!==undefined){demoPhase=Number(b.dataset.phaseSelect);motionPaused=true;paintDemo();return}
+  switch(b.dataset.action){
+    case"motion":motionPaused=!motionPaused;paintDemo();break;
+    case"open":case"retry-open":{
+      const orig=b.textContent;b.disabled=true;b.textContent="正在准备…";
+      const copied=manualChrome()?await copyChrome():false;
+      const ok=await m.prepare();
+      b.disabled=false;b.textContent=orig;
+      if(ok)notice(manualChrome()?(copied?"地址已复制、文件夹已打开；请到 Chrome 地址栏粘贴并回车":"文件夹已打开；复制失败，请手动复制上方管理页地址"):"已打开 Chrome 管理页并定位扩展文件夹");
+      break;
+    }
+    case"reopen":await doAction(b,"open_extensions","已打开 Chrome 扩展管理页");break;
+    case"folder":await doAction(b,"reveal_folder",isMac()?"已在 Finder 定位扩展文件夹":"已在资源管理器打开扩展文件夹");break;
+    case"copy-path":copyPath();break;
+    case"copy-chrome":notice(await copyChrome()?"地址已复制；请在 Chrome 地址栏粘贴并回车":"复制失败，请手动复制 chrome://extensions/");break;
+    case"copy-prompt":copy("列出我当前 Chrome 中的标签页","指令已复制，请回到 ZCode 等客户端发送","复制失败，请手动复制上方指令");break;
+    case"check-now":case"retry-check":m.recheck();break;
+    case"ensure":ensureFromPage();break;
+    case"retry-poll":m.poll(true);break;
+    case"manual-next":m.setState("install");break;
+    case"done":{b.disabled=true;const ok=await m.performDone();if(!ok)b.disabled=false;break}
+  }
+});
+
+(async()=>{
+  await m.start();
+  setInterval(()=>m.poll(false),2000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)m.poll(false)});
+})();
+</script>
+</html>

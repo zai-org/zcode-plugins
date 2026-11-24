@@ -1,0 +1,31 @@
+{
+  "name": "cc-browser-bridge",
+  "version": "0.6.1",
+  "description": "Connect ZCode to your existing Chrome session to read, click, type, and take screenshots in a selected background tab, with visible activity status.",
+  "description_i18n": {
+    "en": "Connect ZCode to your existing Chrome session to read, click, type, and take screenshots in a selected background tab, with visible activity status.",
+    "zh-CN": "连接 ZCode 与日常 Chrome，在指定后台标签页读取网页、点击、输入和截图，并显示操作状态。"
+  },
+  "author": {
+    "name": "lihytaihe-lang",
+    "url": "https://github.com/lihytaihe-lang"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "browser",
+    "chrome",
+    "mcp",
+    "automation",
+    "local-first"
+  ],
+  "mcpServers": {
+    "cc-browser": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/server/mcp-stdio.js"
+      ]
+    }
+  },
+  "commands": "./commands"
+}
