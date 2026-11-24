@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "png-trim": {
+      "type": "http",
+      "url": "https://transparent-padding-trimmer.chajian.workers.dev/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    },
+    "png-batch-trim": {
+      "type": "http",
+      "url": "https://batch-transparent-png-trim.chajian.workers.dev/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    },
+    "sprite-slicer": {
+      "type": "http",
+      "url": "https://sprite-sheet-slicer.chajian.workers.dev/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    }
+  }
+}

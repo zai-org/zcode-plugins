@@ -1673,6 +1673,50 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "png-sprite-tools",
+      "source": "./external_plugins/png-sprite-tools",
+      "displayName": "PNG & Sprite Tools",
+      "displayName_i18n": {
+        "en": "PNG & Sprite Tools",
+        "zh-CN": "PNG 与精灵图工具"
+      },
+      "description": "Browser tools for game and UI PNG assets: trim transparent padding from one PNG or a batch (with exact padding), and slice a sprite sheet into individual PNG frames, then wire the results into your project.",
+      "description_i18n": {
+        "en": "Browser tools for game and UI PNG assets: trim transparent padding from one PNG or a batch (with exact padding), and slice a sprite sheet into individual PNG frames, then wire the results into your project.",
+        "zh-CN": "面向游戏与界面 PNG 素材的浏览器工具：裁掉单张或批量 PNG 的透明边并加精确留白，把精灵图切成单帧 PNG，再把结果接入你的项目。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "homepage": "https://sprite-sheet-slicer.chajian.workers.dev",
+      "license": "MIT",
+      "category": "游戏/3D",
+      "keywords": [
+        "png",
+        "transparent",
+        "trim",
+        "sprite-sheet",
+        "game-assets",
+        "icons",
+        "alpha",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Slice this 16×16 sprite sheet with 1 px gaps into frames named hero",
+        "Trim the transparent edges of my icon PNGs and keep 8 px padding",
+        "Crop the empty space around this character PNG"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把这张 16×16、间隔 1 像素的精灵图切成单帧，文件名前缀 hero",
+          "批量裁掉图标 PNG 的透明边，四周保留 8 像素",
+          "把这张角色 PNG 周围的空白透明区域裁掉"
+        ]
+      }
     }
   ]
 }
