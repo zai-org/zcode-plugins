@@ -1,0 +1,26 @@
+{
+  "name": "viralkey",
+  "version": "1.0.0",
+  "description": "Generate and edit AI images and videos using your connected Viralkey account, model catalog, and credit wallet via Remote MCP.",
+  "description_i18n": {
+    "en": "Generate and edit AI images and videos using your connected Viralkey account, model catalog, and credit wallet via Remote MCP.",
+    "zh-CN": "通过 Remote MCP 连接 Viralkey 账号、模型目录与积分钱包，支持 AI 图片/视频估价、生成与素材获取。"
+  },
+  "author": {
+    "name": "Viralkey",
+    "email": "support@viralkey.ai",
+    "url": "https://viralkey.ai"
+  },
+  "homepage": "https://viralkey.ai",
+  "repository": "https://github.com/Twin-sk/viralkey-plugin",
+  "license": "MIT",
+  "keywords": [
+    "viralkey",
+    "ai-image",
+    "ai-video",
+    "media-generation",
+    "mcp"
+  ],
+  "skills": "skills",
+  "mcpServers": ".mcp.json"
+}

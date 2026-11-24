@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -810,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -833,7 +838,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -860,7 +867,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -887,7 +896,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -914,7 +925,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -941,7 +954,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -968,7 +983,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -995,7 +1012,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1022,7 +1041,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1049,7 +1070,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1132,7 +1155,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1671,6 +1696,49 @@
           "把 assets/robot.png 生成一个 glb 格式的 3D 模型",
           "用这两张正面和左侧视角图生成一个白模",
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
+        ]
+      }
+    },
+    {
+      "name": "viralkey",
+      "source": "./external_plugins/viralkey",
+      "displayName": "Viralkey",
+      "displayName_i18n": {
+        "en": "Viralkey",
+        "zh-CN": "Viralkey"
+      },
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/viralkey/icon.png",
+      "description": "Generate and edit AI images and videos using your connected Viralkey account, model catalog, and credit wallet via Remote MCP.",
+      "description_i18n": {
+        "en": "Generate and edit AI images and videos using your connected Viralkey account, model catalog, and credit wallet via Remote MCP.",
+        "zh-CN": "通过 Remote MCP 连接 Viralkey 账号、模型目录与积分钱包，支持 AI 图片/视频估价、生成与素材获取。"
+      },
+      "version": "1.0.0",
+      "author": {
+        "name": "Viralkey",
+        "url": "https://viralkey.ai"
+      },
+      "homepage": "https://viralkey.ai",
+      "repository": "https://github.com/Twin-sk/viralkey-plugin",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "viralkey",
+        "ai-image",
+        "ai-video",
+        "media-generation",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "List available Viralkey image and video models and recommend one for a product promo",
+        "Estimate credits and generate a 16:9 product showcase image with Viralkey",
+        "Check my recent Viralkey generations and retrieve the finished asset link"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出 Viralkey 可用的图片和视频模型，推荐一个适合产品宣传片的模型",
+          "先帮我估价，再用 Viralkey 生成一张 16:9 的产品展示图",
+          "查看我最近的 Viralkey 生成记录并拿到成品素材链接"
         ]
       }
     }

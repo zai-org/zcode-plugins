@@ -2609,5 +2609,14 @@
     "mimeType": "image/png",
     "sha256": "f33c29f46a1e4f8ad8afc8989f5850d3c24129cf61feb7a1ab6293bf9358c5ce",
     "transformation": "SVG rendered to 512x512 PNG with transparent background; no baked corner radius"
+  },
+  {
+    "name": "viralkey",
+    "icon": "viralkey/icon.png",
+    "source": "Official Viralkey brand icon (https://viralkey.ai/brand/viralkey-icon-color.png)",
+    "homepage": "https://viralkey.ai",
+    "mimeType": "image/png",
+    "sha256": "6b29ea3cca045a988e5fd95c9618e405ec41273125c2a86fdd7c3b0310060612",
+    "transformation": "Original 1024x1024 square PNG brand icon"
   }
 ]
