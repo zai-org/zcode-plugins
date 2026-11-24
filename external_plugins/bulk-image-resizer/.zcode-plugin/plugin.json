@@ -1,0 +1,27 @@
+{
+  "name": "bulk-image-resizer",
+  "version": "0.1.0",
+  "description": "Batch-resize local images to one exact pixel size in the browser (fit with transparent or white padding, or center-crop) and download a ZIP, for favicons, app icons, Open Graph images and product or avatar sets.",
+  "description_i18n": {
+    "en": "Batch-resize local images to one exact pixel size in the browser (fit with transparent or white padding, or center-crop) and download a ZIP, for favicons, app icons, Open Graph images and product or avatar sets.",
+    "zh-CN": "在浏览器中把一批本地图片批量缩放到同一精确像素尺寸（透明或白底留边适配，或居中裁剪），并打包下载 ZIP，适合网站图标、App 图标、Open Graph 分享图和商品图、头像组。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "homepage": "https://bulk-image-resizer.pages.dev",
+  "license": "MIT",
+  "keywords": [
+    "image-resize",
+    "bulk",
+    "batch",
+    "favicon",
+    "app-icon",
+    "open-graph",
+    "png",
+    "jpeg",
+    "mcp"
+  ],
+  "commands": "commands"
+}
