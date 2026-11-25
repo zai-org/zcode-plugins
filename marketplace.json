@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "interview-notes",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/interview-notes",
+      "displayName": "Interview Notes",
+      "displayName_i18n": {
+        "en": "Interview Notes",
+        "zh-CN": "访谈纪要"
+      },
+      "description": "Turn a user interview recording and its transcript into a needs list where every item quotes the interviewee's own words and plays back that moment of the recording. Rename and fix speakers, confirm or reject needs, then export Markdown, CSV and a self-contained HTML page with click-to-play quotes. Reads SRT, WebVTT and timestamped text exports (Feishu Minutes, Tencent Meeting…); does no speech recognition. Runs locally with the ffmpeg on your computer; no API keys.",
+      "description_i18n": {
+        "en": "Turn a user interview recording and its transcript into a needs list where every item quotes the interviewee's own words and plays back that moment of the recording. Rename and fix speakers, confirm or reject needs, then export Markdown, CSV and a self-contained HTML page with click-to-play quotes. Reads SRT, WebVTT and timestamped text exports (Feishu Minutes, Tencent Meeting…); does no speech recognition. Runs locally with the ffmpeg on your computer; no API keys.",
+        "zh-CN": "把用户访谈录音和转写整理成需求清单：每条需求都附上受访者原话，点一下就从录音对应位置播放。可以改说话人名字、纠正说话人、确认或不采纳需求，再导出 Markdown、CSV 和一个点引用即播放录音的独立 HTML 页面。支持 SRT、WebVTT 和带时间戳的文字导出（飞书妙记、腾讯会议等）；不做语音识别。在本地用电脑上的 ffmpeg 运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "interview",
+        "user research",
+        "needs",
+        "requirements",
+        "transcript",
+        "quotes",
+        "srt",
+        "ffmpeg",
+        "访谈",
+        "用户研究",
+        "需求",
+        "原话"
+      ],
+      "examplePrompts": [
+        "Go through interview-0412.m4a and list what the user needs, with their exact words for each point",
+        "The first speaker is me, the second is Ms Li — rename them and redo the needs",
+        "Export the confirmed needs as a CSV and an HTML page I can send to the team"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "整理 访谈-0412.m4a 里用户提到的需求，每条附上原话",
+          "说话人1是我，说话人2是李女士，改一下名字再整理一遍",
+          "把确认过的需求导出成 CSV 和能发给团队的 HTML"
+        ]
+      }
     }
   ]
 }
