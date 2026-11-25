@@ -1,0 +1,59 @@
+{
+  "name": "doc-compare",
+  "version": "0.1.0",
+  "description": "Compare two versions of a contract, proposal or policy (DOCX, PDF, Markdown or TXT, even across formats): paragraphs are aligned and each change is shown word by word (character by character for Chinese), with changes to numbers flagged. Review side by side, mark each change confirmed or questioned with notes, and export an HTML/CSV report. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Compare two versions of a contract, proposal or policy (DOCX, PDF, Markdown or TXT, even across formats): paragraphs are aligned and each change is shown word by word (character by character for Chinese), with changes to numbers flagged. Review side by side, mark each change confirmed or questioned with notes, and export an HTML/CSV report. Runs locally; no API keys.",
+    "zh-CN": "对照合同、方案、制度等文件的两个版本（DOCX、PDF、Markdown、TXT，可以不同格式）：按段落对齐，逐词（中文逐字）标出增删改，涉及数字的改动单独标记。左右对照逐条审阅，标记“已确认 / 有疑问”并写备注，导出 HTML / CSV 对照报告。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "diff",
+    "compare",
+    "redline",
+    "contract",
+    "docx",
+    "pdf",
+    "version",
+    "review",
+    "对比",
+    "文档对照",
+    "合同",
+    "修订",
+    "版本"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "doc-compare": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "文档版本对照",
+          "en-US": "Doc Compare"
+        },
+        "icon": "git-compare",
+        "server": "doc-compare",
+        "resourceUri": "ui://doc-compare/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
