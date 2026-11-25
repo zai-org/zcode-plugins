@@ -58,12 +58,12 @@ color: cyan
 - **脱敏飞轮与日志**：`bugx telemetry inspect` / `bugx log --root <ROOT> --errors`
 - **双轨报告与预览**：`bugx report both --eval-dir verification/evals/oss --out verification/evals/oss` / `bugx report serve --port 18991`
 
-### 4. 紧凑型命令全景雷达（41 个顶层命令分类索引）
+### 4. 紧凑型命令全景雷达（43 个顶层命令分类索引）
 如需调用以下命令，通过 `bugx help <命令>` 动态获取具体参数与子命令，严禁盲猜：
-- **诊断探索 (9)**：`help`, `doctor`, `hosts`, `completion`, `log`, `stats`, `view`, `project`, `self-audit`
-- **核心生命周期 (14)**：`init`, `engine`, `supervisor`, `daemon`, `config`, `reset`, `install`, `uninstall`, `dsh`, `plugin`, `mcp`, `mcp-runtime`, `capability`, `logic-analysis`
-- **深度审计验证 (10)**：`audit`, `probe`, `test-generate`, `test-audit`, `test-verify`, `patch-forge`, `test-strategy`, `fuzz-input`, `differential-probe`, `mining-audit`
-- **知识飞轮交付 (8)**：`report`, `lesson`, `knowledge`, `skill`, `cloud`, `auth`, `telemetry`, `advisory`
+- **诊断与探索 (10)**：`help`, `completion`, `guide`, `hosts`, `doctor`, `log`, `stats`, `view`, `project`, `self-audit`
+- **核心生命周期与宿主 (15)**：`init`, `install`, `reset`, `uninstall`, `dsh`, `engine`, `supervisor`, `daemon`, `config`, `plugin`, `mcp`, `capability`, `mcp-runtime`, `update`, `interaction`
+- **深度审计与测试验证 (10)**：`audit`, `probe`, `logic-analysis`, `mining-audit`, `test-generate`, `test-audit`, `test-verify`, `patch-forge`, `autonomous`, `goal`
+- **云端、知识与交付 (8)**：`cloud`, `auth`, `telemetry`, `knowledge`, `lesson`, `skill`, `advisory`, `report`
 
 ### 5. 核心军规与废弃命令重定向
 - **阻断不授权暴力修复**：`FATAL_BLOCKED` 严禁使用 `init`、`reset`、`--force` 绕过，先保留报告和日志。

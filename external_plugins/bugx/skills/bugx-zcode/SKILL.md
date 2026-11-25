@@ -1,6 +1,6 @@
 ---
 name: bugx-zcode
-description: BugX 漏洞挖掘引擎在 ZCode 宿主下的专属使用手册——新环境快速接入（构建/安装/doctor）、启动挖掘标准流程（pre 启动门禁→workers→checkpoint→post）、本机实证过的坑位与对策（MCP root 漂移、worker 误回收、findings 格式、死锁链、token 上报、云端面板、重置）。当用户要在 ZCode 里启动/排障/重置 BugX 审计、配置新环境、解释 BugX 报错或 token/报告不更新时使用本 skill。
+description: BugX 自主代码审查与智能测试在 ZCode 宿主下的专属使用手册——新环境快速接入（构建/安装/doctor）、启动流程（pre 启动门禁→workers→checkpoint→post）、本机实证过的坑位与对策（MCP root 漂移、worker 误回收、findings 格式、死锁链、token 上报、云端面板、重置）。当用户要在 ZCode 里启动/排障/重置 BugX 审查与测试、配置新环境、解释 BugX 报错或 token/报告不更新时使用本 skill。
 ---
 
 # BugX × ZCode 使用手册（实战复盘版）
@@ -81,8 +81,8 @@ bugx doctor --root <项目>
   自愈拒绝用 RECORD 恢复，生产链路整体断裂。开发验证只走 `bugx-dev`。
 - dev 模式下 `install` 目的地解析到仓库 core，会被「拒绝把引擎布署到源码仓库」守卫拦下
   （防 wheel 旧资产覆盖开发树）——按上面 force 路径发布。
-- build_id 连续 bump 会触发宿主入口失配门禁：bump 前确认无活跃挖掘轮，bump 后宿主入口
-  需重新装配（`bugx install`）；动 `core/**` 后必须重签 `core/engine-integrity.json`。
+- Build ID bump 只产生宿主入口装配身份漂移警告；语义版本或入口文件哈希不一致才触发失配门禁。
+  bump 后仍应重新装配并重启宿主，以便加载最新 Skill/Agent；动 `core/**` 后必须重签 `core/engine-integrity.json`。
 - dev 模式只影响该进程；ZCode 的 MCP 服务器仍跑安装副本（生产隔离是有意设计）。
 - **bugx-worker 代理定义已授权 Worker 通道 MCP 工具**（claim/worker_start/heartbeat/
   run_sandboxed_probe/checkpoint/begin_long_call/status/submit_finding）——被派子代理

@@ -1,8 +1,8 @@
 ---
 name: bugx
-description: 专注于代码质量与安全的自主审查智能体。专为深层缺陷排查而生——在功能写完、提 PR 或排查疑难 Bug 时，它能深入分析代码逻辑，自动编写测试用例，挖掘、复现Bug和漏洞，生成经过验证的修复补丁。随时为您的代码质量和代码安全把关。
+description: BugX 是一个具备自主代码审查与测试能力的智能体，严把代码交付关：它帮助开发人员在写完代码后自动排查隐藏的深层 Bug，减少反复排错与返工；帮助测试人员自动化运行黑盒测试、功能验证与性能测试，自动覆盖手工盲测难以覆盖的极端场景；确保代码功能符合要求、具备良好的健壮性和稳定性。让开发和测试在繁琐的工作中解放双手，大幅提高工作效率、全面提升代码质量、显著降低后期维护成本，实现科技服务于人。
 metadata:
-  bugx_version: "0.1.0"
+  bugx_version: "0.1.4"
 ---
 <!-- bugx-locale: zh-CN -->
 
@@ -10,7 +10,7 @@ metadata:
 
 BugX ChatGPT Skill 镜像。执行前用 `bugx engine path --name AGENT_GUIDE.md` 和 `bugx engine path --name bugx.md` 读取全局协议；项目 `.bugx/` 只保存状态与配置。
 
-协议镜像版本：0.1.0
+协议镜像版本：0.1.4
 
 ## ChatGPT 原生交互适配（强制）
 
@@ -55,18 +55,18 @@ BugX ChatGPT Skill 镜像。执行前用 `bugx engine path --name AGENT_GUIDE.md
 - **单点复现与变异**：`bugx test-generate --root <ROOT> --scope <PATH::SYM> --out <FILE>` / `bugx test-verify verify --scope <SCOPE>`
 - **Supervisor 与并发排查**：`bugx supervisor status --root <ROOT>`
 - **脱敏飞轮与日志**：`bugx telemetry inspect` / `bugx log --root <ROOT> --errors`
-- **双轨报告与预览**：`bugx report both --eval-dir verification/evals/oss --out verification/evals/oss` / `bugx report serve --port 18991`
+- **双轨报告与预览**：`bugx report both --eval-dir evals/oss --out evals/oss` / `bugx report serve --port 18991`
 
-### 4. 紧凑型命令全景雷达（41 个顶层命令分类索引）
+### 4. 紧凑型命令全景雷达（43 个顶层命令分类索引）
 如需调用以下命令，通过 `bugx help <命令>` 动态获取具体参数与子命令，严禁盲猜：
-- **诊断探索 (9)**：`help`, `doctor`, `hosts`, `completion`, `log`, `stats`, `view`, `project`, `self-audit`
-- **核心生命周期 (14)**：`init`, `engine`, `supervisor`, `daemon`, `config`, `reset`, `install`, `uninstall`, `dsh`, `plugin`, `mcp`, `mcp-runtime`, `capability`, `logic-analysis`
-- **深度审计验证 (10)**：`audit`, `probe`, `test-generate`, `test-audit`, `test-verify`, `patch-forge`, `test-strategy`, `fuzz-input`, `differential-probe`, `mining-audit`
-- **知识飞轮交付 (8)**：`report`, `lesson`, `knowledge`, `skill`, `cloud`, `auth`, `telemetry`, `advisory`
+- **诊断与探索 (10)**：`help`, `completion`, `guide`, `hosts`, `doctor`, `log`, `stats`, `view`, `project`, `self-audit`
+- **核心生命周期与宿主 (15)**：`init`, `install`, `reset`, `uninstall`, `dsh`, `engine`, `supervisor`, `daemon`, `config`, `plugin`, `mcp`, `capability`, `mcp-runtime`, `update`, `interaction`
+- **深度审计与测试验证 (10)**：`audit`, `probe`, `logic-analysis`, `mining-audit`, `test-generate`, `test-audit`, `test-verify`, `patch-forge`, `autonomous`, `goal`
+- **云端、知识与交付 (8)**：`cloud`, `auth`, `telemetry`, `knowledge`, `lesson`, `skill`, `advisory`, `report`
 
 ### 5. 核心军规与废弃命令重定向
 - **阻断不授权暴力修复**：`FATAL_BLOCKED` 严禁使用 `init`、`reset`、`--force` 绕过，先保留报告和日志。
-- **废弃命令重定向**：`matrix` -> `bugx audit`；`console` -> `bugx report serve`；`watch` -> `bugx log --watch`；`test` 不是公共命令。开发验证请在仓库外生成最小临时验证脚本，或运行被测目标项目自带的测试，完成后删除过程文件。
+- **废弃命令重定向**：`matrix` -> `bugx audit`；`console` -> `bugx report serve`；`watch` -> `bugx log --watch`；`test` 为内部脚本改用 `scripts/test_selector.py`。
 
 
 # BugX L0 路由入口（系统最高原则与阶段调度器）
