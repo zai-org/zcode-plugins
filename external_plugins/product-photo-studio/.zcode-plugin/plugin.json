@@ -1,0 +1,56 @@
+{
+  "name": "product-photo-studio",
+  "version": "0.1.0",
+  "description": "Batch-prepare e-commerce product photos: remove plain studio backgrounds, crop and normalise product size and position, add ground or drop shadows, and export white-background JPGs, transparent PNGs and marketplace sizes (Taobao, Amazon, Shopify, social). Tweak any photo on its own in the side panel. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Batch-prepare e-commerce product photos: remove plain studio backgrounds, crop and normalise product size and position, add ground or drop shadows, and export white-background JPGs, transparent PNGs and marketplace sizes (Taobao, Amazon, Shopify, social). Tweak any photo on its own in the side panel. Runs locally; no API keys.",
+    "zh-CN": "批量处理电商商品图：去掉纯色/浅色棚拍背景，自动裁切并统一商品大小和位置，加地面柔影或投影，导出白底 JPG、透明 PNG 和各平台尺寸（淘宝、拼多多、Amazon、Shopify、社媒）。不满意的图可以在侧栏单独调整。全部本地处理，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "e-commerce",
+    "product-photo",
+    "white-background",
+    "remove-background",
+    "batch",
+    "taobao",
+    "amazon",
+    "shopify",
+    "商品图",
+    "白底图"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "product-photo-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "电商商品图助手",
+          "en-US": "Product Photo Studio"
+        },
+        "icon": "image",
+        "server": "product-photo-studio",
+        "resourceUri": "ui://product-photo-studio/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
