@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>会话统计</title>
+    <style>
+__CSS__
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app" data-state="loading">
+      <header class="header">
+        <div class="brand">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </svg>
+          </span>
+          <div class="brand-text">
+            <div class="title-row">
+              <h1 id="app-title">会话统计</h1>
+            </div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="refresh" class="icon-button" type="button" data-tip="刷新" aria-label="刷新">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path
+                d="M20 11a8.1 8.1 0 0 0-14.9-4M4 4v5h5M4 13a8.1 8.1 0 0 0 14.9 4M20 20v-5h-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <button id="theme" class="icon-button" type="button" data-tip="主题：跟随 ZCode&#10;点击切换" aria-label="切换主题">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2" />
+              <path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="summary">
+        <div class="summary-meta" id="summary-meta">
+          <span><b id="summary-turns">—</b> 轮 · <b id="summary-steps">—</b> 步 · <b id="summary-requests">—</b> 次主轮请求</span>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-main" id="total-card">
+            <span class="summary-label">累计消耗 Token</span>
+            <b id="total-tokens" class="summary-value">—</b>
+            <div class="summary-split" aria-hidden="true"><i id="input-split"></i><i id="output-split"></i></div>
+            <div class="summary-sub"><span>输入 <b id="input-tokens">—</b></span><span>输出 <b id="output-tokens">—</b></span></div>
+          </div>
+          <div class="summary-cache" id="cache-card">
+            <span class="summary-label">平均缓存命中率</span>
+            <b id="cache-hit-rate" class="summary-value">—</b>
+            <div class="summary-bar" aria-hidden="true"><i id="cache-bar"></i></div>
+            <div class="summary-sub"><span>缓存读取 <b id="cache-read">—</b></span><span>未缓存读取 <b id="cache-uncached">—</b></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="row">
+          <span class="label">累计模型用时</span>
+          <span id="model-time" class="value">—</span>
+        </div>
+        <div class="row">
+          <span class="label">累计工具用时</span>
+          <span id="tool-time" class="value">—</span>
+        </div>
+        <div class="row">
+          <span class="label">平均首 token（TTFT）</span>
+          <span id="ttft" class="value">—</span>
+        </div>
+        <div class="row">
+          <span class="label">平均输出速度（TPS）</span>
+          <span id="tps" class="value">—</span>
+        </div>
+      </section>
+
+      <section class="bar-section" aria-label="耗时占比">
+        <div class="bar-head">
+          <span class="bar-title">耗时占比</span>
+          <span id="bar-total" class="bar-unit">—</span>
+        </div>
+        <div class="bar"><span id="bar-model" class="bar-model"></span><span id="bar-tool" class="bar-tool"></span></div>
+        <div class="bar-legend">
+          <span><i class="dot dot-model"></i>模型 <b id="model-bar-time">—</b><em id="model-pct">—</em></span>
+          <span><i class="dot dot-tool"></i>工具 <b id="tool-bar-time">—</b><em id="tool-pct">—</em></span>
+        </div>
+      </section>
+
+      <section class="turns-section">
+        <div class="section-head">
+          <h2>轮次</h2>
+          <div class="section-tools">
+            <span id="turn-count" class="muted"></span>
+            <button
+              id="columns-button"
+              class="columns-button"
+              type="button"
+              data-tip="显示列、对齐与列宽"
+              aria-label="轮次表列设置"
+              aria-expanded="false"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+                <circle cx="9" cy="6" r="2" fill="var(--bg)" />
+                <circle cx="15" cy="12" r="2" fill="var(--bg)" />
+                <circle cx="8" cy="18" r="2" fill="var(--bg)" />
+              </svg>
+              <span>列设置</span>
+            </button>
+          </div>
+        </div>
+        <div class="turns-scroll">
+          <div id="turns-table" class="turns-table">
+            <div id="turns-head" class="turn-row turn-head" hidden></div>
+            <div id="turns-list" class="turns-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="column-popover" class="column-popover" hidden>
+        <div class="popover-head">轮次表显示</div>
+        <div id="column-options" class="column-options"></div>
+        <div class="popover-divider"></div>
+        <div class="popover-row">
+          <span class="popover-label">对齐</span>
+          <div id="align-options" class="segmented" role="group" aria-label="轮次表数据列对齐">
+            <button type="button" class="segment" data-align="left">左</button>
+            <button type="button" class="segment" data-align="center">中</button>
+            <button type="button" class="segment" data-align="right">右</button>
+          </div>
+        </div>
+        <div class="popover-hint">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5" />
+            <path d="M12 7.5h.01" />
+          </svg>
+          <span>拖动表头边界可调整列宽</span>
+        </div>
+        <button id="reset-widths" type="button" class="popover-reset">恢复默认列宽</button>
+      </div>
+
+      <section class="setting">
+        <div class="setting-text">
+          <span>单轮统计卡</span>
+          <small id="auto-note">读取设置中…</small>
+        </div>
+        <div class="setting-preview" aria-hidden="true">
+          <div class="preview-card">
+            <div class="preview-head">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+              </svg>
+              <span>单轮统计卡 · 示例</span>
+            </div>
+            <div class="preview-row"><span>模型用时</span><b>22分14秒</b></div>
+            <div class="preview-row"><span>TTFT</span><b>8.6秒</b></div>
+          </div>
+        </div>
+        <button
+          id="auto-toggle"
+          class="switch"
+          type="button"
+          role="switch"
+          aria-checked="false"
+          aria-label="单轮统计卡"
+          disabled
+        >
+          <span class="switch-knob"></span>
+        </button>
+      </section>
+
+      <footer class="footer">
+        <span id="updated">—</span>
+        <div class="footer-right">
+          <span id="status" class="status">连接中…</span>
+          <span class="poll-label-text">统计频率</span>
+          <button
+            id="poll-button"
+            class="poll-button"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-label="自动刷新频率"
+          >
+            <span id="poll-label">每 10 秒</span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m6 15 6-6 6 6" />
+            </svg>
+          </button>
+        </div>
+      </footer>
+      <div id="poll-popover" class="poll-popover" role="listbox" aria-label="自动刷新频率" hidden></div>
+    </div>
+    <div id="tip" class="tip" role="tooltip" aria-hidden="true"></div>
+    <script type="module">
+__SDK__
+__UI__
+    </script>
+  </body>
+</html>

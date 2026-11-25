@@ -1,0 +1,16 @@
+{
+  "name": "@zcode/plugin-turn-lens",
+  "version": "0.11.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "TurnLens: per-turn and session statistics for ZCode, with a themed live side panel",
+  "author": "MorganWsy <shuyang@email.ncu.edu.cn>",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node dist/server.mjs"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
