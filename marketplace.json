@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "bank-statement-categorizer",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/bank-statement-categorizer",
+      "displayName": "Statement Categorizer",
+      "displayName_i18n": {
+        "en": "Statement Categorizer",
+        "zh-CN": "账单自动分类"
+      },
+      "description": "Categorise bank, card and payment-app statement exports (.csv/.xlsx, Chinese or English) with keyword rules you can edit, fix any transaction by hand, spot uncategorised and double-counted rows, and see totals by category and month. Export a categorised Excel file, CSV and an HTML report; keep your rules for next month. Runs locally; no bank login, no API keys.",
+      "description_i18n": {
+        "en": "Categorise bank, card and payment-app statement exports (.csv/.xlsx, Chinese or English) with keyword rules you can edit, fix any transaction by hand, spot uncategorised and double-counted rows, and see totals by category and month. Export a categorised Excel file, CSV and an HTML report; keep your rules for next month. Runs locally; no bank login, no API keys.",
+        "zh-CN": "把银行卡、信用卡、支付软件导出的流水（.csv/.xlsx，中英文都行）按可编辑的关键词规则自动分类，可逐笔手动改分类，标出未分类和可能重复计入的交易，按分类和月份汇总收支。导出分类后的 Excel、CSV 和 HTML 报告，规则可以下个月继续用。在本地运行，不需要登录银行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "bank statement",
+        "expenses",
+        "budget",
+        "categorize",
+        "personal finance",
+        "csv",
+        "账单",
+        "流水",
+        "记账",
+        "分类",
+        "支出统计",
+        "支付宝",
+        "微信账单"
+      ],
+      "examplePrompts": [
+        "Categorise 账单/bank-2026-10.csv and 账单/支付宝-2026-11.csv and tell me where my money went each month",
+        "Put UNKNOWN MERCHANT 8831 under Dining and add a rule that 小店 means Shopping",
+        "Export the categorised Excel and the monthly report"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 账单/bank-2026-10.csv 和 账单/支付宝-2026-11.csv 分类，告诉我每个月钱花在哪了",
+          "把 UNKNOWN MERCHANT 8831 归到餐饮，再加一条规则：小店算购物",
+          "导出分类后的 Excel 和月度报告"
+        ]
+      }
     }
   ]
 }
