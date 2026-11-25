@@ -1,0 +1,66 @@
+{
+  "name": "token-stats",
+  "version": "0.2.3",
+  "description": "在 ZCode 输入框旁显示实时生成速度和已观测的 Token 用量。",
+  "description_i18n": {
+    "en": "Show live generation speed and observed token usage beside the ZCode composer.",
+    "zh-CN": "在 ZCode 输入框旁显示实时生成速度和已观测的 Token 用量。"
+  },
+  "extension": {
+    "engines": {
+      "zcode": "^1.4.0"
+    },
+    "main": "./dist/extension.mjs",
+    "activationEvents": [
+      "onAvailable"
+    ],
+    "contributes": {
+      "commands": [
+        {
+          "id": "open-stats",
+          "title": {
+            "zh-CN": "打开 Token 统计",
+            "en-US": "Open Token statistics"
+          }
+        }
+      ],
+      "views": [
+        {
+          "id": "details",
+          "icon": "gauge",
+          "title": {
+            "zh-CN": "Token 统计",
+            "en-US": "Token statistics"
+          }
+        }
+      ]
+    }
+  },
+  "slots": {
+    "composer.status": [
+      {
+        "id": "usage",
+        "icon": "gauge",
+        "target": {
+          "command": "open-stats"
+        }
+      }
+    ]
+  },
+  "commands": "commands",
+  "mcpServers": {
+    "stats": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "alwaysLoad": true
+    }
+  },
+  "author": {
+    "name": "Ed4ward",
+    "url": "https://github.com/Ed4ward"
+  },
+  "license": "Apache-2.0"
+}

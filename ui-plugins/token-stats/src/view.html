@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token statistics</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --fallback-text: #262626;
+        --fallback-muted: #606060;
+        --fallback-surface: #f6f6f6;
+        --fallback-border: #dedede;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --fallback-text: #eeeeee;
+        --fallback-muted: #a5a5a5;
+        --fallback-surface: #242424;
+        --fallback-border: #434343;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      body {
+        margin: 0;
+        padding: 1px;
+        color: var(--color-text-primary, var(--fallback-text));
+        font-family: var(--font-sans, system-ui, sans-serif);
+        font-size: var(--font-text-sm-size, 0.8125rem);
+        line-height: 1.45;
+      }
+      section {
+        padding: 12px;
+        border: 1px solid var(--color-border-primary, var(--fallback-border));
+        border-radius: var(--border-radius-lg, 0.5rem);
+        background: var(--color-background-tertiary, var(--fallback-surface));
+      }
+      header {
+        display: flex;
+        gap: 8px 12px;
+        flex-wrap: wrap;
+        align-items: baseline;
+      }
+      h1,
+      p,
+      dl,
+      dd {
+        margin: 0;
+      }
+      h1 {
+        font-size: var(--font-text-md-size, 0.9375rem);
+        font-weight: 600;
+      }
+      .model,
+      dt,
+      #empty,
+      #context-model {
+        color: var(--color-text-secondary, var(--fallback-muted));
+      }
+      .model,
+      #context-model {
+        overflow-wrap: anywhere;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+        gap: 12px;
+        margin-top: 10px;
+      }
+      dd {
+        font-size: var(--font-heading-xs-size, 1rem);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      #context,
+      #empty {
+        margin-top: 10px;
+      }
+      #context {
+        display: flex;
+        gap: 4px 10px;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <section aria-labelledby="title" aria-live="polite">
+      <header>
+        <h1 id="title">Token statistics</h1>
+        <span class="model" id="model"></span>
+      </header>
+      <p id="empty">Waiting for statistics…</p>
+      <dl id="generation" hidden>
+        <div>
+          <dt id="speed-label"></dt>
+          <dd id="speed"></dd>
+        </div>
+        <div>
+          <dt id="output-label"></dt>
+          <dd id="output"></dd>
+        </div>
+        <div id="first-group">
+          <dt id="first-label"></dt>
+          <dd id="first"></dd>
+        </div>
+        <div>
+          <dt id="total-label"></dt>
+          <dd id="total"></dd>
+        </div>
+      </dl>
+      <dl id="context" hidden>
+        <div>
+          <dt id="context-label"></dt>
+          <dd id="context-input"></dd>
+        </div>
+        <div id="context-model-group">
+          <dt id="context-model-label" hidden>Model</dt>
+          <dd class="model" id="context-model"></dd>
+        </div>
+      </dl>
+    </section>
+    <!-- view-script -->
+  </body>
+</html>
