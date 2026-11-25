@@ -1,0 +1,67 @@
+{
+  "name": "interview-notes",
+  "version": "0.1.0",
+  "description": "Turn a user interview recording and its transcript into a needs list where every item quotes the interviewee's own words and plays back that moment of the recording. Rename and fix speakers, confirm or reject needs, then export Markdown, CSV and a self-contained HTML page with click-to-play quotes. Reads SRT, WebVTT and timestamped text exports (Feishu Minutes, Tencent Meeting…); does no speech recognition. Runs locally with the ffmpeg on your computer; no API keys.",
+  "description_i18n": {
+    "en": "Turn a user interview recording and its transcript into a needs list where every item quotes the interviewee's own words and plays back that moment of the recording. Rename and fix speakers, confirm or reject needs, then export Markdown, CSV and a self-contained HTML page with click-to-play quotes. Reads SRT, WebVTT and timestamped text exports (Feishu Minutes, Tencent Meeting…); does no speech recognition. Runs locally with the ffmpeg on your computer; no API keys.",
+    "zh-CN": "把用户访谈录音和转写整理成需求清单：每条需求都附上受访者原话，点一下就从录音对应位置播放。可以改说话人名字、纠正说话人、确认或不采纳需求，再导出 Markdown、CSV 和一个点引用即播放录音的独立 HTML 页面。支持 SRT、WebVTT 和带时间戳的文字导出（飞书妙记、腾讯会议等）；不做语音识别。在本地用电脑上的 ffmpeg 运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "interview",
+    "user research",
+    "needs",
+    "requirements",
+    "transcript",
+    "quotes",
+    "srt",
+    "ffmpeg",
+    "访谈",
+    "用户研究",
+    "需求",
+    "原话"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "interview-notes": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FFMPEG_PATH": "${user_config.ffmpegPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "访谈纪要",
+          "en-US": "Interview Notes"
+        },
+        "icon": "mic",
+        "server": "interview-notes",
+        "resourceUri": "ui://interview-notes/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "ffmpegPath": {
+      "type": "string",
+      "default": "",
+      "title": "ffmpeg 路径（可选）",
+      "description": "可选。ffmpeg 可执行文件的完整路径。默认在 PATH 和 /opt/homebrew/bin、/usr/local/bin 中查找。"
+    }
+  }
+}

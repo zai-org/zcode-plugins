@@ -1,0 +1,32 @@
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.spacer { flex:1; }
+.layout { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.1fr); gap: 12px; align-items:start; }
+@media (max-width: 820px) { .layout { grid-template-columns: 1fr; } }
+.col { max-height: calc(100vh - 150px); overflow:auto; padding-right: 4px; }
+.need { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:8px; background: var(--panel); }
+.need.sel { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+.need.rejected { opacity:.55; }
+.need .head { display:flex; gap:6px; align-items:center; }
+.need .head input.title { flex:1; font-weight:600; }
+.need textarea { width:100%; min-height:34px; font-size:12px; margin-top:4px; }
+.need .meta { display:flex; gap:6px; align-items:center; margin-top:4px; font-size:12px; flex-wrap: wrap; }
+.need .meta input { width: 110px; }
+.pri-high { color:#b91c1c; } .pri-low { color: var(--muted); }
+.st button { font-size:11px; padding:1px 6px; }
+.st button.on { background:#2563eb; color:#fff; border-color:#2563eb; }
+.quote { display:flex; gap:6px; align-items:flex-start; margin-top:5px; font-size:12px; border-left:3px solid #93c5fd; padding:2px 6px; background: var(--bg); border-radius: 0 4px 4px 0; }
+.quote .q { flex:1; cursor:pointer; }
+.quote .who { color: var(--muted); white-space: nowrap; }
+.play { font: 11px ui-monospace, monospace; padding: 1px 5px; white-space: nowrap; }
+.speakers { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; font-size:12px; align-items:center; }
+.speakers label { display:flex; gap:4px; align-items:center; }
+.speakers input { width: 110px; }
+.dot { width:9px; height:9px; border-radius:50%; display:inline-block; flex: none; }
+.line { display:flex; gap:6px; padding:3px 4px; border-radius:4px; font-size:13px; align-items:flex-start; }
+.line.on { background: var(--warnbg); }
+.line.quoted { box-shadow: inset 3px 0 0 #3b82f6; }
+.line .sp { font-size:11px; max-width: 120px; padding: 0 2px; }
+.line .tx { flex:1; }
+.line .add { visibility:hidden; font-size: 11px; padding: 0 5px; }
+.line:hover .add { visibility:visible; }
+.small { font-size: 11px; }
