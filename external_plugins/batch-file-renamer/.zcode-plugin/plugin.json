@@ -1,0 +1,56 @@
+{
+  "name": "batch-file-renamer",
+  "version": "0.1.0",
+  "description": "Rename a whole folder of files by rules — find/replace or regex, name templates with numbering, dates and folder names, case and space clean-up, lower-case extensions and per-file manual names. See old → new for every file and every clash before anything changes, rename safely (swaps and case-only changes work), keep a log, and undo the last rename. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Rename a whole folder of files by rules — find/replace or regex, name templates with numbering, dates and folder names, case and space clean-up, lower-case extensions and per-file manual names. See old → new for every file and every clash before anything changes, rename safely (swaps and case-only changes work), keep a log, and undo the last rename. Runs locally; no API keys.",
+    "zh-CN": "按规则批量重命名整个文件夹：查找替换或正则、带序号/日期/文件夹名的命名模板、大小写和空格整理、扩展名统一小写，也可逐个手动指定新名。改名前就能看到每个文件的“原名 → 新名”和所有冲突，安全执行（互换名字、只改大小写也没问题），留下改名记录，还能撤销上一次改名。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "rename",
+    "batch rename",
+    "file names",
+    "regex",
+    "numbering",
+    "批量重命名",
+    "改名",
+    "文件名",
+    "序号",
+    "正则"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "batch-file-renamer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "批量重命名",
+          "en-US": "Batch File Renamer"
+        },
+        "icon": "text-cursor-input",
+        "server": "batch-file-renamer",
+        "resourceUri": "ui://batch-file-renamer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
