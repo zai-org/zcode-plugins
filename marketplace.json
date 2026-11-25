@@ -1673,6 +1673,59 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "exam-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/exam-builder",
+      "displayName": "Exam Builder",
+      "displayName_i18n": {
+        "en": "Exam Builder",
+        "zh-CN": "题库与试卷制作"
+      },
+      "description": "Build exam papers from your own question bank (Markdown or Excel, with LaTeX formulas and images): the bank is checked for missing answers, missing images, formula errors and duplicates; papers are drawn by section, chapter and difficulty ratio, with several non-overlapping sets (A/B) from a fixed seed; you can swap single questions. Exports print-ready A4 PDFs with vector formulas plus separate answer keys, and HTML. Runs locally; nothing is uploaded.",
+      "description_i18n": {
+        "en": "Build exam papers from your own question bank (Markdown or Excel, with LaTeX formulas and images): the bank is checked for missing answers, missing images, formula errors and duplicates; papers are drawn by section, chapter and difficulty ratio, with several non-overlapping sets (A/B) from a fixed seed; you can swap single questions. Exports print-ready A4 PDFs with vector formulas plus separate answer keys, and HTML. Runs locally; nothing is uploaded.",
+        "zh-CN": "用自己的题库（Markdown 或 Excel，支持 LaTeX 公式和图片）组卷：先检查缺答案、缺图、公式错误和重复题；按题型、章节和难度比例抽题，可出多套互不重复的 A/B 卷（种子固定、可复现），单题可替换。导出可直接打印的 A4 PDF（公式为矢量）和单独的答案册，以及 HTML。全部本地处理，不上传。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "exam",
+        "test paper",
+        "question bank",
+        "quiz",
+        "LaTeX",
+        "math",
+        "PDF",
+        "teacher",
+        "组卷",
+        "试卷",
+        "题库",
+        "出题",
+        "答案",
+        "公式",
+        "老师"
+      ],
+      "examplePrompts": [
+        "Build a mid-term paper from my question bank: 8 single-choice, 3 fill-in, 2 problems, easy:medium:hard 5:3:2",
+        "Make an A and a B paper with no overlapping questions",
+        "Check my question bank for missing answers and broken formulas"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用我的题库出一份期中试卷：8 道单选、3 道填空、2 道解答，难度 5:3:2",
+          "出 A、B 两套不重复的卷子，再导出答案册",
+          "检查一下题库里有没有缺答案、公式写错的题"
+        ]
+      }
     }
   ]
 }

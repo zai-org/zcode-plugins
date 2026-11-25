@@ -1,0 +1,29 @@
+.files .flist { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0; }
+.stats { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.stats > div { border:1px solid var(--line); border-radius:8px; padding:6px 12px; background:var(--panel); display:flex; gap:6px; align-items:baseline; }
+.stats b { font-size:18px; } .stats .bad b { color: var(--bad); }
+.two { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr); gap:10px; align-items:start; }
+table.bankgrid { width:100%; } .bankgrid td, .bankgrid th { text-align:center; } .bankgrid td:first-child { text-align:left; }
+.issues .issue { display:flex; gap:8px; align-items:baseline; font-size:12px; margin:4px 0; flex-wrap:wrap; }
+.badge.bad { background: var(--badbg); color: var(--bad); }
+.rules label { display:inline-flex; align-items:center; gap:4px; }
+.rules input.title { width: 220px; } .rules input.short { width: 80px; } input.n { width: 56px; }
+.rules .row { margin:6px 0; flex-wrap:wrap; gap:6px 12px; }
+.secs td, .secs th { padding: 2px 8px; }
+.chapters label { margin-right: 4px; }
+.tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:8px; align-items:center; }
+.tab { border:none; border-bottom:2px solid transparent; border-radius:0; background:none; }
+.tab.on { border-bottom-color: var(--accent); color: var(--accent); }
+.grow { flex: 1; }
+.warnbox { background: var(--warnbg); border-radius:6px; padding:6px 10px; margin:6px 0; font-size:12px; }
+.paper { background:#fff; color:#111; border:1px solid var(--line); border-radius:4px; padding:24px 32px; margin-top:8px; max-height: 70vh; overflow:auto; font:14px/1.8 "Songti SC","SimSun","Noto Serif CJK SC",serif; }
+.paper h1 { text-align:center; font-size:20px; margin:0; } .paper .sub, .paper .info { text-align:center; color:#555; margin:4px 0 10px; }
+.paper h2 { font-size:15px; margin:14px 0 6px; }
+.paper .q { position:relative; margin:6px 0 8px; padding-left:2em; text-indent:-2em; } .paper .q * { text-indent:0; }
+.paper .opts { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:2px 16px; padding-left:2em; }
+.paper .opts.wide { grid-template-columns:1fr 1fr; } .paper .opts.long { grid-template-columns:1fr; }
+.paper .fig { display:block; max-width:40%; max-height:180px; margin:6px 0 6px 2em; } .paper .dm { text-align:center; }
+.paper .im svg { vertical-align: middle; } .paper .space { height: calc(var(--h) / 2); border-bottom: 1px dashed #ddd; }
+.paper .expl { color:#333; padding-left:2em; } .paper .missing { color:#b00; }
+.paper .swap { position:absolute; right:0; top:0; display:none; font-size:11px; padding:1px 8px; }
+.paper .q:hover { background:#f5f8ff; } .paper .q:hover .swap { display:inline-block; }
