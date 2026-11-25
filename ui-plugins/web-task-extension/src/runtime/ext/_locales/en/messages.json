@@ -1,0 +1,226 @@
+{
+ "run": {
+  "message": "Run task"
+ },
+ "running": {
+  "message": "Running…"
+ },
+ "results": {
+  "message": "Results"
+ },
+ "settings": {
+  "message": "Settings"
+ },
+ "save": {
+  "message": "Save"
+ },
+ "saved": {
+  "message": "Saved"
+ },
+ "stepsTitle": {
+  "message": "What it does"
+ },
+ "permsTitle": {
+  "message": "Permissions and why they are needed"
+ },
+ "permsIntro": {
+  "message": "This extension asks only for what its steps need. It runs only when you press Run and sends nothing anywhere; settings and results stay in this browser."
+ },
+ "timeoutLabel": {
+  "message": "Wait per step (ms)"
+ },
+ "timeoutHelp": {
+  "message": "How long a step waits for its element or page before it fails."
+ },
+ "needSettings": {
+  "message": "Fill in the settings first: $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "rowsIn": {
+  "message": "$p1$ rows in “$p2$”",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "lastRun": {
+  "message": "Last run $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "stepN": {
+  "message": "Step $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "logExtracted": {
+  "message": "Extracted $p1$ rows from page $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "logSaved": {
+  "message": "Saved $p1$ ($p2$ rows)",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "logLinks": {
+  "message": "Downloading $p1$ file(s)",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "logDone": {
+  "message": "Done"
+ },
+ "errTimeoutLoad": {
+  "message": "The page took too long to load"
+ },
+ "errNoAccess": {
+  "message": "This extension isn't allowed on $p1$. Add the site to the task and rebuild.",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "errNoResult": {
+  "message": "The page didn't answer (it may have navigated away)"
+ },
+ "errNoTab": {
+  "message": "No tab to work in. Start the task on the page it is meant for."
+ },
+ "errSettings": {
+  "message": "Fill in the settings first: $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dOpen": {
+  "message": "Open $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dClick": {
+  "message": "Click $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dFill": {
+  "message": "Fill $p1$ with $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "dWait": {
+  "message": "Wait for $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dWaitGone": {
+  "message": "Wait until $p1$ disappears",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dWaitMs": {
+  "message": "Wait $p1$ s",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dExtract": {
+  "message": "Extract $p2$ from each $p1$",
+  "placeholders": {
+   "p2": {
+    "content": "$2"
+   },
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dExtractPages": {
+  "message": "Extract $p2$ from each $p1$ (up to $p3$ pages)",
+  "placeholders": {
+   "p2": {
+    "content": "$2"
+   },
+   "p1": {
+    "content": "$1"
+   },
+   "p3": {
+    "content": "$3"
+   }
+  }
+ },
+ "dDownload": {
+  "message": "Save “$p1$” as $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "dDownloadLinks": {
+  "message": "Download the files linked by $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "errNotWebPage": {
+  "message": "This tab isn't a web page. Open the page the task is for, then click the extension icon."
+ }
+}
