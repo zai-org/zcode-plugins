@@ -1,49 +1,52 @@
-"""ZCode 官方 Server MCP 身份头的接收侧。
+"""ZCode official identity for ToolHub calls (receiver side).
 
-宿主（ZCode CLI 的 MCP adapter）在**每次** `tools/call` 的 `params._meta` 上带一个
-`com.zcode/official-mcp-auth` 键，内容是本次调用可用的身份头，或一个失败原因。
-协议见 z-code 仓库的 `docs/coding-plan/zcode-official-server-mcp-stdio-meta-phase-2-spec.md`。
+The plugin holds no credential. Its MCP server is declared in
+``.zcode-plugin/plugin.json`` with ``"auth": {"type": "zcode_official",
+"provider": "jwt_token"}``; the ZCode host then puts the identity headers of
+**each** ``tools/call`` into ``params._meta["com.zcode/official-mcp-auth"]``.
 
-为什么身份头走 `_meta` 而不是 env：env 在本进程生命周期内是死值，而这个 MCP server 活整个
-会话，ZCode 的 JWT 一轮换就必然 401 且无法自救。`_meta` 是逐调用现取的，天然新鲜。
+How the identity travels inside this plugin:
 
-两个使用约束：
+1. ``server_common`` reads it on the event-loop thread (the MCP request context
+   is a contextvar and does not cross thread boundaries) and hands it to
+   ``jobs.call``.
+2. ``jobs`` sets the ``CURRENT`` contextvar for the thread that runs the tool
+   body (inline worker thread or job thread). It is never written to disk or to
+   the environment, so ffmpeg and other children never see the token.
+3. Threads a tool starts itself (thread pools for parallel TTS or images) do not
+   inherit contextvars; for them ``current()`` falls back to the most recent
+   valid identity this server process received. One MCP server serves one
+   signed-in ZCode user, and that identity is also the freshest JWT.
 
-1. `mcp` 的 `request_context` 是 contextvar，**不会**跨 `loop.run_in_executor` 的线程边界传播。
-   因此必须在事件循环线程里把它读出来（见 server_common.serve），worker 线程里读不到；
-2. 单次工具调用内部长跑时（如 2 小时视频转写会在一次调用里连续发几十个 HTTP 请求），中途
-   凭证轮换后本进程拿不到新头。约定是 401 **不重试**，如实报 official_auth_rejected，
-   由 agent 重试整个工具调用来换取新头。
+A process that never served a tool call (the CLI, recap scripts) has no
+identity at all. A 401/403 is not retried inside the call; the agent re-invokes
+the tool to get fresh headers.
 """
 from __future__ import annotations
 
+import contextvars
+import os
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
-# 跨语言协议常量，必须与 z-code 的 OFFICIAL_MCP_AUTH_META_KEY 逐字符一致。
+# Cross-language protocol constant; must match the ZCode host exactly.
 OFFICIAL_AUTH_META_KEY = "com.zcode/official-mcp-auth"
 
-# 宿主下发的失败原因（枚举，不是自由文本）。这里只做人类可读化，不据此改变控制流——
-# 控制流只看"有没有 headers"。
 REASON_HINTS = {
-    "official_auth_unavailable": (
-        "ZCode is not signed in, or no provider connection is selected "
-        "(a standalone CLI without a host auth port also reports this)"
-    ),
-    "official_auth_plan_required": (
-        "the official speech MCP is a Coding Plan entitlement, and the currently selected "
-        "ZCode connection has no Coding Plan key (Start Plan and API-key mode are not eligible)"
-    ),
-    "official_mcp_origin_untrusted": (
-        "the host rejected its own resolved ZCode API origin; this is a client configuration "
-        "problem (non-https or overridden endpoint), not a credential problem"
-    ),
+    # Only the ZCode desktop app answers the host's identity request; a headless
+    # `zcode -p` / `--target` run (or the TUI) sends this reason on every call.
+    "official_auth_unavailable": ("ZCode is not signed in, no model connection is selected, or the session is "
+                                  "not hosted by the ZCode desktop app (headless `zcode -p`/`--target` runs "
+                                  "never carry an identity)"),
+    "official_auth_plan_required": "the selected ZCode connection has no Coding Plan entitlement",
+    "official_mcp_origin_untrusted": "the host rejected its own ZCode API origin (client configuration problem)",
 }
 
 
 @dataclass(frozen=True)
 class OfficialAuth:
-    """一次工具调用可用的官方身份。`headers` 与 `reason` 恰有一个非空。"""
+    """Identity of one tool call. Exactly one of ``headers`` / ``reason`` is set."""
 
     headers: dict[str, str] | None = None
     reason: str | None = None
@@ -60,51 +63,63 @@ class OfficialAuth:
         return f"{reason} ({hint})" if hint else reason
 
 
+CURRENT: contextvars.ContextVar[OfficialAuth | None] = contextvars.ContextVar("ve_official_auth", default=None)
+_LATEST: OfficialAuth | None = None
+
+
+def zcode_api_origin() -> tuple[str | None, str | None]:
+    """``(origin, error)`` of the ZCode API, from the host-injected ``ZCODE_BASE_URL`` only.
+
+    Never falls back to a project ``.env``: a repository could otherwise send the
+    user's identity headers to another host. https only (http on loopback for
+    local development).
+    """
+    raw = (os.environ.get("ZCODE_BASE_URL") or "").strip().rstrip("/")
+    if not raw:
+        return None, "ZCODE_BASE_URL is not set; the plugin is not running under ZCode"
+    try:
+        parts = urlsplit(raw)
+    except Exception as exc:  # noqa: BLE001
+        return None, f"ZCODE_BASE_URL is unparseable: {raw!r} ({exc})"
+    scheme, host = (parts.scheme or "").lower(), (parts.hostname or "").lower()
+    if parts.username or parts.password:
+        return None, "ZCODE_BASE_URL must not embed credentials"
+    if scheme == "https" or (scheme == "http" and host in ("127.0.0.1", "::1", "localhost")):
+        return f"{parts.scheme}://{parts.netloc}", None
+    return None, f"ZCODE_BASE_URL must be https (or http on loopback), got {raw!r}"
+
+
 def extract_official_auth(meta: Any) -> OfficialAuth | None:
-    """从一个 `_meta` 对象里取出身份载荷。返回 None = 宿主没下发该键（非 ZCode 宿主）。"""
+    """Identity payload of one ``_meta`` object; None when the host sent none."""
     payload = _meta_get(meta, OFFICIAL_AUTH_META_KEY)
     if not isinstance(payload, dict):
         return None
     if payload.get("ok") is True:
         headers = payload.get("headers")
-        if not isinstance(headers, dict) or not headers:
-            # 声明成功却没有头：当作协议异常处理，不静默当成"没配"
-            return OfficialAuth(reason="official_auth_unavailable")
-        clean = {
-            str(name): str(value)
-            for name, value in headers.items()
-            if isinstance(name, str) and value is not None and str(value).strip() != ""
-        }
-        return OfficialAuth(headers=clean) if clean else OfficialAuth(
-            reason="official_auth_unavailable"
-        )
+        clean = {str(k): str(v) for k, v in headers.items()
+                 if isinstance(k, str) and v is not None and str(v).strip()} if isinstance(headers, dict) else {}
+        return OfficialAuth(headers=clean) if clean else OfficialAuth(reason="official_auth_unavailable")
     reason = payload.get("reason")
-    return OfficialAuth(reason=str(reason) if isinstance(reason, str) else "official_auth_unavailable")
+    return OfficialAuth(reason=reason if isinstance(reason, str) else "official_auth_unavailable")
 
 
-def read_official_auth(
-    *,
-    server: Any = None,
-    request_context: Any = None,
-    params: Any = None,
-) -> OfficialAuth | None:
-    """在事件循环线程里读取本次请求的身份载荷。
-
-    三个来源按可得性依次尝试，覆盖 mcp 1.x 两套 dispatch API：
-    显式 params（>=1.22 的 on_call_tool）、显式 request_context、以及 contextvar
-    （<1.22 的装饰器路径只能走这条）。
-    """
-    for meta in (
-        _params_meta(params),
-        getattr(request_context, "meta", None),
-        _server_context_meta(server),
-    ):
+def read_official_auth(*, server: Any = None, request_context: Any = None, params: Any = None) -> OfficialAuth | None:
+    """Read this request's identity on the event-loop thread (all mcp 1.x dispatch styles)."""
+    global _LATEST
+    for meta in (_params_meta(params), getattr(request_context, "meta", None), _server_context_meta(server)):
         if meta is None:
             continue
         found = extract_official_auth(meta)
         if found is not None:
+            if found.ok:
+                _LATEST = found
             return found
     return None
+
+
+def current() -> OfficialAuth | None:
+    """Identity of the running call; in threads without it, the latest one this process received."""
+    return CURRENT.get() or _LATEST
 
 
 def _params_meta(params: Any) -> Any:
@@ -119,9 +134,8 @@ def _server_context_meta(server: Any) -> Any:
     if server is None:
         return None
     try:
-        # 未在请求上下文中调用时 mcp 会抛 LookupError
         return getattr(server.request_context, "meta", None)
-    except Exception:  # noqa: BLE001 — 取不到上下文不是错误，只是没有身份
+    except Exception:  # noqa: BLE001 - outside a request there is simply no identity
         return None
 
 
@@ -130,8 +144,7 @@ def _meta_get(meta: Any, key: str) -> Any:
         return None
     if isinstance(meta, dict):
         return meta.get(key)
-    # pydantic 的 RequestParams.Meta 用 extra="allow"，自定义键落在 model_extra 里；
-    # 键名带点和斜杠，不能用属性访问。
+    # pydantic RequestParams.Meta keeps custom keys (with dots and slashes) in model_extra.
     extra = getattr(meta, "model_extra", None)
     if isinstance(extra, dict) and key in extra:
         return extra[key]

@@ -84,6 +84,10 @@ def guess_language(text: str) -> str:
 # speaker said. The model decides on those by reading the unit.
 
 FILLERS_HARD_ZH = ["嗯嗯", "嗯", "呃", "额", "唔", "呣", "哎", "诶", "欸", "啊啊"]
+# Chinese has no word boundaries, so a hard filler that is also a real morpheme
+# only counts when it stands alone (no Han character on either side): "额，我
+# 觉得" is a stall, "金额" / "额度" / "名额" are words and "金" must not be left over.
+FILLERS_ZH_WORD_BOUNDED = frozenset({"额"})
 FILLERS_HARD_EN = ["um", "umm", "uh", "uhh", "erm", "er", "hmm", "mmm", "ah"]
 FILLERS_SOFT_ZH = [
     "就是说", "也就是说", "怎么说呢", "怎么讲", "你知道吧", "你知道",
@@ -441,6 +445,11 @@ def _widest_internal_gap(piece: dict[str, Any]) -> int | None:
             best = (score, idx)
     if best is None:
         return None
+    if best[0] <= 0.0:
+        # Interpolated timing has no internal gaps and no clause punctuation was
+        # found: every index scores 0 and the first one (the 10% mark) would win,
+        # peeling a sliver off the front on every pass. Split at the middle.
+        return (lo + hi) // 2 if hi > lo else best[1]
     return best[1]
 
 
@@ -480,15 +489,28 @@ def _merge_tiny(pieces: list[dict[str, Any]], min_unit_seconds: float) -> list[d
             out.append(piece)
             continue
         prev = out[-1]
-        prev["text"] = f"{prev['text']}{piece['text']}" if _needs_no_space(prev["text"]) else f"{prev['text']} {piece['text']}"
+        # `char_times` must stay index-aligned with `text`: every inserted space
+        # gets a zero-width slot, otherwise every later character reads its
+        # neighbour's timing and filler excisions land a character off.
+        if _needs_no_space(prev["text"]):
+            prev["text"] = f"{prev['text']}{piece['text']}"
+            joiner: list = []
+        else:
+            prev["text"] = f"{prev['text']} {piece['text']}"
+            joiner = [(prev["end"], prev["end"])]
         prev["end"] = max(prev["end"], piece["end"])
-        prev["char_times"] = prev["char_times"] + piece["char_times"]
+        prev["char_times"] = prev["char_times"] + joiner + piece["char_times"]
     # A leading fragment has no previous unit to fold into; fold it forward.
     if len(out) > 1 and out[0]["end"] - out[0]["start"] < min_unit_seconds:
         head, second = out[0], out[1]
-        second["text"] = f"{head['text']}{second['text']}" if _needs_no_space(head["text"]) else f"{head['text']} {second['text']}"
+        if _needs_no_space(head["text"]):
+            second["text"] = f"{head['text']}{second['text']}"
+            joiner = []
+        else:
+            second["text"] = f"{head['text']} {second['text']}"
+            joiner = [(head["end"], head["end"])]
         second["start"] = min(head["start"], second["start"])
-        second["char_times"] = head["char_times"] + second["char_times"]
+        second["char_times"] = head["char_times"] + joiner + second["char_times"]
         out = out[1:]
     return out
 
@@ -551,6 +573,8 @@ def _match_spans(
             end = idx + len(needle)
             if language != "zh" and not _word_bounded(lowered, idx, end):
                 continue
+            if language == "zh" and needle in FILLERS_ZH_WORD_BOUNDED and not _han_bounded(text, idx, end):
+                continue
             if _overlaps_existing(spans, idx, end):
                 continue
             if idx >= len(times) or end - 1 >= len(times):
@@ -573,6 +597,14 @@ def _word_bounded(text: str, start: int, end: int) -> bool:
     return not before.isalnum() and not after.isalnum()
 
 
+def _han_bounded(text: str, start: int, end: int) -> bool:
+    """Chinese "stands alone": neither neighbour is a Han character (punctuation,
+    space, Latin or the unit edge are all fine)."""
+    before = text[start - 1] if start > 0 else " "
+    after = text[end] if end < len(text) else " "
+    return not is_cjk(before) and not is_cjk(after)
+
+
 def _overlaps_existing(spans: list[dict[str, Any]], start: int, end: int) -> bool:
     return any(not (end <= s["char_start"] or start >= s["char_end"]) for s in spans)
 
@@ -591,7 +623,23 @@ def _standalone_hint(text: str, start: int, end: int) -> bool:
     return edge and tail
 
 
-_STUTTER_ZH = re.compile(r"([一-鿿]{1,3})(?:\1){1,}")
+# Three or more copies: a doubled character is far more often a real
+# reduplicated word (谢谢/看看/慢慢) than a restart, and a doubled two-character
+# word (就是就是) is emphasis as often as a stutter. "这这这个" still trips it.
+_STUTTER_ZH = re.compile(r"([一-鿿]{1,3})(?:\1){2,}")
+# Reduplicated words that are vocabulary, not disfluency — never excised even
+# when spoken three times in a row ("谢谢谢谢" is two thank-yous).
+REDUPLICATED_WORDS_ZH = frozenset({
+    "谢谢", "天天", "刚刚", "看看", "慢慢", "常常", "渐渐", "往往", "偏偏", "刚好",
+    "试试", "想想", "听听", "说说", "走走", "坐坐", "等等", "许许", "多多", "少少",
+    "轻轻", "静静", "悄悄", "默默", "淡淡", "深深", "早早", "远远", "紧紧", "好好",
+    "年年", "月月", "日日", "夜夜", "人人", "家家", "户户", "处处", "时时", "事事",
+    "个个", "件件", "句句", "步步", "层层", "点点", "样样", "纷纷", "统统", "通通",
+    "仅仅", "恰恰", "稍稍", "略略", "频频", "屡屡", "久久", "缓缓", "匆匆", "急急",
+    "哈哈", "呵呵", "嘻嘻", "嘿嘿", "呜呜", "哇哇",
+    "爸爸", "妈妈", "哥哥", "姐姐", "弟弟", "妹妹", "爷爷", "奶奶", "叔叔", "阿姨",
+    "宝宝", "娃娃", "星星", "猩猩", "蛐蛐", "拜拜", "乖乖", "姥姥", "公公", "婆婆",
+})
 _STUTTER_EN = re.compile(r"\b(\w{1,12})(?:[\s,]+\1\b){1,}", re.IGNORECASE)
 
 
@@ -607,6 +655,8 @@ def _find_stutters(text: str, times: list[tuple[float, float]], language: str) -
     for match in pattern.finditer(text):
         token = match.group(1)
         if not token.strip():
+            continue
+        if language == "zh" and (token in REDUPLICATED_WORDS_ZH or token * 2 in REDUPLICATED_WORDS_ZH):
             continue
         keep_end = match.start() + len(token)
         drop_start, drop_end = keep_end, match.end()
@@ -630,7 +680,14 @@ def unit_features(unit: dict[str, Any], language: str) -> dict[str, Any]:
     stripped = "".join(ch for ch in text if is_content_char(ch))
     return {
         "chars": len(stripped),
-        "has_terminal_punct": bool(text.rstrip() and text.rstrip()[-1] in _TERMINAL_PUNCT),
+        # Units are cut *after* closing quotes (see _unit_cut_offsets), so look past
+        # them — otherwise 「…。”」 reads as unterminated and every join after it
+        # gets a false mid_thought_out warning.
+        "has_terminal_punct": bool(
+            # "." closes English sentences; it is kept out of _TERMINAL_PUNCT because unit
+            # splitting must not break at decimals and abbreviations inside a sentence.
+            (body := text.rstrip().rstrip("\"'”’)）】》")) and body[-1] in _TERMINAL_PUNCT + "."
+        ),
         "opens_with_connective": _opening_match(text, _lex(language, CONNECTIVE_OPENERS_ZH, CONNECTIVE_OPENERS_EN), language),
         "anaphora": _contains_any(text, _lex(language, ANAPHORA_ZH, ANAPHORA_EN), language),
         "enum_first": _contains_any(text, _lex(language, ENUM_FIRST_ZH, ENUM_FIRST_EN), language),

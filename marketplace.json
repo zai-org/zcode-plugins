@@ -92,12 +92,12 @@
       "name": "video-agent-kit",
       "source": "./plugins/video-agent-kit",
       "requiresPaidPlan": true,
-      "description": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。",
+      "description": "一体化视频插件：视频理解与检索研究、剪辑、字幕、口播精简、电影解说与足球/篮球/英雄联盟赛事解说、单集与连续剧视频创作、人物替换，以及从录屏复刻网站/游戏/全栈应用；语音识别、配音与生成服务均通过已登录的 ZCode 账号调用 ZCode ToolHub，全部能力共享一套媒体工具与证据。",
       "description_i18n": {
-        "en": "Automated video editing toolkit: standard cloud speech transcription and synthesis, full video frame extraction and understanding, local re-inspection, timeline, preview rendering, QC, and TTS.",
-        "zh-CN": "自动化视频剪辑工具包: 标准云端语音转录与合成、完整视频抽帧理解、局部复看、时间线、预览渲染、QC 和 TTS。"
+        "en": "Unified video plugin: understanding and research, editing, subtitles, talking-head condensing, narrated movie and soccer/basketball/LoL match recaps, standalone and serial video creation, person replacement, and replicating websites/games/full-stack apps from screen recordings; speech recognition, voiceover and generation run through ZCode ToolHub on the signed-in ZCode account, and every capability shares one set of media tools and evidence.",
+        "zh-CN": "一体化视频插件：视频理解与检索研究、剪辑、字幕、口播精简、电影解说与足球/篮球/英雄联盟赛事解说、单集与连续剧视频创作、人物替换，以及从录屏复刻网站/游戏/全栈应用；语音识别、配音与生成服务均通过已登录的 ZCode 账号调用 ZCode ToolHub，全部能力共享一套媒体工具与证据。"
       },
-      "version": "0.4.3",
+      "version": "0.5.1",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"
@@ -107,31 +107,14 @@
       "keywords": [
         "video-editing",
         "video-agent",
-        "visual-inspection",
+        "video-understanding",
+        "subtitles",
+        "tts",
+        "movie-recap",
+        "video-creation",
+        "video2code",
         "timeline",
         "ffmpeg"
-      ]
-    },
-    {
-      "name": "video2code",
-      "source": "./plugins/video2code",
-      "description": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium",
-      "description_i18n": {
-        "en": "Records WebM through ZCode's built-in Browser Use WebView and converts it to MP4 with ffmpeg for video/URL replication; no Playwright or external Chromium required.",
-        "zh-CN": "基于 ZCode 内置 Browser Use WebView 录制 WebM 并用 ffmpeg 转成 MP4/URL 复刻；无需 Playwright 或外部 Chromium"
-      },
-      "version": "0.6.1",
-      "author": {
-        "name": "Z.ai",
-        "url": "https://z.ai"
-      },
-      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video2code/icon.png",
-      "category": "productivity",
-      "keywords": [
-        "video2code",
-        "replication",
-        "webapp",
-        "motion"
       ]
     },
     {
@@ -1487,7 +1470,7 @@
         "en": "Official ZCode video generation: create a short video from text, reference media, or first/last frames, and save it to the workspace.",
         "zh-CN": "ZCode 官方视频生成：用文字生成短视频，或按参考素材、首尾帧生成，结果保存到工作区。"
       },
-      "version": "0.2.1",
+      "version": "0.3.0",
       "author": {
         "name": "Z.ai",
         "url": "https://z.ai"

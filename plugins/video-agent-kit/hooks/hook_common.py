@@ -7,14 +7,47 @@ import sys
 from pathlib import Path
 
 
+# Working directory of the current hook event (ZCode puts the project root in
+# every event's ``cwd``; it injects no project-directory variable).
+_EVENT_CWD: str | None = None
+
+
+def remember_event(event) -> None:
+    global _EVENT_CWD
+    cwd = event.get("cwd") if isinstance(event, dict) else None
+    _EVENT_CWD = cwd.strip() if isinstance(cwd, str) and cwd.strip() else None
+
+
 def project_dir() -> Path:
-    value = os.environ.get("CLAUDE_PROJECT_DIR") or os.environ.get("VE_PROJECT_DIR")
-    return Path(value).resolve() if value else Path.cwd().resolve()
+    # 与 run_context.project_dir 同口径: 显式 VE_PROJECT_DIR 优先; 其次本次 hook 事件的 cwd,
+    # 最后进程 cwd。空值 / 未展开的 ${...} 占位视为未设置 (否则 hook 与 MCP 工具会看到不同的项目目录)
+    value = (os.environ.get("VE_PROJECT_DIR") or "").strip()
+    if value and "${" not in value:
+        return Path(value).resolve()
+    if _EVENT_CWD:
+        return Path(_EVENT_CWD).resolve()
+    return Path.cwd().resolve()
 
 
 def plugin_root() -> Path:
-    value = os.environ.get("CLAUDE_PLUGIN_ROOT") or os.environ.get("VE_PLUGIN_ROOT")
+    value = os.environ.get("ZCODE_PLUGIN_ROOT") or os.environ.get("VE_PLUGIN_ROOT")
     return Path(value).resolve() if value else Path(__file__).resolve().parents[1]
+
+
+def read_event_line() -> dict:
+    """One hook event from stdin (ZCode writes one JSON line); {} when absent or invalid.
+
+    Reads a single line so a host that keeps stdin open cannot block the hook.
+    """
+    try:
+        if sys.stdin is None or sys.stdin.isatty():
+            return {}
+        value = json.loads(sys.stdin.readline() or "{}")
+    except Exception:
+        return {}
+    value = value if isinstance(value, dict) else {}
+    remember_event(value)
+    return value
 
 
 def read_stdin_json() -> dict:
@@ -23,12 +56,14 @@ def read_stdin_json() -> dict:
         value = json.loads(raw) if raw.strip() else {}
     except Exception:
         return {}
-    # CC 总是发 object; 防御性归一, 非 dict 输入不该让 hook 以 AttributeError 崩掉
-    return value if isinstance(value, dict) else {}
+    # 宿主总是发 object; 防御性归一, 非 dict 输入不该让 hook 以 AttributeError 崩掉
+    value = value if isinstance(value, dict) else {}
+    remember_event(value)
+    return value
 
 
 def state_dir() -> Path:
-    value = os.environ.get("CLAUDE_PLUGIN_DATA")
+    value = os.environ.get("ZCODE_PLUGIN_DATA")
     root = Path(value) if value else project_dir() / ".video_agent" / "hook_state"
     root.mkdir(parents=True, exist_ok=True)
     return root

@@ -26,7 +26,6 @@
 | [**lark-cli**](./plugins/lark-cli) | `utilities` | Lark CLI 工作流：覆盖文档、表格、多维表格、日历、消息等 SaaS 资源，并引导应用配置与 OAuth 登录。 |
 | [**dingtalk-cli**](./plugins/dingtalk-cli) | `productivity` | 钉钉 Workspace CLI 工作流：OAuth/设备授权、验证组织账号，并按需安装上游 Skills。 |
 | [**wecom-cli**](./plugins/wecom-cli) | `productivity` | 企业微信 CLI 工作流：覆盖消息、文档、表格、邮件、日历、会议、通讯录和待办，并支持扫码授权与状态检查。 |
-| [**video2code**](./plugins/video2code) | `productivity` | 从网页录屏或 URL 复刻网页：内置 WebView 录制、逐帧观察、脚手架 React 项目，并与源视频对照验证。 |
 
 ### UI 插件
 
@@ -77,7 +76,7 @@ agent + 领域 skill」的组合；除 `accounting-and-reporting` 外都带远�
 | 分类 | 适用范围 | 当前插件 |
 | --- | --- | --- |
 | `developer-tools` | 开发、代码质量、Git、CI 和工程工作流 | `cloudbase-skills`、`mimosa`、`github`、`gitlab`、`alibaba-cloud-cli` |
-| `productivity` | 计划、知识工作和个人工作流自动化 | `video2code` |
+| `productivity` | 计划、知识工作和个人工作流自动化 | `video-agent-kit` |
 | `utilities` | 不属于其他分类的通用工具 | `lark-cli` |
 | `finance` | 金融领域工作流：行情、财务、风险与金融科技集成 | `write-research`、`read-macro`、`assess-credit`、`pick-funds`、`watch-positions`、`model-deals`、`vet-companies`、`find-clients`、`run-fpa`、`accounting-and-reporting` |
 | `guides` | 文档、学习和参考类插件 | — |

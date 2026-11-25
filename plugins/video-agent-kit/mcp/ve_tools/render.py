@@ -1,20 +1,21 @@
 from __future__ import annotations
 
+import functools
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
-from .ffproc import run_proc, safe_expr, require_ffmpeg
 import time
 from pathlib import Path
 
-from .fonts import find_cjk_font
 from .result import ToolResult
 from .run_context import RunContext
 from .timeline import (
     AUDIO_TRACK_TYPES,
     OVERLAY_TRACK_TYPES,
+    STILL_IMAGE_SUFFIXES,
     TEXT_TRACK_TYPES,
     VIDEO_TRACK_TYPES,
     file_sha256,
@@ -31,10 +32,6 @@ def render_preview(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text="[ERROR] timeline_path is required")
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         return ToolResult(text="[ERROR] ffmpeg/ffprobe not found on PATH")
-    # Fail fast before a long encode: minimal/conda builds often drop libx264.
-    cap_err = require_ffmpeg(encoders=("libx264", "aac"))
-    if cap_err:
-        return ToolResult(text=cap_err)
     timeline_path = ctx.resolve(args["timeline_path"])
     if not timeline_path.is_file():
         return ToolResult(text=f"[ERROR] timeline not found: {timeline_path}")
@@ -46,6 +43,13 @@ def render_preview(args: dict, ctx: RunContext) -> ToolResult:
     validation = validate_timeline({"timeline_path": str(timeline_path)}, ctx)
     if validation.data.get("status") != "pass":
         return ToolResult(text="[ERROR] timeline validation failed before render", data=validation.data)
+    # Every film passes through here, so this is where an unverified take is caught: a
+    # hand-written timeline.json reaches render without ever meeting creation_timeline's
+    # own gate. See render_gate.
+    from .render_gate import refusal
+    gate = refusal(data, ctx)
+    if gate:
+        return ToolResult(text=gate)
 
     if isinstance(data.get("tracks"), list):
         return render_project_timeline(args, ctx, data, timeline_path)
@@ -96,7 +100,7 @@ def render_preview(args: dict, ctx: RunContext) -> ToolResult:
         str(output_path),
     ]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=3600)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
     except Exception as exc:
         return ToolResult(text=f"[ERROR] ffmpeg concat failed: {exc}", data={"cmd": cmd})
     if proc.returncode != 0:
@@ -137,24 +141,41 @@ def render_project_timeline(args: dict, ctx: RunContext, data: dict, timeline_pa
     work_dir.mkdir(parents=True, exist_ok=True)
 
     started = time.time()
+    # 渲染到同目录临时文件, 成功后原子替换: 半途失败/超时不会留下无 moov 的半截
+    # preview.mp4
+    # 临时名与 work 子目录带 pid+时间戳: 两个并发 render_preview 共用同名临时文件时,
+    # 一方的 os.replace 会把另一方半写的文件当成品发布
+    job_tag = f"{os.getpid()}-{time.time_ns()}"
+    tmp_output = output_path.with_name(f".{output_path.stem}.render_tmp-{job_tag}{output_path.suffix}")
+    job_dir = work_dir / f"job-{job_tag}"
+    job_dir.mkdir(parents=True, exist_ok=True)
     try:
-        cmd, filter_complex = build_project_ffmpeg_command(plan, output_path, work_dir)
+        cmd, filter_complex = build_project_ffmpeg_command(plan, tmp_output, job_dir)
     except Exception as exc:
         return ToolResult(
             text=f"[ERROR] ffmpeg project render command failed: {exc}",
             data={"plan": public_render_plan(plan)},
         )
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=7200)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
     except Exception as exc:
+        tmp_output.unlink(missing_ok=True)
         return ToolResult(text=f"[ERROR] ffmpeg project render failed: {exc}", data={"cmd": cmd})
     if proc.returncode != 0:
+        tmp_output.unlink(missing_ok=True)
         return ToolResult(
-            text=f"[ERROR] ffmpeg project render failed: {proc.stderr.strip()}",
+            # 只带 stderr 尾部: 完整 banner + 滤镜图回显可达数 KB, 真正的错误在末尾
+            text=f"[ERROR] ffmpeg project render failed: {_stderr_tail(proc.stderr)}",
             data={"cmd": cmd, "filter_complex": filter_complex},
         )
-    if not output_path.is_file() or not source_has_video(output_path):
+    if not tmp_output.is_file() or not source_has_video(tmp_output):
+        tmp_output.unlink(missing_ok=True)
         return ToolResult(text="[ERROR] project render produced no playable video stream", data={"cmd": cmd})
+    os.replace(tmp_output, output_path)
+    # 成功后清掉本次的文本/音频床中间件 (失败时保留供排查); 命令行里的路径只做记录
+    shutil.rmtree(job_dir, ignore_errors=True)
+    # 落盘的命令行/滤镜图指向的是临时文件名, 记录时换成最终路径
+    cmd = [str(output_path) if c == str(tmp_output) else c for c in cmd]
 
     report = {
         "timeline_path": str(timeline_path),
@@ -165,6 +186,9 @@ def render_project_timeline(args: dict, ctx: RunContext, data: dict, timeline_pa
         "output_width": plan["width"],
         "output_height": plan["height"],
         "output_fps": plan["fps"],
+        # QC compares against the timeline canvas unless the size came from output_width/output_height.
+        "output_size_source": "render_args" if (args.get("output_width") is not None
+                                                 or args.get("output_height") is not None) else "timeline",
         "expected_duration_seconds": plan["duration"],
         "video_clip_count": len(plan["video_clips"]),
         "audio_clip_count": len(plan["audio_clips"]),
@@ -180,7 +204,9 @@ def render_project_timeline(args: dict, ctx: RunContext, data: dict, timeline_pa
     plan_path = output_path.with_suffix(".render_plan.json")
     decisions_path = output_path.with_suffix(".edit_decisions.json")
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    plan_path.write_text(json.dumps(public_render_plan(plan), ensure_ascii=False, indent=2), encoding="utf-8")
+    # render_plan 附带实际 ffmpeg 命令与滤镜图: 三份产物与真实渲染命令可对照
+    plan_path.write_text(json.dumps({**public_render_plan(plan), "ffmpeg": {"cmd": cmd, "filter_complex": filter_complex}},
+                                    ensure_ascii=False, indent=2), encoding="utf-8")
     decisions_path.write_text(json.dumps(edit_decisions_from_plan(plan), ensure_ascii=False, indent=2), encoding="utf-8")
     return ToolResult(
         text=f"Project preview rendered: {ctx.virtualize(output_path)}",
@@ -209,6 +235,16 @@ def build_render_plan(args: dict, ctx: RunContext, data: dict, timeline_path: Pa
             continue
         clip_cursor = 0.0
         clips = track.get("clips") if isinstance(track.get("clips"), list) else []
+        if track_type not in (VIDEO_TRACK_TYPES | AUDIO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES):
+            # 一条轨记一次 (此前在 clip 循环里逐 clip 追加, 10 个 clip 的未知轨在
+            # render_plan.json 里出现 10 条同样的记录); 未知轨的 clip 也不再走
+            # normalize (它们缺 source/end 时会把整次渲染炸掉)
+            unsupported_tracks.append({
+                "track_index": track_index,
+                "track_type": track_type or str(track.get("name") or ""),
+                "clip_count": len(clips),
+            })
+            continue
         for clip_index, raw_clip in enumerate(clips):
             if not isinstance(raw_clip, dict) or raw_clip.get("enabled") is False:
                 continue
@@ -229,12 +265,6 @@ def build_render_plan(args: dict, ctx: RunContext, data: dict, timeline_path: Pa
                 text_clips.append(clip)
             elif track_type in OVERLAY_TRACK_TYPES:
                 overlay_clips.append(clip)
-            else:
-                unsupported_tracks.append({
-                    "track_index": track_index,
-                    "track_type": track_type or str(track.get("name") or ""),
-                    "clip_count": len(clips),
-                })
 
     video_clips.sort(key=lambda c: (c["track_order"], c["timeline_start"], c["clip_index"]))
     audio_clips.sort(key=lambda c: (c["track_order"], c["timeline_start"], c["clip_index"]))
@@ -248,6 +278,7 @@ def build_render_plan(args: dict, ctx: RunContext, data: dict, timeline_path: Pa
     return {
         "timeline_path": str(timeline_path),
         "timeline_sha256": file_sha256(timeline_path),
+        "crf": int(args.get("crf", 20)),
         "width": width,
         "height": height,
         "fps": fps,
@@ -258,6 +289,71 @@ def build_render_plan(args: dict, ctx: RunContext, data: dict, timeline_path: Pa
         "overlay_clips": overlay_clips,
         "unsupported_tracks": unsupported_tracks,
     }
+
+
+def render_preflight_issues(data: dict, ctx: RunContext) -> list[dict]:
+    """Checks video_render makes after building its plan (track types, audio presence,
+    font coverage), reported by timeline_validate so a passing timeline renders."""
+    issues: list[dict] = []
+    if not isinstance(data, dict):
+        return issues
+    text_clips = []
+    for track_index, track in enumerate(data.get("tracks") or []):
+        if not isinstance(track, dict) or track.get("enabled") is False:
+            continue
+        track_type = normalize_track_type(track.get("type") or track.get("track_type") or track.get("name") or "")
+        if track_type in AUDIO_TRACK_TYPES and track.get("muted") is True:
+            continue
+        if track_type in (VIDEO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES) and track.get("visible") is False:
+            continue
+        if track_type not in (VIDEO_TRACK_TYPES | AUDIO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES):
+            continue  # reported by render_support_issues
+        cursor = 0.0
+        for clip_index, raw_clip in enumerate(track.get("clips") or []):
+            if not isinstance(raw_clip, dict) or raw_clip.get("enabled") is False:
+                continue
+            if track_type in AUDIO_TRACK_TYPES and raw_clip.get("muted") is True:
+                continue
+            if track_type in (VIDEO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES) and raw_clip.get("visible") is False:
+                continue
+            try:
+                clip = normalize_project_clip(raw_clip, ctx, track, track_index, clip_index, cursor)
+            except (RuntimeError, TypeError, ValueError) as exc:
+                issues.append({"severity": "error", "track": track_index, "clip": clip_index, "message": str(exc)})
+                continue
+            cursor = max(cursor, clip["timeline_start"] + clip["render_duration"])
+            if track_type in AUDIO_TRACK_TYPES:
+                source = Path(clip["source"])
+                if source.is_file() and not (source_has_audio(source) and audio_covers(source, clip["start"])):
+                    issues.append({"severity": "error", "track": track_index, "clip": clip_index,
+                                   "message": f"audio track source has no audio at {clip['start']:.3f}s: {source}"})
+            elif track_type in TEXT_TRACK_TYPES:
+                text_clips.append(clip)
+            try:
+                # Same filter builders as the render: style and position checks stay in one place.
+                if track_type in TEXT_TRACK_TYPES:
+                    drawtext_filter("in", "out", clip, Path("text.txt"), None)
+                elif track_type in OVERLAY_TRACK_TYPES:
+                    _position_expr(clip.get("x"), "0", "x", "overlay clip")
+                    _position_expr(clip.get("y"), "0", "y", "overlay clip")
+            except RuntimeError as exc:
+                issues.append({"severity": "error", "track": track_index, "clip": clip_index, "message": str(exc)})
+    shared_text = "".join(str(c.get("text") or "") for c in text_clips if not c.get("font_file"))
+    if shared_text.strip():
+        fontfile = find_fontfile(shared_text)
+        uncovered = font_uncovered_characters(fontfile, shared_text)
+        if uncovered:
+            issues.append({"severity": "error",
+                           "message": f"no available font covers the text clips (missing glyphs for "
+                                      f"{''.join(uncovered)!r}; fontfile={fontfile}); set style.font_file to a "
+                                      "covering font or point VE_FONT_DIRS at one"})
+    for clip in text_clips:
+        if clip.get("font_file"):
+            uncovered = font_uncovered_characters(clip["font_file"], str(clip.get("text") or ""))
+            if uncovered:
+                issues.append({"severity": "error", "track": clip["track_index"], "clip": clip["clip_index"],
+                               "message": f"font_file lacks glyphs for {''.join(uncovered)!r}: {clip['font_file']}"})
+    return issues
 
 
 def normalize_project_clip(
@@ -300,15 +396,47 @@ def normalize_project_clip(
         "timeline_start": timeline_start_f,
         "timeline_end": timeline_start_f + render_duration,
         "speed": speed,
-        "volume": float(raw.get("volume", track.get("volume", 1.0)) or 0.0),
-        "opacity": float(raw.get("opacity", track.get("opacity", 1.0)) or 0.0),
+        "volume": _level(raw, track, "volume"),
+        "opacity": _level(raw, track, "opacity"),
+        "font_file": _clip_font_file(raw, ctx),
         "muted": bool(raw.get("muted") or track.get("muted")),
         "track_index": track_index,
         "clip_index": clip_index,
-        "track_order": int(track.get("order", track_index) or track_index),
+        "track_order": int(track["order"]) if track.get("order") is not None else track_index,
         "track_name": str(track.get("name") or track.get("type") or ""),
         "track_type": normalize_track_type(track.get("type") or track.get("track_type") or track.get("name") or ""),
     }
+
+
+def _level(raw: dict, track: dict, key: str) -> float:
+    """Clip value, else track value, else 1.0. An explicit null means "not set": it used to
+    become 0 and silently muted the clip or made it fully transparent."""
+    for holder in (raw, track):
+        value = holder.get(key)
+        if value is not None:
+            if isinstance(value, bool):
+                raise RuntimeError(f"{key} must be a number")
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                raise RuntimeError(f"{key} must be a number") from None
+    return 1.0
+
+
+def _text_style(clip: dict) -> dict:
+    """Text options: clip.style supplies defaults, fields on the clip itself win."""
+    style = clip.get("style") if isinstance(clip.get("style"), dict) else {}
+    return {**style, **{key: value for key, value in clip.items() if value is not None}}
+
+
+def _clip_font_file(raw: dict, ctx: RunContext) -> str:
+    font = _text_style(raw).get("font_file")
+    if not font:
+        return ""
+    path = ctx.resolve(str(font))
+    if not path.is_file():
+        raise RuntimeError(f"font_file not found: {path}")
+    return str(path)
 
 
 def resolve_project_render_size(args: dict, data: dict, video_clips: list[dict]) -> tuple[int, int]:
@@ -318,6 +446,8 @@ def resolve_project_render_size(args: dict, data: dict, video_clips: list[dict])
         data.get("output_canvas"),
         (data.get("sequence") or {}).get("canvas") if isinstance(data.get("sequence"), dict) else None,
         (data.get("sequence") or {}).get("output_canvas") if isinstance(data.get("sequence"), dict) else None,
+        # sequence.width/height is the documented form and the one video_qc compares against.
+        data.get("sequence"),
     ):
         if isinstance(candidate, dict) and candidate.get("width") and candidate.get("height"):
             return even_dimension(int(candidate["width"])), even_dimension(int(candidate["height"]))
@@ -356,10 +486,29 @@ def build_project_ffmpeg_command(plan: dict, output_path: Path, work_dir: Path) 
     cmd = ["ffmpeg", "-y"]
     input_kinds = []
     for clip in plan["video_clips"]:
-        cmd += ["-ss", f"{clip['start']:.6f}", "-t", f"{clip['source_duration']:.6f}", "-i", clip["source"]]
+        suffix = Path(str(clip["source"])).suffix.lower()
+        if suffix == ".gif":
+            clip["video_still"] = True
+            cmd += ["-stream_loop", "-1", "-t", f"{clip['render_duration']:.6f}", "-i", clip["source"]]
+        elif suffix in _STILL_IMAGE_SUFFIXES:
+            # A single decoded frame lasted only the tail padding and the rest of the clip was black.
+            clip["video_still"] = True
+            cmd += ["-loop", "1", "-t", f"{clip['render_duration']:.6f}", "-i", clip["source"]]
+        else:
+            cmd += ["-ss", f"{clip['start']:.6f}", "-t", f"{clip['source_duration']:.6f}", "-i", clip["source"]]
         input_kinds.append(("video", clip))
     for clip in plan["overlay_clips"]:
-        cmd += ["-loop", "1", "-t", f"{clip['render_duration']:.6f}", "-i", clip["source"]]
+        still = overlay_source_is_still(clip["source"])
+        clip["overlay_still"] = still
+        if Path(str(clip["source"])).suffix.lower() == ".gif":
+            # gif demuxer 没有 -loop (只有 ignore_loop); -stream_loop 对单帧/动图都成立
+            cmd += ["-stream_loop", "-1", "-t", f"{clip['render_duration']:.6f}", "-i", clip["source"]]
+        elif still:
+            cmd += ["-loop", "1", "-t", f"{clip['render_duration']:.6f}", "-i", clip["source"]]
+        else:
+            # -loop 是 image2 demuxer 选项, 对 mp4 等视频源 ffmpeg 直接报
+            # "Option loop not found" 退出; b_roll/画中画视频按 start/end 截取
+            cmd += ["-ss", f"{clip['start']:.6f}", "-t", f"{clip['source_duration']:.6f}", "-i", clip["source"]]
         input_kinds.append(("overlay", clip))
     for bed_path, clip in bake_project_audio_beds(plan, work_dir):
         cmd += ["-i", str(bed_path)]
@@ -384,11 +533,12 @@ def build_project_ffmpeg_command(plan: dict, output_path: Path, work_dir: Path) 
         elif kind == "overlay":
             label = f"ov{video_overlay_idx}"
             filters.append(overlay_clip_filter(input_index, clip, plan, label))
-            x = filter_number(clip.get("x"), "0")
-            y = filter_number(clip.get("y"), "0")
+            # Expressions such as "(W-w)/2" used to fall back to 0 and put the layer top-left.
+            x = _position_expr(clip.get("x"), "0", "x", "overlay clip")
+            y = _position_expr(clip.get("y"), "0", "y", "overlay clip")
             out_label = f"vcomp{video_overlay_idx}"
             filters.append(
-                f"[{current_video}][{label}]overlay={x}:{y}:eof_action=pass:shortest=0"
+                f"[{current_video}][{label}]overlay=x='{x}':y='{y}':eof_action=pass:shortest=0"
                 f":enable='{between_expr(clip)}'[{out_label}]"
             )
             current_video = out_label
@@ -400,12 +550,30 @@ def build_project_ffmpeg_command(plan: dict, output_path: Path, work_dir: Path) 
         input_index += 1
 
     text_current = current_video
-    fontfile = find_fontfile()
+    all_text = "".join(str(clip.get("text") or "") for clip in plan["text_clips"] if not clip.get("font_file"))
+    fontfile = find_fontfile(all_text) if plan["text_clips"] else None
+    if plan["text_clips"] and all_text.strip():
+        uncovered = font_uncovered_characters(fontfile, all_text)
+        if uncovered:
+            # fontconfig/候选表兜底常给出 DejaVu 这类无 CJK 字形的字体, drawtext 会把
+            # 中文渲成方框但 ffmpeg 正常退出、QC 也 pass —— 在渲染前拦下。
+            # 本函数返回 tuple, 这里必须抛异常而不是 return ToolResult (否则调用点解包
+            # 成 "cannot unpack non-iterable ToolResult", 提示全丢)
+            raise RuntimeError(
+                "no available font covers the subtitle/title text "
+                f"(missing glyphs for {''.join(uncovered)!r}; fontfile={fontfile}); install a CJK font or point "
+                "VE_FONT_DIRS at a directory with NotoSansCJK/SourceHanSans/*.ttc"
+            )
     for idx, clip in enumerate(plan["text_clips"]):
         text_path = work_dir / f"text_{idx:04d}.txt"
         text_path.write_text(str(clip.get("text") or ""), encoding="utf-8")
         out_label = f"vtext{idx}"
-        filters.append(drawtext_filter(text_current, out_label, clip, text_path, fontfile))
+        clip_font = clip.get("font_file") or fontfile
+        if clip.get("font_file"):
+            uncovered = font_uncovered_characters(clip_font, str(clip.get("text") or ""))
+            if uncovered:
+                raise RuntimeError(f"font_file lacks glyphs for {''.join(uncovered)!r}: {clip_font}")
+        filters.append(drawtext_filter(text_current, out_label, clip, text_path, clip_font))
         text_current = out_label
     filters.append(f"[{text_current}]trim=duration={plan['duration']:.6f},setpts=PTS-STARTPTS[vout]")
 
@@ -413,6 +581,9 @@ def build_project_ffmpeg_command(plan: dict, output_path: Path, work_dir: Path) 
         mix_inputs = "".join(f"[{label}]" for label in audio_labels)
         filters.append(
             f"{mix_inputs}amix=inputs={len(audio_labels)}:duration=longest:dropout_transition=0:normalize=0,"
+            # levels add up (normalize=0); only peaks above the limit are reduced, with no
+            # auto gain and with latency compensated so audio stays in sync
+            "alimiter=limit=0.98:level=false:latency=true,"
             f"atrim=0:{plan['duration']:.6f},asetpts=PTS-STARTPTS[aout]"
         )
     else:
@@ -421,7 +592,7 @@ def build_project_ffmpeg_command(plan: dict, output_path: Path, work_dir: Path) 
     cmd += [
         "-filter_complex", filter_complex,
         "-map", "[vout]", "-map", "[aout]",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(plan["crf"]),
         "-c:a", "aac", "-ar", "48000", "-ac", "2",
         "-movflags", "+faststart",
         str(output_path),
@@ -447,8 +618,11 @@ def bake_project_audio_beds(plan: dict, work_dir: Path) -> list[tuple[Path, dict
             audio_jobs.append(clip)
     for clip in plan["audio_clips"]:
         source = Path(clip["source"])
-        if source_has_audio(source) and audio_covers(source, clip["start"]):
-            audio_jobs.append(clip)
+        if not (source_has_audio(source) and audio_covers(source, clip["start"])):
+            # Dropping it silently delivered a film without the requested music/voice.
+            raise RuntimeError(f"audio track {clip['track_index']} clip {clip['clip_index']}: "
+                               f"source has no audio at {clip['start']:.3f}s: {source}")
+        audio_jobs.append(clip)
     audio_dir = work_dir / "audio_beds"
     audio_dir.mkdir(parents=True, exist_ok=True)
     for idx, clip in enumerate(audio_jobs):
@@ -479,6 +653,7 @@ def render_audio_bed(clip: dict, plan: dict, output_path: Path) -> None:
     volume = max(0.0, float(clip.get("volume", 1.0)))
     clip_parts += [
         f"volume={volume:.6f}",
+        *audio_fade_filters(clip, body),
         f"apad=pad_dur={body + 0.25:.6f}",
         f"atrim=0:{body:.6f}",
         "asetpts=PTS-STARTPTS",
@@ -506,9 +681,25 @@ def render_audio_bed(clip: dict, plan: dict, output_path: Path) -> None:
         "-c:a", "pcm_s16le",
         str(output_path),
     ]
-    proc = run_proc(cmd, capture_output=True, text=True, timeout=1800)
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or f"failed to render audio bed for {clip.get('source')}")
+
+
+def audio_fade_filters(clip: dict, body: float) -> list[str]:
+    """Clip fades of audio-track clips, in output time (applied after atempo)."""
+    if clip.get("track_type") not in AUDIO_TRACK_TYPES:
+        return []
+    parts = []
+    for key, direction in (("transition_in", "in"), ("transition_out", "out")):
+        value = clip.get(key)
+        if not isinstance(value, dict):
+            continue
+        duration = min(float(value.get("duration") or 0), body)
+        if str(value.get("type") or value.get("name") or "").lower() in {"fade", "crossfade", "dissolve"} and duration > 0:
+            start = 0.0 if direction == "in" else max(0.0, body - duration)
+            parts.append(f"afade=t={direction}:st={start:.6f}:d={duration:.6f}")
+    return parts
 
 
 def audio_bed_filter(input_index: int, label: str) -> str:
@@ -528,6 +719,9 @@ def video_clip_filter(input_index: int, clip: dict, plan: dict, label: str) -> s
     opacity = max(0.0, min(1.0, float(clip.get("opacity", 1.0))))
     if opacity < 1.0:
         vf.append(f"colorchannelmixer=aa={opacity:.6f}")
+    if clip.get("video_still"):
+        # Looped stills already last render_duration; source speed does not apply.
+        clip = {**clip, "speed": 1.0, "source_duration": clip["render_duration"]}
     vf.append(transition_fade_filter(clip))
     vf.append(f"setpts=(PTS-STARTPTS)/{clip['speed']:.8f}+{clip['timeline_start']:.6f}/TB")
     return f"[{input_index}:v]" + ",".join(part for part in vf if part) + f"[{label}]"
@@ -543,9 +737,42 @@ def overlay_clip_filter(input_index: int, clip: dict, plan: dict, label: str) ->
         f"fps={plan['fps']}",
         "setsar=1",
         "format=yuva420p",
-        f"setpts=PTS-STARTPTS+{clip['timeline_start']:.6f}/TB",
     ]
+    opacity = clip.get("opacity")
+    if opacity is not None and not isinstance(opacity, bool):
+        try:
+            alpha = float(opacity)
+        except (TypeError, ValueError):
+            alpha = 1.0
+        if math.isfinite(alpha) and 0.0 <= alpha < 1.0:
+            # 此前 opacity 被静默忽略 (例如 logo 叠加图常用 0.85)
+            parts.append(f"colorchannelmixer=aa={alpha:.4f}")
+    # 视频源叠加层按 speed 重定时; 静态图/循环 gif 已按 render_duration 生成, speed 不适用
+    still = clip.get("overlay_still")
+    if still is None:
+        still = overlay_source_is_still(clip["source"])
+    speed = 1.0 if still or Path(str(clip["source"])).suffix.lower() == ".gif" else float(clip.get("speed") or 1.0)
+    looped = still or Path(str(clip["source"])).suffix.lower() == ".gif"
+    fade = transition_fade_filter({**clip, "speed": 1.0, "source_duration": clip["render_duration"]} if looped else clip)
+    if fade:
+        parts.append(fade)
+    parts.append(f"setpts=(PTS-STARTPTS)/{speed:.8f}+{clip['timeline_start']:.6f}/TB")
     return f"[{input_index}:v]" + ",".join(parts) + f"[{label}]"
+
+
+_STILL_IMAGE_SUFFIXES = STILL_IMAGE_SUFFIXES
+
+
+def overlay_source_is_still(source: str) -> bool:
+    """叠加层源是静态图 (需 -loop 1 循环成时长) 还是视频 (按 -ss/-t 截取)。
+    gif 单独处理 (见 build_project_ffmpeg_command), 这里按视频归类。"""
+    path = Path(str(source))
+    if path.suffix.lower() in _STILL_IMAGE_SUFFIXES:
+        return True
+    if path.suffix.lower() == ".gif":
+        return False
+    # 无扩展名/罕见格式: 探到视频流即当视频; 探不到就按静态图处理 (保持旧行为)
+    return not source_has_video(path)
 
 
 def atempo_chain(speed: float) -> str:
@@ -570,29 +797,45 @@ def transition_fade_filter(clip: dict) -> str:
         kind = str(value.get("type") or value.get("name") or "").lower()
         duration = float(value.get("duration") or 0)
         if kind in {"fade", "crossfade", "dissolve"} and duration > 0:
+            # fade 位于 setpts 之前, 时间轴是源时间: render 里的 d 秒对应源里的
+            # d*speed 秒 (speed=2 时若按 render 时长算, 淡出会落在 clip 中段, 后半
+            # 段整段透明)
+            speed = float(clip.get("speed") or 1.0)
+            source_duration = float(clip.get("source_duration") or 0.0) or float(clip["render_duration"]) * speed
+            fade_src = min(duration * speed, source_duration)
             if direction == "in":
-                parts.append(f"fade=t=in:st=0:d={duration:.6f}:alpha=1")
+                parts.append(f"fade=t=in:st=0:d={fade_src:.6f}:alpha=1")
             else:
-                start = max(0.0, float(clip["render_duration"]) - duration)
-                parts.append(f"fade=t=out:st={start:.6f}:d={duration:.6f}:alpha=1")
+                start = max(0.0, source_duration - fade_src)
+                parts.append(f"fade=t=out:st={start:.6f}:d={fade_src:.6f}:alpha=1")
     return ",".join(parts)
 
 
 def drawtext_filter(input_label: str, output_label: str, clip: dict, text_path: Path, fontfile: str | None) -> str:
-    fontsize = int(float(clip.get("fontsize") or clip.get("font_size") or 42))
-    fontcolor = filter_string(str(clip.get("fontcolor") or clip.get("font_color") or "white"))
-    boxcolor = filter_string(str(clip.get("boxcolor") or clip.get("box_color") or "black@0.55"))
-    x = safe_expr(clip.get("x"), "(w-text_w)/2")
-    y = safe_expr(clip.get("y"), "h-text_h-72")
+    style = _text_style(clip)
+    try:
+        fontsize = int(float(style.get("fontsize") or style.get("font_size") or 42))
+    except (TypeError, ValueError):
+        raise RuntimeError("text clip font_size must be a number") from None
+    if fontsize <= 0:
+        raise RuntimeError("text clip font_size must be positive")
+    fontcolor = filter_string(str(style.get("fontcolor") or style.get("font_color") or "white"))
+    boxcolor = filter_string(str(style.get("boxcolor") or style.get("box_color") or "black@0.55"))
+    x = _position_expr(style.get("x"), "(w-text_w)/2", "x")
+    y = _position_expr(style.get("y"), "h-text_h-72", "y")
     args = [
         f"textfile={filter_path(text_path)}",
+        # 字幕文本必须按字面渲染: drawtext 默认 expansion=normal 会把 "100%" 里的 %
+        # 当 %{...} 展开语法, 报 "Stray %" 后整条文本渲成空白而 ffmpeg 仍正常退出
+        # (e2e 实测), QC 也 pass —— 字幕静默消失
+        "expansion=none",
         f"fontcolor={fontcolor}",
         f"fontsize={fontsize}",
         "box=1",
         f"boxcolor={boxcolor}",
         "boxborderw=14",
-        f"x={x}",
-        f"y={y}",
+        f"x='{x}'",
+        f"y='{y}'",
         f"enable='{between_expr(clip)}'",
     ]
     if fontfile:
@@ -627,49 +870,171 @@ def filter_number(value: object, default: str) -> str:
     return f"{parsed:.6f}"
 
 
+_POSITION_EXPR_RE = re.compile(r"^[0-9A-Za-z_+\-*/().,% ]+$")
+
+
+def _position_expr(value, default: str, name: str, owner: str = "text clip") -> str:
+    """drawtext x/y: None/空串用默认; 0 是合法坐标 (此前 `or` 把 0 当假值退回居中);
+    只放行由数字/标识符/四则运算组成的表达式, 引号等会破坏滤镜图的字符直接拒绝。"""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return default
+    if isinstance(value, bool):
+        raise RuntimeError(f"{owner} {name} must be a number or ffmpeg expression, not a boolean")
+    if isinstance(value, (int, float)):
+        if not math.isfinite(float(value)):
+            raise RuntimeError(f"{owner} {name} must be finite")
+        return f"{float(value):.6f}".rstrip("0").rstrip(".")
+    text = str(value).strip()
+    if not _POSITION_EXPR_RE.match(text):
+        raise RuntimeError(f"{owner} {name}={text!r} contains characters not allowed in a position expression")
+    return text
+
+
 def filter_path(path: Path) -> str:
-    # Unquoted option value: every filtergraph-special char must be escaped
-    # (backslash first), not just \ : ' — otherwise a crafted path/option can
-    # inject a new filter into -filter_complex.
-    s = str(path)
-    for ch in ("\\", ":", "'", ",", ";", "[", "]"):
-        s = s.replace(ch, "\\" + ch)
-    return s
+    """路径/选项值在滤镜图里未加引号使用: ffmpeg 解析两层 (滤镜图层 `\\ ' [ ] , ;` 与
+    选项值层 `\\ ' :`), 只转义一层时含逗号/方括号的目录名会报 Invalid argument。"""
+    level1 = re.sub(r"([\\':])", r"\\\1", str(path))
+    return re.sub(r"([\\'\[\],;])", r"\\\1", level1)
 
 
 def filter_string(value: str) -> str:
-    s = str(value)
-    for ch in ("\\", ":", "'", ",", ";", "[", "]"):
-        s = s.replace(ch, "\\" + ch)
-    return s
+    level1 = re.sub(r"([\\':])", r"\\\1", value)
+    return re.sub(r"([\\'\[\],;])", r"\\\1", level1)
 
 
-def find_fontfile() -> str | None:
-    candidates = []
-    font_dirs = (
-        os.environ.get("VE_FONT_DIRS")
-        or os.environ.get("VIDEO_EDIT_FONT_DIRS")
-        or ""
-    )
+def _stderr_tail(text: str | None, limit: int = 1200) -> str:
+    lines = [l for l in (text or "").strip().splitlines() if l.strip()]
+    # 跳过 banner/配置回显 (以两个空格开头的 configuration/lib 行)
+    lines = [l for l in lines if not l.startswith("  ") and not l.startswith("ffmpeg version")]
+    tail = "\n".join(lines[-12:])
+    return tail[-limit:]
+
+
+@functools.lru_cache(maxsize=16)
+def _font_charset(font_file: str) -> frozenset[int] | None:
+    """cmap codepoints of the font (first face of a .ttc); None = unknown (no fontTools)."""
+    try:
+        from fontTools.ttLib import TTFont
+
+        with TTFont(font_file, fontNumber=0, lazy=True) as font:
+            return frozenset(font.getBestCmap())
+    except Exception:
+        return None
+
+
+def font_uncovered_characters(font_file: str | None, text: str, limit: int = 12) -> list[str]:
+    """Characters ``font_file`` has no glyph for (ignoring whitespace). Empty when
+    coverage is complete or cannot be determined (fontTools missing). A missing
+    font counts as uncovered when the text has any non-ASCII character."""
+    meaningful = [ch for ch in text if not ch.isspace()]
+    if not meaningful:
+        return []
+    if not font_file:
+        non_ascii = sorted({ch for ch in meaningful if ord(ch) > 127})
+        return non_ascii[:limit]
+    charset = _font_charset(font_file)
+    if charset is None:
+        return []
+    missing: list[str] = []
+    seen: set[str] = set()
+    for ch in meaningful:
+        if ch in seen:
+            continue
+        seen.add(ch)
+        if ord(ch) not in charset:
+            missing.append(ch)
+        if len(missing) >= limit:
+            break
+    return missing
+
+
+def _fc_match_font(text: str) -> str | None:
+    """fontconfig 兜底: 按文本语言要一个字体文件路径 (无 fc-match 时 None)。"""
+    if not shutil.which("fc-match"):
+        return None
+    lang = "zh" if any("\u4e00" <= ch <= "\u9fff" for ch in text) else "en"
+    try:
+        proc = subprocess.run(
+            ["fc-match", "-f", "%{file}", f":lang={lang}"],
+            capture_output=True, text=True, timeout=20, check=False,
+        )
+    except Exception:
+        return None
+    path = (proc.stdout or "").strip()
+    return path if path and Path(path).is_file() else None
+
+
+def find_fontfile(text: str = "") -> str | None:
+    """Pick a font for drawtext. Candidates: VE_FONT_DIRS / VIDEO_EDIT_FONT_DIRS,
+    fontconfig (by text language), then well-known paths. The first candidate whose
+    cmap covers ``text`` wins; if none covers it, the platform's own CJK font
+    whose first face is Simplified Chinese (Hiragino Sans GB, Microsoft YaHei, ...) is
+    tried (see _drawtext_cjk_font). Without fontTools the first existing file wins."""
+    candidates: list[str] = []
+    from .run_context import clean_env
+    font_dirs = clean_env("VE_FONT_DIRS", "VIDEO_EDIT_FONT_DIRS") or ""
     for raw_dir in [p for p in font_dirs.split(os.pathsep) if p.strip()]:
         font_dir = Path(raw_dir)
-        if font_dir.is_dir():
-            candidates.extend(
-                str(p) for p in sorted(font_dir.iterdir())
-                if p.is_file() and p.suffix.lower() in {".ttf", ".ttc", ".otf"}
-            )
+        try:  # an unreadable directory raises PermissionError from stat(): skip it
+            if font_dir.is_dir():
+                candidates.extend(
+                    str(p) for p in sorted(font_dir.iterdir())
+                    if p.is_file() and p.suffix.lower() in {".ttf", ".ttc", ".otf"}
+                )
+        except OSError:
+            continue
+    fc = _fc_match_font(text)
+    if fc:
+        candidates.append(fc)
     candidates.extend([
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
         "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
         "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "/usr/share/fonts/truetype/arphic/uming.ttc",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
     ])
-    for candidate in candidates:
-        if Path(candidate).is_file():
-            return candidate
-    # 上面全是 Linux 路径; mac/Windows 自带的 CJK 字体在别处 (见 fonts.py)。
-    return find_cjk_font("regular")
+    existing = [c for c in candidates if Path(c).is_file()]
+    if text.strip():
+        for candidate in existing:
+            if not font_uncovered_characters(candidate, text):
+                return candidate
+        # macOS and Windows keep their CJK faces where neither the paths above nor
+        # fontconfig reach them (Homebrew's fc-match answers :lang=zh with Verdana),
+        # so fall back to the platform lookup the subtitle renderer already uses.
+        platform = _platform_cjk_fontfile()
+        if platform and not font_uncovered_characters(platform, text):
+            return platform
+    return existing[0] if existing else None
+
+
+_PLATFORM_CJK_CACHE: dict[str, str] = {}   # VE_FONT_DIRS value -> font file; misses are not cached
+
+
+def _platform_cjk_fontfile() -> str | None:
+    """The platform's own CJK font for drawtext (Hiragino Sans GB / PingFang / STHeiti,
+    Microsoft YaHei, Noto).
+
+    Only hits are cached, keyed by the VE_FONT_DIRS value the lookup reads: a font
+    installed while the MCP server runs (for example by /setup-guide) is found on the
+    next call, as with subtitle_style.find_cjk_font. The lookup never raises.
+    """
+    from .run_context import clean_env
+    key = clean_env("VE_FONT_DIRS", "VIDEO_EDIT_FONT_DIRS") or ""
+    hit = _PLATFORM_CJK_CACHE.get(key)
+    if hit and Path(hit).is_file():
+        return hit
+    found = _drawtext_cjk_font()
+    if found:
+        _PLATFORM_CJK_CACHE[key] = found
+    return found
+
+
+def _drawtext_cjk_font() -> str | None:
+    """See subtitle_style.find_drawtext_cjk_font (drawtext loads face 0 only)."""
+    from .subtitle_style import find_drawtext_cjk_font
+    return find_drawtext_cjk_font()
 
 
 def public_render_plan(plan: dict) -> dict:
@@ -778,7 +1143,7 @@ def cut_clip(clip: dict, output_path: Path, *, target_width: int, target_height:
         "-avoid_negative_ts", "make_zero",
         str(output_path),
     ]
-    proc = run_proc(cmd, capture_output=True, text=True, timeout=1800)
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or "ffmpeg cut failed")
     # 亚帧时长 clip (< 1 帧间隔) 会让 ffmpeg 输出 0 视频帧但 exit 0 — 无视频流
@@ -816,24 +1181,11 @@ def resolve_render_size(args: dict, clips: list[dict]) -> tuple[int, int]:
 
 
 def probe_video_size(source: Path) -> tuple[int, int]:
-    cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height",
-        "-of", "json", str(source),
-    ]
-    proc = run_proc(cmd, capture_output=True, text=True, timeout=30)
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or f"ffprobe failed for {source}")
-    try:
-        payload = json.loads(proc.stdout)
-        stream = (payload.get("streams") or [])[0]
-        width = int(stream.get("width") or 0)
-        height = int(stream.get("height") or 0)
-    except Exception as exc:
-        raise RuntimeError(f"invalid ffprobe size metadata for {source}") from exc
-    if width <= 0 or height <= 0:
-        raise RuntimeError(f"invalid video size for {source}: {width}x{height}")
-    return even_dimension(width), even_dimension(height)
+    from .observation_media import probe
+    info = probe(source)
+    if not info.get("width") or not info.get("height"):
+        raise RuntimeError("source has no video dimensions")
+    return even_dimension(info["width"]), even_dimension(info["height"])
 
 
 def even_dimension(value: int) -> int:
@@ -881,29 +1233,15 @@ def source_has_video(source: Path) -> bool:
 
 
 def audio_covers(source: Path, start: float) -> bool:
-    """音轨时长是否覆盖到 start。探不到时长 (容器不带 stream duration) 按覆盖
-    处理, 保持旧行为。"""
-    cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "a:0",
-        "-show_entries", "stream=duration", "-of", "csv=p=0", str(source),
-    ]
-    try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=30)
-        duration = float(proc.stdout.strip())
-    except Exception:
-        return True
-    if not math.isfinite(duration) or duration <= 0:
-        return True
-    return duration > start + 0.01
+    from .observation_media import probe
+    streams = probe(source).get("audio_streams", [])
+    durations = [float(s["duration"]) for s in streams if s.get("duration") not in (None, "N/A")]
+    return max(durations) > start + 0.01 if durations else bool(streams)
 
 
 def _has_stream(source: Path, selector: str) -> bool:
-    cmd = [
-        "ffprobe", "-v", "error", "-select_streams", selector,
-        "-show_entries", "stream=index", "-of", "csv=p=0", str(source),
-    ]
+    from .observation_media import probe
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=30)
+        return probe(source)["has_audio" if selector.startswith("a") else "has_video"]
     except Exception:
         return False
-    return proc.returncode == 0 and bool(proc.stdout.strip())

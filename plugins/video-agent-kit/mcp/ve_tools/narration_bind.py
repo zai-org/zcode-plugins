@@ -36,7 +36,14 @@ LINGER_MAX_SEC = 10.0       # 同一镜头连续停留上限(再长会闷)
 MERGE_UNIT_SEC = 2.4        # 短于此的句子并入邻句共用画面(不再每句强制切一刀)
 MERGE_GROUP_CAP_SEC = 7.0   # 软并组后的组预算上限(防整段滚雪球丢失锚精度)
 
-TAIL_MAX_SEC = 3.0     # 呼吸留白上限
+TAIL_MAX_SEC = 3.0     # 高光拍呼吸留白上限(原声透出)
+TAIL_PLAIN_SEC = 2.0   # 普通拍呼吸留白上限——"解说完停一停,让原片自己响一会"
+                       # 是真人解说的节奏本体;v5 全片仅高光拍留白,10 分钟
+                       # 96% 时间在说话,用户实听"很急"。留白是标点:每拍都要,
+                       # 高光拍更长。
+TAIL_LINE_EXT_SEC = 1.5  # 留白切点撞上台词时, 为念完这句最多再延长的秒数
+                         # ——"台词必须说完才切"(8-26 用户定案), 延长不够就
+                         # 回退到这句台词开始前收刀, 宁可留白短也不掐半句。
 TAIL_MIN_SEC = 0.5     # 比这短的余量不值得留(直接截掉)
 
 # ---- DP 打分(每秒画面价值 / 每次动作代价) ------------------------------
@@ -52,6 +59,20 @@ FRAME_GAP_TOL = 2      # "帧连续"判定容差(帧): DP接缝/审计/留白必
                        # 任何一处单改都会造成 seamless 与 QC 判定分裂(假阳性短闪)
 V_AVOID = -4.0         # 回看判定"句画矛盾"的 (句,镜头) 组合:主动回避
 
+# ---- J/L-cut 声画错开切(v3):出刀点吸附镜头边界,借还记账 ----------------
+# 病根:句组预算帧一用完就地停刀(常在镜头半截),下一组跳走 = 半截出刀 +
+# 声画同点切,观感"闪一下"。人类剪辑的标配是 J/L-cut:声音切点在句边界,
+# 画面切点在镜头边界,两者刻意错开零点几秒。
+SNAP_EXIT_SEC = 1.2        # 出刀点离磁带区间尾 ≤ 此值就播完该区间再跳(J-cut),
+                           # 多占的帧记为 drift,从下一句组预算里扣(借还)
+KEY_MAX_DRIFT_SEC = 0.35   # 锚句(写手点名镜头的关键句)画面入场最大容忍延迟:
+                           # J-cut 不许压过关键句的"说到即看到"
+MIDSHOT_EXIT_PENALTY = 4.0  # 半截出刀又跳切:在 JUMP_PENALTY 之外的额外罚分,
+                            # 推动 DP 优先选吸附出刀/顺播,而不是句号处硬剁
+MIN_RUN_SEC = 2.0          # 碎片禁令:两次跳切之间的连续播放段 <2s 即"闪",
+                           # DP 直接判不可行(1.25 仍是 audit 硬底线;段级无解
+                           # 时回退 1.25 兜底,宁可偶闪不可缺画面)
+
 
 # ---- 辅助(移植自 common.py / event_common.py) --------------------------
 
@@ -64,6 +85,16 @@ def save_json(obj: Any, path: str | Path) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f, ensure_ascii=False, indent=2)
+
+
+def save_audited_edl(edl: list[dict], report: dict, out_path: Path, qc_path: Path) -> None:
+    """Persist the exact EDL inspected by this passing audit, then bind its report."""
+    import hashlib
+    if report.get("status") != "passed":
+        raise ValueError("Cannot save an EDL with a failing audit")
+    save_json(edl, out_path)
+    report["edl_sha256"] = hashlib.sha256(out_path.read_bytes()).hexdigest()
+    save_json(report, qc_path)
 
 
 def overlap_seconds(a0: float, a1: float, b0: float, b1: float) -> float:
@@ -287,8 +318,14 @@ def _replay_original(insert: dict, seg: dict, shots: list[dict],
 
 
 def audit_edl(edl: list[dict], fps: float = DEFAULT_FPS,
-              min_window_sec: float = MIN_WINDOW_SEC) -> dict:
+              min_window_sec: float = MIN_WINDOW_SEC, *,
+              source_edit_proof: dict | None = None, source_clock: dict | None = None) -> dict:
     """渲染前硬门禁：任何重复、重叠、倒退或无意碎片都不放行。"""
+    from .source_usage import audit_usage, declares_proof
+    if source_edit_proof is not None or declares_proof(edl):
+        return {'schema_version': SCHEMA_VERSION,
+                **audit_usage(edl, fps, min_window_sec, source_edit_proof=source_edit_proof,
+                              source_clock=source_clock, frame_gap_tol=FRAME_GAP_TOL)}
     seen_shots, intervals = set(), []
     duplicate_shots, overlaps, regressions, short_windows, reused = [], [], [], [], []
     previous_end = -1
@@ -296,9 +333,11 @@ def audit_edl(edl: list[dict], fps: float = DEFAULT_FPS,
     for entry in edl:
         is_oa = bool(entry.get("original_audio"))
         for window in entry.get("windows", []):
-            if window.get("replay"):
+            if window.get("replay") or window.get("cold_open"):
                 # 原声回放窗口:有意重放关键台词时刻(带原声),在旁白画面
                 # 账本之外,不参与重复/倒带/重叠判定,也不推进时间基。
+                # 冷开场窗口同理:高潮前置钩子,画面届时在正片高潮重演,
+                # 段内单调性已由 bind 的临时账本把关。
                 continue
             sid = window.get("shot_id", "")
             start = int(window.get("start_frame", round(float(window["start"]) * fps)))
@@ -462,14 +501,20 @@ def _value_fn(group: dict, fps: float,
 
 def _record(tape: list[dict], k: int, off: int, need: int, value,
             not_after_f: int, min_frames: int, fps: float,
-            entry_jump: bool = False) -> tuple[list[dict], float, int, int] | None:
+            entry_jump: bool = False,
+            min_run_frames: int | None = None
+            ) -> tuple[list[dict], float, int, int] | None:
     """从磁带位置 (k, off) 起为一个句组录 need 帧。
 
     跨相邻可用区间(帧连续)= 原片自己的切点,免罚;中间有洞(被用镜头/裁剪)
-    则视为一次组内跳切。**任何跳切入场的连续录制段都必须 ≥ min_frames**
+    则视为一次组内跳切。**任何跳切入场的连续录制段都必须 ≥ min_run**
     (入场残段=闪);跳切状态下容量不足的区间直接跳过(仍算同一次跳切)。
+    min_run_frames: 跳切间连续段下限(碎片禁令,默认取 min_frames);
+    入场区间的容量筛选仍用 min_frames——小锚岛可以跳进来,只要后面帧连续
+    续得下去把 run 攒够。
     返回 (pieces, score, 新k, 新off);录不满返回 None。
     """
+    min_run = min_run_frames or min_frames
     pieces: list[dict] = []
     score = 0.0
     run = 0                     # 距上次跳切的连续帧
@@ -495,7 +540,7 @@ def _record(tape: list[dict], k: int, off: int, need: int, value,
         run += take
         jumping = False
         if need <= 0:
-            if jumped and run < min_frames:
+            if jumped and run < min_run:
                 return None      # 跳切后的末段残段太短=闪,禁止
             new_off = lo + take - iv["sf"]
             if iv["sf"] + new_off >= iv["ef"]:
@@ -508,7 +553,7 @@ def _record(tape: list[dict], k: int, off: int, need: int, value,
         if lo + take >= iv["ef"] and gap <= FRAME_GAP_TOL:
             score += SEAM_BONUS      # 帧连续:原片自带切点,丝滑
         else:
-            if run < min_frames:
+            if run < min_run:
                 return None          # 跳切前的残段太短=闪,禁止
             score -= JUMP_PENALTY
             run = 0
@@ -521,12 +566,22 @@ def _record(tape: list[dict], k: int, off: int, need: int, value,
 def _solve_segment(groups: list[dict], tape: list[dict], fps: float,
                    min_frames: int,
                    avoid: dict[str, set[str]] | None = None,
-                   cap_floor_f: int = 0
+                   cap_floor_f: int = 0,
+                   min_run_frames: int | None = None
                    ) -> list[list[dict]] | dict:
     """段级 DP:为每个句组选落点并录满预算,最大化总分。
 
-    状态 (句组i, 磁带位置k, 区间内偏移off);落点 = 当前位置(免罚,即顺延/续播)
-    或前方区间起点(跳切罚分,锚收益可覆盖)。无解返回缺口信息 dict。
+    状态 (句组i, 磁带位置k, 区间内偏移off, 漂移drift);落点 = 当前位置
+    (免罚,即顺延/续播)或前方区间起点(跳切罚分,锚收益可覆盖)。
+    无解返回缺口信息 dict。
+
+    drift(J-cut 借还账,v3):上一组出刀时若离所在磁带区间尾 ≤SNAP_EXIT_SEC,
+    可以把该区间播完再跳(画面切点吸附镜头边界,声音切点仍在句边界——声画
+    错开切)。多播的帧记为 drift,本组预算 = 原预算 - drift(借的从下一句
+    份额里还),段内总帧数不变。锚句(写手点名镜头)容忍的入场延迟以
+    KEY_MAX_DRIFT_SEC 为限;末组不许带漂移出段(段总长=配音长的硬校验)。
+    半截出刀又跳切在 JUMP_PENALTY 外加罚 MIDSHOT_EXIT_PENALTY,推动 DP
+    优先吸附;跳切间连续段下限 min_run_frames(碎片禁令)。
 
     cap_floor_f: 句组时间上限的下限(帧)。卷引擎用:卷在选卷时已做过防剧透
     把关,卷内画面对本段任何句子都不算"未来镜头"——否则段落首节拍的句子
@@ -540,21 +595,33 @@ def _solve_segment(groups: list[dict], tape: list[dict], fps: float,
         caps.append(max(cap_floor_f, int(math.floor(
             max(float(e.get("end", 0)) for e in events) * fps + 1e-7))))
     anchor_ks: list[list[int]] = []
+    has_anchor: list[bool] = []
     for g in groups:
-        want = {s for r in g["rows"] for s in r["preferred"]} | \
-               {s for r in g["rows"] for s in r["claim_shots"]}
+        preferred = {s for r in g["rows"] for s in r["preferred"]}
+        want = preferred | {s for r in g["rows"] for s in r["claim_shots"]}
         anchor_ks.append([k for k, iv in enumerate(tape)
                           if iv["shot_id"] in want])
+        has_anchor.append(bool(preferred))
+    snap_f = max(0, int(SNAP_EXIT_SEC * fps))
+    key_f = max(0, int(KEY_MAX_DRIFT_SEC * fps))
     NEG = float("-inf")
     memo: dict = {}
 
-    def solve(gi: int, k: int, off: int):
+    def solve(gi: int, k: int, off: int, drift: int):
         if gi == len(groups):
             return 0.0, []
-        key = (gi, k, off)
+        if has_anchor[gi] and drift > key_f:
+            return NEG, None     # J-cut 压过关键句的"说到即看到":不许
+        key = (gi, k, off, drift)
         if key in memo:
             return memo[key]
+        need = groups[gi]["budget"] - drift
+        if need <= 0:
+            # 本组份额已被上一组的吸附延播整个盖住(极短并组句):顺播即可
+            memo[key] = solve(gi + 1, k, off, -need)
+            return memo[key]
         best, best_plan = NEG, None
+        last_group = gi == len(groups) - 1
         # 组间接缝: "当前位置"落点若正好是新区间开头且与上一区间尾部有洞,
         # 实为一次跳切 — 与组内跳切同罚,并按 entry_jump 强制入场残段 ≥min_frames
         # (否则组间可绑出非 seamless 的 <1.25s 短窗,必挂硬 QC 且重试环无解)。
@@ -572,23 +639,49 @@ def _solve_segment(groups: list[dict], tape: list[dict], fps: float,
             if nk > k and nk not in seen:
                 landings.append((nk, 0, -JUMP_PENALTY))
         for nk, noff, pen in landings:
-            got = _record(tape, nk, noff, groups[gi]["budget"],
+            # 半截出刀又跳切:额外罚分(off>0 = 上一组停在区间半截)
+            if pen < 0 and off > 0:
+                pen -= MIDSHOT_EXIT_PENALTY
+            got = _record(tape, nk, noff, need,
                           values[gi], caps[gi], min_frames, fps,
-                          entry_jump=pen < 0)
+                          entry_jump=pen < 0, min_run_frames=min_run_frames)
             if got is None:
                 continue
-            pieces, rec_score, ek, eoff = got
-            # 跳切落地本身也要满足最短连续段(首段在 _record 内检查 run)
-            sub, sub_plan = solve(gi + 1, ek, eoff)
-            if sub == NEG:
-                continue
-            total = pen + rec_score + sub
-            if total > best:
-                best, best_plan = total, [pieces] + sub_plan
+            # 出刀变体:exact(照预算停,可能半截)/ snap-J(吸附到区间尾,
+            # 多播 extra 帧记正 drift 从下一组扣)/ snap-L(回撤到区间头,
+            # 少播 eoff 帧记负 drift 让下一组补)。末组必须 exact(段长守恒)。
+            variants = [(got, 0)]
+            ek, eoff = got[2], got[3]
+            if not last_group and eoff > 0 and ek < len(tape):
+                iv = tape[ek]
+                extra = min(iv["ef"], caps[gi]) - (iv["sf"] + eoff)
+                if 0 < extra <= snap_f:
+                    got2 = _record(tape, nk, noff, need + extra,
+                                   values[gi], caps[gi], min_frames, fps,
+                                   entry_jump=pen < 0,
+                                   min_run_frames=min_run_frames)
+                    if got2 is not None:
+                        variants.append((got2, extra))
+                if 0 < eoff <= snap_f and need - eoff > 0:
+                    got3 = _record(tape, nk, noff, need - eoff,
+                                   values[gi], caps[gi], min_frames, fps,
+                                   entry_jump=pen < 0,
+                                   min_run_frames=min_run_frames)
+                    # 确认真回撤到了区间边界(确定性录制,少录 eoff 帧必然
+                    # 停在 ek-1 区间尾;防御:验证出刀 off==0)
+                    if got3 is not None and got3[3] == 0:
+                        variants.append((got3, -eoff))
+            for (pieces, rec_score, vk, voff), vdrift in variants:
+                sub, sub_plan = solve(gi + 1, vk, voff, vdrift)
+                if sub == NEG:
+                    continue
+                total = pen + rec_score + sub
+                if total > best:
+                    best, best_plan = total, [pieces] + sub_plan
         memo[key] = (best, best_plan)
         return memo[key]
 
-    score, plan = solve(0, 0, 0)
+    score, plan = solve(0, 0, 0, 0)
     if plan is None:
         # 精确报缺口:磁带总量 vs 预算总量,并指认第一个录不满的句组。
         # available_sec 始终报真实余量; 总量够但无可行路径时用 reason 区分,
@@ -598,7 +691,8 @@ def _solve_segment(groups: list[dict], tape: list[dict], fps: float,
         first = groups[0]["rows"][0]["unit"]
         for gi, g in enumerate(groups):
             if _record(tape, 0, 0, g["budget"], values[gi], caps[gi],
-                       min_frames, fps) is None:
+                       min_frames, fps,
+                       min_run_frames=min_run_frames) is None:
                 first = g["rows"][0]["unit"]
                 break
         return {"required_sec": round(need / fps, 3),
@@ -608,6 +702,25 @@ def _solve_segment(groups: list[dict], tape: list[dict], fps: float,
                 "semantic_unit_id": first.get("semantic_unit_id", ""),
                 "text": first.get("text", "")}
     return plan
+
+
+def solve_segment_snap(groups: list[dict], tape: list[dict], fps: float,
+                       min_frames: int,
+                       avoid: dict[str, set[str]] | None = None,
+                       cap_floor_f: int = 0
+                       ) -> tuple[list[list[dict]] | dict, bool]:
+    """J/L-cut 求解入口:先按碎片禁令(MIN_RUN_SEC)严格解;段级无解再回退
+    legacy 下限(1.25s)兜底——宁可偶闪,不可整段缺画面。返回 (结果, 是否严格)。
+    bind 与 refit 可行性预检必须走同一入口,两边判定才不会分裂。"""
+    min_run = max(min_frames, int(math.ceil(MIN_RUN_SEC * fps - 1e-7)))
+    result = _solve_segment(groups, tape, fps, min_frames, avoid=avoid,
+                            cap_floor_f=cap_floor_f, min_run_frames=min_run)
+    if isinstance(result, list):
+        return result, True
+    fallback = _solve_segment(groups, tape, fps, min_frames, avoid=avoid,
+                              cap_floor_f=cap_floor_f,
+                              min_run_frames=min_frames)
+    return fallback, False
 
 
 def _emit_windows(groups: list[dict], plan: list[list[dict]],
@@ -704,10 +817,10 @@ def _reel_tape(spans: list[dict], state: SelectionState) -> list[dict]:
 
 
 def _emit_tail(tape: list[dict], last_end_frame: int, fps: float,
-               min_frames: int) -> list[dict]:
-    """旁白铺完后,沿卷继续帧连续地播 ≤TAIL_MAX_SEC 当呼吸留白。
+               min_frames: int, max_sec: float = TAIL_MAX_SEC) -> list[dict]:
+    """旁白铺完后,沿卷继续帧连续地播 ≤max_sec 当呼吸留白(原声透出)。
     只收连续段:第一处真跳切即停(留白里出现跳切=白挨一刀)。"""
-    budget = int(TAIL_MAX_SEC * fps)
+    budget = int(max_sec * fps)
     pieces: list[dict] = []
     pos = last_end_frame
     for iv in tape:
@@ -734,6 +847,48 @@ def _emit_tail(tape: list[dict], last_end_frame: int, fps: float,
     if total < int(TAIL_MIN_SEC * fps):
         return []
     return pieces
+
+
+def _snap_tail_to_line(pieces: list[dict], tape: list[dict], fps: float,
+                       lines: list[tuple[float, float]]) -> list[dict]:
+    """留白切点避开台词半句:末尾窗口的收刀点若落在某句台词中间,先试着
+    沿卷延长到句尾+0.15s(≤TAIL_LINE_EXT_SEC,且不越过跳切/镜头边界);
+    延长不成就回退到句头-0.05s 收刀。回退后留白若短于 TAIL_MIN_SEC,整段
+    留白放弃(纯解说直切下一拍,也好过掐半句)。lines 用源片时间坐标。"""
+    if not pieces or not lines:
+        return pieces
+    last = pieces[-1]
+    cut_t = last["end"]                    # 源片坐标的收刀时刻
+    hit = next((ln for ln in lines
+                if ln[0] < cut_t - 0.02 and cut_t < ln[1] - 0.02), None)
+    if hit is None:
+        return pieces
+    want_end = hit[1] + 0.15               # 念完这句再多给一点尾气
+    ext = want_end - cut_t
+    if ext <= TAIL_LINE_EXT_SEC:
+        # 沿当前窗口所在的卷段延长(不越过该卷段的帧上界=不引入新跳切)
+        iv = next((iv for iv in tape if iv["shot_id"] == last["shot_id"]
+                   and iv["sf"] <= last["start_frame"] < iv["ef"]), None)
+        if iv is not None:
+            new_ef = min(int(round(want_end * fps)), iv["ef"])
+            if new_ef / fps >= hit[1] + 0.05:      # 真够到句尾才算延长成功
+                last["end_frame"] = new_ef
+                last["end"] = round(new_ef / fps, 6)
+                return pieces
+    # 延长不成: 回退到句头前收刀
+    back_ef = int((hit[0] - 0.05) * fps)
+    out: list[dict] = []
+    for p in pieces:
+        if p["end_frame"] <= back_ef:
+            out.append(p)
+        elif p["start_frame"] < back_ef:
+            p["end_frame"] = back_ef
+            p["end"] = round(back_ef / fps, 6)
+            out.append(p)
+    total = sum(p["end_frame"] - p["start_frame"] for p in out)
+    if total < int(TAIL_MIN_SEC * fps):
+        return []
+    return out
 
 
 # ---- 工具入口 -----------------------------------------------------------
@@ -779,9 +934,21 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
             not all(isinstance(x, str) for x in avoid_ids):
         return ToolResult(text="[ERROR] avoid_shot_ids must be an array of strings")
     avoid = _GlobalAvoid(avoid_ids) if avoid_ids else None
-    tail_mode = str(args.get("tail_mode") or "highlight").strip().lower()
+    tail_mode = str(args.get("tail_mode") or "all").strip().lower()
     if tail_mode not in ("highlight", "all", "none"):
         return ToolResult(text='[ERROR] tail_mode must be "highlight", "all" or "none"')
+    # 台词时间表(留白切点避让用): 有 transcript 就自动启用, 没有不报错
+    lines: list[tuple[float, float]] = []
+    tr_path = ctx.resolve(args.get("transcript_path") or "out/transcript.json")
+    if tr_path.is_file():
+        try:
+            tr = load_json(tr_path)
+            tr_segs = tr.get("segments") if isinstance(tr, dict) else tr
+            lines = sorted((float(x["start"]), float(x["end"]))
+                           for x in tr_segs or []
+                           if isinstance(x, dict) and str(x.get("text", "")).strip())
+        except Exception:  # noqa: BLE001  台词表坏了不拦渲染, 只失去避让
+            lines = []
 
     try:
         reel = load_json(paths["reel_path"])
@@ -792,29 +959,65 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text=f"[ERROR] invalid JSON input: {exc}")
 
     min_window_sec = MIN_WINDOW_SEC
-    reels = reel.get("beats", {})
     # 输入契约轻校验: 缺字段以结构化 [ERROR] 返回, 不让 KeyError 裸奔到调用方
+    if not isinstance(reel, dict) or not isinstance(reel.get("beats", {}), dict):
+        return ToolResult(text="[ERROR] reel_path must contain an object with a beats{} map")
+    reels = reel.get("beats", {})
+    if not isinstance(graph, dict):
+        return ToolResult(text="[ERROR] graph_path must contain a JSON object with events[]")
+    if not isinstance(timeline, dict) or not isinstance(timeline.get("shots", []), list):
+        return ToolResult(text="[ERROR] timeline_path must contain a JSON object with shots[]")
     if not isinstance(segs, list):
         return ToolResult(text="[ERROR] script_path must contain a JSON array of segments")
     for i, seg in enumerate(segs):
         if not isinstance(seg, dict) or not str(seg.get("seg_id", "")).strip():
             return ToolResult(text=f"[ERROR] script segment #{i} is missing seg_id")
-        if float(seg.get("audio_dur", 0) or 0) > 0 and not seg.get("audio_path"):
+        if not isinstance(seg.get("text", ""), str):
+            return ToolResult(text=f"[ERROR] segment {seg['seg_id']} text must be a string")
+        try:
+            audio_dur = float(seg.get("audio_dur", 0) or 0)
+        except (TypeError, ValueError):
+            return ToolResult(text=f"[ERROR] segment {seg['seg_id']} audio_dur must be numeric")
+        if audio_dur > 0 and not seg.get("audio_path"):
             return ToolResult(text=f"[ERROR] segment {seg['seg_id']} has audio_dur "
                                    "but no audio_path; run synthesize_narration first")
+        if audio_dur > 0 and "text" not in seg:
+            return ToolResult(text=f"[ERROR] segment {seg['seg_id']} is missing text")
+        if not isinstance(seg.get("sentences", []), list):
+            return ToolResult(text=f"[ERROR] segment {seg['seg_id']} sentences must be an array")
+    if not isinstance(graph.get("events", []), list):
+        return ToolResult(text="[ERROR] graph events must be an array")
     for i, e in enumerate(graph.get("events", [])):
         if not isinstance(e, dict) or not e.get("event_id"):
             return ToolResult(text=f"[ERROR] graph event #{i} is missing event_id")
+    for i, sh in enumerate(timeline.get("shots", [])):
+        if not isinstance(sh, dict) or not sh.get("shot_id"):
+            return ToolResult(text=f"[ERROR] timeline shot #{i} is missing shot_id")
+        if not isinstance(sh.get("start"), (int, float)) or \
+                not isinstance(sh.get("end"), (int, float)):
+            return ToolResult(text=f"[ERROR] timeline shot {sh.get('shot_id')} needs numeric start/end")
     events = {e["event_id"]: e for e in graph.get("events", [])}
     shots = sorted(timeline.get("shots", []), key=lambda s: float(s["start"]))
     shot_bounds = {s["shot_id"]: s for s in shots}
-    fps = float(timeline.get("fps", DEFAULT_FPS) or DEFAULT_FPS)
+    try:
+        fps = float(timeline.get("fps", DEFAULT_FPS) or DEFAULT_FPS)
+    except (TypeError, ValueError):
+        return ToolResult(text="[ERROR] timeline fps must be numeric")
     min_frames = max(1, int(math.ceil(
         min(min_window_sec, HARD_MIN_WINDOW_SEC) * fps - 1e-7)))
     inserts_by_seg: dict[str, dict] = {}
     if inserts_path is not None and inserts_path.exists():
-        inserts_by_seg = {x["seg_id"]: x for x in
-                          load_json(inserts_path).get("inserts", [])}
+        try:
+            inserts_doc = load_json(inserts_path)
+        except Exception as exc:
+            return ToolResult(text=f"[ERROR] invalid inserts JSON: {exc}")
+        inserts_list = inserts_doc.get("inserts", []) if isinstance(inserts_doc, dict) else None
+        if not isinstance(inserts_list, list):
+            return ToolResult(text="[ERROR] inserts_path must contain an object with inserts[]")
+        for i, x in enumerate(inserts_list):
+            if not isinstance(x, dict) or not str(x.get("seg_id", "")).strip():
+                return ToolResult(text=f"[ERROR] insert #{i} is missing seg_id")
+        inserts_by_seg = {x["seg_id"]: x for x in inserts_list}
     logs: list[str] = []  # movie_cut 里的 print 全部改为进结构化日志
 
     def seg_spans(seg: dict) -> list[dict]:
@@ -863,6 +1066,13 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
                 continue
             insert = inserts_by_seg.get(seg["seg_id"])
             reserved = bool(insert) and seg["seg_id"] not in replay_segs
+            # 冷开场拍(高潮前置钩子): 画面取自片尾高潮, 走独立账本——
+            # 不推进全局游标、不占全局镜头账(正片高潮届时重演同镜头,
+            # 与原声回放同一豁免哲学), 段内单调/无重叠仍由临时账本把关。
+            cold_seg = any(bool(reels.get(bid, {}).get("cold_open"))
+                           for bid in (seg.get("source_seg_ids")
+                                       or [seg.get("seg_id", "")]))
+            seg_state = SelectionState(fps=fps) if cold_seg else state
             cap_f = None
             if insert and insert.get("position") == "before":
                 emit_oa(insert, seg, reserved)
@@ -870,15 +1080,19 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
             elif insert and reserved:
                 cap_f = int(math.floor(float(insert["start"]) * fps + 1e-7))
             groups = _group_rows(seg, evs, events, audio_dur, fps, min_frames)
-            tape = _reel_tape(seg_spans(seg), state)
+            tape = _reel_tape(seg_spans(seg), seg_state)
             if cap_f is not None:      # after+预留:旁白止步于台词时刻
                 tape = [{**iv, "ef": min(iv["ef"], cap_f)} for iv in tape
                         if iv["sf"] < cap_f]
             # 卷已在选卷时做过防剧透把关:卷内画面对本段任何句子都可用,
             # 否则首节拍句子会被"禁未来镜头"误判成无画面(cap_floor)。
             reel_end_f = max((iv["ef"] for iv in tape), default=0)
-            result = _solve_segment(groups, tape, fps, min_frames, avoid=avoid,
-                                    cap_floor_f=reel_end_f)
+            result, strict = solve_segment_snap(groups, tape, fps, min_frames,
+                                                avoid=avoid,
+                                                cap_floor_f=reel_end_f)
+            if not strict and isinstance(result, list):
+                logs.append(f"[warn] {seg['seg_id']}: 碎片禁令(≥{MIN_RUN_SEC}s)"
+                            f"下无解,回退 {MIN_WINDOW_SEC}s 下限兜底(可能偶闪)")
             if isinstance(result, dict):
                 # 卷内短缺 = 稿子超写(或原声吃进卷),精确报给缩稿闭环
                 raise FootageShortageError({
@@ -889,14 +1103,23 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
             windows, semantic_map = _emit_windows(groups, result, fps)
             for w in windows:
                 w["engine"] = "reel"
-            # 留白是标点不是空格:默认只发给高光拍(highlight),到处停顿等于没有停顿
-            want_tail = (tail_mode == "all" or
-                         (tail_mode == "highlight" and bool(seg.get("highlight"))))
+            # 留白是标点也是呼吸:默认每拍都停(解说时垫底归零,留白透原声——
+            # "解说的时候不要有原声,不解说的时候放原声"),高光拍停更长。
+            want_tail = tail_mode != "none"
+            if tail_mode == "highlight" and not seg.get("highlight"):
+                want_tail = False
+            tail_cap = TAIL_MAX_SEC if seg.get("highlight") else TAIL_PLAIN_SEC
             tail = (_emit_tail(tape, windows[-1]["end_frame"] if windows else 0,
-                               fps, min_frames) if want_tail else [])
+                               fps, min_frames, max_sec=tail_cap)
+                    if want_tail else [])
+            # 台词必须说完才切: 留白收刀点撞上半句台词就延长到句尾或回退到句头
+            if tail and lines:
+                tail = _snap_tail_to_line(tail, tape, fps, lines)
             for w in windows + tail:
-                state.occupy(w["shot_id"], w["start_frame"], w["end_frame"])
+                seg_state.occupy(w["shot_id"], w["start_frame"], w["end_frame"])
                 used[w["shot_id"]] += 1
+                if cold_seg:
+                    w["cold_open"] = True
                 source = shot_bounds.get(w["shot_id"])
                 if source is None:
                     raise AssertionError(
@@ -915,19 +1138,24 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
             tail_sec = round(sum(w["end_frame"] - w["start_frame"]
                                  for w in tail) / fps, 6)
             all_windows = windows + tail
-            edl.append({"schema_version": REEL_SCHEMA_VERSION, "seg_id": seg["seg_id"],
-                        "event_ids": [e["event_id"] for e in evs],
-                        "text": seg["text"],
-                        "emotion": normalize_emotion(seg.get("emotion")),
-                        "audio_path": seg["audio_path"], "audio_dur": audio_dur,
-                        "windows": all_windows, "semantic_map": semantic_map,
-                        "shot_ids": [f"{w['start']:.6f}-{w['end']:.6f}"
-                                     for w in all_windows],
-                        "video_dur": round(narr_total + tail_sec, 6),
-                        "speed": 1.0, "bgm_track": None,
-                        "duck": bool(seg.get("highlight", False)),
-                        "story_scene_id": seg.get("story_scene_id", ""),
-                        "tail_sec": tail_sec})
+            entry = {"schema_version": REEL_SCHEMA_VERSION, "seg_id": seg["seg_id"],
+                     "event_ids": [e["event_id"] for e in evs],
+                     "text": seg["text"],
+                     "emotion": normalize_emotion(seg.get("emotion")),
+                     "audio_path": seg["audio_path"], "audio_dur": audio_dur,
+                     "windows": all_windows, "semantic_map": semantic_map,
+                     "shot_ids": [f"{w['start']:.6f}-{w['end']:.6f}"
+                                  for w in all_windows],
+                     "video_dur": round(narr_total + tail_sec, 6),
+                     "speed": 1.0, "bgm_track": None,
+                     "duck": bool(seg.get("highlight", False)),
+                     "story_scene_id": seg.get("story_scene_id", ""),
+                     "tail_sec": tail_sec}
+            if cold_seg:
+                entry["cold_open"] = True
+                entry["reuse_type"] = "cold_open_teaser"
+                entry["exemptions"] = ["global_no_repeat", "monotonic_time"]
+            edl.append(entry)
             logs.append(f"{seg['seg_id']}: 配音{audio_dur:.1f}s / "
                         f"{len(semantic_map)}语义句 ← {len(windows)}窗口(卷)"
                         f"{f' +留白{tail_sec:.1f}s' if tail_sec else ''}")
@@ -962,6 +1190,12 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text=f"[ERROR] bind_assertion: {exc}",
                           data={"error": "bind_assertion", "detail": str(exc),
                                 "log": logs})
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
+        # 轻校验漏网的脏输入 (end:null / sentence 非 dict / insert 缺 start ...):
+        # 结构化 [ERROR], 不让 traceback 冒到工具外
+        return ToolResult(text=f"[ERROR] invalid input data: {type(exc).__name__}: {exc}",
+                          data={"error": "invalid_input", "detail": str(exc),
+                                "log": logs})
 
     report = audit_edl(edl, fps=fps,
                        min_window_sec=min(min_window_sec, HARD_MIN_WINDOW_SEC))
@@ -975,7 +1209,7 @@ def bind_narration(args: dict, ctx: RunContext) -> ToolResult:
             data={"error": "edl_qc_failed", "qc": report,
                   "qc_json": str(qc_path), "log": logs},
             artifacts=[str(qc_path)])
-    save_json(edl, out_path)
+    save_audited_edl(edl, report, out_path, qc_path)
 
     # 摘要统计(附加信息,不影响产物契约):接缝/锚命中/留白。
     rhythm = report.get("rhythm", {})

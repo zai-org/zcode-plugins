@@ -4,9 +4,9 @@ import copy
 import hashlib
 import json
 import math
+import os
 import shutil
 import subprocess
-from .ffproc import run_proc
 import time
 from pathlib import Path
 from typing import Any
@@ -114,6 +114,10 @@ CLIP_PATCH_KEYS = {
     "move_clips",
 }
 PROTECTED_TIMELINE_PATCH_FIELDS = {"clips", "tracks"}
+# Rendered as a fade of the clip itself (video/overlay alpha, audio-track volume).
+CLIP_FADE_TYPES = {"fade", "crossfade", "dissolve"}
+# Still images: a clip shows the whole picture, so its source start defaults to 0.
+STILL_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
 
 
 def load_timeline(path: Path) -> Any:
@@ -165,6 +169,11 @@ def validate_timeline(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text=f"[ERROR] invalid JSON: {exc}")
 
     clips, issues = validate_timeline_data(data, ctx)
+    if not any(i["severity"] == "error" for i in issues):
+        # video_render runs this validation first; report what it would reject now
+        # instead of passing a timeline the renderer refuses.
+        from .render import render_preflight_issues
+        issues.extend(render_preflight_issues(as_project(data), ctx))
     status = "pass" if not any(i["severity"] == "error" for i in issues) else "fail"
     project_contract = timeline_project_contract(data)
     report = {
@@ -198,6 +207,7 @@ def validate_timeline_data(data: dict[str, Any], ctx: RunContext) -> tuple[list[
     check_project_contract(data, issues)
     check_container_shape(data, issues)
     check_asset_references_and_track_layout(data, issues)
+    issues.extend(render_support_issues(as_project(data)))
     tracks_mode = not isinstance(data.get("clips"), list) and isinstance(data.get("tracks"), list)
     clips = timeline_clips(data)
     if not clips:
@@ -206,6 +216,64 @@ def validate_timeline_data(data: dict[str, Any], ctx: RunContext) -> tuple[list[
     for idx, clip in enumerate(clips):
         check_clip(idx, clip, ctx, issues, tracks_mode=tracks_mode, duration_cache=duration_cache)
     return clips, issues
+
+
+def as_project(data: Any) -> Any:
+    """Top-level clips[] is shorthand for one video track."""
+    if not isinstance(data, dict) or not isinstance(data.get("clips"), list) or isinstance(data.get("tracks"), list):
+        return data
+    data = {**data, "project": data.get("project") or {"task": "sequential cut"},
+            "assets": [{"source": c["source"]} for c in data["clips"] if isinstance(c, dict) and c.get("source")],
+            "tracks": [{"type": "video", "clips": data["clips"]}]}
+    del data["clips"]
+    return data
+
+
+def render_support_issues(data: Any) -> list[dict[str, Any]]:
+    """Fields the renderer refuses instead of silently ignoring; shared by validation and render."""
+    issues: list[dict[str, Any]] = []
+    if not isinstance(data, dict):
+        return issues
+    if data.get("transitions"):
+        issues.append({"severity": "error",
+                       "message": "global transitions are not rendered; use supported clip fades"})
+    tracks = data.get("tracks") if isinstance(data.get("tracks"), list) else []
+    for track_idx, track in enumerate(tracks):
+        if not isinstance(track, dict) or track.get("enabled") is False:
+            continue
+        kind = normalize_track_type(track.get("type") or track.get("track_type") or track.get("name") or "")
+        clips = track.get("clips") if isinstance(track.get("clips"), list) else []
+        if kind not in KNOWN_TRACK_TYPES:
+            if clips:
+                issues.append({"severity": "error", "track": track_idx,
+                               "message": f"track type is not rendered: {kind or 'untyped'}; "
+                                          "use video/audio/text/overlay track types or disable the track"})
+            continue
+        if track.get("visible") is False:
+            continue
+        if track.get("effects"):
+            issues.append({"severity": "error", "track": track_idx,
+                           "message": "track effects[] are metadata only; remove them or implement the requested effect"})
+        for clip_idx, clip in enumerate(clips):
+            if not isinstance(clip, dict) or clip.get("enabled") is False:
+                continue
+            if clip.get("effects"):
+                issues.append({"severity": "error", "track": track_idx, "clip": clip_idx,
+                               "message": "effects[] are metadata only; remove them or implement the requested effect"})
+            for key in ("transition_in", "transition_out"):
+                transition = clip.get(key)
+                if not isinstance(transition, dict):
+                    continue
+                name = str(transition.get("type") or transition.get("name") or "").lower()
+                if name not in CLIP_FADE_TYPES:
+                    issues.append({"severity": "error", "track": track_idx, "clip": clip_idx,
+                                   "message": f"{key} type {name!r} is not rendered; supported clip transitions: "
+                                              "fade, crossfade, dissolve"})
+                elif kind in TEXT_TRACK_TYPES:
+                    issues.append({"severity": "error", "track": track_idx, "clip": clip_idx,
+                                   "message": f"{key} is not rendered on text clips; remove it or use a prepared "
+                                              "image/video overlay"})
+    return issues
 
 
 def check_asset_references_and_track_layout(data: dict[str, Any], issues: list[dict[str, Any]]) -> None:
@@ -342,6 +410,7 @@ def check_project_shape(data: dict[str, Any], issues: list[dict[str, Any]]) -> N
     sequence = data.get("sequence")
     if isinstance(sequence, dict):
         check_canvas_like(sequence.get("canvas") or sequence.get("output_canvas"), "sequence.canvas", issues)
+        check_canvas_like({key: sequence.get(key) for key in ("width", "height")}, "sequence", issues)
         check_positive_number(sequence.get("fps"), "sequence.fps", issues)
         check_positive_number(sequence.get("duration"), "sequence.duration", issues)
         check_non_negative_number(sequence.get("start_time"), "sequence.start_time", issues)
@@ -491,7 +560,16 @@ def check_container_shape(data: dict[str, Any], issues: list[dict[str, Any]]) ->
 def check_track_shape(track_idx: int, track: dict[str, Any], issues: list[dict[str, Any]]) -> None:
     track_type_raw = track.get("type") or track.get("track_type") or track.get("name") or ""
     track_type = normalize_track_type(track_type_raw)
-    if track_type and track_type not in KNOWN_TRACK_TYPES:
+    if not track_type and not (track.get("enabled") is not False and track.get("clips")):
+        # 有 clip 的无类型轨由 render_support_issues 报 error; 空轨只提示
+        issues.append({
+            "severity": "warning",
+            "track": track_idx,
+            "message": "track has no type/track_type/name; render_preview will skip it as unsupported "
+                       "(set type to video/audio/text/overlay)",
+        })
+    elif track_type not in KNOWN_TRACK_TYPES and not (track.get("enabled") is not False and track.get("clips")):
+        # A typed-but-unknown track with clips is a render error (render_support_issues).
         issues.append({
             "severity": "warning",
             "track": track_idx,
@@ -546,7 +624,8 @@ def check_clip(
     end = clip.get("end", clip.get("end_time", clip.get("out")))
     duration = clip.get("duration")
     start_f = coerce_timeline_number(start)
-    if start_f is None and text_only_clip:
+    if start_f is None and (text_only_clip or (source_path is not None
+                                               and source_path.suffix.lower() in STILL_IMAGE_SUFFIXES)):
         start_f = 0.0
     if start_f is None:
         issues.append({"severity": "error", "clip": idx, "message": "start/start_time/in must be numeric"})
@@ -586,7 +665,10 @@ def check_clip(
         resolved_end = start_f + duration_f
     if duration_f is not None and duration_f <= 0:
         issues.append({"severity": "error", "clip": idx, "message": "duration must be greater than 0"})
-    if source_path is not None and source_path.is_file() and resolved_end is not None:
+    # The renderer loops still images for the requested hold. ffprobe may report
+    # a one-frame duration for JPEGs; that is not a limit on their display time.
+    if (source_path is not None and source_path.is_file() and resolved_end is not None
+            and source_path.suffix.lower() not in STILL_IMAGE_SUFFIXES):
         source_duration = cached_media_duration(source_path, duration_cache)
         if source_duration is not None and resolved_end > source_duration + 0.05:
             issues.append({
@@ -676,37 +758,11 @@ def cached_media_duration(path: Path, cache: dict[str, float | None]) -> float |
 
 
 def media_duration_seconds(path: Path) -> float | None:
-    cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration:stream=duration",
-        "-of", "json",
-        str(path),
-    ]
+    from .observation_media import probe
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=30)
+        return safe_duration(probe(path)["duration"])
     except Exception:
         return None
-    if proc.returncode != 0:
-        return None
-    try:
-        data = json.loads(proc.stdout)
-    except Exception:
-        return None
-    fmt = data.get("format") if isinstance(data, dict) else {}
-    value = safe_duration(fmt.get("duration")) if isinstance(fmt, dict) else None
-    if value is not None:
-        return value
-    streams = data.get("streams") if isinstance(data, dict) else []
-    if not isinstance(streams, list):
-        return None
-    values = [
-        duration
-        for stream in streams
-        if isinstance(stream, dict)
-        for duration in [safe_duration(stream.get("duration"))]
-        if duration is not None
-    ]
-    return max(values) if values else None
 
 
 def safe_duration(value: object) -> float | None:
@@ -799,7 +855,12 @@ def timeline_diff(args: dict, ctx: RunContext) -> ToolResult:
             artifacts=artifacts,
         )
     if apply_flag:
-        timeline_path.write_text(json.dumps(after, ensure_ascii=False, indent=2), encoding="utf-8")
+        # timeline.json is the source of truth (not re-derivable): write via tmp +
+        # os.replace so a crash mid-write or a concurrent reader never sees a
+        # truncated file
+        tmp_timeline = timeline_path.with_name(f".{timeline_path.name}.tmp-{os.getpid()}")
+        tmp_timeline.write_text(json.dumps(after, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(tmp_timeline, timeline_path)
         diff["applied"] = True
         output_json.write_text(json.dumps(diff, ensure_ascii=False, indent=2), encoding="utf-8")
         artifacts.append(str(timeline_path))
@@ -862,9 +923,17 @@ def apply_patch_to_timeline(data: dict[str, Any], patch: dict[str, Any]) -> None
             default_clip_container(data).append(item)
 
 
+def patch_has_ops(patch: dict[str, Any], keys: tuple[str, ...]) -> bool:
+    return any(isinstance(patch.get(key), list) and patch.get(key) for key in keys)
+
+
 def apply_asset_patch(data: dict[str, Any], patch: dict[str, Any]) -> None:
     assets = data.get("assets")
     if not isinstance(assets, list):
+        # 只在确有 asset 操作时才创建容器: legacy clips[] timeline 无条件补
+        # assets[]/tracks[] 会让任何 patch 都误报 "must use either clips[] or tracks[]"
+        if not patch_has_ops(patch, ("update_assets", "remove_asset_indices", "add_assets")):
+            return
         assets = []
         data["assets"] = assets
     update_assets = patch.get("update_assets", [])
@@ -890,6 +959,8 @@ def apply_asset_patch(data: dict[str, Any], patch: dict[str, Any]) -> None:
 def apply_track_patch(data: dict[str, Any], patch: dict[str, Any]) -> None:
     tracks = data.get("tracks")
     if not isinstance(tracks, list):
+        if not patch_has_ops(patch, ("replace_tracks", "remove_track_indices", "insert_tracks", "add_tracks")):
+            return
         tracks = []
         data["tracks"] = tracks
     replace_tracks = patch.get("replace_tracks", [])
@@ -961,10 +1032,16 @@ def move_clip(data: dict[str, Any], item: dict[str, Any]) -> None:
     refs = timeline_clip_refs(data)
     if not (0 <= from_idx < len(refs)):
         return
-    target_container = clip_target_container(data, item)
+    source_container, local_idx = refs[from_idx]
+    # Without an explicit track_index the move stays on the clip's own track:
+    # `from` is a flat index over all tracks, so defaulting the target to "the
+    # first video track" would silently drag an audio clip onto the video track.
+    if is_patch_index(item.get("track_index")):
+        target_container = clip_target_container(data, item)
+    else:
+        target_container = source_container
     if target_container is None:
         return
-    source_container, local_idx = refs[from_idx]
     clip = source_container.pop(local_idx)
     if target_container is source_container and to_idx > local_idx:
         to_idx -= 1
@@ -1162,10 +1239,20 @@ def validate_timeline_patch(
                     issues.append({"severity": "error", "message": f"move_clips[{pos}].from must be an integer"})
                 elif from_idx < 0 or from_idx >= len(refs):
                     issues.append({"severity": "error", "message": f"move_clips[{pos}].from out of range: {from_idx}"})
+                # `to` is a position inside the target container (the clip's own
+                # track unless track_index says otherwise), not a flat index
+                target_len = len(refs)
+                tracks = data.get("tracks")
+                if is_patch_index(item.get("track_index")):
+                    ti = item["track_index"]
+                    if isinstance(tracks, list) and 0 <= ti < len(tracks) and isinstance(tracks[ti], dict):
+                        target_len = len(tracks[ti].get("clips") or []) if isinstance(tracks[ti].get("clips"), list) else 0
+                elif is_patch_index(from_idx) and 0 <= from_idx < len(refs):
+                    target_len = len(refs[from_idx][0])
                 if not is_patch_index(to_idx):
                     issues.append({"severity": "error", "message": f"move_clips[{pos}].to must be an integer"})
-                elif to_idx < 0 or to_idx > len(refs):
-                    issues.append({"severity": "error", "message": f"move_clips[{pos}].to out of range: {to_idx}"})
+                elif to_idx < 0 or to_idx > target_len:
+                    issues.append({"severity": "error", "message": f"move_clips[{pos}].to out of range for the target track: {to_idx} (track has {target_len} clip(s))"})
                 validate_track_index(data, item, f"move_clips[{pos}]", issues)
 
     set_timeline_fields = patch.get("set_timeline_fields")
@@ -1205,6 +1292,14 @@ def validate_timeline_patch(
                 fields = item.get("fields")
                 if not isinstance(fields, dict) or not fields:
                     issues.append({"severity": "error", "message": f"set_track_fields[{pos}].fields must be a non-empty object"})
+                elif "clips" in fields:
+                    # Rewriting a track's clips[] here would invalidate every flat
+                    # clip index the same patch was validated against (remove/
+                    # update/replace run after set_track_fields)
+                    issues.append({
+                        "severity": "error",
+                        "message": f"set_track_fields[{pos}].fields cannot modify clips; use clip patch operations",
+                    })
     return issues
 
 
@@ -1404,6 +1499,23 @@ def track_clips_list(track: dict[str, Any]) -> list:
 
 def is_video_track(track: dict[str, Any]) -> bool:
     return normalize_track_type(track.get("type") or track.get("track_type") or track.get("name") or "") in VIDEO_TRACK_TYPES
+
+
+def clip_is_rendered(track_type: str, track: dict, clip: dict) -> bool:
+    """render_preview 的可见性规则 (qc 的时长核对必须用同一套, 否则 muted/disabled
+    clip 让合法 timeline 必 QC fail): enabled=false 的轨/clip 跳过; 音频轨 muted 跳过;
+    视频/文字/叠加轨 visible=false 跳过; 未知/空类型轨整轨不渲染。"""
+    if track_type not in (VIDEO_TRACK_TYPES | AUDIO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES):
+        return False
+    if track.get("enabled") is False or clip.get("enabled") is False:
+        return False
+    if track_type in AUDIO_TRACK_TYPES and (track.get("muted") is True or clip.get("muted") is True):
+        return False
+    if track_type in (VIDEO_TRACK_TYPES | TEXT_TRACK_TYPES | OVERLAY_TRACK_TYPES) and (
+        track.get("visible") is False or clip.get("visible") is False
+    ):
+        return False
+    return True
 
 
 def normalize_track_type(value: object) -> str:

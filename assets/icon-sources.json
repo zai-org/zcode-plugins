@@ -2347,14 +2347,6 @@
     "transformation": "Solid background, 512x512 PNG; no baked corner radius"
   },
   {
-    "name": "video2code",
-    "icon": "video2code/icon.png",
-    "source": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/video2code/icon.png",
-    "sha256": "696c2fbc2c504c6e92fb383c0067e6f5ad0a6f2eb7c6c6fe38fd7f9bb519e08b",
-    "mimeType": "image/png",
-    "transformation": "Solid background, 512x512 PNG; no baked corner radius"
-  },
-  {
     "name": "visualize",
     "icon": "visualize/icon.png",
     "source": "ZCode authored asset",

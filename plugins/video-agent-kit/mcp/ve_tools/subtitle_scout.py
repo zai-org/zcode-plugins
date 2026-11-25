@@ -25,7 +25,6 @@ import json
 import re
 import shutil
 import subprocess
-from .ffproc import run_proc
 import time
 from pathlib import Path
 from typing import Any
@@ -69,23 +68,34 @@ def subtitle_scout(args: dict, ctx: RunContext) -> ToolResult:
     except ValueError as exc:
         return ToolResult(text=f"[ERROR] {exc}")
 
-    max_frames = max(2, int(args.get("max_frames") or DEFAULT_MAX_FRAMES))
-    threshold = float(args.get("scene_threshold") or DEFAULT_SCENE_THRESHOLD)
+    try:
+        max_frames = max(2, int(args.get("max_frames") or DEFAULT_MAX_FRAMES))
+    except (TypeError, ValueError):
+        return ToolResult(text=f"[ERROR] max_frames must be an integer, got {args.get('max_frames')!r}")
+    try:
+        threshold = float(args.get("scene_threshold") or DEFAULT_SCENE_THRESHOLD)
+    except (TypeError, ValueError):
+        return ToolResult(text=f"[ERROR] scene_threshold must be a number, got {args.get('scene_threshold')!r}")
+    if not (0.0 < threshold < 1.0):
+        return ToolResult(text=f"[ERROR] scene_threshold must be in (0, 1), got {threshold}")
     cuts = detect_shot_cuts(video_path, threshold)
     timestamps = pick_timestamps(cuts, duration, max_frames)
 
     band = caption_band(style)
     work_dir = ctx.resolve(args.get("frames_dir") or f".video_agent/subtitle_scout/{video_path.stem}")
     work_dir.mkdir(parents=True, exist_ok=True)
-    for stale in work_dir.glob("*.jpg"):
-        stale.unlink()
+    if not args.get("frames_dir"):
+        # Only sweep the directory this tool owns; a user-supplied frames_dir
+        # may hold their own .jpg files.
+        for stale in work_dir.glob("*.jpg"):
+            stale.unlink()
 
     frames: list[tuple[float, Path]] = []
     for idx, ts in enumerate(timestamps):
         frame_path = work_dir / f"f{idx:03d}.jpg"
         error = run_ffmpeg([
             "ffmpeg", "-y", "-v", "error", "-ss", f"{ts:.3f}", "-i", str(video_path),
-            "-frames:v", "1", "-q:v", "3", str(frame_path),
+            "-frames:v", "1", "-q:v", "3", "-update", "1", str(frame_path),
         ])
         if error or not frame_path.is_file():
             continue
@@ -253,7 +263,7 @@ def detect_shot_cuts(video_path: Path, threshold: float) -> list[float]:
         "-an", "-f", "null", "-",
     ]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     except Exception:
         return []
     log = (proc.stderr or "") + (proc.stdout or "")

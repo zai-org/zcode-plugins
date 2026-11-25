@@ -25,7 +25,6 @@ import math
 import re
 import shutil
 import subprocess
-from .ffproc import run_proc, require_ffmpeg
 import time
 from pathlib import Path
 from typing import Any
@@ -66,7 +65,7 @@ def measure_loudness(video_path: Path) -> dict[str, float | None]:
     """
     cmd = ["ffmpeg", "-v", "info", "-i", str(video_path), "-vn", "-af", "volumedetect", "-f", "null", "-"]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=900)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     except Exception:
         return {"mean_volume_db": None, "max_volume_db": None}
     log = (proc.stderr or "") + (proc.stdout or "")
@@ -134,18 +133,38 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
             return ToolResult(text="[ERROR] speaker_names must be an object mapping speaker label to display name")
         style["speaker_names"] = {str(k): str(v) for k, v in speaker_names.items()}
 
+    seg_stats: dict[str, Any] = {}
     try:
-        segments = load_timed_segments(transcript_path)
+        segments = load_timed_segments(transcript_path, stats=seg_stats)
     except Exception as exc:
         return ToolResult(text=f"[ERROR] could not read transcript: {exc}")
     if not segments:
         return ToolResult(
             text="[ERROR] transcript has no timed segments; subtitle timing needs start/end per segment",
-            data={"transcript_path": str(transcript_path)},
+            data={"transcript_path": str(transcript_path), **seg_stats},
+        )
+    warnings: list[str] = []
+    if seg_stats.get("dropped_untimed"):
+        warnings.append(
+            f"{seg_stats['dropped_untimed']} of {seg_stats['raw_segments']} transcript segment(s) had no usable "
+            f"start<end and were dropped ({seg_stats['dropped_untimed_chars']} visible chars not subtitled); "
+            "fix their timing in the transcript if that text matters"
         )
 
     snap_window = coerce_positive(args.get("snap_window_seconds"), DEFAULT_SNAP_WINDOW)
-    missing_glyphs = sty.uncovered_characters("".join(s["text"] for s in segments), style)
+    all_text = "".join(s["text"] for s in segments)
+    missing_glyphs = sty.uncovered_characters(all_text, style)
+    if missing_glyphs and not (overrides or {}).get("font_file"):
+        # 默认字体不覆盖 (常见: fc-match 给了无 CJK 的 Noto Sans), 按 cmap 覆盖挑一个能画
+        # 全部字符的字体再试; 调用方显式给了 font_file 才硬失败
+        fallback = sty.find_cjk_font(all_text)
+        if not fallback.startswith("[ERROR]") and fallback != style.get("font_file"):
+            style["font_file"] = fallback
+            face_index, family = sty.font_face(fallback)
+            style["font_family_resolved"] = family or style.get("font_family_resolved")
+            style["font_face_index"] = face_index
+            style["font_fallback_reason"] = f"default font lacked glyphs for {''.join(missing_glyphs)}"
+            missing_glyphs = sty.uncovered_characters(all_text, style)
     if missing_glyphs:
         return ToolResult(
             text=(
@@ -163,7 +182,7 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
     cues: list[dict[str, Any]] = []
     for seg_index, segment in enumerate(segments):
         cues.extend(segment_to_cues(segment, seg_index, style, pauses, snap_window))
-    cues = finalize_cues(cues, style, video_duration=duration, pauses=pauses)
+    cues = finalize_cues(cues, style, video_duration=duration, pauses=pauses, warnings=warnings)
     if not cues:
         return ToolResult(
             text="[ERROR] no subtitle cues were produced; the transcript segments carried no displayable text",
@@ -171,7 +190,7 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
         )
 
     ass_text = sty.build_ass(cues, style, title=video_path.stem)
-    srt_text = sty.build_srt(cues)
+    srt_text = sty.build_srt(cues, style)
     output_json = ctx.resolve(args.get("output_json") or "out/subtitles.json")
     output_ass = ctx.resolve(args.get("output_ass") or output_json.with_suffix(".ass"))
     output_srt = ctx.resolve(args.get("output_srt") or output_json.with_suffix(".srt"))
@@ -181,6 +200,12 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
     output_srt.write_text(srt_text, encoding="utf-8")
 
     stats = cue_stats(cues, segments, style, duration)
+    # Count against the transcript as written, not the survivors: a segment
+    # dropped for bad timing must still show up as missing coverage.
+    stats["segment_count"] = int(seg_stats.get("raw_segments") or len(segments))
+    stats["segments_timed"] = len(segments)
+    stats["segments_dropped_untimed"] = int(seg_stats.get("dropped_untimed") or 0)
+    stats["overlapping_segments"] = sum(1 for w in warnings if w.startswith("transcript segments"))
     package = {
         "version": "1.0",
         "source_video": str(video_path),
@@ -198,6 +223,7 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
         "snap_window_seconds": snap_window,
         "cues": cues,
         "stats": stats,
+        "warnings": warnings,
         "ass_path": str(output_ass),
         "srt_path": str(output_srt),
         "elapsed_seconds": round(time.time() - started, 3),
@@ -208,9 +234,12 @@ def subtitle_build(args: dict, ctx: RunContext) -> ToolResult:
     return ToolResult(
         text=(
             f"Built {len(cues)} subtitle cues from {len(segments)} transcript segments "
-            f"({stats['snapped_boundaries']}/{stats['internal_boundaries']} boundaries snapped to a real pause). "
+            f"({stats['snapped_boundaries']}/{stats['internal_boundaries']} invented boundaries placed on a real "
+            f"speech boundary: {stats['word_timed_boundaries']} from word timestamps, "
+            f"{stats['snapped_boundaries'] - stats['word_timed_boundaries']} snapped to a detected pause). "
             f"Read the cue table below and check the wording and break points before rendering: "
             f"{ctx.virtualize(output_json)}\n\n" + cue_table(cues)
+            + (("\n\nWARNINGS:\n- " + "\n- ".join(warnings)) if warnings else "")
             + (("\n\n" + hints) if hints else "")
         ),
         data={k: v for k, v in package.items() if k != "cues"},
@@ -262,6 +291,60 @@ def build_hints(stats: dict[str, Any], style: dict[str, Any], package: dict[str,
     return "\n".join(hints)
 
 
+def _word_char_spans(words: Any) -> list[tuple[int, int, float, float]]:
+    """Per word: (visible-char offset from, to, start, end), the offsets being the
+    running count of visible characters (spaces and punctuation excluded, see
+    `visible_char_count`) over the word tokens.
+
+    Visible characters are the one coordinate raw ASR word tokens and the wrapped
+    caption text reliably share: the tokens carry no punctuation and the caption
+    may have dropped some, spacing differs, and the segmenter's atoms glue
+    "hasn" + "'t" back together — none of that moves a letter. Empty when the
+    words are unusable (missing/non-finite times), so callers fall back."""
+    spans: list[tuple[int, int, float, float]] = []
+    run = 0
+    for w in words if isinstance(words, list) else []:
+        if not isinstance(w, dict):
+            return []
+        try:
+            start = float(w["start"])
+            end = float(w["end"])
+        except (KeyError, TypeError, ValueError):
+            return []
+        if not (math.isfinite(start) and math.isfinite(end)) or end < start:
+            return []
+        n = sty.visible_char_count(str(w.get("text") or ""))
+        if n <= 0:
+            continue
+        spans.append((run, run + n, start, end))
+        run += n
+    return spans
+
+
+def _time_at_char(spans: list[tuple[int, int, float, float]], pos: int, *, side: str) -> float:
+    """Spoken time of visible-char position `pos` on the word timeline.
+
+    side="start": the moment the character at `pos` begins (first word holding
+    it); side="end": the moment the character before `pos` finishes. The two
+    differ exactly at a word boundary, where they return the gap's two edges.
+    Inside a word, time is interpolated linearly by character."""
+    if not spans:
+        return 0.0
+    if side == "start":
+        if pos >= spans[-1][1]:
+            return spans[-1][3]
+        for c0, c1, s, e in spans:
+            if c0 <= pos < c1:
+                return s + (e - s) * (pos - c0) / (c1 - c0)
+        return spans[0][2]
+    if pos <= spans[0][0]:
+        return spans[0][2]
+    for c0, c1, s, e in spans:
+        if c0 < pos <= c1:
+            return s + (e - s) * (pos - c0) / (c1 - c0)
+    return spans[-1][3]
+
+
 def segment_to_cues(
     segment: dict[str, Any],
     seg_index: int,
@@ -295,25 +378,47 @@ def segment_to_cues(
     def time_at(atom_index: int) -> float:
         return seg_start + span * (prefix[atom_index] / total_units)
 
+    # When the provider gave word-level timestamps and they reconstruct the
+    # segment's visible characters, the cuts we invent inside the segment land
+    # exactly in the gap between the last word of one cue and the first word of
+    # the next — real speech boundaries, which no amount of speech-rate
+    # interpolation or silence detection recovers (the interpolated split on an
+    # English segment routinely parked the first word of the next cue inside
+    # the previous one).
+    chars = [0]
+    for a in atoms:
+        chars.append(chars[-1] + sty.visible_char_count(a["raw"]))
+    spans = _word_char_spans(segment.get("words"))
+    word_timed = bool(spans) and spans[-1][1] == chars[-1] and chars[-1] > 0
+
     breaks = plan_breaks(atoms, prefix, total_units, span, style)
     cues: list[dict[str, Any]] = []
     for order, (i, j) in enumerate(breaks):
         cue_text = atoms_display(atoms, i, j)
         if not cue_text:
             continue
+        if word_timed:
+            start = _time_at_char(spans, chars[i], side="start")
+            end = _time_at_char(spans, chars[j], side="end")
+        else:
+            start, end = time_at(i), time_at(j)
         cues.append({
-            "start": time_at(i),
-            "end": time_at(j),
+            "start": start,
+            "end": end,
             "text": cue_text,
             "lines": sty.wrap_lines(cue_text, style),
             "source_segment": seg_index,
             "speaker": segment.get("speaker"),
             "_words": segment.get("words"),
+            "_char_from": chars[i],
+            "_char_to": chars[j],
             "break_strength": atoms[j - 1]["break_after"],
             "is_segment_start": order == 0,
             "is_segment_end": j == len(atoms),
             "snapped_start": False,
             "snapped_end": False,
+            # How this cue's start boundary was placed; see the loop below.
+            "boundary_source": "segment" if order == 0 else "interpolated",
         })
     if not cues:
         return []
@@ -325,7 +430,25 @@ def segment_to_cues(
     # own maximum on-screen time.
     hold_room = max(0.0, float(style["max_duration"]) - (seg_end - cues[-1]["start"]))
     cues[-1]["end"] = seg_end + min(TAIL_HOLD, hold_room)
+    min_gap = float(style["min_gap"])
     for idx in range(len(cues) - 1):
+        a = cues[idx]["start"]
+        b = cues[idx + 1]["end"]
+        if word_timed:
+            # The outgoing cue stays until its last word is finished and may
+            # hold a little into the silence; the incoming one appears when its
+            # first word starts, delayed by at most min_gap when the words run
+            # straight on. Word times beat silence detection, so no snapping.
+            t_end = cues[idx]["end"]
+            t_start = cues[idx + 1]["start"]
+            end_i = max(t_end, min(t_end + TAIL_HOLD, t_start - min_gap))
+            end_i = max(a + 0.15, min(end_i, b - 0.30))
+            cues[idx]["end"] = end_i
+            cues[idx + 1]["start"] = max(end_i, min(max(t_start, end_i + min_gap), b - 0.15))
+            cues[idx]["snapped_end"] = True
+            cues[idx + 1]["snapped_start"] = True
+            cues[idx + 1]["boundary_source"] = "words"
+            continue
         boundary = 0.5 * (cues[idx]["end"] + cues[idx + 1]["start"])
         snapped = snap_to_pause(boundary, pauses, snap_window)
         if snapped is None:
@@ -341,18 +464,17 @@ def segment_to_cues(
         # char-weighted division of their shared span; clamp that fair point into
         # the pause so sync is preserved but no cue is starved further than the
         # pause geometry forces.
-        a = cues[idx]["start"]
-        b = cues[idx + 1]["end"]
         prev_chars = max(1, sty.visible_char_count(cues[idx]["text"]))
         next_chars = max(1, sty.visible_char_count(cues[idx + 1]["text"]))
         fair = (prev_chars * b + next_chars * a) / (prev_chars + next_chars)
         swap = min(max(fair, pause_start), pause_end)
         swap = max(a + 0.20, min(swap, b - 0.20))
-        half_gap = 0.5 * float(style["min_gap"])
+        half_gap = 0.5 * min_gap
         cues[idx]["end"] = max(a + 0.15, swap - half_gap)
         cues[idx + 1]["start"] = min(b - 0.15, max(cues[idx]["end"], swap + half_gap))
         cues[idx]["snapped_end"] = True
         cues[idx + 1]["snapped_start"] = True
+        cues[idx + 1]["boundary_source"] = "pause"
     return cues
 
 
@@ -545,16 +667,29 @@ def tokenize_atoms(text: str, style: dict[str, Any]) -> list[dict[str, Any]]:
     """
     tokens = sty.cut_words_tagged(text)
     atoms: list[dict[str, Any]] = []
+    pending_prefix = ""   # opening quote/bracket waiting for the word it opens
     for token, pos in tokens:
         if not token:
             continue
         if token.isspace():
+            if pending_prefix:
+                continue
             if atoms:
+                # an apostrophe followed by whitespace is a closing quote, never
+                # intra-word: drop any pending glue so the next word stays separate
+                atoms[-1].pop("_glue_next_alnum", None)
                 atoms[-1]["display"] += " "
                 atoms[-1]["raw"] += " "
                 atoms[-1]["break_after"] = max(atoms[-1]["break_after"], 1)
             continue
         strength = _punctuation_strength(token)
+        if strength is not None and _is_opening_punct(token, atoms[-1]["raw"] if atoms else ""):
+            # An opening quote/bracket belongs to the word that follows it, not
+            # the word before: glued to the previous atom it would let a cue end
+            # in a dangling 「说“」 (wrap_lines never breaks there, so the cue
+            # segmenter and the line wrapper would disagree).
+            pending_prefix += token
+            continue
         if strength is not None and atoms:
             # Punctuation is not a cue of its own; it trails the word it
             # follows and upgrades the break strength at that position. It also
@@ -564,20 +699,49 @@ def tokenize_atoms(text: str, style: dict[str, Any]) -> list[dict[str, Any]]:
             atoms[-1]["break_after"] = max(atoms[-1]["break_after"], strength)
             if strength >= 2:
                 atoms[-1]["trailing_taboo"] = False
+            # An apostrophe between letters (it's, NASA's) is not a boundary.
+            if token in "'’" and atoms[-1]["raw"][:-1].rstrip()[-1:].isalnum():
+                atoms[-1]["_glue_next_alnum"] = True
+            continue
+        raw_token = pending_prefix + token
+        pending_prefix = ""
+        if atoms and atoms[-1].pop("_glue_next_alnum", False) and token[:1].isalnum():
+            atoms[-1]["raw"] += raw_token
+            atoms[-1]["display"] += sty.to_display_text(raw_token, style)
+            atoms[-1]["text"] += token
+            atoms[-1]["break_after"] = 1
+            atoms[-1]["trailing_taboo"] = sty.is_trailing_taboo(atoms[-1]["text"], pos)
             continue
         atoms.append({
-            "raw": token,
-            "display": sty.to_display_text(token, style),
+            "raw": raw_token,
+            "display": sty.to_display_text(raw_token, style),
             "text": token,
             "pos": pos,
             "break_after": 1,
             "trailing_taboo": sty.is_trailing_taboo(token, pos),
             "leading_taboo": sty.is_leading_taboo(token, pos),
         })
+    if pending_prefix and atoms:
+        atoms[-1]["raw"] += pending_prefix
+        atoms[-1]["display"] += sty.to_display_text(pending_prefix, style)
     if atoms:
+        atoms[-1].pop("_glue_next_alnum", None)
         atoms[-1]["break_after"] = 3
         atoms[-1]["trailing_taboo"] = False
     return [a for a in atoms if a["display"].strip() or a["raw"].strip()]
+
+
+_OPENING_PUNCT = "“‘（【《「『([{"
+
+
+def _is_opening_punct(token: str, prev_raw: str) -> bool:
+    """True for tokens made only of opening marks. Straight quotes are ambiguous:
+    treat them as opening when they follow a space / the start of text."""
+    if all(ch in _OPENING_PUNCT for ch in token):
+        return True
+    if all(ch in "\"'" for ch in token):
+        return not prev_raw or prev_raw.endswith(" ")
+    return False
 
 
 def _punctuation_strength(token: str) -> int | None:
@@ -598,13 +762,20 @@ def finalize_cues(
     *,
     video_duration: float,
     pauses: list[tuple[float, float]] | None = None,
+    warnings: list[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Global pass: order, de-overlap, hold across short gaps, clamp to the
-    video, and re-derive the reported metrics from the final times."""
+    video, and re-derive the reported metrics from the final times.
+
+    Cues from *different* transcript segments that overlap in time (two people
+    talking over each other, or a diarizer that emitted overlapping turns) are
+    reported through `warnings`; the shorter interjection loses display time
+    when it can afford it, else the earlier cue is pulled back as before."""
     cues = [c for c in cues if c["text"].strip()]
     cues.sort(key=lambda c: (c["start"], c["end"]))
     min_gap = float(style["min_gap"])
     max_duration = float(style["max_duration"])
+    min_duration = float(style.get("min_duration") or 0.7)
 
     for idx, cue in enumerate(cues):
         cue["start"] = max(0.0, min(cue["start"], video_duration))
@@ -613,11 +784,29 @@ def finalize_cues(
             continue
         prev = cues[idx - 1]
         if cue["start"] < prev["end"] + min_gap:
-            # Overlap or too tight: give the boundary to the later cue and pull
-            # the earlier one back, never past its own start.
-            boundary = max(prev["start"] + 0.20, min(cue["start"], prev["end"]))
-            prev["end"] = max(prev["start"] + 0.20, boundary - min_gap)
-            cue["start"] = max(cue["start"], prev["end"] + min_gap)
+            overlap = prev["end"] - cue["start"]
+            cross_segment = cue.get("source_segment") != prev.get("source_segment")
+            before = (prev["start"], prev["end"], cue["start"], cue["end"])
+            if (cross_segment and overlap > 0
+                    and (cue["end"] - cue["start"]) < (prev["end"] - prev["start"])
+                    and cue["end"] - (prev["end"] + min_gap) >= min_duration):
+                # The later cue is the shorter interjection and still reads after
+                # losing its head: keep the main sentence on screen to its end.
+                cue["start"] = prev["end"] + min_gap
+                trimmed = f"cue {idx + 1} (the shorter one) now starts at {cue['start']:.2f}s"
+            else:
+                # Overlap or too tight: give the boundary to the later cue and pull
+                # the earlier one back, never past its own start.
+                boundary = max(prev["start"] + 0.20, min(cue["start"], prev["end"]))
+                prev["end"] = max(prev["start"] + 0.20, boundary - min_gap)
+                cue["start"] = max(cue["start"], prev["end"] + min_gap)
+                trimmed = f"cue {idx} now ends at {prev['end']:.2f}s"
+            if warnings is not None and cross_segment and overlap > 0.05:
+                warnings.append(
+                    f"transcript segments {prev.get('source_segment')} and {cue.get('source_segment')} overlap by "
+                    f"{overlap:.2f}s ({before[0]:.2f}-{before[1]:.2f}s vs {before[2]:.2f}-{before[3]:.2f}s); "
+                    f"{trimmed}. Check whether two people talk over each other here."
+                )
 
     for idx in range(len(cues) - 1):
         gap = cues[idx + 1]["start"] - cues[idx]["end"]
@@ -631,6 +820,14 @@ def finalize_cues(
     usable = float(style.get("usable_width_px") or 0)
     for idx, cue in enumerate(cues, start=1):
         if cue["end"] - cue["start"] <= 0:
+            # Squeezed to nothing by overlap resolution: say so now rather than
+            # letting the text surface later as a subtitle_qc coverage error.
+            if warnings is not None:
+                warnings.append(
+                    f"cue {idx} ({cue.get('text', '')[:24]!r}, transcript segment "
+                    f"{cue.get('source_segment')}) was squeezed to zero duration while "
+                    "resolving overlaps and dropped; check the overlapping segments."
+                )
             continue
         cue["index"] = idx
         cue["start"] = round(cue["start"], 3)
@@ -653,6 +850,8 @@ def finalize_cues(
     # bloat subtitles.json.
     for cue in out:
         cue.pop("_words", None)
+        cue.pop("_char_from", None)
+        cue.pop("_char_to", None)
     return out
 
 
@@ -722,7 +921,7 @@ def karaoke_units(
 ) -> list[dict[str, Any]]:
     """Split a cue into word-by-word karaoke timing units.
 
-    When the transcript carries real word-level timestamps, the
+    When the transcript carried real word-level timestamps (the provider may), the
     highlight follows the actual voice: each word holds until the moment it is
     finished being spoken. Otherwise the cue's own duration is distributed across
     its words by the same speech-weight measure the segmenter uses
@@ -773,87 +972,84 @@ def karaoke_units(
 
 
 def _karaoke_from_words(cue: dict[str, Any], words: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Karaoke units from real word timestamps that fall inside the cue window.
+    """Karaoke units from real word timestamps, emitted over the cue's *display*
+    tokens so they reconstruct the caption text exactly.
 
-    Each word's fill spans exactly its spoken interval `[start, end]`, and the
-    silence between words is a *hold*: the completed highlight waits on the gap
-    rather than the next word beginning to fill before it is spoken. This is the
-    honest reading of the audio — the older convention (fold the gap into the
-    following word's fill) made the sweep anticipate every pause, e.g. "largest"
-    lit up ~0.2 s early on propy_titan cue #5. The hold is expressed as an ASS
-    karaoke unit on the inter-word space (`{\\kf<gap>} `), or an empty lead-in
-    unit (`{\\kf<gap>}`) where there is no space to carry it (before the first
-    word, and between CJK glyphs). Words are matched to the cue by time overlap.
+    The units must spell the wrapped lines character for character —
+    `_dialogue_line` only uses the sweep when they do, and otherwise draws the
+    cue plain. Building them from the raw ASR tokens broke that silently for
+    any Latin-script cue: the tokens carry no punctuation ("shoveled" vs
+    "shoveled,"), and matching words to the cue by time overlap dropped a word
+    straddling a boundary. So the tokens of the display lines are the units,
+    and each one is *timed* from the words through the shared visible-character
+    coordinate (`_word_char_spans`): a token's fill spans the spoken interval of
+    its characters, interpolated inside a word when tokenisation differs.
 
-    The sweep must also respect the cue's line wrapping, so the units are folded
-    onto `cue["lines"]` by `_fold_karaoke_lines`.
+    Silence between words is a *hold*: the completed highlight waits on the gap
+    rather than the next word beginning to fill before it is spoken. The hold
+    rides the inter-word space (`{\\kf<gap>} `) or, where there is none (before
+    the first word, after a line break, between CJK glyphs), an empty lead-in
+    unit. Returns [] when the words do not cover the cue's text, in which case
+    the caller falls back to the speech-weight estimate.
     """
+    spans = _word_char_spans(words)
+    if not spans:
+        return []
     cs = float(cue["start"])
     ce = float(cue["end"])
-    inside = [w for w in words if float(w["end"]) > cs + 0.01 and float(w["start"]) < ce - 0.01]
-    if not inside:
+    lines = [str(l) for l in (cue.get("lines") or [cue.get("text", "")])]
+    total_chars = sum(sty.visible_char_count(l) for l in lines)
+    if total_chars <= 0:
         return []
+    base = cue.get("_char_from")
+    if base is None:
+        # Cue not produced by segment_to_cues (e.g. rebuilt from an edited
+        # package): locate its first word by time overlap instead.
+        inside = [c0 for c0, _, s, e in spans if e > cs + 0.01 and s < ce - 0.01]
+        if not inside:
+            return []
+        base = inside[0]
+    elif cue.get("_char_to") is not None and int(cue["_char_to"]) - int(base) != total_chars:
+        return []  # text edited after segmentation; the words no longer map onto it
+    base = int(base)
+    if base + total_chars > spans[-1][1]:
+        return []
+
+    def clamp(t: float) -> float:
+        return min(max(t, cs), ce)
+
     units: list[dict[str, Any]] = []
     cursor = cs
-    for k, w in enumerate(inside):
-        wstart = max(cs, float(w["start"]))
-        wend = min(ce, float(w["end"]))
-        if wend <= wstart:
-            wend = min(ce, wstart + 0.01)
-        gap_cs = int(round((wstart - cursor) * 100))  # silence to hold before this word
-        word_cs = max(1, int(round((wend - wstart) * 100)))
-        text = str(w["text"]).lstrip(" ")
-        # Non-CJK words after the first are separated by a real space, which is
-        # the natural carrier for the gap hold; CJK glyphs and the first word are
-        # not, so the hold rides an empty lead-in unit instead.
-        space_carrier = k > 0 and not sty.is_wide(text[:1] or " ")
-        if space_carrier:
-            units.append({"text": " ", "cs": max(1, gap_cs)})
-        elif gap_cs >= 1:
-            units.append({"text": "", "cs": gap_cs})
-        units.append({"text": text, "cs": word_cs})
-        cursor = wend
-    return _fold_karaoke_lines(units, cue.get("lines") or [])
-
-
-def _fold_karaoke_lines(units: list[dict[str, Any]], lines: list[Any]) -> list[dict[str, Any]]:
-    """Insert newline karaoke units so a word-timed sweep breaks where the cue's
-    wrapped `lines` break.
-
-    The mapping is by visible-character count (spaces and punctuation excluded),
-    which is robust to the spacing/punctuation differences between raw ASR word
-    tokens and the wrapped caption text: after the running word-character count
-    passes each line's length, a hard break is emitted before the next word. If
-    the words do not reconstruct the lines exactly (an edited transcript), the
-    count simply yields fewer breaks rather than a wrong one — never an overflow
-    worse than the unbroken fallback."""
-    if len(lines) <= 1:
-        return units
-    bounds: list[int] = []
-    run = 0
-    for line in lines[:-1]:
-        run += sty.visible_char_count(str(line))
-        bounds.append(run)
-    out: list[dict[str, Any]] = []
-    acc = 0
-    bi = 0
-    for unit in units:
-        if bi < len(bounds) and acc >= bounds[bi]:
-            out.append({"text": "\n", "cs": 0})
-            bi += 1
-            # A word that starts a new line must not carry the inter-word space
-            # the previous line's flow gave it, or line 2 renders indented.
-            txt = str(unit.get("text") or "")
-            if txt.startswith(" "):
-                unit = {**unit, "text": txt[1:]}
-        out.append(unit)
-        acc += sty.visible_char_count(str(unit.get("text") or ""))
-    while bi < len(bounds):
-        # Any line boundaries the word run never reached (rare count drift) still
-        # get a break, appended in order so no two lines merge.
-        out.append({"text": "\n", "cs": 0})
-        bi += 1
-    return out
+    pos = base
+    pending_space: dict[str, Any] | None = None
+    for li, line in enumerate(lines):
+        if li > 0:
+            units.append({"text": "\n", "cs": 0})
+        for tok in _karaoke_tokens(line):
+            n = sty.visible_char_count(tok)
+            if n == 0:
+                # Stray punctuation or space with no letters of its own: no time.
+                units.append({"text": tok, "cs": 0})
+                continue
+            t0 = clamp(_time_at_char(spans, pos, side="start"))
+            t1 = clamp(_time_at_char(spans, pos + n, side="end"))
+            t0 = max(t0, cursor)
+            t1 = max(t1, t0)
+            gap_cs = int(round((t0 - cursor) * 100))
+            if pending_space is not None:
+                pending_space["cs"] = max(1, gap_cs)
+            elif gap_cs >= 1:
+                units.append({"text": "", "cs": gap_cs})
+            pending_space = None
+            word = tok.rstrip()
+            space = tok[len(word):]
+            units.append({"text": word, "cs": max(1, int(round((t1 - t0) * 100)))})
+            cursor = t1
+            if space:
+                pending_space = {"text": space, "cs": 1}
+                units.append(pending_space)
+            pos += n
+    return units
 
 
 def _karaoke_tokens(line: str) -> list[str]:
@@ -892,7 +1088,7 @@ def detect_pauses(video_path: Path, *, silence_db: float, min_silence: float) ->
         "-f", "null", "-",
     ]
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=900)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     except Exception:
         return []
     log = (proc.stderr or "") + (proc.stdout or "")
@@ -928,19 +1124,30 @@ def snap_to_pause(
 
 # --- transcript loading ---------------------------------------------------
 
-def load_timed_segments(path: Path) -> list[dict[str, Any]]:
+def load_timed_segments(path: Path, stats: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Timed, non-empty segments. When `stats` is given it is filled with what
+    the filter threw away (segments with text but no usable start<end), so the
+    caller can report the loss instead of quietly shrinking its denominators."""
     data = load_transcript_data(path)
     segments: list[dict[str, Any]] = []
+    raw_count = 0
+    dropped = 0
+    dropped_chars = 0
+    text_chars = 0
     for raw in collect_segments(data):
         text = str(raw.get("text") or raw.get("word") or raw.get("content") or "").strip()
         if not text:
             continue
+        raw_count += 1
+        text_chars += sty.visible_char_count(text)
         start = coerce_float(first_present(raw, ["start", "start_time", "start_seconds", "begin"]))
         end = coerce_float(first_present(raw, ["end", "end_time", "end_seconds", "finish"]))
         if start is None or end is None or end <= start:
+            dropped += 1
+            dropped_chars += sty.visible_char_count(text)
             continue
         seg = {"start": start, "end": end, "text": text, "speaker": raw.get("speaker")}
-        # Carry word-level timing when the provider gives it:
+        # Carry word-level timing when the provider gives it (the provider may):
         # it lets karaoke follow the real voice instead of an even estimate.
         words = raw.get("words")
         if isinstance(words, list) and words:
@@ -957,6 +1164,13 @@ def load_timed_segments(path: Path) -> list[dict[str, Any]]:
                 seg["words"] = clean
         segments.append(seg)
     segments.sort(key=lambda s: s["start"])
+    if stats is not None:
+        stats.update({
+            "raw_segments": raw_count,
+            "dropped_untimed": dropped,
+            "dropped_untimed_chars": dropped_chars,
+            "text_chars_total": text_chars,
+        })
     return segments
 
 
@@ -968,6 +1182,19 @@ def detect_language(segments: list[dict[str, Any]]) -> str:
 
 # --- render ---------------------------------------------------------------
 
+_ISO_639_2 = {"zh": "zho", "en": "eng", "ja": "jpn", "ko": "kor", "fr": "fra", "de": "deu", "es": "spa",
+              "ru": "rus", "pt": "por", "it": "ita", "ar": "ara", "hi": "hin", "vi": "vie", "th": "tha",
+              "id": "ind", "tr": "tur", "nl": "nld", "pl": "pol", "uk": "ukr"}
+
+
+def container_language(value: object) -> str:
+    """MP4 keeps three-letter ISO 639-2 codes only; "zh"/"en" were stored as "und"."""
+    code = str(value or "").strip().lower().split("-")[0].split("_")[0]
+    if len(code) == 3 and code.isalpha():
+        return code
+    return _ISO_639_2.get(code, "und")
+
+
 def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
     started = time.time()
     if not args.get("video_path"):
@@ -976,11 +1203,6 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
         return ToolResult(text="[ERROR] subtitles_path is required (out/subtitles.json from subtitle_build)")
     if not shutil.which("ffmpeg"):
         return ToolResult(text="[ERROR] ffmpeg not found on PATH")
-    # Fail fast: subtitle burn-in needs libass (subtitles/ass filter); minimal
-    # builds drop it and only fail after reading the whole video.
-    cap_err = require_ffmpeg(encoders=("libx264", "aac"), filters=("subtitles",))
-    if cap_err:
-        return ToolResult(text=cap_err)
     video_path = ctx.resolve(args["video_path"])
     if not video_path.is_file():
         return ToolResult(text=f"[ERROR] video not found: {video_path}")
@@ -1011,8 +1233,17 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
 
     output_path = ctx.resolve(args.get("output_path") or "out/subtitled.mp4")
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    crf = int(args.get("crf") or 18)
-    fonts_dir = str(Path(style["font_file"]).parent)
+    crf_raw = args.get("crf")
+    if crf_raw is not None and (isinstance(crf_raw, bool) or not math.isfinite(coerce_number(crf_raw, float("nan")))):
+        return ToolResult(text=f"[ERROR] crf must be an integer between 0 and 51, got {crf_raw!r}")
+    crf = 18 if crf_raw is None else int(coerce_number(crf_raw, 18))  # 0 (lossless) is a legal value
+    if not 0 <= crf <= 51:
+        return ToolResult(text=f"[ERROR] crf must be between 0 and 51, got {crf_raw!r}")
+    if not style.get("font_file"):
+        return ToolResult(text="[ERROR] subtitles JSON style has no font_file; rebuild with subtitle_build")
+    # 私有字体目录: libass 会把 fontsdir 里每个文件整个读进内存, 系统字体目录 (/System/Library/Fonts,
+    # C:\Windows\Fonts) 有几百 MB, 只把选中的那一个字体链接进去
+    fonts_dir = sty.libass_fontsdir(style["font_file"])
 
     outputs: dict[str, str] = {}
     if mode in {"burn", "both"}:
@@ -1035,13 +1266,17 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
 
     if mode in {"soft", "both"}:
         srt_path = ctx.resolve(args.get("srt_path") or subtitles_path.with_suffix(".srt"))
-        srt_path.write_text(sty.build_srt(cues), encoding="utf-8")
+        srt_path.write_text(sty.build_srt(cues, style), encoding="utf-8")
         soft_path = output_path.with_name(output_path.stem + "_softsubs" + output_path.suffix)
+        # The new track follows the source's own subtitle streams; tagging s:s:0 relabelled
+        # an existing track and left the new one undetermined.
+        from .observation_media import probe
+        existing_tracks = sum(1 for s in probe(video_path)["streams"] if s.get("codec_type") == "subtitle")
         cmd = [
             "ffmpeg", "-y", "-i", str(video_path), "-i", str(srt_path),
             "-map", "0", "-map", "1",
             "-c", "copy", "-c:s", "mov_text",
-            "-metadata:s:s:0", f"language={package.get('language') or 'und'}",
+            f"-metadata:s:s:{existing_tracks}", f"language={container_language(package.get('language'))}",
             str(soft_path),
         ]
         proc = run_ffmpeg(cmd)
@@ -1077,7 +1312,7 @@ def subtitle_render(args: dict, ctx: RunContext) -> ToolResult:
 def run_ffmpeg(cmd: list[str]) -> str | None:
     """Run ffmpeg; return None on success or the stderr tail on failure."""
     try:
-        proc = run_proc(cmd, capture_output=True, text=True, timeout=7200)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
     except Exception as exc:
         return str(exc)
     if proc.returncode != 0:
@@ -1106,14 +1341,16 @@ def subtitle_qc(args: dict, ctx: RunContext) -> ToolResult:
     except Exception as exc:
         return ToolResult(text=f"[ERROR] invalid subtitles JSON: {exc}")
     cues = package.get("cues") or []
-    style = package.get("style") or {}
+    style = package.get("style")
     if not isinstance(cues, list) or not cues:
         return ToolResult(text="[ERROR] subtitles JSON has no cues[]")
+    if not isinstance(style, dict) or not style.get("font_file"):
+        return ToolResult(text="[ERROR] subtitles JSON has no style object (with font_file); rebuild with subtitle_build")
 
     video_path = ctx.resolve(args["video_path"]) if args.get("video_path") else None
     if video_path is not None and not video_path.is_file():
         return ToolResult(text=f"[ERROR] video not found: {video_path}")
-    video_duration = media_duration_seconds(video_path) if video_path else package.get("video", {}).get("duration")
+    video_duration = media_duration_seconds(video_path) if video_path else (package.get("video") or {}).get("duration")
 
     issues = check_cues(cues, style, video_duration)
     coverage = check_coverage(package, ctx)
@@ -1124,9 +1361,17 @@ def subtitle_qc(args: dict, ctx: RunContext) -> ToolResult:
     frames_meta: list[dict[str, Any]] = []
     if video_path is not None:
         frames_dir = ctx.resolve(args.get("frames_dir") or f".video_agent/subtitle_qc/{video_path.stem}")
-        max_frames = int(args.get("max_evidence_frames") or 12)
+        try:
+            max_frames = int(args.get("max_evidence_frames") or 12)
+        except (TypeError, ValueError):
+            return ToolResult(text=f"[ERROR] max_evidence_frames must be an integer, got {args.get('max_evidence_frames')!r}")
+        if max_frames < 1:
+            return ToolResult(text=f"[ERROR] max_evidence_frames must be >= 1, got {max_frames}")
         image_paths, frames_meta, frame_error = sample_cue_frames(
-            video_path, cues, frames_dir, max_frames=max_frames
+            video_path, cues, frames_dir, max_frames=max_frames,
+            # Only sweep stale frames out of the directory this tool owns; a
+            # user-supplied frames_dir may hold their own .jpg files.
+            clean_stale=not args.get("frames_dir"),
         )
         if frame_error:
             issues.append({"severity": "error", "message": "cue evidence sampling failed", "evidence": frame_error})
@@ -1292,14 +1537,23 @@ def check_coverage(package: dict[str, Any], ctx: RunContext) -> dict[str, Any] |
     path = ctx.resolve(str(transcript_path))
     if not path.is_file():
         return {"issues": [{"severity": "warning", "message": f"transcript missing, coverage not checked: {path}"}]}
+    seg_stats: dict[str, Any] = {}
     try:
-        segments = load_timed_segments(path)
+        segments = load_timed_segments(path, stats=seg_stats)
     except Exception as exc:
         return {"issues": [{"severity": "warning", "message": f"coverage check failed: {exc}"}]}
-    transcript_chars = sum(sty.visible_char_count(s["text"]) for s in segments)
+    # Every segment with text counts, including those dropped for a missing or
+    # inverted start/end — otherwise the denominator shrinks with the loss.
+    transcript_chars = int(seg_stats.get("text_chars_total") or 0) or sum(sty.visible_char_count(s["text"]) for s in segments)
     cue_chars = sum(sty.visible_char_count(c.get("text") or "") for c in package.get("cues") or [])
     ratio = (cue_chars / transcript_chars) if transcript_chars else 1.0
     issues: list[dict[str, Any]] = []
+    if seg_stats.get("dropped_untimed"):
+        issues.append({
+            "severity": "warning",
+            "message": f"{seg_stats['dropped_untimed']} transcript segment(s) with text had no usable start<end "
+                       f"and carry no subtitle ({seg_stats['dropped_untimed_chars']} chars)",
+        })
     if transcript_chars and ratio < 0.98:
         issues.append({
             "severity": "error",
@@ -1316,6 +1570,7 @@ def check_coverage(package: dict[str, Any], ctx: RunContext) -> dict[str, Any] |
         "transcript_chars": transcript_chars,
         "cue_chars": cue_chars,
         "ratio": round(ratio, 4),
+        "segments_dropped_untimed": int(seg_stats.get("dropped_untimed") or 0),
         "issues": issues,
     }
 
@@ -1326,13 +1581,15 @@ def sample_cue_frames(
     frames_dir: Path,
     *,
     max_frames: int,
+    clean_stale: bool = True,
 ) -> tuple[list[str], list[dict[str, Any]], str]:
     """Grab one frame at the midpoint of evenly spread cues and tile them."""
     frames_dir.mkdir(parents=True, exist_ok=True)
-    for stale in frames_dir.glob("cue_*.jpg"):
-        stale.unlink()
-    for stale in frames_dir.glob("sheet_*.jpg"):
-        stale.unlink()
+    if clean_stale:
+        for stale in frames_dir.glob("cue_*.jpg"):
+            stale.unlink()
+        for stale in frames_dir.glob("sheet_*.jpg"):
+            stale.unlink()
 
     picks = evenly_spaced(cues, max_frames)
     saved: list[tuple[dict[str, Any], Path]] = []
@@ -1345,7 +1602,8 @@ def sample_cue_frames(
         cmd = [
             "ffmpeg", "-y", "-v", "error",
             "-ss", f"{midpoint:.3f}", "-i", str(video_path),
-            "-frames:v", "1", "-q:v", "3", str(frame_path),
+            # -update 1: a "%" in the project path is otherwise read as an image sequence pattern
+            "-frames:v", "1", "-q:v", "3", "-update", "1", str(frame_path),
         ]
         error = run_ffmpeg(cmd)
         if error or not frame_path.is_file():
@@ -1438,21 +1696,11 @@ def _label_font(size: int):
 # --- shared helpers -------------------------------------------------------
 
 def probe_video_size(source: Path) -> tuple[int, int]:
-    cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height", "-of", "json", str(source),
-    ]
-    proc = run_proc(cmd, capture_output=True, text=True, timeout=60)
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or f"ffprobe failed for {source}")
-    try:
-        stream = (json.loads(proc.stdout).get("streams") or [])[0]
-        width, height = int(stream["width"]), int(stream["height"])
-    except Exception as exc:
-        raise RuntimeError(f"invalid ffprobe size metadata for {source}") from exc
-    if width <= 0 or height <= 0:
-        raise RuntimeError(f"invalid video size for {source}: {width}x{height}")
-    return width, height
+    from .observation_media import probe
+    info = probe(source)
+    if not info.get("width") or not info.get("height"):
+        raise RuntimeError("source has no video dimensions")
+    return info["width"], info["height"]
 
 
 def coerce_number(value: object, default: float) -> float:
@@ -1486,6 +1734,7 @@ def cue_stats(
         "segment_count": len(segments),
         "internal_boundaries": internal,
         "snapped_boundaries": snapped,
+        "word_timed_boundaries": sum(1 for c in cues if c.get("boundary_source") == "words"),
         "max_cps": round(max(cps_values), 2) if cps_values else 0.0,
         "mean_cps": round(sum(cps_values) / len(cps_values), 2) if cps_values else 0.0,
         "min_duration": round(min(durations), 2) if durations else 0.0,

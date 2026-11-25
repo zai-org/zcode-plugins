@@ -1,0 +1,3 @@
+# Only for the legacy voice scorers (VE_SPEAKER_SCORER=mfcc_f0 or resemblyzer). The default
+# campp scorer needs nothing beyond requirements.txt: it downloads its weights on first use.
+librosa>=0.10.2,<1
