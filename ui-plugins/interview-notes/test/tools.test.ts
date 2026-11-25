@@ -121,4 +121,13 @@ describe("tools", () => {
     expect((await call("interview_open", { audio: "../x.mp3" })).isError).toBe(true);
     expect((await call("interview_submit", { audio: "solo.wav", needs: [] })).content[0].text).toMatch(/Open the interview first/);
   });
+
+  it("reports a corrupt recording as bad audio before looking for a transcript", async () => {
+    await writeFile(join(workspace, "broken.wav"), "RIFF");
+    const result = await call("interview_open", { audio: "broken.wav" });
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toMatch(/Cannot decode the recording broken\.wav/);
+    expect(result.content[0].text).not.toMatch(/No transcript found/);
+    expect(result.structuredContent.error.code).toBe("bad_audio");
+  });
 });
