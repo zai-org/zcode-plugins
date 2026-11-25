@@ -1673,6 +1673,32 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "token-stats",
+      "source": "./external_plugins/token-stats",
+      "displayName": "Token Stats",
+      "displayName_i18n": {
+        "en": "Token Stats",
+        "zh-CN": "Token 统计"
+      },
+      "description": "在 ZCode 输入框旁显示实时生成速度和已观测的 Token 用量。",
+      "description_i18n": {
+        "en": "Show live generation speed and observed token usage beside the ZCode composer.",
+        "zh-CN": "在 ZCode 输入框旁显示实时生成速度和已观测的 Token 用量。"
+      },
+      "version": "0.2.3",
+      "author": {
+        "name": "Ed4ward",
+        "url": "https://github.com/Ed4ward"
+      },
+      "license": "Apache-2.0",
+      "category": "developer-tools",
+      "keywords": [
+        "tokens",
+        "generation-speed",
+        "usage"
+      ]
     }
   ]
 }
