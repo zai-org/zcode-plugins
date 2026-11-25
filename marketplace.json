@@ -1673,6 +1673,58 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sheet-to-app",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sheet-to-app",
+      "displayName": "Sheet To App",
+      "displayName_i18n": {
+        "en": "Sheet To App",
+        "zh-CN": "表格转小应用"
+      },
+      "description": "Turn an inventory, booking or customer spreadsheet (.xlsx / .csv) into a small offline web app: infers field types, required fields, options and a key column, lists data problems in the sheet, and writes one HTML file with search, filters, sorting, add / edit / delete forms with validation, a highlight rule (e.g. low stock), CSV import / export and JSON backup. Data stays in the browser. The mapping is saved, so when the sheet changes the app is rebuilt with your settings kept. No server, no network.",
+      "description_i18n": {
+        "en": "Turn an inventory, booking or customer spreadsheet (.xlsx / .csv) into a small offline web app: infers field types, required fields, options and a key column, lists data problems in the sheet, and writes one HTML file with search, filters, sorting, add / edit / delete forms with validation, a highlight rule (e.g. low stock), CSV import / export and JSON backup. Data stays in the browser. The mapping is saved, so when the sheet changes the app is rebuilt with your settings kept. No server, no network.",
+        "zh-CN": "把库存、预约、客户等表格（.xlsx / .csv）变成一个离线小应用：自动识别字段类型、必填、选项和唯一编号列，列出表格里的数据问题，生成一个 HTML 文件，带搜索、筛选、排序、新增/修改/删除（含校验）、高亮规则（如库存不足）、CSV 导入导出和 JSON 备份。数据存在浏览器本地。字段映射会保存，表格更新后一键重新生成并保留设置。不需要服务器，不联网。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "spreadsheet",
+        "excel",
+        "csv",
+        "app",
+        "inventory",
+        "booking",
+        "crud",
+        "no-code",
+        "offline",
+        "表格",
+        "小应用",
+        "库存",
+        "预约",
+        "客户管理"
+      ],
+      "examplePrompts": [
+        "Turn inventory.xlsx into a small app I can search and edit",
+        "Make a booking tracker from this CSV",
+        "The sheet changed — rebuild the app and keep my settings"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把库存表.xlsx 做成一个能查询、能修改的小应用",
+          "用这个预约表 CSV 生成一个预约管理页面",
+          "表格更新了，重新生成应用，保留我的设置"
+        ]
+      }
     }
   ]
 }
