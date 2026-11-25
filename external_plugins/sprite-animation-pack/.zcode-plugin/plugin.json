@@ -1,0 +1,60 @@
+{
+  "name": "sprite-animation-pack",
+  "version": "0.1.0",
+  "description": "Turn a character's animation frames — a folder of PNGs or a whole sprite sheet — into a game-ready animation pack: actions grouped automatically, every frame lined up on the feet (or kept in place), frame timing and loops, a uniform-cell atlas PNG, Aseprite/Phaser JSON, a Godot 4 SpriteFrames .tres and Unity slicing notes. Preview each action with onion skin and nudge frames pixel by pixel. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn a character's animation frames — a folder of PNGs or a whole sprite sheet — into a game-ready animation pack: actions grouped automatically, every frame lined up on the feet (or kept in place), frame timing and loops, a uniform-cell atlas PNG, Aseprite/Phaser JSON, a Godot 4 SpriteFrames .tres and Unity slicing notes. Preview each action with onion skin and nudge frames pixel by pixel. Runs locally; no API keys.",
+    "zh-CN": "把角色的动作帧（一文件夹 PNG 或一整张精灵图）整理成游戏可直接用的动作包：自动按动作分组，所有帧按脚底对齐（或保持原位），设置帧时长和循环，导出等格图集 PNG、Aseprite/Phaser JSON、Godot 4 SpriteFrames .tres 和 Unity 切片说明。面板里逐个动作播放预览，带洋葱皮，可逐像素微调。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "sprite",
+    "sprite sheet",
+    "animation",
+    "atlas",
+    "pixel art",
+    "godot",
+    "phaser",
+    "unity",
+    "aseprite",
+    "game",
+    "精灵图",
+    "动作",
+    "图集",
+    "游戏"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "sprite-animation-pack": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "游戏角色动作包",
+          "en-US": "Sprite Animation Pack"
+        },
+        "icon": "gamepad-2",
+        "server": "sprite-animation-pack",
+        "resourceUri": "ui://sprite-animation-pack/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
