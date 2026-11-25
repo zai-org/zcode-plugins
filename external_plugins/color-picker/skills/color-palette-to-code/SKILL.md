@@ -14,13 +14,13 @@ Call the MCP tool `prepare_color_picker` from the `color-picker` server. It only
 | Argument | Values | Default | Meaning |
 | --- | --- | --- | --- |
 | `format` | `css` or `json` | `css` | Palette download format |
-| `size` | `1`, `3`, `5` or `11` | `1` | Sample a single pixel, or average a 3×3, 5×5 or 11×11 area |
+| `size` | `1`, `3`, `5` or `11` (JSON numbers, not the strings `"5"` / `"11"`) | `1` | Sample a single pixel, or average a 3×3, 5×5 or 11×11 area |
 | `example` | `true` or `false` | `false` | Load the built-in sample image |
 
 Choose arguments from the request:
 
 - Pick `json` when the user wants design tokens, HSL values or alpha values in data form; otherwise `css`.
-- Pick `size: 5` (or `11`) for photos, gradients or noisy screenshots; keep `1` for flat logos, icons and UI.
+- Pick `size: 5` (or `11`) for photos, gradients or noisy screenshots; keep `1` for flat logos, icons and UI. Always pass `size` as a number, never as a string.
 - Only pass arguments from the table. Any other value is rejected with an input validation error.
 
 The result contains `structuredContent.preset`, a URL such as `https://browser-color-picker.pages.dev/?format=css&size=1&example=0`, and the same URL in the text content. Give that link to the user and explain the steps:
