@@ -24,9 +24,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { discoverModules, moduleDirectory, findApk, apkInfo } = require('./project-info.js');
+const { discoverModules, discoverFlavors, hasFlavorConfig, moduleDirectory, findApk, apkInfo } = require('./project-info.js');
 
-const VERSION = '0.1.0';
+const VERSION = '0.4.8';
 const EXIT = { OK: 0, FAIL: 1, ENV: 2, CONFIRM: 3, CANCELLED: 130 };
 
 class CliError extends Error {
@@ -59,21 +59,25 @@ function printHelp() {
   uninstall              卸载 App(破坏性,需 --yes)
   clear-data             清除应用数据(破坏性,需 --yes)
   logcat                 查看设备日志(优先只看本应用进程,前台持续输出)
+  java [路径|版本]       查看/记住本工程使用的 JDK(--clear 恢复按 Gradle 自动选择)
+  flavor [名字]          查看/记住本工程的 productFlavor(--clear 恢复自动,默认 official)
   dashboard              生成图形化状态面板(HTML,--open 自动在浏览器打开)
 
 通用参数:
   --module <名>          Gradle 模块,默认 app
   --variant <名>         构建变体,默认 debug
-  --task <名>            自定义 Gradle 任务,默认自动 :<module>:assemble<Variant>
+  --flavor <名>          productFlavor(渠道),默认自动:official / 唯一 flavor
+  --task <名>            自定义 Gradle 任务,默认自动 :<module>:assemble<Flavor><Variant>
   --apk <路径>           指定 APK 路径(默认自动在 build/outputs/apk 下查找最新)
   --package <包名>       指定 applicationId(默认从 build.gradle 自动识别)
   --serial <序列号>      本次操作的目标设备
   --adb <路径>           指定 adb 路径(默认自动探测)
   --java-home <路径>     指定 JAVA_HOME(默认自动探测)
-  --reinstall            兼容旧参数(签名不一致时默认就会自动卸载重装)
+  --reinstall            显式允许签名不一致时自动卸载重装(覆盖 --no-reinstall)
   --no-reinstall         关闭自动替换:签名不一致/版本回退时直接报错退出(exit 3)
   --yes / -y             确认破坏性操作(uninstall / clear-data)
-  --no-local-properties  不自动生成 local.properties
+  --local-properties     缺少 local.properties 时自动生成(默认不写工程文件)
+  --no-local-properties  兼容旧参数(默认行为)
   --json                 结构化输出(devices / info)
 
 示例:
@@ -86,11 +90,11 @@ function printHelp() {
 }
 
 const opts = {
-  module: '', variant: '', task: '', apk: '', applicationId: '',
+  module: '', variant: '', flavor: '', task: '', apk: '', applicationId: '',
   adb: process.env.AR_ADB || '', javaHome: process.env.AR_JAVA_HOME || '',
-  serial: '', emulator: '', clear: false, json: false, yes: false, reinstall: false,
+  serial: '', emulator: '', javaPath: '', clear: false, json: false, yes: false, reinstall: false,
   noReinstall: false,
-  localProperties: true, open: false
+  localProperties: false, open: false
 };
 let command = '';
 let gradleArgs = [];
@@ -99,7 +103,7 @@ let positionals = [];
 try {
 (function parseArgs() {
   const flagMap = {
-    '--module': 'module', '--variant': 'variant', '--task': 'task', '--apk': 'apk',
+    '--module': 'module', '--variant': 'variant', '--flavor': 'flavor', '--task': 'task', '--apk': 'apk',
     '--application-id': 'applicationId', '--package': 'applicationId',
     '--adb': 'adb', '--java-home': 'javaHome', '--serial': 'serial', '--emulator': 'emulator'
   };
@@ -113,6 +117,7 @@ try {
     if (a === '--yes' || a === '-y') { opts.yes = true; continue; }
     if (a === '--reinstall') { opts.reinstall = true; continue; }
     if (a === '--no-reinstall') { opts.noReinstall = true; continue; }
+    if (a === '--local-properties') { opts.localProperties = true; continue; }
     if (a === '--no-local-properties') { opts.localProperties = false; continue; }
     if (a === '--clear') { opts.clear = true; continue; }
     if (a === '--open') { opts.open = true; continue; }
@@ -136,6 +141,12 @@ try {
   if (command === 'use' && !opts.serial && positionals.length) {
     opts.serial = positionals.shift();
   }
+  if (command === 'java' && positionals.length) {
+    opts.javaPath = positionals.shift();
+  }
+  if (command === 'flavor' && positionals.length) {
+    opts.flavor = positionals.shift();
+  }
   if (positionals.length) {
     throw new CliError(EXIT.ENV, `多余的参数:${positionals.join(' ')}\n运行 node ar.js --help 查看用法`);
   }
@@ -148,7 +159,7 @@ try {
   throw e;
 }
 
-const COMMANDS = ['doctor', 'devices', 'use', 'info', 'build', 'install', 'run', 'launch', 'stop', 'restart', 'uninstall', 'clear-data', 'logcat', 'dashboard'];
+const COMMANDS = ['doctor', 'devices', 'use', 'java', 'flavor', 'info', 'build', 'install', 'run', 'launch', 'stop', 'restart', 'uninstall', 'clear-data', 'logcat', 'dashboard'];
 if (!COMMANDS.includes(command)) {
   console.error(`未知命令:${command || '(缺省)'}\n可用命令:${COMMANDS.join(' ')}\n运行 node ar.js --help 查看用法`);
   process.exit(EXIT.ENV);
@@ -252,6 +263,96 @@ function variant() {
   return (opts.variant || 'debug').trim();
 }
 
+function availableFlavors() {
+  return discoverFlavors(projectRoot(), module());
+}
+
+/** 工程记住的 flavor(用户显式选择/输入过才存在)。 */
+function flavorPreference() {
+  const pref = projectStoreEntry();
+  const name = pref && typeof pref.flavor === 'string' ? pref.flavor.trim() : '';
+  if (!name) return null;
+  // 静态解析可能漏掉动态 flavor:记住的名字一律保留,大小写能对上就归一
+  const flavors = availableFlavors();
+  const matched = flavors.find((item) => item.toLowerCase() === name.toLowerCase());
+  return matched || name;
+}
+
+function rememberFlavor(name) {
+  const root = projectRoot();
+  if (!root) {
+    throw new CliError(EXIT.ENV, '当前目录不在 Gradle 工程内,无法记住 flavor\n请先 cd 到工程根目录');
+  }
+  const all = readStore();
+  all[root] = Object.assign({}, all[root], { flavor: name, at: Date.now() });
+  writeStore(all);
+}
+
+function clearFlavor() {
+  const root = projectRoot();
+  if (!root) return;
+  const all = readStore();
+  if (!all[root] || !all[root].flavor) return;
+  delete all[root].flavor;
+  if (Object.keys(all[root]).length) writeStore(all);
+  else { delete all[root]; writeStore(all); }
+}
+
+/**
+ * 当前使用的 productFlavor。
+ * 开发调试通常不需要渠道:显式指定 > 工程记住 > official > 唯一 flavor / dev。
+ */
+function flavor() {
+  const explicit = (opts.flavor || '').trim();
+  if (explicit) {
+    const flavors = availableFlavors();
+    const matched = flavors.find((item) => item.toLowerCase() === explicit.toLowerCase());
+    return matched || explicit;
+  }
+  const stored = flavorPreference();
+  if (stored) return stored;
+  const flavors = availableFlavors();
+  if (!flavors.length) return '';
+  if (flavors.length === 1) return flavors[0];
+  if (flavors.includes('official')) return 'official';
+  if (flavors.includes('dev')) return 'dev';
+  return '';
+}
+
+function fullVariant() {
+  const f = flavor();
+  const v = variant();
+  const cap = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : '');
+  return `${cap(f)}${cap(v)}`;
+}
+
+function requireFlavorIfAmbiguous() {
+  const selected = flavor();
+  if (selected) return selected;
+  const flavors = availableFlavors();
+  if (flavors.length > 1) {
+    throw new CliError(
+      EXIT.ENV,
+      `工程有 ${flavors.length} 个 productFlavor:${flavors.join('、')}\n` +
+        `为避免一次编译所有渠道,请用 --flavor <名字> 指定(开发调试通常选 official)`
+    );
+  }
+  // 解析不到任何 flavor 时不拦:按普通 debug 构建(用户可再手动指定)
+  return '';
+}
+
+/** 明确识别到多个 flavor 且没有选择:必须让用户选,不能猜。 */
+function flavorUnresolved() {
+  if (flavor()) return false;
+  return availableFlavors().length > 1;
+}
+
+/** 有 flavor 配置但一个名字都没解析出来:默认按普通 debug 构建。 */
+function flavorUnknown() {
+  if (flavor()) return false;
+  return availableFlavors().length === 0 && hasFlavorConfig(projectRoot(), module());
+}
+
 /* ------------------------------------------------------------------ */
 /* 环境探测:adb / SDK / JDK / Gradle                                   */
 /* ------------------------------------------------------------------ */
@@ -280,6 +381,16 @@ function detectSdkDir() {
   candidates.push(path.join(os.homedir(), 'Library', 'Android', 'sdk'));
   candidates.push(path.join(os.homedir(), 'Android', 'Sdk'));
   candidates.push(path.join(os.homedir(), 'Android', 'sdk'));
+  if (isWin()) {
+    if (process.env.LOCALAPPDATA) {
+      candidates.push(path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk'));
+    }
+    candidates.push('C:\\Android\\Sdk');
+  } else {
+    candidates.push('/opt/android-sdk');
+    candidates.push('/opt/android/Sdk');
+    candidates.push('/usr/lib/android-sdk');
+  }
 
   for (const c of candidates) {
     if (c && fs.existsSync(c)) return path.resolve(c);
@@ -331,7 +442,13 @@ function javaHomeForVersion(version) {
   ];
   for (const dir of roots) {
     if (!fs.existsSync(dir)) continue;
-    for (const name of fs.readdirSync(dir)) {
+    let names = [];
+    try {
+      names = fs.readdirSync(dir);
+    } catch (e) {
+      continue;
+    }
+    for (const name of names) {
       const home = path.join(dir, name, 'Contents', 'Home');
       if (name.indexOf(version) !== -1 && fs.existsSync(home)) return home;
     }
@@ -353,64 +470,296 @@ function readGradleJvmFromIdea() {
   }
 }
 
-/** 把 .idea 的 gradleJvm 取值解析成 JAVA_HOME。 */
+function androidStudioJbrs() {
+  const candidates = [
+    '/Applications/Android Studio.app/Contents/jbr/Contents/Home',
+    path.join(os.homedir(), 'Applications', 'Android Studio.app', 'Contents', 'jbr', 'Contents', 'Home'),
+    '/opt/android-studio/jbr',
+    path.join(os.homedir(), 'android-studio', 'jbr'),
+    'C:\\Program Files\\Android\\Android Studio\\jbr',
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'Android Studio', 'jbr') : '',
+    process.env.ProgramFiles ? path.join(process.env.ProgramFiles, 'Android', 'Android Studio', 'jbr') : ''
+  ];
+  return candidates.filter((home) => home && existsFile(path.join(home, 'bin', 'java')));
+}
+
+/** 把 .idea 的 gradleJvm 取值(corretto-17 / jbr-17 / 17 / 绝对路径)解析成实际 JAVA_HOME。 */
+function findJavaHomeByValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const homes = listJavaHomes();
+  const compact = (text) => text.toLowerCase().replace(/[\s_-]/g, '');
+  const needle = compact(raw);
+  // 1) 目录名直接包含(gradleJvm 常见为 corretto-17.0.9 这类下载目录名)
+  const exact = homes.filter((home) => compact(home).includes(needle));
+  if (exact.length) return exact.sort((a, b) => a.length - b.length)[0];
+  // 2) 厂商+大版本,例如 corretto-17:优先同厂商,其次同大版本的其他发行版
+  const vendorMajor = /^([a-z]+)[-_ ]?(\d+)/i.exec(raw);
+  if (vendorMajor) {
+    const vendor = compact(vendorMajor[1]);
+    const major = Number(vendorMajor[2]);
+    const sameMajor = homes.filter((home) => javaMajorOf(javaVersionOf(home)) === major);
+    const sameVendor = sameMajor.filter((home) => compact(home).includes(vendor));
+    if (sameVendor.length) return sameVendor.sort((a, b) => a.length - b.length)[0];
+    if (sameMajor.length) return sameMajor.sort((a, b) => a.length - b.length)[0];
+    if (vendor === 'jbr') {
+      const jbr = androidStudioJbrs().find((home) => javaMajorOf(javaVersionOf(home)) === major);
+      if (jbr) return jbr;
+    }
+  }
+  // 3) 纯版本号
+  const numeric = /^(\d+(?:\.\d+)?)$/.exec(raw);
+  if (numeric) {
+    const sameMajor = homes.filter((home) => javaVersionOf(home).startsWith(numeric[1] + '.') || javaMajorOf(javaVersionOf(home)) === Number(numeric[1]));
+    if (sameMajor.length) return sameMajor.sort((a, b) => a.length - b.length)[0];
+  }
+  return null;
+}
+
 function resolveGradleJvmValue(value) {
   if (!value) return null;
   const v = value.trim();
   if (path.isAbsolute(v) && fs.existsSync(v)) return v;
-  const jbr = /^jbr-(\d+)/.exec(v);
-  if (jbr) {
-    const asJbr = '/Applications/Android Studio.app/Contents/jbr/Contents/Home';
-    if (fs.existsSync(asJbr)) return asJbr;
-    return javaHomeForVersion(jbr[1]);
-  }
-  const numeric = /^(\d+(?:\.\d+)?)$/.exec(v);
-  if (numeric) return javaHomeForVersion(numeric[1]);
-  return null;
+  return findJavaHomeByValue(v);
 }
 
-function detectJavaHomeDetail() {
-  const configured = (opts.javaHome || '').trim();
-  if (configured && fs.existsSync(configured)) {
-    return { home: configured, source: '参数 --java-home' };
+/* ------------------------------------------------------------------ */
+/* JDK 选择:必须和 Gradle 版本匹配,不能盲目用 JAVA_HOME                 */
+/* ------------------------------------------------------------------ */
+
+const javaVersionCache = new Map();
+
+function javaVersionOf(home) {
+  if (!home) return '';
+  if (javaVersionCache.has(home)) return javaVersionCache.get(home);
+  const javaBin = path.join(home, 'bin', 'java');
+  if (!existsFile(javaBin)) {
+    javaVersionCache.set(home, '');
+    return '';
   }
-  const jvmValue = readGradleJvmFromIdea();
-  const fromIdea = resolveGradleJvmValue(jvmValue);
-  if (fromIdea) {
-    return { home: fromIdea, source: `.idea/gradle.xml 中的 gradleJvm="${jvmValue}"` };
+  try {
+    // java -version 输出到 stderr,必须两个流都读
+    const r = cp.spawnSync(javaBin, ['-version'], { encoding: 'utf8', timeout: 5000, windowsHide: true });
+    const text = `${r.stdout || ''}${r.stderr || ''}`;
+    const m = /version "([^"]+)"/.exec(text);
+    const version = m ? m[1] : '';
+    javaVersionCache.set(home, version);
+    return version;
+  } catch (e) {
+    javaVersionCache.set(home, '');
+    return '';
   }
-  const envHome = process.env.JAVA_HOME;
-  if (envHome && fs.existsSync(envHome)) {
-    return { home: envHome, source: '环境变量 JAVA_HOME' };
+}
+
+function javaMajorOf(version) {
+  const m = /^(\d+)(?:\.(\d+))?/.exec(String(version || ''));
+  if (!m) return 0;
+  let major = Number(m[1]);
+  if (major === 1 && m[2]) major = Number(m[2]); // 1.8 -> 8
+  return major;
+}
+
+/** 各 Gradle 版本支持的 Java 上限(超过会直接启动失败或构建脚本报错)。 */
+function gradleJavaRange(version) {
+  const m = /^(\d+)\.(\d+)/.exec(String(version || ''));
+  if (!m) return { min: 8, max: 23 };
+  const major = Number(m[1]);
+  const minor = Number(m[2]);
+  if (major <= 4) return { min: 7, max: 10 };
+  if (major === 5) return { min: 8, max: 12 };
+  if (major === 6) return { min: 8, max: minor >= 8 ? 15 : 13 };
+  if (major === 7) return { min: 8, max: minor >= 5 ? 18 : minor >= 3 ? 17 : 16 };
+  return { min: 8, max: 23 };
+}
+
+/** 读取 gradle.properties 里未注释的属性值(支持简单引号与 ~)。 */
+function gradleProperty(name) {
+  const root = projectRoot();
+  if (!root) return '';
+  try {
+    const text = fs.readFileSync(path.join(root, 'gradle.properties'), 'utf8');
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = new RegExp(`^\\s*${escaped}\\s*=\\s*(.+)$`, 'm').exec(text);
+    if (!m) return '';
+    const value = m[1].trim().replace(/^["']|["']$/g, '');
+    return value.startsWith('~/') ? path.join(os.homedir(), value.slice(2)) : value;
+  } catch (e) {
+    return '';
   }
+}
+
+/** 老工程常见 -XX:MaxPermSize,该参数 Java 8 之后会被 JVM 直接拒绝。 */
+function gradleJvmArgs() {
+  return gradleProperty('org.gradle.jvmargs');
+}
+
+/** 工程自己声明的 Gradle JDK —— 跨机器最可靠的一种(团队可提交)。 */
+function gradleJavaHomeProperty() {
+  return gradleProperty('org.gradle.java.home');
+}
+
+/** PATH / 系统默认的 JDK(其他机器上可能只有这一种)。 */
+function systemDefaultJavaHome() {
   if (process.platform === 'darwin') {
     const out = execFileSyncSafe('/usr/libexec/java_home', []);
-    if (out && fs.existsSync(out)) {
-      return { home: out, source: '系统默认 JDK(/usr/libexec/java_home)' };
-    }
+    if (out && fs.existsSync(out)) return out;
   }
-  return { home: null, source: '未找到' };
+  const which = execFileSyncSafe(isWin() ? 'where' : 'which', ['java']);
+  const first = (which || '').split(/\r?\n/).map((line) => line.trim()).find(Boolean);
+  if (!first) return null;
+  try {
+    const real = fs.realpathSync(first);
+    const home = path.dirname(path.dirname(real));
+    return existsFile(path.join(home, 'bin', 'java')) ? home : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function listJavaHomes() {
+  const homes = new Set();
+  const add = (home) => {
+    try {
+      if (home && existsFile(path.join(home, 'bin', 'java'))) homes.add(fs.realpathSync(home));
+    } catch (e) { /* 忽略无权限的目录 */ }
+  };
+  const scan = (dir, suffix) => {
+    let names = [];
+    try { names = fs.readdirSync(dir); } catch (e) { return; }
+    for (const name of names) add(path.join(dir, name, suffix));
+  };
+  if (process.platform === 'darwin') {
+    scan('/Library/Java/JavaVirtualMachines', 'Contents/Home');
+    scan(path.join(os.homedir(), 'Library', 'Java', 'JavaVirtualMachines'), 'Contents/Home');
+    scan(path.join(os.homedir(), '.jdks'), 'Contents/Home'); // IntelliJ / Android Studio 下载的 JDK
+    scan(path.join(os.homedir(), '.jdks'), '');            // Windows / Linux 布局
+    scan('/opt/homebrew/opt', 'libexec/openjdk.jdk/Contents/Home');
+    scan(path.join(os.homedir(), '.sdkman', 'candidates', 'java'), '');
+    add('/Applications/Android Studio.app/Contents/jbr/Contents/Home');
+  } else if (isWin()) {
+    scan('C:\\Program Files\\Java', '');
+    scan('C:\\Program Files\\Eclipse Adoptium', '');
+    scan('C:\\Program Files\\Microsoft', 'jdk');
+    scan(path.join(os.homedir(), '.jdks'), '');
+  } else {
+    scan('/usr/lib/jvm', '');
+    scan('/usr/java', '');
+    scan(path.join(os.homedir(), '.jdks'), '');
+    scan(path.join(os.homedir(), '.sdkman', 'candidates', 'java'), '');
+  }
+  return Array.from(homes);
+}
+
+/** 同版本范围内优先用哪个 Java 版本。 */
+function javaPreferenceOrder(gradleVersion, requireJava8) {
+  if (requireJava8) return [8];
+  const major = Number((/^(\d+)/.exec(String(gradleVersion || '')) || [0, 0])[1]);
+  if (!major || major <= 6) return [8, 11, 12, 13];
+  if (major === 7) return [11, 17, 8];
+  return [17, 21, 11, 8];
+}
+
+/**
+ * 选择运行 Gradle 的 JDK。
+ * 只看 JAVA_HOME 是不够的:Gradle 5.x 配 JDK 17、或 gradle.properties 里带
+ * -XX:MaxPermSize 的老工程都会直接启动失败,表现为"编译没产出、找不到 APK"。
+ */
+function detectJavaHomeDetail() {
+  const gradleVersion = gradleVersionFromWrapper();
+  const range = gradleJavaRange(gradleVersion);
+  const jvmArgs = gradleJvmArgs();
+  const requireJava8 = /MaxPermSize/i.test(jvmArgs);
+  const candidates = [];
+  const add = (home, source) => {
+    if (!home) return;
+    let abs = path.resolve(home);
+    if (!fs.existsSync(abs)) return;
+    try { abs = fs.realpathSync(abs); } catch (e) { /* realpath 失败时沿用原路径 */ }
+    if (candidates.some((c) => c.home === abs)) return;
+    const version = javaVersionOf(abs);
+    candidates.push({ home: abs, source, version, major: javaMajorOf(version) });
+  };
+
+  const configured = (opts.javaHome || '').trim();
+  if (configured) {
+    if (fs.existsSync(configured)) add(configured, '参数 --java-home');
+    else console.error(`⚠ --java-home 指向的目录不存在:${configured}`);
+  }
+  const storedHome = javaHomePreference();
+  if (storedHome) add(storedHome, '工程记住的 JDK');
+  const propsJavaHome = gradleJavaHomeProperty();
+  if (propsJavaHome) {
+    if (fs.existsSync(propsJavaHome)) add(propsJavaHome, 'gradle.properties 的 org.gradle.java.home');
+    else console.error(`⚠ gradle.properties 里的 org.gradle.java.home 不存在:${propsJavaHome}`);
+  }
+  const jvmValue = readGradleJvmFromIdea();
+  const ideaHome = resolveGradleJvmValue(jvmValue);
+  const compact = (text) => String(text || '').toLowerCase().replace(/[\s_-]/g, '');
+  const ideaSource = jvmValue
+    ? `.idea/gradle.xml 的 gradleJvm="${jvmValue}"${
+        ideaHome && !compact(ideaHome).includes(compact(jvmValue))
+          ? `(按 Java ${javaMajorOf(javaVersionOf(ideaHome))} 匹配)`
+          : ''
+      }`
+    : '.idea/gradle.xml';
+  add(ideaHome, ideaSource);
+  add(process.env.JAVA_HOME, '环境变量 JAVA_HOME');
+  for (const jbr of androidStudioJbrs()) add(jbr, 'Android Studio 内置 JBR');
+  add(systemDefaultJavaHome(), '系统默认 java');
+  for (const home of listJavaHomes()) add(home, '本机 JDK');
+
+  const compatible = (c) =>
+    c.major >= range.min && c.major <= range.max && (!requireJava8 || c.major === 8);
+  const noteFor = (c) => {
+    const gradle = gradleVersion || '(未知版本)';
+    if (compatible(c)) return `兼容 Gradle ${gradle}`;
+    if (requireJava8) return `gradle.properties 的 MaxPermSize 只支持 Java 8`;
+    return `与 Gradle ${gradle} 不兼容(需要 Java ${range.min}-${range.max})`;
+  };
+  const sourceRank = (c) =>
+    c.source.startsWith('.idea') ? 0 : c.source.startsWith('环境变量') ? 1 : c.source.startsWith('Android Studio') ? 2 : 3;
+
+  // 显式指定(--java-home / 工程记住的选择)优先,但仍把兼容性写出来
+  const explicit = candidates.find(
+    (c) => c.source.startsWith('参数 --java-home') || c.source.startsWith('工程记住的 JDK')
+  );
+  if (explicit) return { ...explicit, compatible: compatible(explicit), note: noteFor(explicit) };
+
+  const preference = javaPreferenceOrder(gradleVersion, requireJava8);
+  const rank = (c) => {
+    const index = preference.indexOf(c.major);
+    return index === -1 ? 99 : index;
+  };
+  // 优先级:工程声明/IDE 配置 > JAVA_HOME > Android Studio JBR > 系统 java > 本机其他 JDK
+  const usable = candidates.filter(compatible);
+  let pick = usable.find((c) => c.source.startsWith('gradle.properties'));
+  if (!pick) pick = usable.find((c) => c.source.startsWith('.idea/gradle.xml'));
+  if (!pick) pick = usable.find((c) => c.source.startsWith('环境变量'));
+  if (!pick) pick = usable.find((c) => c.source.startsWith('Android Studio'));
+  if (!pick) pick = usable.find((c) => c.source.startsWith('系统默认'));
+  if (!pick) {
+    pick = usable.slice().sort((a, b) => rank(a) - rank(b) || b.major - a.major)[0];
+  }
+  if (pick) {
+    const skipped = candidates
+      .filter((c) => !compatible(c))
+      .map((c) => `Java ${c.major}(${c.source})`);
+    const skipNote = skipped.length
+      ? `;已跳过 ${skipped.slice(0, 3).join('、')}${skipped.length > 3 ? ` 等 ${skipped.length} 个` : ''}`
+      : '';
+    return { ...pick, compatible: true, note: noteFor(pick) + skipNote };
+  }
+  if (candidates.length) {
+    const pick = candidates.slice().sort((a, b) => sourceRank(a) - sourceRank(b) || b.major - a.major)[0];
+    return { ...pick, compatible: false, note: noteFor(pick) };
+  }
+  return { home: null, source: '未找到', version: '', major: 0, compatible: false, note: '未探测到 JDK' };
 }
 
 function detectJavaHome() {
   if (cache.javaHome !== undefined) return cache.javaHome;
   cache.javaHome = detectJavaHomeDetail().home;
   return cache.javaHome;
-}
-
-function javaVersionOf(home) {
-  if (!home) return '';
-  const javaBin = path.join(home, 'bin', 'java');
-  if (!existsFile(javaBin)) return '';
-  try {
-    // java -version 输出到 stderr,必须两个流都读
-    const r = cp.spawnSync(javaBin, ['-version'], { encoding: 'utf8', timeout: 5000 });
-    const text = `${r.stdout || ''}${r.stderr || ''}`;
-    const m = /version "([^"]+)"/.exec(text);
-    return m ? m[1] : '';
-  } catch (e) {
-    return '';
-  }
 }
 
 function gradleVersionFromWrapper() {
@@ -442,7 +791,7 @@ function ensureGradlewExecutable() {
   }
 }
 
-/** 缺少 local.properties 时自动生成(该文件通常在 .gitignore 中)。 */
+/** 仅在显式 --local-properties 时生成;默认不改工程文件,构建用 ANDROID_HOME。 */
 function ensureLocalProperties() {
   if (!opts.localProperties) return;
   const root = projectRoot();
@@ -549,21 +898,41 @@ function readStore() {
 }
 
 function writeStore(data) {
-  fs.mkdirSync(path.dirname(storeFile()), { recursive: true });
-  fs.writeFileSync(storeFile(), JSON.stringify(data, null, 2), 'utf8');
+  const file = storeFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  // 面板与命令行可能同时写偏好;先写临时文件再改名,避免读到半截 JSON
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch (e2) { /* 临时文件可能未创建 */ }
+    throw e;
+  }
 }
 
-function devicePreference() {
+function projectStoreEntry() {
   const root = projectRoot();
   if (!root) return null;
   return readStore()[root] || null;
+}
+
+function devicePreference() {
+  const pref = projectStoreEntry();
+  if (!pref || !pref.serial) return null;
+  return { serial: pref.serial, model: pref.model, at: pref.at };
 }
 
 function rememberDevice(device) {
   const root = projectRoot();
   if (!root) return;
   const all = readStore();
-  all[root] = { serial: device.serial, model: device.model || device.serial, at: Date.now() };
+  // 合并而不是覆盖:同一工程还记着 JDK 选择
+  all[root] = Object.assign({}, all[root], {
+    serial: device.serial,
+    model: device.model || device.serial,
+    at: Date.now()
+  });
   writeStore(all);
 }
 
@@ -572,9 +941,42 @@ function clearDevicePreference() {
   if (!root) return;
   const all = readStore();
   if (all[root]) {
-    delete all[root];
-    writeStore(all);
+    delete all[root].serial;
+    delete all[root].model;
+    delete all[root].at;
+    if (Object.keys(all[root]).length) writeStore(all);
+    else { delete all[root]; writeStore(all); }
   }
+}
+
+/** 工程记住的 JDK(用户显式选择过才存在)。 */
+function javaHomePreference() {
+  const pref = projectStoreEntry();
+  const home = pref && typeof pref.javaHome === 'string' ? pref.javaHome : '';
+  if (!home || !fs.existsSync(home)) return null;
+  try { return fs.realpathSync(home); } catch (e) { return home; }
+}
+
+function rememberJavaHome(home) {
+  const root = projectRoot();
+  if (!root) {
+    throw new CliError(EXIT.ENV, '当前目录不在 Gradle 工程内,无法记住 JDK 选择\n请先 cd 到工程根目录');
+  }
+  let normalized = home;
+  try { normalized = fs.realpathSync(home); } catch (e) { /* 保留原路径 */ }
+  const all = readStore();
+  all[root] = Object.assign({}, all[root], { javaHome: normalized, at: Date.now() });
+  writeStore(all);
+}
+
+function clearJavaHome() {
+  const root = projectRoot();
+  if (!root) return;
+  const all = readStore();
+  if (!all[root] || !all[root].javaHome) return;
+  delete all[root].javaHome;
+  if (Object.keys(all[root]).length) writeStore(all);
+  else { delete all[root]; writeStore(all); }
 }
 
 function noDeviceMessage(unavailable, ready) {
@@ -657,13 +1059,16 @@ async function pickDevice({ interactiveHint } = {}) {
 function gradleTaskFor() {
   const explicit = (opts.task || '').trim();
   if (explicit) return explicit;
-  const mod = module();
-  const varnt = variant();
-  return `:${mod}:assemble${varnt.charAt(0).toUpperCase() + varnt.slice(1)}`;
+  return `:${module()}:assemble${fullVariant()}`;
 }
 
 function findApkForConfiguration() {
-  return findApk(projectRoot(), module(), variant(), (opts.apk || '').trim());
+  // 明确多个 flavor 又没选:任何 APK 都可能不是用户要的,宁可不显示
+  if (flavorUnresolved()) return null;
+  // 解析不到 flavor 时只认普通 debug 产物,不要误拿某个渠道的 APK
+  return findApk(projectRoot(), module(), variant(), (opts.apk || '').trim(), flavor(), {
+    plainOnly: flavorUnknown()
+  });
 }
 
 function resolveApk() {
@@ -717,7 +1122,8 @@ function runGradle(args, device) {
       return;
     }
     const env = Object.assign({}, process.env);
-    const javaHome = detectJavaHome();
+    const javaDetail = detectJavaHomeDetail();
+    const javaHome = javaDetail.home;
     if (javaHome) env.JAVA_HOME = javaHome;
     const sdk = detectSdkDir();
     if (sdk && fs.existsSync(sdk)) {
@@ -729,7 +1135,7 @@ function runGradle(args, device) {
     console.log('');
     console.log(`▶ ${path.basename(gradlew)} ${args.join(' ')}`);
     console.log(`  cwd=${root}`);
-    if (javaHome) console.log(`  JAVA_HOME=${javaHome}`);
+    if (javaHome) console.log(`  JAVA_HOME=${javaHome}${javaDetail.note ? `(${javaDetail.note})` : ''}`);
     if (env.ANDROID_SERIAL) console.log(`  ANDROID_SERIAL=${env.ANDROID_SERIAL}`);
 
     const proc = cp.spawn(
@@ -768,8 +1174,15 @@ function runGradle(args, device) {
 }
 
 async function build(device) {
+  requireFlavorIfAmbiguous();
+  if (flavorUnknown()) {
+    console.log('⚠ 未识别到 flavor,按普通 debug 构建;需要指定渠道请用 --flavor <名字> 或面板 Flavor 输入');
+  }
   const task = gradleTaskFor();
-  const args = [task].concat(gradleArgs);
+  // 显式把选中的 JDK 传给 Gradle,覆盖 gradle.properties 里可能写死的 org.gradle.java.home
+  const javaDetail = detectJavaHomeDetail();
+  const systemArgs = javaDetail.home ? [`-Dorg.gradle.java.home=${javaDetail.home}`] : [];
+  const args = systemArgs.concat([task], gradleArgs);
 
   ensureGradlewExecutable();
   ensureLocalProperties();
@@ -805,7 +1218,37 @@ async function runInstall(adb, serial, apk, extraArgs) {
   return { ok: r.ok && /Success/i.test(text), text, seconds };
 }
 
+/** 读取设备上已安装的包名列表;失败时返回 null(不阻断后续流程)。 */
+async function installedPackages(device) {
+  const r = await execFileP(detectAdb(), ['-s', device.serial, 'shell', 'pm', 'list', 'packages'], { timeout: 15000 });
+  if (!r.ok) return null;
+  return r.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('package:'))
+    .map((line) => line.slice('package:'.length).trim())
+    .filter(Boolean);
+}
+
+/**
+ * 卸载重装前确认要卸载的包确实在设备上。
+ * build.gradle 里只有 applicationId、没有 applicationIdSuffix 时,实际安装的是
+ * `<applicationId>.debug` 之类;直接按 applicationId 卸载会失败,重装也仍然失败。
+ */
+async function resolveInstalledPackage(device, pkg) {
+  if (!pkg) return pkg;
+  const installed = await installedPackages(device);
+  if (!installed || installed.includes(pkg)) return pkg;
+  const suffixed = installed.filter((name) => name.startsWith(`${pkg}.`));
+  if (suffixed.length === 1) {
+    console.log(`  设备上的实际包名是 ${suffixed[0]}(applicationIdSuffix),按该包名处理`);
+    return suffixed[0];
+  }
+  return pkg;
+}
+
 async function installApk(device, { quiet = false } = {}) {
+  requireFlavorIfAmbiguous();
   const adb = detectAdb();
   const apk = resolveApk();
   if (!apk || !fs.existsSync(apk)) {
@@ -838,17 +1281,21 @@ async function installApk(device, { quiet = false } = {}) {
   }
 
   if (/INSTALL_FAILED_UPDATE_INCOMPATIBLE|signatures do not match|INSTALL_FAILED_VERSION_DOWNGRADE/i.test(result.text)) {
-    const pkg = resolvePackage();
-    if (opts.noReinstall) {
+    // --reinstall 显式允许替换,优先级高于 --no-reinstall;两者都没给时默认允许(与旧版一致)
+    const allowReinstall = opts.reinstall || !opts.noReinstall;
+    if (!allowReinstall) {
       throw new CliError(
         EXIT.CONFIRM,
         `安装被拒绝(签名不一致或版本回退),当前已关闭自动替换。\n` +
-          `去掉 --no-reinstall 后重试,即会自动卸载重装(会清空${pkg ? ' ' + pkg : ''}的本地数据)`
+          `去掉 --no-reinstall 后重试,即会自动卸载重装(会清空应用在设备上的本地数据)`
       );
     }
+    const declared = resolvePackage();
+    const pkg = await resolveInstalledPackage(device, declared);
     if (!pkg) {
       throw new CliError(EXIT.FAIL, '安装被拒绝且未能识别包名,无法自动卸载重装;可用 --package 指定包名');
     }
+    if (declared !== pkg) console.log(`  提示:声明的 applicationId 是 ${declared}`);
     console.log(`⚠ 签名不一致或版本回退 → 自动卸载重装(会清空 ${pkg} 在设备上的本地数据)`);
     const un = await execFileP(adb, ['-s', device.serial, 'uninstall', pkg], { timeout: 60000 });
     if (!un.ok && !/Unknown package|not installed/i.test(`${un.stdout}${un.stderr}`)) {
@@ -904,40 +1351,54 @@ async function launchApp(device) {
   return ok;
 }
 
-async function isAppRunning(device, pkg) {
-  const r = await execFileP(detectAdb(), ['-s', device.serial, 'shell', 'pidof', pkg], { timeout: 5000 });
-  return r.ok && !!r.stdout.trim();
-}
-
+/**
+ * 前台持续输出日志,直到 Ctrl-C 或流结束。
+ * 返回 Promise:入口不能在启动流之后立刻 process.exit,否则 adb logcat 会被一起带走。
+ */
 function openLogcat(device) {
   const adb = detectAdb();
   const pkg = resolvePackage();
   const args = ['-s', device.serial, 'logcat', '-v', 'time'];
   console.log(`▶ adb ${args.join(' ')}${pkg ? `(优先只看 ${pkg} 的进程,Ctrl-C 停止)` : '(Ctrl-C 停止)'}`);
-  const start = (extra) => {
-    const child = cp.spawn(adb, args.concat(extra || []), { stdio: 'inherit', windowsHide: true });
-    const onSignal = () => {
-      try { child.kill('SIGKILL'); } catch (e) { /* 可能已结束 */ }
-      process.exit(EXIT.OK);
+  return new Promise((resolve) => {
+    let finished = false;
+    const start = (extra) => {
+      const child = cp.spawn(adb, args.concat(extra || []), { stdio: 'inherit', windowsHide: true });
+      const onSignal = () => {
+        try { child.kill('SIGKILL'); } catch (e) { /* 可能已结束 */ }
+        process.exit(EXIT.OK);
+      };
+      process.on('SIGINT', onSignal);
+      process.on('SIGTERM', onSignal);
+      const finish = (code) => {
+        if (finished) return;
+        finished = true;
+        process.removeListener('SIGINT', onSignal);
+        process.removeListener('SIGTERM', onSignal);
+        resolve(code);
+      };
+      child.on('error', (error) => {
+        console.error(`启动 adb logcat 失败:${error.message}`);
+        finish(EXIT.FAIL);
+      });
+      // Ctrl-C 由上面的信号处理负责;正常结束(设备断开等)也返回成功
+      child.on('close', () => finish(EXIT.OK));
     };
-    process.on('SIGINT', onSignal);
-    process.on('SIGTERM', onSignal);
-    child.on('close', () => process.exit(EXIT.OK));
-  };
-  if (!pkg) {
-    start();
-    return;
-  }
-  // 优先只看本应用进程;多进程时取第一个 pid;拿不到 pid 时回落全量日志
-  execFileP(adb, ['-s', device.serial, 'shell', 'pidof', pkg], { timeout: 5000 }).then((r) => {
-    const pid = (r.stdout || '').trim().split(/\s+/)[0];
-    if (pid && /^\d+$/.test(pid)) {
-      console.log(`  进程 ${pkg} pid=${pid}`);
-      start([`--pid=${pid}`]);
-    } else {
-      console.log(`  未取到 ${pkg} 的 pid(App 未运行?),输出全量日志`);
+    if (!pkg) {
       start();
+      return;
     }
+    // 优先只看本应用进程;多进程时取第一个 pid;拿不到 pid 时回落全量日志
+    execFileP(adb, ['-s', device.serial, 'shell', 'pidof', pkg], { timeout: 5000 }).then((r) => {
+      const pid = (r.stdout || '').trim().split(/\s+/)[0];
+      if (pid && /^\d+$/.test(pid)) {
+        console.log(`  进程 ${pkg} pid=${pid}`);
+        start([`--pid=${pid}`]);
+      } else {
+        console.log(`  未取到 ${pkg} 的 pid(App 未运行?),输出全量日志`);
+        start();
+      }
+    });
   });
 }
 
@@ -971,10 +1432,15 @@ async function startAvd(name) {
   if (!existing) {
     console.log(`▶ ${path.basename(emu)} -avd ${name}`);
     const proc = cp.spawn(emu, ['-avd', name], { detached: true, stdio: 'ignore' });
-    proc.once('error', (error) => {
-      throw new CliError(EXIT.FAIL, `启动模拟器失败:${error.message}`);
+    // spawn 失败是异步事件;在事件回调里 throw 会变成未捕获异常,这里收集后统一报错
+    const spawnError = await new Promise((resolve) => {
+      proc.once('spawn', () => resolve(null));
+      proc.once('error', (error) => resolve(error));
     });
     proc.unref();
+    if (spawnError) {
+      throw new CliError(EXIT.FAIL, `启动模拟器失败:${spawnError.message}`);
+    }
   }
 
   const deadline = Date.now() + 180000;
@@ -1029,7 +1495,7 @@ async function cmdDoctor() {
     ['Gradle 任务', gradleTaskFor()],
     ['Android SDK', sdk || '❌ 未探测到(检查 local.properties / ANDROID_HOME)'],
     ['adb', `${adbUsable ? adb : '❌ 未找到(检查 --adb 参数)'}${adbVer ? '  ' + adbVer : ''}`],
-    ['JAVA_HOME', `${javaDetail.home || '❌ 未探测到'}(来源:${javaDetail.source}${javaVer ? ',' + javaVer : ''})`]
+    ['JAVA_HOME', `${javaDetail.home || '❌ 未探测到'}(来源:${javaDetail.source}${javaVer ? ',' + javaVer : ''}${javaDetail.note ? ',' + javaDetail.note : ''})`]
   ];
   for (const [k, v] of rows) {
     console.log(`  ${padLabel(k, 14)}: ${v}`);
@@ -1066,10 +1532,10 @@ async function cmdDoctor() {
   console.log('══════════════════════════════════════');
 
   const problems = [];
-  if (!root) problems.push('找到 Gradle 工程根目录');
   if (!sdk) problems.push('探测 Android SDK');
   if (!adbUsable) problems.push('探测 adb');
   if (!javaDetail.home) problems.push('探测 JDK');
+  else if (!javaDetail.compatible) problems.push(`换一个与 Gradle 兼容的 JDK(${javaDetail.note})`);
   const ready = devices.filter((d) => d.state === 'device');
   if (!ready.length) problems.push('连接一台可用设备');
 
@@ -1079,11 +1545,11 @@ async function cmdDoctor() {
   console.log('✅ 环境自检通过:工程、SDK、JDK、adb、设备均就绪');
 }
 
-/** 按终端显示宽度补齐(中文占 2 格),用于自检报告对齐。 */
+/** 按终端显示宽度补齐(非 ASCII 占 2 格),用于自检报告对齐。 */
 function padLabel(text, width) {
   let w = 0;
   for (const ch of text) {
-    w += /[一-龥():,]/.test(ch) ? 2 : 1;
+    w += /[^\x00-\xff]/.test(ch) ? 2 : 1;
   }
   return text + ' '.repeat(Math.max(0, width - w));
 }
@@ -1166,7 +1632,7 @@ async function cmdUse() {
   if (opts.emulator) {
     const device = await startAvd(opts.emulator);
     rememberDevice(device);
-    console.log(`已记住目标设备:${device.serial}(工程:${projectRoot()})`);
+    console.log(`已记住目标设备:${device.serial}${projectRoot() ? `(工程:${projectRoot()})` : '(当前目录不在 Gradle 工程内,仅本次会话有效)'}`);
     return;
   }
   if (opts.clear) {
@@ -1195,7 +1661,103 @@ async function cmdUse() {
   }
   const model = await resolveModel(device);
   rememberDevice({ serial: device.serial, model: model || device.model });
-  console.log(`已记住目标设备:${device.serial}${model ? ' · ' + model : ''}(工程:${projectRoot()})`);
+  console.log(`已记住目标设备:${device.serial}${model ? ' · ' + model : ''}${projectRoot() ? `(工程:${projectRoot()})` : '(当前目录不在 Gradle 工程内,仅本次会话有效)'}`);
+}
+
+/**
+ * 查看 / 记住本工程使用的 JDK。
+ * 不指定参数时列出本机 JDK 和当前自动选择结果;指定路径或版本号则写入工程偏好。
+ */
+async function cmdJava() {
+  requireProjectRoot();
+  const root = projectRoot();
+  const gradleVersion = gradleVersionFromWrapper();
+  const range = gradleJavaRange(gradleVersion);
+  const requireJava8 = /MaxPermSize/i.test(gradleJvmArgs());
+  const isCompatible = (major) =>
+    major >= range.min && major <= range.max && (!requireJava8 || major === 8);
+  const detail = detectJavaHomeDetail();
+
+  if (opts.clear) {
+    clearJavaHome();
+    const auto = detectJavaHomeDetail();
+    console.log(`已恢复自动选择 JDK(当前:${auto.home || '未探测到'})`);
+    return;
+  }
+
+  const requested = (opts.javaPath || '').trim();
+  if (requested) {
+    const home = path.isAbsolute(requested) && fs.existsSync(requested)
+      ? requested
+      : findJavaHomeByValue(requested);
+    if (!home) {
+      throw new CliError(EXIT.ENV, `未找到 JDK:${requested}\n运行 node ar.js java 查看本机可用 JDK`);
+    }
+    rememberJavaHome(home);
+    const version = javaVersionOf(home);
+    const major = javaMajorOf(version);
+    console.log(`已记住本工程的 JDK:${home}(Java ${major}${version ? ' · ' + version : ''})`);
+    if (!isCompatible(major)) {
+      console.log(
+        `⚠ 该 JDK 与 Gradle ${gradleVersion || '(未知)'} 不兼容${requireJava8 ? '(gradle.properties 含 MaxPermSize,只能使用 Java 8)' : `(需要 Java ${range.min}-${range.max})`}`
+      );
+    }
+    return;
+  }
+
+  console.log(`工程        : ${root}`);
+  console.log(`Gradle      : ${gradleVersion || '(未知)'}${requireJava8 ? ' · gradle.properties 含 MaxPermSize(仅 Java 8)' : ''}`);
+  console.log(`当前 JDK    : ${detail.home || '未探测到'}${detail.version ? `(Java ${detail.major} · ${detail.version})` : ''}`);
+  console.log(`  来源      : ${detail.source}${detail.note ? ` · ${detail.note}` : ''}`);
+  const locked = javaHomePreference();
+  if (locked) console.log(`  本工程锁定: ${locked}(用 node ar.js java --clear 恢复自动)`);
+  console.log('');
+  console.log('可用 JDK:');
+  const homes = listJavaHomes().sort((a, b) => javaMajorOf(javaVersionOf(b)) - javaMajorOf(javaVersionOf(a)) || a.length - b.length);
+  for (const home of homes) {
+    const version = javaVersionOf(home);
+    const major = javaMajorOf(version);
+    const mark = home === detail.home ? '*' : ' ';
+    const suffix = isCompatible(major) ? '' : '  (与当前 Gradle 不兼容)';
+    console.log(`  ${mark} ${home}  Java ${major}${version ? ' · ' + version : ''}${suffix}`);
+  }
+  console.log('');
+  console.log('选择:node ar.js java <路径 或 17 / corretto-17>    恢复自动:node ar.js java --clear');
+}
+
+/**
+ * 查看 / 记住本工程的 productFlavor。
+ * 不指定参数时列出可用 flavor;指定名字则记住,`--clear` 恢复自动(默认 official)。
+ */
+async function cmdFlavor() {
+  requireProjectRoot();
+  const root = projectRoot();
+  const flavors = availableFlavors();
+  if (opts.clear) {
+    clearFlavor();
+    console.log(`已恢复自动选择 flavor(当前:${flavor() || '(无)'})`);
+    return;
+  }
+  const requested = (opts.flavor || '').trim();
+  if (requested) {
+    // 动态生成的 flavor 可能解析不到:允许直接输入,以 Gradle 的 task 为准
+    const canonical = flavors.find((item) => item.toLowerCase() === requested.toLowerCase()) || requested;
+    if (flavors.length && !flavors.includes(canonical)) {
+      console.log(`⚠ 静态解析没找到 ${requested},仍按这个名字构建;若 Gradle 报 task 不存在,请检查拼写`);
+    }
+    rememberFlavor(canonical);
+    console.log(`已记住本工程的 flavor:${canonical}(构建任务 ${gradleTaskFor()})`);
+    return;
+  }
+  console.log(`工程        : ${root}`);
+  console.log(`Gradle      : ${gradleVersionFromWrapper() || '(未知)'} · variant=${variant()}(运行固定 debug)`);
+  console.log(`当前 flavor : ${flavor() || '(无)'}${flavorPreference() ? '(本工程记住)' : '(自动)'}`);
+  console.log(`可用 flavor : ${flavors.join('、') || '(未配置)'}`);
+  if (flavors.length > 1 && !flavor()) {
+    console.log('⚠ 多个 flavor 且没有 official:请用 node ar.js flavor <名字> 指定,避免一次编译所有渠道');
+  }
+  console.log('');
+  console.log('选择:node ar.js flavor <名字>    恢复自动:node ar.js flavor --clear');
 }
 
 async function cmdInfo() {
@@ -1208,6 +1770,21 @@ async function cmdInfo() {
     throw new CliError(EXIT.ENV, '当前目录不是 Gradle 工程(未找到 gradlew)\n请在 Gradle 工程根目录(或其子目录)运行');
   }
   const javaDetail = detectJavaHomeDetail();
+  const javaRange = gradleJavaRange(gradleVersionFromWrapper());
+  const javaRequire8 = /MaxPermSize/i.test(gradleJvmArgs());
+  const javaHomes = listJavaHomes()
+    .map((home) => {
+      const version = javaVersionOf(home);
+      const major = javaMajorOf(version);
+      return {
+        home,
+        version,
+        major,
+        compatible: major >= javaRange.min && major <= javaRange.max && (!javaRequire8 || major === 8),
+        selected: home === javaDetail.home
+      };
+    })
+    .sort((a, b) => a.major - b.major || a.home.localeCompare(b.home));
   const info = {
     root,
     isProject: true,
@@ -1215,6 +1792,12 @@ async function cmdInfo() {
     gradleVersion: gradleVersionFromWrapper() || '',
     module: module(),
     variant: variant(),
+    flavor: flavor(),
+    flavorPreference: flavorPreference() || '',
+    flavors: availableFlavors(),
+    variantFull: fullVariant(),
+    flavorAmbiguous: flavorUnresolved(),
+    flavorUnknown: flavorUnknown(),
     task: gradleTaskFor(),
     modules: discoverModules(root, module()),
     sdk: detectSdkDir() || '',
@@ -1223,6 +1806,10 @@ async function cmdInfo() {
     javaHome: javaDetail.home || '',
     javaSource: javaDetail.source,
     javaVersion: javaVersionOf(javaDetail.home) || '',
+    javaCompatible: !!javaDetail.compatible,
+    javaNote: javaDetail.note || '',
+    javaHomePreference: javaHomePreference() || '',
+    javaHomes,
     packageName: resolvePackage() || '',
     apk: apkInfo(findApkForConfiguration()),
     preference: devicePreference()
@@ -1239,14 +1826,17 @@ async function cmdInfo() {
 
 async function cmdBuild() {
   requireProjectRoot();
-  const device = await pickDevice().catch((e) => {
-    // 仅编译不强制要求设备;无设备时照常编译
-    if (e.code === EXIT.ENV && /没有检测到设备|未授权|offline/.test(e.message)) {
+  // 仅编译不需要设备:多设备未选择、无设备、设备未授权都不应挡住编译
+  let device = null;
+  try {
+    device = await pickDevice();
+  } catch (e) {
+    if (e instanceof CliError && e.code === EXIT.ENV) {
       console.log(`⚠ ${e.message.split('\n')[0]}\n(仅编译,不校验设备)`);
-      return null;
+    } else {
+      throw e;
     }
-    throw e;
-  });
+  }
   await build(device);
 }
 
@@ -1270,12 +1860,14 @@ async function cmdRun() {
 
 async function cmdLaunch() {
   requireProjectRoot();
+  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   await launchApp(device);
 }
 
 async function cmdStop() {
   requireProjectRoot();
+  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   const pkg = resolvePackage();
   if (!pkg) throw new CliError(EXIT.ENV, '未识别 applicationId,无法停止应用(可用 --package 指定)');
@@ -1286,6 +1878,7 @@ async function cmdStop() {
 
 async function cmdRestart() {
   requireProjectRoot();
+  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   const pkg = resolvePackage();
   if (!pkg) throw new CliError(EXIT.ENV, '未识别 applicationId,无法重启应用(可用 --package 指定)');
@@ -1297,6 +1890,7 @@ async function cmdRestart() {
 
 async function cmdUninstall() {
   requireProjectRoot();
+  requireFlavorIfAmbiguous();
   requireConfirmation('卸载', `将从设备移除应用并清空其数据`);
   const device = await pickDevice();
   const pkg = resolvePackage();
@@ -1312,6 +1906,7 @@ async function cmdUninstall() {
 
 async function cmdClearData() {
   requireProjectRoot();
+  requireFlavorIfAmbiguous();
   requireConfirmation('清除数据', '登录态等本地数据会丢失');
   const device = await pickDevice();
   const pkg = resolvePackage();
@@ -1328,7 +1923,7 @@ async function cmdClearData() {
 async function cmdLogcat() {
   requireProjectRoot();
   const device = await pickDevice();
-  openLogcat(device);
+  return openLogcat(device);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1413,7 +2008,7 @@ function renderDashboard(d) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Android Runner · ${esc(path.basename(d.root || ''))}</title>
+<title>Android Runner v${VERSION} · ${esc(path.basename(d.root || ''))}</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -1421,6 +2016,7 @@ function renderDashboard(d) {
   .wrap { max-width: 880px; margin: 0 auto; padding: 28px 20px 48px; }
   h1 { font-size: 20px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
   h1 .logo { width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(135deg, #3ddc84, #2bb673); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; color: #0b1210; }
+  h1 .ver { font-size: 11.5px; font-weight: 500; color: #8a94a3; margin-left: 2px; }
   .meta { color: #8a94a3; font-size: 12.5px; margin-bottom: 22px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8a94a3; margin: 26px 0 10px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
@@ -1451,7 +2047,7 @@ function renderDashboard(d) {
 </head>
 <body>
 <div class="wrap">
-  <h1><span class="logo">🤖</span> Android Runner</h1>
+  <h1><span class="logo">🤖</span> Android Runner <span class="ver">v${VERSION}</span></h1>
   <div class="meta">${esc(path.basename(d.root))} · 模块 ${esc(d.module)} · ${esc(d.variant)} · 生成于 ${new Date().toLocaleString()} · 刷新:对 ZCode 说「刷新 Android 面板」</div>
 
   <h2>设备</h2>
@@ -1542,7 +2138,9 @@ async function cmdDashboard() {
   if (opts.open) {
     const opener = isWin() ? 'cmd.exe' : process.platform === 'darwin' ? 'open' : 'xdg-open';
     const args = isWin() ? ['/c', 'start', '', out] : [out];
-    cp.spawn(opener, args, { detached: true, stdio: 'ignore' }).unref();
+    const openerProc = cp.spawn(opener, args, { detached: true, stdio: 'ignore' });
+    openerProc.on('error', (error) => console.error(`打开浏览器失败:${error.message},请手动打开 ${out}`));
+    openerProc.unref();
     console.log('已在默认浏览器打开');
   } else {
     console.log('在浏览器打开:node ar.js dashboard --open');
@@ -1557,6 +2155,8 @@ const IMPL = {
   doctor: cmdDoctor,
   devices: cmdDevices,
   use: cmdUse,
+  java: cmdJava,
+  flavor: cmdFlavor,
   info: cmdInfo,
   build: cmdBuild,
   install: cmdInstall,
@@ -1572,8 +2172,8 @@ const IMPL = {
 
 (async () => {
   try {
-    await IMPL[command]();
-    process.exit(EXIT.OK);
+    const code = await IMPL[command]();
+    process.exit(typeof code === 'number' ? code : EXIT.OK);
   } catch (e) {
     if (e instanceof CliError) {
       console.error(`\n❌ ${e.message}`);

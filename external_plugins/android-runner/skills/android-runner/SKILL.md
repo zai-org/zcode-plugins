@@ -38,11 +38,21 @@ node "${ZCODE_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/ar.js" <命令> [参�
 | `launch` / `stop` / `restart` | 启动 / 强停 / 重启(resolve-activity,失败回退 monkey) |
 | `uninstall` / `clear-data` | 卸载 / 清数据(**破坏性**) |
 | `logcat` | 持续输出,优先只看本应用进程 |
+| `java [路径\|版本]` | 查看/记住本工程使用的 JDK(`--clear` 恢复自动) |
+| `flavor [名字]` | 查看/记住本工程的 productFlavor(`--clear` 恢复自动,默认 official) |
 | `doctor` | 环境自检报告 |
 | `info [--json]` | 工程探测结果 |
 | `dashboard [--open]` | 生成静态 HTML 面板(面板不可用时的浏览器兜底) |
 
-通用参数:`--module`(默认 app)、`--variant`(默认 debug)、`--task`、`--apk`、`--package`、`--serial`、`--adb`、`--java-home`、`--no-reinstall`;`--` 之后透传给 Gradle(如 `ar build -- --info`)。
+通用参数:`--module`(默认 app)、`--variant`(默认 debug)、`--flavor`(productFlavor,默认 official / 唯一 flavor)、`--task`、`--apk`、`--package`、`--serial`、`--adb`、`--java-home`、`--reinstall`、`--no-reinstall`;`--` 之后透传给 Gradle(如 `ar build -- --info`)。
+
+- `build` **不需要设备**:没设备、设备未授权、多设备未选择时都能正常编译,不要为了编译先让用户选设备。
+- 安装/启动/停止/日志需要唯一目标设备:多台在线且无偏好时会报错,先 `ar use <serial>` 或让用户点面板「设为当前」。
+- **JDK**:插件按 Gradle 版本自动选(读 wrapper / `org.gradle.java.home` / `.idea` / `JAVA_HOME`);用户想换时用 `ar java <路径|17>` 记住、`ar java --clear` 恢复自动,或单次 `--java-home`。编译失败先看 `ar doctor` 的 JDK 行。
+- **多渠道/Flavor**:像 `channel.txt` + `productFlavors` 的工程,默认只打 `official` 的 debug 包;运行/编译**始终 debug**,不会切 release,也绝不一次编所有渠道。需要特定渠道用 `--flavor <名字>`(仍是该渠道 debug)。APK 在 `outputs/apk/<flavor>/<variant>/`。**明确识别到多个 flavor 且没选**时才要求选择;完全识别不到 flavor 名称时默认按普通 debug 构建(不要拦着用户),面板里可直接输入名字。
+- **快捷指定**:面板「应用」区有 Flavor 下拉、「环境」区有 JDK 下拉;命令行用 `ar flavor <名字>` / `ar java <路径|版本>` 按工程记住;斜杠命令 `/android-flavor`、`/android-java`、`/android-run flavor=baidu`。
+- **权限**:面板状态/任务/日志走 MCP resource,不走工具审批;不要把轮询改回 tools/call。点按钮的动作会按当前模式请求一次;聊天里直接跑 CLI 可能触发 Bash 审批。
+- flavor 名称是动态生成、静态解析不到时,面板 Flavor 行仍可**直接输入**名字点「应用」;不要只提示用户去敲命令。
 
 退出码:0 成功;1 操作失败;2 环境问题;3 需要用户确认;130 被中断。
 
@@ -56,7 +66,7 @@ node "${ZCODE_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/ar.js" <命令> [参�
 
 ## 4. 安全政策(必须遵守)
 
-- **安装会自动替换**:`install` / `run` 遇到签名不一致或版本回退时,会**自动卸载重装**,并清空该应用在设备上的本地数据(登录态等)。这是默认行为 —— **执行后必须主动告知用户"已自动卸载重装,本地数据被清空"**,不要静默略过。需要临时关闭时加 `--no-reinstall`(此时以退出码 3 报错)。
+- **安装会自动替换**:`install` / `run` 遇到签名不一致或版本回退时,会**自动卸载重装**,并清空该应用在设备上的本地数据(登录态等)。这是默认行为 —— **执行后必须主动告知用户"已自动卸载重装,本地数据被清空"**,不要静默略过。需要临时关闭时加 `--no-reinstall`(此时以退出码 3 报错);`--reinstall` 显式允许,优先于 `--no-reinstall`。卸载前脚本会核对设备上实际安装的包名(兼容 `applicationIdSuffix`,如 `com.foo.debug`)。
 - `uninstall` / `clear-data` 仍属高破坏性操作:**先说明后果并征得用户同意**;面板里点这些按钮会弹确认框,你代为执行命令行时必须在用户同意后加 `--yes`。
 - 多台设备时不要替用户选,列出清单让用户挑(或在面板里让他点)。
 - logcat 可能含隐私信息,汇报时只摘录相关行。

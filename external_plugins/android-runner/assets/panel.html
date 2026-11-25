@@ -66,6 +66,7 @@
   }
   .titles { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
   .title { font-weight: 650; font-size: 13.5px; letter-spacing: .01em; }
+  .title .ver { font-weight: 500; font-size: 10.5px; color: var(--fg-3); margin-left: 5px; }
   .subtitle { font-size: 11.5px; color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .header-actions { display: flex; gap: 6px; align-items: center; flex: 0 0 auto; }
 
@@ -172,13 +173,20 @@
     font: inherit; font-size: 12px; background: var(--bg-2); color: var(--fg);
     border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; max-width: 100%;
   }
+  .flavor-edit { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .flavor-edit select { max-width: 120px; }
+  .flavor-edit input {
+    width: 104px; font: inherit; font-size: 12px; background: var(--bg-2); color: var(--fg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-family: var(--mono);
+  }
+  .flavor-edit button { padding: 3px 9px; font-size: 11.5px; }
 </style>
 </head>
 <body>
 <header>
   <div class="logo">🤖</div>
   <div class="titles">
-    <div class="title">Android Runner</div>
+    <div class="title">Android Runner <span class="ver" id="appVersion"></span></div>
     <div class="subtitle" id="projectLabel">正在连接…</div>
   </div>
   <div class="header-actions">
@@ -263,7 +271,7 @@
  * ============================================================== */
 
 const SURFACE = 'android-runner';
-const VERSION = '0.4.0';
+const VERSION = '0.4.8'; // 与 .zcode-plugin/plugin.json 保持一致
 const PROTOCOL = '2026-01-26';
 
 const pending = new Map();
@@ -290,6 +298,8 @@ function rpcNotify(method, params) {
 }
 
 window.addEventListener('message', (event) => {
+  // 只接受宿主窗口的消息;iframe 内其它来源一律忽略
+  if (event.source !== window.parent) return;
   const msg = event.data;
   if (!msg || typeof msg !== 'object' || msg.jsonrpc !== '2.0') return;
   if (msg.id !== undefined && pending.has(msg.id)) {
@@ -315,6 +325,25 @@ async function callTool(name, args) {
   try { return JSON.parse(text); } catch { return { text }; }
 }
 
+/**
+ * 读 MCP resource。状态/任务/日志都走这里:resources/read 不会被宿主当成
+ * 工具调用去审批,面板定时刷新才不会反复弹权限。失败时返回 null,调用方回退工具。
+ */
+async function readJsonResource(uri) {
+  if (state.resourceReads === 'failed' && Date.now() < state.resourceRetryAt) return null;
+  try {
+    const result = await rpcRequest('resources/read', { uri }, 4000);
+    const text = result && result.contents && result.contents[0] && result.contents[0].text;
+    if (!text) throw new Error('空资源');
+    state.resourceReads = 'ok';
+    return JSON.parse(text);
+  } catch (error) {
+    state.resourceReads = 'failed';
+    state.resourceRetryAt = Date.now() + 60000;
+    return null;
+  }
+}
+
 function reportSize() {
   const height = Math.ceil(document.documentElement.getBoundingClientRect().height);
   const width = Math.ceil(window.innerWidth);
@@ -331,8 +360,14 @@ const state = {
   activeJob: null,
   jobTimer: null,
   logcatTimer: null,
-  consoleMode: 'output',
+  logcatActive: false,
+  jobFailures: 0,
+  logcatFailures: 0,
+  tab: 'output',
+  buffers: { output: '', logcat: '' },
   busy: false,
+  resourceReads: 'unknown',
+  resourceRetryAt: 0,
   diag: [],
   notice: null,
   noticeTimer: null
@@ -357,12 +392,6 @@ function fmtAgo(ms) {
   const h = Math.round(min / 60);
   if (h < 24) return h + ' 小时前构建';
   return Math.round(h / 24) + ' 天前构建';
-}
-
-function shortPath(p) {
-  if (!p) return '';
-  const parts = p.split('/');
-  return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : p;
 }
 
 function deviceState(dev) {
@@ -397,6 +426,15 @@ function render() {
   } else if (st.deviceError) {
     banner.className = 'banner show warn';
     banner.textContent = 'adb 异常:' + st.deviceError;
+  } else if (st.devices.filter((d) => d.state === 'device').length > 1 && !currentSerial()) {
+    banner.className = 'banner show warn';
+    banner.textContent = '检测到多台在线设备,请先点设备卡片上的「设为当前」选择目标设备。';
+  } else if (st.app && st.app.flavorAmbiguous) {
+    banner.className = 'banner show warn';
+    banner.textContent = '工程有多个 productFlavor,请先在下方「应用」区选择 Flavor 再运行。';
+  } else if (st.app && st.app.flavorUnknown) {
+    banner.className = 'banner show warn';
+    banner.textContent = '未识别到 flavor,将按普通 debug 构建;如工程有多渠道,可在下方「应用」区输入名字后点「应用」。';
   } else {
     banner.className = 'banner';
   }
@@ -429,13 +467,14 @@ function render() {
       .map((dev) => {
         const stt = deviceState(dev);
         const isCurrent = dev.serial === active;
+        const locked = state.busy || !!state.activeJob;
         const meta = [
           dev.model || dev.serial,
           dev.android ? 'Android ' + dev.android : '',
           dev.isEmulator ? '模拟器' : '真机'
         ].filter(Boolean).join(' · ');
         const useBtn = dev.state === 'device'
-          ? `<button data-use="${esc(dev.serial)}"${isCurrent ? ' disabled' : ''}>${isCurrent ? '当前设备' : '设为当前'}</button>`
+          ? `<button data-use="${esc(dev.serial)}"${isCurrent || locked ? ' disabled' : ''}>${isCurrent ? '当前设备' : '设为当前'}</button>`
           : '';
         return `<div class="card${isCurrent ? ' current' : ''}">
           <div class="card-row">
@@ -460,28 +499,83 @@ function render() {
   // 应用
   const app = st.app || {};
   const apk = app.apk;
+  const flavors = app.flavors || [];
+  const flavorPref = app.flavorPreference || '';
+  const flavorOptions = flavors
+    .map((name) => `<option value="${esc(name)}"${name === flavorPref ? ' selected' : ''}>${esc(name)}</option>`)
+    .join('');
+  const showFlavorRow = flavors.length > 0 || app.flavorAmbiguous || app.flavorUnknown || !!flavorPref;
+  const flavorRow = showFlavorRow
+    ? `<div class="kv-row"><span class="kv-k">Flavor</span><span class="kv-v"><span class="flavor-edit">
+        ${flavors.length ? `<select id="flavorSelect" title="只影响 debug;不会一次编所有渠道"><option value=""${flavorPref ? '' : ' selected'}>自动(默认 official)</option>${flavorOptions}</select>` : ''}
+        <input id="flavorInput" type="text" placeholder="${flavors.length ? '或输入其他' : (app.flavorAmbiguous ? '输入 flavor' : '可留空')}" value="${esc(flavorPref)}" />
+        <button id="flavorApply" title="按输入的 flavor 构建 debug">应用</button>
+      </span></span></div>`
+    : '';
+  const buildMode = app.flavor
+    ? `单渠道 ${app.flavor} 的 debug`
+    : app.flavorAmbiguous
+      ? '需先选择 Flavor(不会一次编所有渠道)'
+      : app.flavorUnknown
+        ? '普通 debug(未识别到 flavor)'
+        : '普通 debug';
+  const flavorSource = flavorPref
+    ? `本工程记住 → ${app.flavor || '(空)'}`
+    : app.flavor
+      ? `自动 → ${app.flavor}`
+      : app.flavorUnknown
+        ? '未识别,默认 debug'
+        : '';
   $('appKv').innerHTML = [
     kvRow('包名', app.packageName || '未识别', app.packageName ? 'ok' : 'bad'),
-    kvRow('模块 / 变体', `${app.module || 'app'} · ${app.variant || 'debug'}`),
+    kvRow('模块 / 变体', `${app.module || 'app'} · ${app.variantFull || `${app.flavor ? app.flavor + ' ' : ''}${app.variant || 'debug'}`}`),
+    flavorRow,
+    flavorSource ? kvRow('Flavor 来源', flavorSource) : '',
+    app.flavorAmbiguous
+      ? kvRow('Flavor 提示', `多个:${flavors.join('、')} —— 先选一个再运行`, 'bad')
+      : app.flavorUnknown
+        ? kvRow('Flavor 提示', '未识别到 flavor,默认按 debug 构建;可输入指定')
+        : '',
+    kvRow('构建任务', `${app.task || '(未知)'} · ${buildMode}`, app.flavorAmbiguous ? 'bad' : 'ok', app.task || ''),
     apk
-      ? kvRow('APK', `${esc(apk.name)} · ${fmtSize(apk.size)} · ${fmtAgo(apk.modifiedAt)}`)
-      : kvRow('APK', '尚未构建', 'bad')
+      ? kvRow('APK', `${esc(apk.name)} · ${fmtSize(apk.size)} · ${fmtAgo(apk.modifiedAt)}`, '', apk.path)
+      : kvRow('APK', '尚未构建', 'bad'),
+    apk ? kvRow('APK 路径', apk.path, '', apk.path) : ''
   ].join('');
 
   // 环境
   const env = st.env || {};
+  const javaHomes = env.javaHomes || [];
+  const javaOptions = javaHomes
+    .map((home) => {
+      const label = `Java ${home.major}${home.version ? ' · ' + home.version : ''} · ${jdkLabel(home.home)}${home.compatible ? '' : ' · 与 Gradle 不兼容'}`;
+      const selected = env.javaHomePreference && home.home === env.javaHomePreference ? ' selected' : '';
+      return `<option value="${esc(home.home)}"${selected}>${esc(label)}</option>`;
+    })
+    .join('');
+  const autoSelected = env.javaHomePreference ? '' : ' selected';
+  const jdkRow = `<div class="kv-row"><span class="kv-k">JDK 选择</span><span class="kv-v"><select id="javaSelect" title="切换后按工程记住,只影响本机"><option value=""${autoSelected}>自动(按 Gradle 版本与工程配置)</option>${javaOptions}</select></span></div>`;
   $('envKv').innerHTML = [
     kvRow('SDK', env.sdk || '未探测到', env.sdk ? 'ok' : 'bad'),
     kvRow('adb', env.adbUsable ? env.adb : (env.adb || '未找到') + '(不可用)', env.adbUsable ? 'ok' : 'bad'),
     kvRow('JDK', env.javaHome ? `${env.javaHome}${env.javaVersion ? ' · ' + env.javaVersion : ''}` : '未探测到', env.javaHome ? 'ok' : 'bad'),
-    kvRow('Gradle', `${env.gradleVersion ? 'v' + env.gradleVersion : '未知'} · ${env.task || ''}`)
+    env.javaNote ? kvRow('JDK 说明', env.javaNote) : '',
+    jdkRow,
+    kvRow('Gradle', env.gradleVersion ? 'v' + env.gradleVersion : '未知')
   ].join('');
 
   updateButtons();
 }
 
-function kvRow(key, value, cls) {
-  return `<div class="kv-row"><span class="kv-k">${esc(key)}</span><span class="kv-v ${cls || ''}">${esc(value)}</span></div>`;
+function jdkLabel(home) {
+  const parts = String(home || '').split(/[\\/]/).filter(Boolean);
+  const match = parts.filter((part) => /jdk|jbr|corretto|temurin|zulu|java/i.test(part)).pop();
+  return match || parts[parts.length - 1] || String(home || '');
+}
+
+function kvRow(key, value, cls, title) {
+  const tip = title ? ` title="${esc(title)}"` : '';
+  return `<div class="kv-row"${tip}><span class="kv-k">${esc(key)}</span><span class="kv-v ${cls || ''}">${esc(value)}</span></div>`;
 }
 
 function updateButtons() {
@@ -489,32 +583,50 @@ function updateButtons() {
   const hasProject = !!(st && st.project);
   const hasPkg = !!(st && st.app && st.app.packageName);
   const busy = state.busy || !!state.activeJob;
+  const ready = st ? st.devices.filter((d) => d.state === 'device') : [];
+  // 多设备且未选择目标时,ar.js 无法决定装到哪台,先让用户选
+  const ambiguous = ready.length > 1 && !currentSerial();
+  const flavorAmbiguous = !!(st && st.app && st.app.flavorAmbiguous);
+  const projectAction = hasProject && !flavorAmbiguous;
+  const deviceAction = projectAction && !ambiguous;
+  const deviceAppAction = deviceAction && hasPkg;
   const set = (id, enabled) => { $(id).disabled = !enabled || busy; };
-  set('act-run', hasProject);
-  set('act-build', hasProject);
-  set('act-install', hasProject);
-  set('act-launch', hasProject && hasPkg);
-  set('act-stop', hasProject && hasPkg);
-  set('act-restart', hasProject && hasPkg);
+  set('act-run', deviceAction);
+  set('act-build', projectAction);
+  set('act-install', deviceAction);
+  set('act-launch', deviceAppAction);
+  set('act-stop', deviceAppAction);
+  set('act-restart', deviceAppAction);
   set('act-doctor', hasProject);
-  set('act-uninstall', hasProject && hasPkg);
-  set('act-cleardata', hasProject && hasPkg);
-  $('act-logcat').disabled = !hasProject;
+  set('act-uninstall', deviceAppAction);
+  set('act-cleardata', deviceAppAction);
+  $('act-logcat').disabled = !hasProject || ambiguous || busy;
 }
 
 /* ============================================================== *
  *  控制台                                                          *
  * ============================================================== */
 
-function consoleWrite(text, { replace = false, mode = 'output' } = {}) {
+const MAX_CONSOLE = 200000;
+const CONSOLE_PLACEHOLDER = {
+  output: '这里会显示编译 / 安装 / 启动的实时输出。',
+  logcat: '点击「≣ 日志」开始采集当前应用的 logcat。'
+};
+
+function renderConsole(mode) {
   const el = $('console');
-  if (replace || el.dataset.mode !== mode) {
-    el.textContent = '';
-    el.dataset.mode = mode;
-    state.consoleMode = mode;
-  }
-  el.textContent += text;
+  el.textContent = state.buffers[mode] || CONSOLE_PLACEHOLDER[mode] || '';
+  el.dataset.mode = mode;
   el.scrollTop = el.scrollHeight;
+}
+
+function consoleWrite(text, { replace = false, mode = 'output' } = {}) {
+  if (replace) state.buffers[mode] = '';
+  if (text) {
+    const next = state.buffers[mode] + text;
+    state.buffers[mode] = next.length > MAX_CONSOLE ? next.slice(-MAX_CONSOLE) : next;
+  }
+  if (state.tab === mode) renderConsole(mode);
 }
 
 function setConsoleState(text, spinning) {
@@ -541,7 +653,8 @@ function showNotice(text, ms = 45000) {
 async function runAction(action, { confirm = false, label } = {}) {
   if (state.activeJob) return;
   const serial = currentSerial();
-  stopLogcatPolling(true);
+  // 作业输出和 logcat 共用一个控制台,启动作业前必须真正停掉服务端日志流
+  stopLogcat(true);
   showTab('output');
   consoleWrite('', { replace: true, mode: 'output' });
   setConsoleState((label || action) + ' 启动中…', true);
@@ -551,7 +664,6 @@ async function runAction(action, { confirm = false, label } = {}) {
     const job = await callTool('panel_action', { action, serial: serial || undefined, confirm });
     state.activeJob = job.jobId;
     setConsoleState(label || action, true);
-    $('stopJobBtn').style.display = 'none';
     pollJob(job.jobId, action);
   } catch (error) {
     state.busy = false;
@@ -563,34 +675,48 @@ async function runAction(action, { confirm = false, label } = {}) {
 
 function pollJob(jobId, action) {
   clearTimeout(state.jobTimer);
+  state.jobFailures = 0;
   const tick = async () => {
+    let res;
     try {
-      const res = await callTool('panel_job', { id: jobId });
-      if (res.output) {
-        consoleWrite(res.output, { mode: 'output' });
-        if (res.output.includes('自动卸载重装')) {
-          showNotice('签名不一致或版本回退,已自动卸载重装 —— 设备上该应用的本地数据已被清空。');
-        }
-      }
-      if (res.running) {
-        setConsoleState(`${action} · 已用 ${Math.round(res.elapsedMs / 1000)}s`, true);
-        state.jobTimer = setTimeout(tick, 600);
+      res =
+        (await readJsonResource(`ui://android-runner/job/${encodeURIComponent(jobId)}.json?t=${Date.now()}`)) ||
+        (await callTool('panel_job', { id: jobId }));
+      if (res && res.error) throw new Error(res.error);
+      state.jobFailures = 0;
+    } catch (error) {
+      // 偶发超时不要直接放弃作业:服务端可能还在跑
+      state.jobFailures += 1;
+      if (state.jobFailures <= 3) {
+        setConsoleState(`${action} · 轮询重试 ${state.jobFailures}/3…`, true);
+        state.jobTimer = setTimeout(tick, 800);
         return;
       }
-      state.activeJob = null;
-      state.busy = false;
-      const ok = res.exitCode === 0;
-      setConsoleState(ok ? `${action} 完成 · ${Math.round(res.elapsedMs / 1000)}s` : `${action} 失败 (exit ${res.exitCode})`);
-      if (!ok) consoleWrite(`\n❌ 退出码 ${res.exitCode}\n`, { mode: 'output' });
-      updateButtons();
-      await refreshStatus(true);
-    } catch (error) {
       state.activeJob = null;
       state.busy = false;
       updateButtons();
       setConsoleState('轮询失败');
       consoleWrite('\n❌ ' + error.message + '\n', { mode: 'output' });
+      return;
     }
+    if (res.output) {
+      consoleWrite(res.output, { mode: 'output' });
+      if (res.output.includes('自动卸载重装')) {
+        showNotice('签名不一致或版本回退,已自动卸载重装 —— 设备上该应用的本地数据已被清空。');
+      }
+    }
+    if (res.running) {
+      setConsoleState(`${action} · 已用 ${Math.round(res.elapsedMs / 1000)}s`, true);
+      state.jobTimer = setTimeout(tick, 600);
+      return;
+    }
+    state.activeJob = null;
+    state.busy = false;
+    const ok = res.exitCode === 0;
+    setConsoleState(ok ? `${action} 完成 · ${Math.round(res.elapsedMs / 1000)}s` : `${action} 失败 (exit ${res.exitCode})`);
+    if (!ok) consoleWrite(`\n❌ 退出码 ${res.exitCode}\n`, { mode: 'output' });
+    updateButtons();
+    await refreshStatus(true);
   };
   tick();
 }
@@ -599,44 +725,66 @@ function pollJob(jobId, action) {
  *  logcat                                                         *
  * ============================================================== */
 
-function stopLogcatPolling(silent) {
+/** 停止日志轮询;silent 时只收尾不打扰控制台(启动作业前使用)。 */
+function stopLogcat(silent) {
   if (state.logcatTimer) {
     clearTimeout(state.logcatTimer);
     state.logcatTimer = null;
   }
-  if (!silent) {
+  state.logcatFailures = 0;
+  if (state.logcatActive) {
+    state.logcatActive = false;
     callTool('panel_logcat', { op: 'stop' }).catch(() => {});
-    $('stopJobBtn').style.display = 'none';
-    setConsoleState('日志已停止');
   }
+  $('stopJobBtn').style.display = 'none';
+  if (!silent) setConsoleState('日志已停止');
 }
 
 async function startLogcat() {
+  if (state.activeJob) return;
+  clearTimeout(state.logcatTimer);
+  state.logcatTimer = null;
   showTab('logcat');
   consoleWrite('', { replace: true, mode: 'logcat' });
   setConsoleState('启动 logcat…', true);
   try {
     await callTool('panel_logcat', { op: 'start', serial: currentSerial() || undefined });
   } catch (error) {
+    state.logcatActive = false;
     setConsoleState('日志启动失败');
     consoleWrite('❌ ' + error.message + '\n', { mode: 'logcat' });
     return;
   }
+  state.logcatActive = true;
+  state.logcatFailures = 0;
   $('stopJobBtn').style.display = '';
   setConsoleState('日志采集中', true);
   const tick = async () => {
+    let res;
     try {
-      const res = await callTool('panel_logcat', { op: 'poll' });
-      if (res.lines && res.lines.length) {
-        consoleWrite(res.lines.join('\n') + '\n', { mode: 'logcat' });
-      }
-      if (!res.running) {
-        setConsoleState('日志流已结束');
-        $('stopJobBtn').style.display = 'none';
+      res =
+        (await readJsonResource(`ui://android-runner/logcat.json?t=${Date.now()}`)) ||
+        (await callTool('panel_logcat', { op: 'poll' }));
+      state.logcatFailures = 0;
+    } catch (error) {
+      state.logcatFailures += 1;
+      if (state.logcatFailures <= 3) {
+        setConsoleState(`日志采集 · 轮询重试 ${state.logcatFailures}/3…`, true);
+        state.logcatTimer = setTimeout(tick, 1000);
         return;
       }
-    } catch (error) {
+      state.logcatActive = false;
       setConsoleState('日志轮询失败');
+      $('stopJobBtn').style.display = 'none';
+      return;
+    }
+    if (res.lines && res.lines.length) {
+      consoleWrite(res.lines.join('\n') + '\n', { mode: 'logcat' });
+    }
+    if (!res.running) {
+      state.logcatActive = false;
+      setConsoleState('日志流已结束');
+      $('stopJobBtn').style.display = 'none';
       return;
     }
     state.logcatTimer = setTimeout(tick, 1200);
@@ -649,11 +797,12 @@ async function startLogcat() {
  * ============================================================== */
 
 function showTab(name) {
+  state.tab = name;
   document.querySelectorAll('.tab').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.tab === name);
   });
-  const el = $('console');
-  el.classList.toggle('logcat', name === 'logcat');
+  $('console').classList.toggle('logcat', name === 'logcat');
+  renderConsole(name);
 }
 
 function askConfirm(title, body, okLabel) {
@@ -662,27 +811,26 @@ function askConfirm(title, body, okLabel) {
     $('dlgTitle').textContent = title;
     $('dlgBody').textContent = body;
     $('dlgOk').textContent = okLabel || '确认';
+    let settled = false;
     const done = (value) => {
-      dlg.close();
+      if (settled) return;
+      settled = true;
       $('dlgOk').onclick = null;
       $('dlgCancel').onclick = null;
+      dlg.oncancel = null;
+      if (dlg.open) dlg.close();
       resolve(value);
     };
     $('dlgOk').onclick = () => done(true);
     $('dlgCancel').onclick = () => done(false);
-    dlg.showModal();
+    // 按 Esc 关闭对话框时也要把 Promise 收掉,否则点击处理一直挂着
+    dlg.oncancel = (event) => {
+      event.preventDefault();
+      done(false);
+    };
+    if (!dlg.open) dlg.showModal();
   });
 }
-
-const ACTION_LABELS = {
-  run: '运行',
-  build: '编译',
-  install: '安装',
-  launch: '启动',
-  stop: '停止',
-  restart: '重启',
-  doctor: '环境自检'
-};
 
 function wire() {
   $('act-run').onclick = () => runAction('run', { label: '运行(编译→安装→启动)' });
@@ -707,16 +855,14 @@ function wire() {
   };
 
   $('refreshBtn').onclick = () => refreshStatus(true);
-  $('clearBtn').onclick = () => { $('console').textContent = ''; };
-  $('stopJobBtn').onclick = () => stopLogcatPolling(false);
+  $('clearBtn').onclick = () => {
+    state.buffers[state.tab] = '';
+    renderConsole(state.tab);
+  };
+  $('stopJobBtn').onclick = () => stopLogcat(false);
 
   document.querySelectorAll('.tab').forEach((tab) => {
-    tab.onclick = () => {
-      showTab(tab.dataset.tab);
-      if (tab.dataset.tab === 'logcat' && !state.logcatTimer && !$('console').textContent.trim()) {
-        $('console').textContent = '点击「≣ 日志」开始采集当前应用的 logcat。\n';
-      }
-    };
+    tab.onclick = () => showTab(tab.dataset.tab);
   });
 
   // 事件委托:设备 / AVD / 工程
@@ -730,7 +876,7 @@ function wire() {
       await refreshStatus(true);
     } catch (error) {
       btn.disabled = false;
-      alert(error.message);
+      showNotice('切换设备失败:' + error.message);
     }
   });
 
@@ -738,6 +884,7 @@ function wire() {
     const btn = event.target.closest('button[data-avd]');
     if (!btn) return;
     const name = btn.dataset.avd;
+    stopLogcat(true);
     showTab('output');
     consoleWrite('', { replace: true, mode: 'output' });
     setConsoleState('启动模拟器 ' + name, true);
@@ -764,18 +911,69 @@ function wire() {
       await callTool('panel_select_project', { project });
       await refreshStatus(true);
     } catch (error) {
-      alert(error.message);
+      showNotice('切换工程失败:' + error.message);
     } finally {
       setConsoleState('就绪');
     }
   };
+
+  // 环境区:切换本工程使用的 JDK(按工程记住,只影响本机)
+  $('envKv').addEventListener('change', async (event) => {
+    if (!event.target || event.target.id !== 'javaSelect') return;
+    const select = event.target;
+    const home = select.value;
+    select.disabled = true;
+    setConsoleState('切换 JDK…', true);
+    try {
+      const result = await callTool('panel_use_java', home ? { home } : { clear: true });
+      if (result && result.ok === false) throw new Error(result.output || '切换 JDK 失败');
+      await refreshStatus(true);
+      setConsoleState('就绪');
+    } catch (error) {
+      select.disabled = false;
+      setConsoleState('就绪');
+      showNotice('切换 JDK 失败:' + error.message);
+    }
+  });
+
+  // 应用区:切换 debug 使用的 flavor(只影响本机本工程)
+  const applyFlavor = async (name, control) => {
+    if (control) control.disabled = true;
+    setConsoleState('切换 flavor…', true);
+    try {
+      const result = await callTool('panel_use_flavor', name ? { name } : { clear: true });
+      if (result && result.ok === false) throw new Error(result.output || '切换 flavor 失败');
+      await refreshStatus(true);
+      setConsoleState('就绪');
+    } catch (error) {
+      if (control) control.disabled = false;
+      setConsoleState('就绪');
+      showNotice('切换 flavor 失败:' + error.message);
+    }
+  };
+  $('appKv').addEventListener('change', (event) => {
+    if (!event.target || event.target.id !== 'flavorSelect') return;
+    applyFlavor(event.target.value, event.target);
+  });
+  $('appKv').addEventListener('click', (event) => {
+    if (!event.target || event.target.id !== 'flavorApply') return;
+    const input = $('flavorInput');
+    applyFlavor(input ? input.value.trim() : '', event.target);
+  });
+  $('appKv').addEventListener('keydown', (event) => {
+    if (!event.target || event.target.id !== 'flavorInput' || event.key !== 'Enter') return;
+    event.preventDefault();
+    applyFlavor(event.target.value.trim(), $('flavorApply'));
+  });
 
   new ResizeObserver(() => reportSize()).observe(document.documentElement);
 }
 
 async function refreshStatus(force) {
   try {
-    const status = await callTool('panel_status', force ? { refresh: true } : {});
+    const status =
+      (await readJsonResource(`ui://android-runner/state.json?t=${Date.now()}${force ? '&refresh=1' : ''}`)) ||
+      (await callTool('panel_status', force ? { refresh: true } : {}));
     state.status = status;
     render();
   } catch (error) {
@@ -802,6 +1000,8 @@ function diag(text) {
  * ============================================================== */
 
 (async function boot() {
+  $('appVersion').textContent = 'v' + VERSION;
+  document.title = 'Android Runner v' + VERSION;
   wire();
   showTab('output');
   if (window.parent === window) {
