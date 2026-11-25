@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "product-3d-showcase",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/product-3d-showcase",
+      "displayName": "Product 3D Showcase",
+      "displayName_i18n": {
+        "en": "Product 3D Showcase",
+        "zh-CN": "产品 3D 展示"
+      },
+      "description": "Turn a glTF/GLB product model into a consistent set of marketing assets: multi-angle product images on white or transparent backgrounds with studio lighting and a soft ground shadow, a frame-exact 360° turntable video (WebM, plus MP4 with ffmpeg) and a self-contained web 3D viewer that works offline. Renders locally with three.js; no API keys.",
+      "description_i18n": {
+        "en": "Turn a glTF/GLB product model into a consistent set of marketing assets: multi-angle product images on white or transparent backgrounds with studio lighting and a soft ground shadow, a frame-exact 360° turntable video (WebM, plus MP4 with ffmpeg) and a self-contained web 3D viewer that works offline. Renders locally with three.js; no API keys.",
+        "zh-CN": "把 glTF/GLB 产品模型做成一整套统一风格的展示素材：白底或透明底的多角度产品图（影棚灯光、柔和地面阴影）、逐帧精确的 360° 旋转视频（WebM，装了 ffmpeg 再出 MP4），以及可离线打开的网页 3D 展示。用 three.js 在本地渲染，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "3d",
+        "product",
+        "gltf",
+        "glb",
+        "three.js",
+        "turntable",
+        "360",
+        "product photo",
+        "viewer",
+        "产品图",
+        "3D 展示",
+        "白底图",
+        "360 度"
+      ],
+      "examplePrompts": [
+        "Make white-background product shots of bottle.glb: front, 45° left and right, side and back",
+        "Add a 6-second 360° video and a web 3D viewer, with transparent PNGs",
+        "Use softer lighting and add a low hero angle"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 bottle.glb 做一套白底产品图：正面、左右 45°、侧面、背面",
+          "再出一段 6 秒的 360° 旋转视频和网页 3D 展示，图片要透明底",
+          "灯光柔和一点，再加一个低机位的主图角度"
+        ]
+      }
     }
   ]
 }
