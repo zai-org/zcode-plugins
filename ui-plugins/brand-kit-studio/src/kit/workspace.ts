@@ -1,3 +1,4 @@
+import { lstatSync, readlinkSync, realpathSync } from "node:fs";
 import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -25,7 +26,51 @@ export class Workspace {
     const rel = relative(this.root, absolute);
     if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel))
       throw new KitError("outside_workspace", `Path is outside the workspace: ${path}`);
+    this.assertRealInside(absolute, path);
     return absolute;
+  }
+
+  private realRoot?: string;
+
+  /**
+   * 符号链接不能把读写带出工作区：从目标往上找到第一个已存在的路径，取它的真实路径，
+   * 必须仍在工作区根目录的真实路径之下。还不存在的写入目标按其已存在的上级目录判断；
+   * 指向不存在位置的悬空链接一律拒绝（否则 writeFile 会顺着它在外部建文件）。
+   */
+  private assertRealInside(absolute: string, path: string) {
+    let realRoot: string;
+    try {
+      realRoot = this.realRoot ??= realpathSync(this.root);
+    } catch {
+      return; // 根目录本身不存在时，没有可逃出的链接
+    }
+    const outside = (real: string) => {
+      const rel = relative(realRoot, real);
+      return rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+    };
+    let probe = absolute;
+    for (;;) {
+      let real: string | undefined;
+      try {
+        real = realpathSync(probe);
+      } catch {
+        let link = false;
+        try {
+          link = lstatSync(probe).isSymbolicLink();
+        } catch {}
+        if (link) {
+          const target = resolve(dirname(probe), readlinkSync(probe));
+          throw new KitError("outside_workspace", outside(target) ? `Path leaves the workspace through a link: ${path}` : `Path goes through a broken link: ${path}`);
+        }
+      }
+      if (real !== undefined) {
+        if (outside(real)) throw new KitError("outside_workspace", `Path leaves the workspace through a link: ${path}`);
+        return;
+      }
+      const parent = dirname(probe);
+      if (parent === probe) return;
+      probe = parent;
+    }
   }
 
   rel(absolute: string): string {
