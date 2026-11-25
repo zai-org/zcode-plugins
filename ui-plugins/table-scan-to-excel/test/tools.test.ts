@@ -37,6 +37,43 @@ describe("numbers", () => {
     expect(parseNumber("A4")).toBeNull();
     expect(parseNumber("1,23")).toBeNull();
     expect(parseNumber("2026-11-07")).toBeNull();
+    expect(parseNumber("十")?.value).toBe(10);
+    expect(parseNumber("十一")?.value).toBe(11);
+    expect(parseNumber("二十")?.value).toBe(20);
+    expect(parseNumber("一百零三")?.value).toBe(103);
+    expect(parseNumber("￥十二元")?.value).toBe(12);
+  });
+  it("flags a wrong Total column and a CJK numeral in a quantity column", () => {
+    const census = normalizeTable({
+      headerRows: 1,
+      rows: [
+        ["Province", "Males", "Females", "Total"],
+        ["Bengal", "100", "90", "200"],
+        ["Madras", "80", "70", "150"],
+        ["Total", "180", "160", "350"],
+      ],
+    }, 0).table;
+    const rowIssues = checkTable(census).filter((i) => i.kind === "total_mismatch");
+    expect(rowIssues.some((i) => i.row === 1 && i.col === 3 && /190/.test(i.message))).toBe(true);
+    const tea = normalizeTable({
+      headerRows: 1,
+      rows: [
+        ["商品", "数量", "单价"],
+        ["春茶 龙井", "十", "68"],
+        ["咖啡杯", "2", "99"],
+        ["合计", "", "167"],
+      ],
+    }, 0).table;
+    expect(checkTable(tea).map((i) => `${i.kind}:${i.row}:${i.col}`)).toEqual([]);
+    expect(checkTable({
+      ...tea,
+      rows: [
+        ["商品", "数量", "单价"],
+        ["春茶 龙井", "十", "68"],
+        ["咖啡杯", "两盒", "99"],
+        ["合计", "", "167"],
+      ],
+    }).some((i) => i.kind === "not_number" && i.row === 2 && i.col === 1)).toBe(true);
   });
   it("checks subtotals and grand totals, respecting confirmed cells", () => {
     const { table } = normalizeTable(tables[0], 0);
