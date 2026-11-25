@@ -1,0 +1,12 @@
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.spacer { flex:1; }
+.layout { display:grid; grid-template-columns: 290px minmax(0,1fr); gap: 10px; }
+@media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+.controls { display:flex; flex-direction:column; gap:6px; }
+.controls label { white-space: nowrap; }
+.controls label > input[type="text"], .controls label > select { flex:1; min-width:0; }
+.pages { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+.pages canvas { width:100%; border:1px solid var(--line); box-shadow: 0 1px 3px #0002; background:#fff; display:block; }
+.pages .pg { text-align:center; font-size:11px; color: var(--muted); }
+.problems { max-height: 220px; overflow:auto; font-size:12px; }
+.small { font-size: 11px; }

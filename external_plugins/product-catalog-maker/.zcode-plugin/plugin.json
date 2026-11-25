@@ -1,0 +1,65 @@
+{
+  "name": "product-catalog-maker",
+  "version": "0.1.0",
+  "description": "Turn a product spreadsheet (CSV/XLSX) and a folder of photos into an A4 catalog PDF with a cover, contents, one section per category and searchable text, plus a self-contained editable HTML version. Flags missing photos, prices and duplicate SKUs, and lists added, removed and re-priced products every time you rebuild. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn a product spreadsheet (CSV/XLSX) and a folder of photos into an A4 catalog PDF with a cover, contents, one section per category and searchable text, plus a self-contained editable HTML version. Flags missing photos, prices and duplicate SKUs, and lists added, removed and re-priced products every time you rebuild. Runs locally; no API keys.",
+    "zh-CN": "用商品表格（CSV/XLSX）和图片文件夹生成 A4 产品目录 PDF：封面、目录页、按分类分节、文字可搜索；同时生成可在浏览器里修改、打印的网页版。自动检查缺图、缺价格和重复编号；每次重新生成都会列出新增、下架和改价的商品。全部本地处理，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "catalog",
+    "product-catalog",
+    "pdf",
+    "e-commerce",
+    "price-list",
+    "lookbook",
+    "spreadsheet",
+    "产品目录",
+    "价目表",
+    "画册"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "product-catalog-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "CATALOG_FONT": "${user_config.fontPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "商品目录制作",
+          "en-US": "Product Catalog Maker"
+        },
+        "icon": "book-open",
+        "server": "product-catalog-maker",
+        "resourceUri": "ui://product-catalog-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "fontPath": {
+      "type": "string",
+      "default": "",
+      "title": "中文字体文件（可选）",
+      "description": "可选。目录文字使用的字体文件（.ttf/.otf/.ttc）完整路径。默认自动查找系统中文字体（macOS: Arial Unicode / 冬青黑体，Windows: 黑体 / 微软雅黑，Linux: Noto Sans CJK）。"
+    }
+  }
+}

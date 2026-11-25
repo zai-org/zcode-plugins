@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "product-catalog-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/product-catalog-maker",
+      "displayName": "Product Catalog Maker",
+      "displayName_i18n": {
+        "en": "Product Catalog Maker",
+        "zh-CN": "商品目录制作"
+      },
+      "description": "Turn a product spreadsheet (CSV/XLSX) and a folder of photos into an A4 catalog PDF with a cover, contents, one section per category and searchable text, plus a self-contained editable HTML version. Flags missing photos, prices and duplicate SKUs, and lists added, removed and re-priced products every time you rebuild. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a product spreadsheet (CSV/XLSX) and a folder of photos into an A4 catalog PDF with a cover, contents, one section per category and searchable text, plus a self-contained editable HTML version. Flags missing photos, prices and duplicate SKUs, and lists added, removed and re-priced products every time you rebuild. Runs locally; no API keys.",
+        "zh-CN": "用商品表格（CSV/XLSX）和图片文件夹生成 A4 产品目录 PDF：封面、目录页、按分类分节、文字可搜索；同时生成可在浏览器里修改、打印的网页版。自动检查缺图、缺价格和重复编号；每次重新生成都会列出新增、下架和改价的商品。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "catalog",
+        "product-catalog",
+        "pdf",
+        "e-commerce",
+        "price-list",
+        "lookbook",
+        "spreadsheet",
+        "产品目录",
+        "价目表",
+        "画册"
+      ],
+      "examplePrompts": [
+        "Make a product catalog PDF from products.xlsx and the photos in images/ — 3 per row, our logo on the cover",
+        "I changed some prices in the spreadsheet — rebuild the catalog and tell me what changed",
+        "Which products in the catalog are missing photos or prices?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 products.xlsx 和 images 文件夹里的图片做一本产品目录 PDF，每行 3 个，封面放我们的 logo",
+          "表格里改了几个价格，重新生成目录并告诉我改了哪些",
+          "目录里哪些商品缺图片或价格？"
+        ]
+      }
     }
   ]
 }
