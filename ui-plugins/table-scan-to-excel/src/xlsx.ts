@@ -49,4 +49,3 @@ export async function toXlsx(tables: ScanTable[], source: string) {
   info.state = "hidden";
   return Buffer.from(await book.xlsx.writeBuffer());
 }
-
