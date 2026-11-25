@@ -17,10 +17,10 @@ Pick exact colors from an image or anywhere on screen in a browser color picker,
 | Argument | Values | Default | Meaning |
 | --- | --- | --- | --- |
 | `format` | `css`, `json` | `css` | Palette download format |
-| `size` | `1`, `3`, `5`, `11` | `1` | Sample one pixel or average a 3×3, 5×5 or 11×11 area |
+| `size` | `1`, `3`, `5`, `11` (JSON numbers, not strings) | `1` | Sample one pixel or average a 3×3, 5×5 or 11×11 area |
 | `example` | `true`, `false` | `false` | Load the built-in sample image |
 
-The tool only returns a preset link to the browser picker (for example `https://browser-color-picker.pages.dev/?format=json&size=5&example=0`) plus the normalized settings. It accepts no images, files or screen data. Invalid arguments are rejected.
+The tool only returns a preset link to the browser picker (for example `https://browser-color-picker.pages.dev/?format=json&size=5&example=0`) plus the normalized settings. It accepts no images, files or screen data. Pass `size` as a JSON number (`5`), not a string (`"5"`); invalid arguments are rejected.
 
 ## How to use
 
