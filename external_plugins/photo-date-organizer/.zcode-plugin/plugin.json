@@ -1,0 +1,57 @@
+{
+  "name": "photo-date-organizer",
+  "version": "0.1.0",
+  "description": "Sort a messy folder of phone photos, screenshots and videos into year/month folders by the date they were taken — read from EXIF, the video's creation time or a date in the file name, with the file time only as a last resort — and optionally rename them to 20261002_091500.jpg. Every file shows where its date came from, you can correct any date, and a move can be undone. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Sort a messy folder of phone photos, screenshots and videos into year/month folders by the date they were taken — read from EXIF, the video's creation time or a date in the file name, with the file time only as a last resort — and optionally rename them to 20261002_091500.jpg. Every file shows where its date came from, you can correct any date, and a move can be undone. Runs locally; no API keys.",
+    "zh-CN": "把乱七八糟的手机照片、截图和视频，按拍摄日期整理进“年/月”文件夹——日期取自 EXIF、视频创建时间或文件名里的日期，最后才用文件修改时间——还可以统一改名成 20261002_091500.jpg。每个文件都标明日期来源，日期可以手动改正，移动后还能撤销。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "photos",
+    "exif",
+    "date taken",
+    "organize",
+    "sort by date",
+    "screenshots",
+    "照片整理",
+    "按日期",
+    "拍摄时间",
+    "相册",
+    "归档"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "photo-date-organizer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "照片按日期整理",
+          "en-US": "Photo Date Organizer"
+        },
+        "icon": "calendar-days",
+        "server": "photo-date-organizer",
+        "resourceUri": "ui://photo-date-organizer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
