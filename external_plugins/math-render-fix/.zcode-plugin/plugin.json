@@ -1,0 +1,25 @@
+{
+  "name": "math-render-fix",
+  "description": "Keeps math readable in ZCode chat: SessionStart and Stop hooks steer the model to dollar-delimited formulas and re-output any written with \\(...\\) or \\[...\\], and an optional command patches the renderer so those delimiters display too.",
+  "description_i18n": {
+    "en": "Keeps math readable in ZCode chat: SessionStart and Stop hooks steer the model to dollar-delimited formulas and re-output any written with \\(...\\) or \\[...\\], and an optional command patches the renderer so those delimiters display too.",
+    "zh-CN": "让 ZCode 聊天界面的数学公式正常显示：SessionStart 与 Stop 两个 Hook 引导模型使用美元符分界符，并把 \\(...\\) 或 \\[...\\] 写法的公式重新输出；另有一个可选命令给渲染层打补丁，让这两种写法也能直接显示。"
+  },
+  "version": "0.1.1",
+  "author": {
+    "name": "Vandarkun",
+    "url": "https://github.com/Vandarkun"
+  },
+  "homepage": "https://github.com/Vandarkun/zcode-plugin-math-render-fix",
+  "repository": "https://github.com/Vandarkun/zcode-plugin-math-render-fix",
+  "license": "MIT",
+  "keywords": [
+    "math",
+    "latex",
+    "katex",
+    "formula",
+    "markdown",
+    "rendering",
+    "hooks"
+  ]
+}

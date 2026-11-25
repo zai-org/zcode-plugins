@@ -1,0 +1,35 @@
+{
+  "description": "math-render-fix hooks: state the math delimiters the ZCode chat renderer understands, and have formulas written with other delimiters re-output.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/math-rules.mjs"
+            ],
+            "timeoutMs": 5000,
+            "statusMessage": "math-render-fix: stating the math delimiters the chat renderer understands"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "process",
+            "command": "node",
+            "args": [
+              "${ZCODE_PLUGIN_ROOT}/hooks/stop-check.mjs"
+            ],
+            "timeoutMs": 10000,
+            "statusMessage": "math-render-fix: checking the answer for formulas the chat UI cannot render"
+          }
+        ]
+      }
+    ]
+  }
+}

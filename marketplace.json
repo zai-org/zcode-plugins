@@ -1673,6 +1673,48 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "math-render-fix",
+      "source": "./external_plugins/math-render-fix",
+      "displayName": "Math Render Fix",
+      "displayName_i18n": {
+        "en": "Math Render Fix",
+        "zh-CN": "公式渲染修复"
+      },
+      "description": "Keeps math readable in ZCode chat: SessionStart and Stop hooks steer the model to dollar-delimited formulas and re-output any written with \\(...\\) or \\[...\\], and an optional command patches the renderer so those delimiters display too.",
+      "description_i18n": {
+        "en": "Keeps math readable in ZCode chat: SessionStart and Stop hooks steer the model to dollar-delimited formulas and re-output any written with \\(...\\) or \\[...\\], and an optional command patches the renderer so those delimiters display too.",
+        "zh-CN": "让 ZCode 聊天界面的数学公式正常显示：SessionStart 与 Stop 两个 Hook 引导模型使用美元符分界符，并把 \\(...\\) 或 \\[...\\] 写法的公式重新输出；另有一个可选命令给渲染层打补丁，让这两种写法也能直接显示。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "Vandarkun",
+        "url": "https://github.com/Vandarkun"
+      },
+      "category": "utilities",
+      "keywords": [
+        "math",
+        "latex",
+        "katex",
+        "formula",
+        "markdown",
+        "rendering",
+        "hooks"
+      ],
+      "examplePrompts": [
+        "Derive power conservation with formulas and check it with a numeric example",
+        "Explain the Shannon-Hartley capacity formula with a worked example"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用公式推导功率守恒，并用一个数值例子验证",
+          "解释香农-哈特利信道容量公式，并给一个算例"
+        ]
+      },
+      "homepage": "https://github.com/Vandarkun/zcode-plugin-math-render-fix",
+      "repository": "https://github.com/Vandarkun/zcode-plugin-math-render-fix",
+      "license": "MIT"
     }
   ]
 }
