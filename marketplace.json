@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "brand-kit-studio",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/brand-kit-studio",
+      "displayName": "Brand Kit Studio",
+      "displayName_i18n": {
+        "en": "Brand Kit Studio",
+        "zh-CN": "品牌素材套装"
+      },
+      "description": "Turn a brand name, tagline and logo into a matching set of assets: favicon.ico and PNG icons with site.webmanifest and <head> tags, app icons, a social avatar, Open Graph / X / Xiaohongshu images, and WeChat, X, LinkedIn and YouTube banners. Colours are suggested from the logo; preview and tweak every asset in the side panel, and get editable SVG templates. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a brand name, tagline and logo into a matching set of assets: favicon.ico and PNG icons with site.webmanifest and <head> tags, app icons, a social avatar, Open Graph / X / Xiaohongshu images, and WeChat, X, LinkedIn and YouTube banners. Colours are suggested from the logo; preview and tweak every asset in the side panel, and get editable SVG templates. Runs locally; no API keys.",
+        "zh-CN": "输入品牌名、标语和 logo，一次生成风格统一的整套素材：favicon.ico 和各尺寸 PNG 图标（含 site.webmanifest 与网页 <head> 代码）、App 图标、社媒头像、链接分享图、X/小红书配图，以及公众号、X、LinkedIn、YouTube 横幅。品牌色可从 logo 自动提取；在侧栏预览并逐个调整，同时导出可编辑的 SVG 模板。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "brand",
+        "logo",
+        "favicon",
+        "og-image",
+        "social-media",
+        "banner",
+        "app-icon",
+        "webmanifest",
+        "品牌",
+        "封面"
+      ],
+      "examplePrompts": [
+        "Make a full brand kit from logo.svg — name “Qinghe Coffee”, tagline “Fresh roasts from Yunnan”",
+        "Generate favicons and a webmanifest for this site from assets/logo.png and add them to index.html",
+        "Change the brand colour to #7a3e1f and redo the YouTube and X banners"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 logo.svg 做一整套品牌素材，品牌名“青禾咖啡”，标语“云南高山新鲜烘焙”",
+          "用 assets/logo.png 给这个网站生成 favicon 和 webmanifest，并加到 index.html 里",
+          "把品牌主色改成 #7a3e1f，重新导出 YouTube 和 X 的横幅"
+        ]
+      }
     }
   ]
 }
