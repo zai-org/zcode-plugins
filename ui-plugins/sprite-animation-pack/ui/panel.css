@@ -1,0 +1,26 @@
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.spacer { flex:1; }
+.layout { display:grid; grid-template-columns: 230px minmax(0,1fr) 220px; gap: 12px; align-items:start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.acts { display:flex; flex-direction:column; gap:6px; }
+.act { border:1px solid var(--line); border-radius:8px; padding:6px; background: var(--panel); cursor:pointer; font-size:12px; }
+.act.sel { border-color:#3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+.act .r { display:flex; gap:4px; align-items:center; margin-top:3px; }
+.act input[type=text] { flex:1; min-width:0; font-weight:600; }
+.act input.num { width:52px; }
+.act select { font-size: 11px; }
+.stage { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.stage canvas { image-rendering: pixelated; border:1px solid var(--line); border-radius:8px; background-color:#fff; background-image: linear-gradient(45deg,#e5e7eb 25%,transparent 25%),linear-gradient(-45deg,#e5e7eb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e5e7eb 75%),linear-gradient(-45deg,transparent 75%,#e5e7eb 75%); background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; }
+.controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px; }
+.strip { display:flex; gap:6px; overflow-x:auto; padding:6px 2px; width:100%; }
+.fr { flex:none; border:1px solid var(--line); border-radius:6px; padding:3px; font-size:10px; text-align:center; background: var(--panel); cursor:pointer; }
+.fr.sel { border-color:#f59e0b; box-shadow: 0 0 0 1px #f59e0b; }
+.fr canvas { image-rendering: pixelated; display:block; margin:0 auto 2px; background:#f8fafc; }
+.fr input { width:46px; font-size:10px; }
+.fr .nudge button { padding:0 3px; font-size:10px; }
+.settings { display:flex; flex-direction:column; gap:6px; font-size:12px; }
+.settings label { display:flex; gap:6px; align-items:center; }
+.settings label > span { width:64px; color: var(--muted); }
+.settings input[type=text], .settings select { flex:1; min-width:0; }
+.atlas img { max-width:100%; image-rendering: pixelated; border:1px solid var(--line); background:#f1f5f9; }
+.small { font-size: 11px; }
