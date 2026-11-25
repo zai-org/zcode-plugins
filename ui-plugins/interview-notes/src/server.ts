@@ -1,7 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import { basename, extname, join, posix } from "node:path";
 import { z } from "zod";
-import { ffmpeg } from "./kit/ffmpeg.ts";
+import { ffmpeg, probe } from "./kit/ffmpeg.ts";
 import { createKitServer } from "./kit/server-kit.ts";
 import { KitError, Workspace, safeFileName } from "./kit/workspace.ts";
 import { toCsv, toHtml, toMarkdown, type Session } from "./export.ts";
@@ -41,6 +41,15 @@ export function createServer(options: ServerOptions) {
     await stat(abs).catch(() => {
       throw new KitError("not_found", `File not found: ${audio}`);
     });
+    let info;
+    try {
+      info = await probe(abs);
+    } catch {
+      throw new KitError("bad_audio", `Cannot decode the recording ${basename(audio)}: it is not a valid audio or video file.`);
+    }
+    if (!info.hasAudio && !info.hasVideo) {
+      throw new KitError("bad_audio", `Cannot decode the recording ${basename(audio)}: no audio or video stream found.`);
+    }
     return audio;
   }
   async function loadSession(audio: string): Promise<Session | undefined> {
