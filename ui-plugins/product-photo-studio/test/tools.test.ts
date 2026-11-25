@@ -95,4 +95,17 @@ describe("product-photo-studio", () => {
     expect((await call("photos_open", { paths: ["../outside.jpg"] })).content[0].text).toMatch(/outside_workspace/);
     expect((await call("photos_export", { project: { images: ["photos/red-bottle.jpg"], presets: ["nope"] } })).content[0].text).toMatch(/no_preset/);
   });
+
+  it("reports corrupt or empty PNG/JPEG as invalid files, not a WebP/HEIC hint", async () => {
+    await writeFile(join(workspace, "photos/empty.png"), Buffer.alloc(0));
+    await writeFile(join(workspace, "photos/not-an-image.jpg"), "this is not a jpeg");
+    expect(() => decodeImage(Buffer.alloc(0), "empty.png")).toThrow(/not a valid PNG or JPEG/);
+    expect(() => decodeImage(Buffer.from("this is not a jpeg"), "not-an-image.jpg")).toThrow(/not a valid PNG or JPEG/);
+    expect(() => decodeImage(Buffer.from("RIFF....WEBP"), "shot.webp")).toThrow(/convert WebP\/HEIC first/);
+    const result = await call("photos_open", { paths: ["photos/empty.png", "photos/not-an-image.jpg"] });
+    const errors = result.structuredContent.items.map((i: any) => `${i.path}: ${i.error}`);
+    expect(errors.join("\n")).toMatch(/empty\.png: not a valid PNG or JPEG/);
+    expect(errors.join("\n")).toMatch(/not-an-image\.jpg: not a valid PNG or JPEG/);
+    expect(errors.join("\n")).not.toMatch(/WebP\/HEIC/);
+  });
 });
