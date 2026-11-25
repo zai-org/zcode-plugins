@@ -1,0 +1,59 @@
+{
+  "name": "barcode-label-maker",
+  "version": "0.1.0",
+  "description": "Turn a product sheet into barcode labels: EAN-13 and UPC-A with check-digit verification, Code 128 for SKUs and anything else, with product name and price, laid out on common A4/Letter label sheets (3×8, 4×10, 2×7, 5×13, 3×10). Set copies per product, skip labels already used on a sheet, fix codes in the panel and export a print-ready PDF plus SVG barcodes. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn a product sheet into barcode labels: EAN-13 and UPC-A with check-digit verification, Code 128 for SKUs and anything else, with product name and price, laid out on common A4/Letter label sheets (3×8, 4×10, 2×7, 5×13, 3×10). Set copies per product, skip labels already used on a sheet, fix codes in the panel and export a print-ready PDF plus SVG barcodes. Runs locally; no API keys.",
+    "zh-CN": "把商品表做成条码标签：EAN-13、UPC-A 自动核对校验位，货号等其他内容用 Code 128，可带品名和价格，按常见 A4/Letter 不干胶标签纸（3×8、4×10、2×7、5×13、3×10）排版。可设每个商品打印几张、跳过半张纸上已用的标签，在面板里修正条码，导出可直接打印的 PDF 和 SVG 条码。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "barcode",
+    "ean-13",
+    "upc",
+    "code 128",
+    "labels",
+    "sku",
+    "price tag",
+    "条码",
+    "条形码",
+    "标签打印",
+    "价签",
+    "货号",
+    "不干胶"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "barcode-label-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "条码标签打印",
+          "en-US": "Barcode Label Maker"
+        },
+        "icon": "barcode",
+        "server": "barcode-label-maker",
+        "resourceUri": "ui://barcode-label-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
