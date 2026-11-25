@@ -1,10 +1,11 @@
-import { mkdtemp, readFile, mkdir, copyFile, readdir } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, mkdir, copyFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { PNG } from "pngjs";
 import { beforeAll, describe, expect, it } from "vitest";
+import { decodeImage } from "../src/kit/raster.ts";
 import { createServer } from "../src/server.ts";
 
 let workspace: string;
@@ -110,5 +111,15 @@ describe("brand-kit-studio", () => {
     expect(bad.isError).toBe(true);
     expect(bad.structuredContent.error.code).toBe("outside_workspace");
     expect((await readdir(join(workspace, "brand-kit/templates"))).length).toBeGreaterThan(5);
+  });
+
+  it("reports an empty or corrupt logo as an invalid PNG/JPEG, not a WebP/HEIC hint", async () => {
+    await writeFile(join(workspace, "assets/empty.png"), Buffer.alloc(0));
+    expect(() => decodeImage(Buffer.alloc(0), "assets/empty.png")).toThrow(/not a valid PNG or JPEG/);
+    expect(() => decodeImage(Buffer.from("RIFF....WEBP"), "logo.webp")).toThrow(/convert WebP\/HEIC first/);
+    const bad = await call("brand_open", { name: "Broken", logo: "assets/empty.png" });
+    expect(bad.isError).toBe(true);
+    expect(bad.content[0].text).toMatch(/not a valid PNG or JPEG/);
+    expect(bad.content[0].text).not.toMatch(/WebP\/HEIC/);
   });
 });
