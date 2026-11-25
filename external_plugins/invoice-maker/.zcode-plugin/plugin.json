@@ -1,0 +1,57 @@
+{
+  "name": "invoice-maker",
+  "version": "0.1.0",
+  "description": "Turn a sheet of line items (.xlsx/.csv) into numbered PDF invoices: rows are grouped by invoice number or client, amounts, tax and totals are calculated, and bad numbers or missing clients are flagged. Fix any cell in the panel, preview the invoice and export one PDF per invoice plus an Excel/CSV ledger. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn a sheet of line items (.xlsx/.csv) into numbered PDF invoices: rows are grouped by invoice number or client, amounts, tax and totals are calculated, and bad numbers or missing clients are flagged. Fix any cell in the panel, preview the invoice and export one PDF per invoice plus an Excel/CSV ledger. Runs locally; no API keys.",
+    "zh-CN": "把一张明细表（.xlsx/.csv）批量做成带编号的 PDF 发票：按发票号或客户自动分组，计算金额、税额和合计，标出数字错误、缺少客户等问题。在面板里直接改单元格、预览发票，导出每张一个 PDF，另附 Excel/CSV 开票台账。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "invoice",
+    "billing",
+    "pdf",
+    "freelancer",
+    "tax",
+    "ledger",
+    "发票",
+    "账单",
+    "开票",
+    "报价",
+    "自由职业"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "invoice-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "批量开发票",
+          "en-US": "Invoice Maker"
+        },
+        "icon": "receipt",
+        "server": "invoice-maker",
+        "resourceUri": "ui://invoice-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
