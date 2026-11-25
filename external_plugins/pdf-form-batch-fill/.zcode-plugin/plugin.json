@@ -1,0 +1,64 @@
+{
+  "name": "pdf-form-batch-fill",
+  "version": "0.1.0",
+  "description": "Fill one blank PDF form for every row of a roster (CSV/XLSX): map fields once in a side panel, place text boxes on forms without fields, check for missing values and text that overflows, then generate one PDF per person plus a merged file and a report. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Fill one blank PDF form for every row of a roster (CSV/XLSX): map fields once in a side panel, place text boxes on forms without fields, check for missing values and text that overflows, then generate one PDF per person plus a merged file and a report. Runs locally; no API keys.",
+    "zh-CN": "用一张名单（CSV/XLSX）批量填写同一份空白 PDF 表单：在侧栏里映射一次字段，没有表单域的 PDF 可直接在页面上拖出文字框；先检查漏填和文字超出，再为每个人生成一份 PDF，可另存合并文件和检查报告。全部本地处理，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pdf",
+    "form",
+    "batch",
+    "mail-merge",
+    "acroform",
+    "roster",
+    "excel",
+    "csv",
+    "报名表"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "pdf-form-batch-fill": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FORM_FILL_FONT": "${user_config.fontPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表单批量填写",
+          "en-US": "PDF Form Batch Fill"
+        },
+        "icon": "file-text",
+        "server": "pdf-form-batch-fill",
+        "resourceUri": "ui://pdf-form-batch-fill/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "fontPath": {
+      "type": "string",
+      "default": "",
+      "title": "中文字体文件（可选）",
+      "description": "可选。填写内容使用的字体文件（.ttf/.otf/.ttc）完整路径。默认自动查找系统中文字体（macOS: Arial Unicode / 冬青黑体，Windows: 黑体 / 微软雅黑，Linux: Noto CJK）。"
+    }
+  }
+}
