@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "demo-video-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/demo-video-maker",
+      "displayName": "Demo Video Maker",
+      "displayName_i18n": {
+        "en": "Demo Video Maker",
+        "zh-CN": "产品演示视频制作"
+      },
+      "description": "Turn screen recordings into a polished product demo video: trim each step, add smooth zoom-ins on the control being used, callouts, subtitles and a title card, and render an MP4 plus SRT. After a product update, replace one segment's recording and only that segment is re-rendered. Uses the ffmpeg installed on your computer; no API keys.",
+      "description_i18n": {
+        "en": "Turn screen recordings into a polished product demo video: trim each step, add smooth zoom-ins on the control being used, callouts, subtitles and a title card, and render an MP4 plus SRT. After a product update, replace one segment's recording and only that segment is re-rendered. Uses the ffmpeg installed on your computer; no API keys.",
+        "zh-CN": "把产品录屏做成演示视频：每一步剪出入点，在正在操作的地方平滑放大，加说明文字、字幕和片头，渲染成 MP4 和 SRT 字幕。产品更新后只需替换其中一段录屏，只重渲染这一段。使用电脑上已安装的 ffmpeg，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "video",
+        "demo",
+        "screen-recording",
+        "product-demo",
+        "zoom",
+        "subtitles",
+        "ffmpeg",
+        "saas",
+        "演示视频",
+        "录屏",
+        "产品演示"
+      ],
+      "examplePrompts": [
+        "Make a product demo video from the recordings in recordings/: zoom into each button I click and add a short caption per step",
+        "We changed the signup screen — replace the 'signup' segment with signup-v2.mov and re-render",
+        "Add an intro card \"Monthly reports in 3 clicks\" and English subtitles to the demo"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 录屏 文件夹里的几段录屏做一个产品演示视频：每一步放大到我点的按钮，再加一句说明",
+          "注册页改版了，把“注册”这一段换成 signup-v2.mov，重新生成",
+          "给演示视频加一个片头“三步生成月度报表”，再配上中文字幕"
+        ]
+      }
     }
   ]
 }

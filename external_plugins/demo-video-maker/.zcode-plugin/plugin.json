@@ -1,0 +1,73 @@
+{
+  "name": "demo-video-maker",
+  "version": "0.1.0",
+  "description": "Turn screen recordings into a polished product demo video: trim each step, add smooth zoom-ins on the control being used, callouts, subtitles and a title card, and render an MP4 plus SRT. After a product update, replace one segment's recording and only that segment is re-rendered. Uses the ffmpeg installed on your computer; no API keys.",
+  "description_i18n": {
+    "en": "Turn screen recordings into a polished product demo video: trim each step, add smooth zoom-ins on the control being used, callouts, subtitles and a title card, and render an MP4 plus SRT. After a product update, replace one segment's recording and only that segment is re-rendered. Uses the ffmpeg installed on your computer; no API keys.",
+    "zh-CN": "把产品录屏做成演示视频：每一步剪出入点，在正在操作的地方平滑放大，加说明文字、字幕和片头，渲染成 MP4 和 SRT 字幕。产品更新后只需替换其中一段录屏，只重渲染这一段。使用电脑上已安装的 ffmpeg，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "demo",
+    "screen-recording",
+    "product-demo",
+    "zoom",
+    "subtitles",
+    "ffmpeg",
+    "saas",
+    "演示视频",
+    "录屏",
+    "产品演示"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "demo-video-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FFMPEG_PATH": "${user_config.ffmpegPath}",
+        "DEMO_FONT": "${user_config.fontPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "产品演示视频制作",
+          "en-US": "Demo Video Maker"
+        },
+        "icon": "video",
+        "server": "demo-video-maker",
+        "resourceUri": "ui://demo-video-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "ffmpegPath": {
+      "type": "string",
+      "default": "",
+      "title": "ffmpeg 路径（可选）",
+      "description": "可选。ffmpeg 可执行文件的完整路径。默认在 PATH 和 /opt/homebrew/bin、/usr/local/bin 中查找。"
+    },
+    "fontPath": {
+      "type": "string",
+      "default": "",
+      "title": "中文字体文件（可选）",
+      "description": "可选。说明文字和片头使用的字体文件（.ttf/.otf/.ttc）。默认自动查找系统中文字体。"
+    }
+  }
+}
