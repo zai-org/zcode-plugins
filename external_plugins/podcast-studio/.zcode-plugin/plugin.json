@@ -1,0 +1,68 @@
+{
+  "name": "podcast-studio",
+  "version": "0.1.0",
+  "description": "Produce a podcast episode from the host and guest recordings: automatic track alignment, cuts applied to every track at once, noise reduction, two-pass loudness normalisation to -16 LUFS (or your target), intro and outro, export to MP3/WAV, plus a project you can reopen and edit. Waveform panel with drag-to-cut and preview. Runs locally with the ffmpeg on your computer; no API keys.",
+  "description_i18n": {
+    "en": "Produce a podcast episode from the host and guest recordings: automatic track alignment, cuts applied to every track at once, noise reduction, two-pass loudness normalisation to -16 LUFS (or your target), intro and outro, export to MP3/WAV, plus a project you can reopen and edit. Waveform panel with drag-to-cut and preview. Runs locally with the ffmpeg on your computer; no API keys.",
+    "zh-CN": "用主持人和嘉宾的录音制作一期播客：自动对齐音轨，所有音轨同步剪辑，降噪，两遍响度统一到 -16 LUFS（或自定目标），加片头片尾，导出 MP3/WAV，并保存可以再次打开修改的工程。面板显示波形，拖动即可剪掉一段，并可试听。在本地用电脑上的 ffmpeg 运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "podcast",
+    "audio",
+    "multitrack",
+    "align",
+    "loudness",
+    "lufs",
+    "noise reduction",
+    "mix",
+    "ffmpeg",
+    "播客",
+    "剪辑",
+    "响度",
+    "降噪"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "podcast-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FFMPEG_PATH": "${user_config.ffmpegPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "播客制作台",
+          "en-US": "Podcast Studio"
+        },
+        "icon": "mic",
+        "server": "podcast-studio",
+        "resourceUri": "ui://podcast-studio/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "ffmpegPath": {
+      "type": "string",
+      "default": "",
+      "title": "ffmpeg 路径（可选）",
+      "description": "可选。ffmpeg 可执行文件的完整路径。默认在 PATH 和 /opt/homebrew/bin、/usr/local/bin 中查找。"
+    }
+  }
+}
