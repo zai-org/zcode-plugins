@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "web-archiver",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/web-archiver",
+      "displayName": "Web Archiver",
+      "displayName_i18n": {
+        "en": "Web Archiver",
+        "zh-CN": "网页资料归档"
+      },
+      "description": "Save web pages you give it as offline copies: the article is extracted (Readability), images are saved locally, and each capture keeps the source URL and capture time as a single offline HTML file, Markdown, the original HTML and metadata. Capture the same page again later to see exactly which paragraphs changed. Optional full-page screenshots with your local Chrome or Edge. Only fetches the URLs you give and the images in them; no API keys.",
+      "description_i18n": {
+        "en": "Save web pages you give it as offline copies: the article is extracted (Readability), images are saved locally, and each capture keeps the source URL and capture time as a single offline HTML file, Markdown, the original HTML and metadata. Capture the same page again later to see exactly which paragraphs changed. Optional full-page screenshots with your local Chrome or Edge. Only fetches the URLs you give and the images in them; no API keys.",
+        "zh-CN": "把你给的网页存成离线资料：提取正文（Readability），图片保存到本地，每次采集都记下来源网址和采集时间，生成单文件离线 HTML、Markdown、原始 HTML 和元数据。同一网页再次采集时，逐段标出正文改了什么。可选用本机 Chrome / Edge 截整页图。只访问你给的网址和其中的图片，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "web archive",
+        "save page",
+        "offline",
+        "readability",
+        "markdown",
+        "snapshot",
+        "change tracking",
+        "网页存档",
+        "剪藏",
+        "离线",
+        "正文提取",
+        "网页变化"
+      ],
+      "examplePrompts": [
+        "Archive these three articles for my research notes, with screenshots",
+        "Capture the pricing page again and tell me what changed since last time",
+        "Read the archived copy of the Wikipedia article and summarise it"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把这三篇文章存档到资料库，顺便截图",
+          "再采集一次价格页面，告诉我跟上次比改了什么",
+          "读一下存档的维基百科文章，帮我总结要点"
+        ]
+      }
     }
   ]
 }
