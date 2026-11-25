@@ -1,0 +1,43 @@
+{
+  "name": "@penova/plugin-theme-from-design",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node --experimental-strip-types scripts/e2e.mts"
+  },
+  "zcode": {
+    "title": "Theme From Design",
+    "stub": [
+      "node-fetch"
+    ],
+    "dirs": {
+      "@shopify/theme-check-docs-updater:data": "data",
+      "@shopify/theme-check-node:configs": "configs"
+    }
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "^4.6.5",
+    "liquidjs": "10.30.1",
+    "@shopify/theme-check-node": "4.0.2",
+    "fflate": "0.8.2",
+    "@shopify/theme-check-docs-updater": "4.0.2"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@types/node": "25.5.0",
+    "esbuild": "^0.25.12",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.2",
+    "vitest": "4.1.4"
+  }
+}
