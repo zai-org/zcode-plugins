@@ -1,0 +1,61 @@
+// 浏览器端到端测试：真实打包的 server（含 MJML）+ 官方 AppBridge 宿主 + 隔离 iframe 中的面板。需要 Chrome。
+import assert from "node:assert/strict";
+import { cp, mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { startHarness } from "./harness.mjs";
+
+const shots = process.env.E2E_SHOTS ?? join(tmpdir(), "email-template-builder-shots");
+await mkdir(shots, { recursive: true });
+const workspace = await mkdtemp(join(tmpdir(), "email-e2e-"));
+const samples = process.env.EMAIL_SAMPLES ?? "/workspace/zcode-new-plugins/samples/email";
+await cp(samples, join(workspace, "设计稿"), { recursive: true });
+const agent = (f: string) => readFile(join(samples, "agent", f), "utf8");
+const harness = await startHarness({ workspace });
+const step = (t: string) => process.stdout.write(`• ${t}\n`);
+try {
+  const { outer, frame } = await harness.open("?locale=zh-CN", { width: 1400, height: 1050 });
+  step("user names the template, ticks the design screenshot and creates it");
+  await frame.locator("input.name").fill("Order shipped");
+  await frame.locator("label", { hasText: "order-shipped-design.png" }).locator("input").check();
+  await frame.locator("button", { hasText: "创建模板" }).click();
+  await frame.locator(".frame iframe").waitFor({ timeout: 60_000 });
+  await frame.locator(".design img").waitFor();
+  step("agent writes a first draft: the checks catch its problems");
+  await harness.agent(outer, "email_write", { mjml: await agent("first-draft.mjml") });
+  await frame.locator(".badge", { hasText: "个错误" }).waitFor({ timeout: 60_000 });
+  for (const t of ["images/logo.png", "mj-colum", "contrast 2", "Gmail", "#"]) await frame.locator(".issue", { hasText: t }).first().waitFor();
+  await outer.screenshot({ path: join(shots, "02-first-draft-checks.png") });
+  step("agent fixes everything and adds sample data");
+  await harness.agent(outer, "email_write", { mjml: await agent("order-shipped.mjml"), data: JSON.parse(await agent("order-shipped.data.json")) });
+  await frame.locator(".badge", { hasText: "无错误" }).waitFor({ timeout: 60_000 });
+  await frame.frameLocator(".frame iframe").locator("text=Your coffee is on its way").waitFor();
+  await frame.frameLocator(".frame iframe").locator("text=Hi Mia").first().waitFor();
+  await frame.locator(".inbox", { hasText: "arriving Friday, March 13" }).waitFor();
+  await outer.screenshot({ path: join(shots, "01-design-vs-email.png") });
+  step("user changes a sample value, then checks mobile + dark mode");
+  await frame.locator('input[data-var="first_name"]').fill("Leo");
+  await frame.locator("button", { hasText: "保存样例数据" }).click();
+  await frame.frameLocator(".frame iframe").locator("text=Hi Leo").first().waitFor({ timeout: 30_000 });
+  await frame.locator(".tab", { hasText: "手机" }).click();
+  await frame.locator("label.chk", { hasText: "深色模式" }).locator("input").check();
+  const bg = await frame.frameLocator(".frame iframe").locator("body").evaluate((b) => getComputedStyle(b).backgroundColor);
+  assert.notEqual(bg, "rgb(246, 241, 231)", "dark styles applied");
+  await frame.locator("label.chk", { hasText: "对照设计稿" }).locator("input").uncheck();
+  assert.equal(await frame.locator(".frame iframe").evaluate((f) => (f as HTMLIFrameElement).getBoundingClientRect().width), 375);
+  await outer.screenshot({ path: join(shots, "03-mobile-dark.png") });
+  step("user reads the plain-text version and exports");
+  await frame.locator(".tab", { hasText: "纯文本" }).click();
+  await frame.locator("pre.text", { hasText: "Track your package" }).waitFor({ timeout: 30_000 });
+  await outer.screenshot({ path: join(shots, "04-plain-text.png") });
+  await frame.locator("button", { hasText: "导出 HTML + 纯文本" }).click();
+  await frame.locator(".toast", { hasText: "order-shipped.txt" }).waitFor({ timeout: 60_000 });
+  const html = await readFile(join(workspace, "emails/order-shipped/export/order-shipped.html"), "utf8");
+  assert.ok(html.includes("{{first_name}}"));
+  assert.ok((await stat(join(workspace, "emails/order-shipped/export/order-shipped.preview.html"))).size > 5000);
+  assert.ok((await readFile(join(workspace, "emails/order-shipped/data.json"), "utf8")).includes('"Leo"'));
+  assert.deepEqual(harness.errors, []);
+  step(`ok — screenshots in ${shots}`);
+} finally {
+  await harness.close();
+}
