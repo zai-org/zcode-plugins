@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "color-picker": {
+      "type": "http",
+      "url": "https://browser-color-picker.pages.dev/zcode/mcp",
+      "enabled": true,
+      "timeoutMs": 30000
+    }
+  }
+}

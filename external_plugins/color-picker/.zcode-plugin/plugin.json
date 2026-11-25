@@ -1,0 +1,25 @@
+{
+  "name": "color-picker",
+  "version": "0.1.0",
+  "description": "Pick exact colors from an image or anywhere on screen in a browser color picker, then turn the palette into CSS variables, Tailwind theme colors or design tokens in your project.",
+  "description_i18n": {
+    "en": "Pick exact colors from an image or anywhere on screen in a browser color picker, then turn the palette into CSS variables, Tailwind theme colors or design tokens in your project.",
+    "zh-CN": "在浏览器取色器中从图片或屏幕任意位置精确取色，再把色板写成项目里的 CSS 变量、Tailwind 主题色或设计 Token。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "homepage": "https://browser-color-picker.pages.dev",
+  "license": "MIT",
+  "keywords": [
+    "color-picker",
+    "eyedropper",
+    "palette",
+    "css",
+    "tailwind",
+    "design-tokens",
+    "mcp"
+  ],
+  "commands": "commands"
+}
