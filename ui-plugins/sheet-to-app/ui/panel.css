@@ -1,0 +1,15 @@
+.cols { display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:8px 14px; }
+.fld { display:flex; flex-direction:column; align-items:stretch; gap:2px; } .fld .lb { font-size:12px; color: var(--muted); } .fld input, .fld select { width:100%; }
+.grow { flex:1; } .hint { font-size:11px; color: var(--muted); }
+.split { display:grid; grid-template-columns: minmax(420px, 1fr) minmax(420px, 1.2fr); gap:12px; align-items:start; }
+@media (max-width: 1000px) { .split { grid-template-columns: 1fr; } }
+table.map { width:100%; font-size:12px; border-collapse:collapse; margin-top:6px; }
+table.map th { text-align:left; color: var(--muted); font-weight:600; padding:4px; border-bottom:1px solid var(--line); }
+table.map td { padding:3px 4px; border-bottom:1px solid var(--line); }
+table.map input[type=text] { width:100%; min-width:80px; } table.map td.c { text-align:center; } table.map tr.hid td { opacity:.5; }
+table.map .col { font-weight:600; white-space:nowrap; } table.map .opts { font-size:11px; color: var(--muted); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.issues { max-height:220px; overflow:auto; font-size:12px; margin-top:6px; } .issue { padding:3px 0; border-bottom:1px dashed var(--line); } .issue b { color: var(--bad); }
+.ok { color: var(--ok); }
+iframe.pv { width:100%; height:560px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.done { background: var(--okbg); color: var(--ok); padding:8px 10px; border-radius:6px; margin:6px 0; font-size:13px; }
+.hl { display:flex; gap:6px; align-items:center; flex-wrap:wrap; } .hl select, .hl input { width:auto; }
