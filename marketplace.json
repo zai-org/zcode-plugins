@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "contact-list-cleaner",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/contact-list-cleaner",
+      "displayName": "Contact List Cleaner",
+      "displayName_i18n": {
+        "en": "Contact List Cleaner",
+        "zh-CN": "客户名单整理"
+      },
+      "description": "Merge contact lists from several Excel/CSV files into one clean list: columns are mapped to one template, names, phone numbers (international format, +86 by default), emails and company names are normalised, sure duplicates (same phone or email) are merged automatically and likely duplicates are shown side by side for you to confirm. Exports Excel or CSV with a merge log and a list of invalid values. Runs locally; nothing is uploaded or looked up online.",
+      "description_i18n": {
+        "en": "Merge contact lists from several Excel/CSV files into one clean list: columns are mapped to one template, names, phone numbers (international format, +86 by default), emails and company names are normalised, sure duplicates (same phone or email) are merged automatically and likely duplicates are shown side by side for you to confirm. Exports Excel or CSV with a merge log and a list of invalid values. Runs locally; nothing is uploaded or looked up online.",
+        "zh-CN": "把多个 Excel/CSV 客户名单合成一份干净的名单：字段映射到统一模板，规范姓名、手机号（国际格式，默认 +86）、邮箱和公司名；电话或邮箱相同的确定重复自动合并，可能重复左右对照交给你逐对确认。导出 Excel 或 CSV，附合并日志和无效值清单。全部本地处理，不上传、不联网查询。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "contacts",
+        "CRM",
+        "dedupe",
+        "merge",
+        "phone numbers",
+        "excel",
+        "csv",
+        "客户名单",
+        "去重",
+        "合并",
+        "通讯录",
+        "手机号",
+        "数据清洗"
+      ],
+      "examplePrompts": [
+        "Merge the CRM export and the trade-show list into one clean contact list",
+        "Find duplicate customers across these three spreadsheets",
+        "Export the cleaned contacts to Excel with a merge log"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 CRM 导出和展会登记表合成一份干净的客户名单",
+          "找出这三个表里重复的客户",
+          "把整理好的名单导出 Excel，附上合并日志"
+        ]
+      }
     }
   ]
 }
