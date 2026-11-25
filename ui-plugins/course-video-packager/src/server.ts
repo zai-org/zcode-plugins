@@ -84,7 +84,10 @@ export function createServer(options: ServerOptions) {
         throw new KitError("bad_project", `${value} is not valid JSON.`);
       }
     }
-    const info = await videoInfo(raw?.video);
+    // 先检查结构再探测视频，否则 {project:{}} 会在 ffprobe 处变成 internal_error（TEST-FINDINGS #5）
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new KitError("bad_project", "Project must be an object like {video, subtitles?, title?, chapters: [{title, start}]}.");
+    if (typeof raw.video !== "string" || !raw.video.trim()) throw new KitError("bad_project", "Project needs `video` (workspace path of the full lecture recording).");
+    const info = await videoInfo(raw.video);
     const result = normalizeProject(raw, info.duration);
     if (result.project.subtitles) ws.resolve(result.project.subtitles);
     ws.resolve(result.project.output);
