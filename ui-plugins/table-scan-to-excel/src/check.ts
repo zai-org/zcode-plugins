@@ -24,7 +24,42 @@ export interface Parsed {
   format: string;
 }
 
-/** 识别数字：千分位、全角、括号负数、负号、百分号、货币符号。不是数字返回 null。 */
+const CJK_DIGITS: Record<string, number> = {
+  "零": 0, "〇": 0, "一": 1, "壹": 1, "二": 2, "贰": 2, "两": 2, "兩": 2, "三": 3, "叁": 3, "四": 4, "肆": 4,
+  "五": 5, "伍": 5, "六": 6, "陆": 6, "陸": 6, "七": 7, "柒": 7, "八": 8, "捌": 8, "九": 9, "玖": 9,
+};
+const CJK_UNITS: Record<string, number> = { "十": 10, "拾": 10, "百": 100, "佰": 100, "千": 1000, "仟": 1000, "万": 10000, "萬": 10000 };
+
+/** 中文数字：十、十一、二十、一百零三、一万二千。无单位时按数位拼接（一二三 = 123）。 */
+export function parseCJKInteger(text: string): number | null {
+  const chars = [...text];
+  if (!chars.length || !chars.every((c) => c in CJK_DIGITS || c in CJK_UNITS)) return null;
+  if (chars.every((c) => c in CJK_DIGITS)) return Number(chars.map((c) => CJK_DIGITS[c]).join(""));
+  let total = 0;
+  let current = 0;
+  let hasDigit = false;
+  for (const c of chars) {
+    if (c in CJK_DIGITS) {
+      current = CJK_DIGITS[c];
+      hasDigit = true;
+      continue;
+    }
+    const unit = CJK_UNITS[c];
+    if (unit === 10000) {
+      const n = hasDigit ? current : total === 0 ? 1 : 0;
+      total = (total + n) * unit;
+      current = 0;
+      hasDigit = false;
+      continue;
+    }
+    total += (hasDigit ? current : 1) * unit;
+    current = 0;
+    hasDigit = false;
+  }
+  return total + current;
+}
+
+/** 识别数字：千分位、全角、括号负数、负号、百分号、货币符号、中文数字。不是数字返回 null。 */
 export function parseNumber(raw: string): Parsed | null {
   let text = raw
     .trim()
@@ -48,10 +83,18 @@ export function parseNumber(raw: string): Parsed | null {
   }
   const percent = text.endsWith("%");
   if (percent) text = text.slice(0, -1).trim();
-  if (!/^(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$|^\.\d+$/.test(text)) return null;
-  const grouped = text.includes(",");
-  const decimals = (text.split(".")[1] ?? "").length;
-  let value = Number(text.replace(/,/g, ""));
+  let value: number;
+  let grouped = false;
+  let decimals = 0;
+  if (/^(\d{1,3}(,\d{3})+|\d+)(\.\d+)?$|^\.\d+$/.test(text)) {
+    grouped = text.includes(",");
+    decimals = (text.split(".")[1] ?? "").length;
+    value = Number(text.replace(/,/g, ""));
+  } else {
+    const cjk = parseCJKInteger(text);
+    if (cjk === null) return null;
+    value = cjk;
+  }
   if (percent) value /= 100;
   if (negative) value = -value;
   const base = `${grouped ? "#,##0" : "0"}${decimals ? `.${"0".repeat(decimals)}` : ""}`;
@@ -105,11 +148,14 @@ export function checkTable(table: ScanTable): Issue[] {
   for (const [r, c] of table.uncertain) if (!confirmed.has(key(r, c))) issues.push({ row: r, col: c, kind: "uncertain", message: `cell ${cellRef(r, c)} "${table.rows[r][c]}" was hard to read — please check` });
   const body = table.rows.map((row, r) => ({ row, r })).filter(({ r }) => r >= table.headerRows);
   const width = table.rows[0]?.length ?? 0;
+  const headerOf = (c: number) => table.rows.slice(0, table.headerRows).map((row) => row[c]?.trim() ?? "").filter(Boolean).join(" ");
+  const QTY_HEADER = /数量|件数|qty|quantity|count|单价|价格|金额|amount|price|total|合计|总计/i;
   const numericCols: number[] = [];
   for (let c = 0; c < width; c++) {
     const values = body.filter(({ row }) => !TOTAL_RE.test(row.find((x) => x.trim()) ?? "")).map(({ row }) => row[c].trim()).filter(Boolean);
     const nums = values.filter((v) => parseNumber(v));
-    if (values.length >= 2 && nums.length / values.length >= 0.6) {
+    const headerHint = QTY_HEADER.test(headerOf(c)) && nums.length >= 1 && values.length >= 1;
+    if (values.length >= 2 && (nums.length / values.length >= 0.6 || headerHint)) {
       numericCols.push(c);
       for (const { row, r } of body) {
         const v = row[c].trim();
@@ -117,6 +163,11 @@ export function checkTable(table: ScanTable): Issue[] {
       }
     }
   }
+  const isTotalHeader = (h: string) => {
+    const t = h.trim();
+    return TOTAL_RE.test(t) || /(?:合\s*计|总\s*计|小\s*计|总\s*额|共\s*计|(?:sum|total|subtotal|grand[\s-]*total))$/i.test(t);
+  };
+  const totalCols = Array.from({ length: width }, (_, c) => c).filter((c) => isTotalHeader(headerOf(c)));
   // 合计行：小计累加上一个合计/小计之后的行；合计/总计累加上一个合计之后的所有明细行（跳过小计）。
   const isSub = (label: string) => /^小\s*计|^subtotal/i.test(label);
   let sectionStart = table.headerRows;
@@ -145,6 +196,29 @@ export function checkTable(table: ScanTable): Issue[] {
     }
     sectionStart = r + 1;
     if (!sub) grandStart = r + 1;
+  }
+  // 合计列：同一行其它数字列之和应等于该列（跳过合计行，避免与纵向检查重复）。
+  for (const tc of totalCols) {
+    for (const { row, r } of body) {
+      const label = (row.find((x) => x.trim()) ?? "").trim();
+      if (TOTAL_RE.test(label)) continue;
+      const total = parseNumber(row[tc]);
+      if (!total || confirmed.has(key(r, tc))) continue;
+      let sum = 0;
+      let count = 0;
+      for (const c of numericCols) {
+        if (c === tc || totalCols.includes(c)) continue;
+        const n = parseNumber(row[c]);
+        if (n) {
+          sum += n.value;
+          count++;
+        }
+      }
+      const tolerance = Math.max(0.011, Math.abs(total.value) * 1e-9);
+      if (count >= 2 && Math.abs(sum - total.value) > tolerance) {
+        issues.push({ row: r, col: tc, kind: "total_mismatch", message: `${headerOf(tc) || "Total"} ${cellRef(r, tc)} = ${row[tc].trim()}, but the other numeric cells in the row add up to ${round(sum)} (difference ${round(total.value - sum)})` });
+      }
+    }
   }
   return issues;
 }
