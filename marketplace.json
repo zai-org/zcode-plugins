@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "email-template-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/email-template-builder",
+      "displayName": "Email Template Builder",
+      "displayName_i18n": {
+        "en": "Email Template Builder",
+        "zh-CN": "截图转邮件模板"
+      },
+      "description": "Turn an email screenshot or design into a responsive HTML email: the agent writes MJML, the plugin compiles it to email-client-safe HTML (table layout, inline styles), lists the {{variables}} with editable sample data, previews desktop / mobile / dark mode next to the design, and checks width, alt text, image URLs, links, colour contrast, preheader, dark-mode styles, unsubscribe link and size (Gmail clips over 102 KB). Exports HTML + plain text. Nothing is sent.",
+      "description_i18n": {
+        "en": "Turn an email screenshot or design into a responsive HTML email: the agent writes MJML, the plugin compiles it to email-client-safe HTML (table layout, inline styles), lists the {{variables}} with editable sample data, previews desktop / mobile / dark mode next to the design, and checks width, alt text, image URLs, links, colour contrast, preheader, dark-mode styles, unsubscribe link and size (Gmail clips over 102 KB). Exports HTML + plain text. Nothing is sent.",
+        "zh-CN": "把邮件截图或设计稿做成响应式 HTML 邮件：Agent 写 MJML，插件编译成主流邮箱兼容的 HTML（表格布局、内联样式），列出 {{变量}} 并可编辑样例数据，与设计稿并排预览桌面 / 手机 / 深色模式，检查宽度、图片替代文字、图片地址、链接、文字对比度、预览行、深色模式样式、退订链接和体积（Gmail 超过 102 KB 会截断）。导出 HTML 和纯文本版。不发送邮件。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "email",
+        "html email",
+        "mjml",
+        "newsletter",
+        "email template",
+        "responsive",
+        "dark mode",
+        "邮件模板",
+        "邮件",
+        "营销邮件",
+        "截图转代码",
+        "EDM"
+      ],
+      "examplePrompts": [
+        "Make an email template from this screenshot",
+        "Check this email for Gmail clipping and dark mode",
+        "Export the HTML and plain-text versions"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "照这张截图做一个邮件模板",
+          "检查这封邮件会不会被 Gmail 截断、深色模式下好不好看",
+          "导出 HTML 和纯文本版"
+        ]
+      }
     }
   ]
 }
