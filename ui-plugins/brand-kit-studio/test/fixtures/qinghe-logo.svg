@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="200" viewBox="0 0 640 200">
+  <g transform="translate(20 20)">
+    <circle cx="80" cy="80" r="78" fill="#1f7a4d"/>
+    <path d="M80 30 C120 50 125 110 80 135 C40 110 40 55 80 30 Z" fill="#c8e6a0"/>
+    <path d="M80 40 L80 130" stroke="#1f7a4d" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <text x="200" y="112" font-size="78" font-weight="700" fill="#1f2d26" font-family="sans-serif">青禾咖啡</text>
+  <text x="203" y="160" font-size="30" fill="#7a5c3e" font-family="sans-serif" letter-spacing="6">QINGHE COFFEE</text>
+</svg>
