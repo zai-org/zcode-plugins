@@ -1,0 +1,58 @@
+{
+  "name": "app-installer-builder",
+  "version": "0.1.0",
+  "description": "Wrap an existing website or Node project as a desktop app with Electron and electron-builder: detects a static site (dist/ with index.html) or a Node server, generates desktop/ with the Electron shell (static sites served at app:// with SPA routes; Node servers started with Electron's own Node on a free port), electron-builder.yml for macOS dmg and Windows nsis (plus Linux AppImage), an icon and a README. Shows which targets this computer can build and runs the build with a live log. Signing is optional and only uses a certificate you provide; otherwise builds are unsigned and the README says so.",
+  "description_i18n": {
+    "en": "Wrap an existing website or Node project as a desktop app with Electron and electron-builder: detects a static site (dist/ with index.html) or a Node server, generates desktop/ with the Electron shell (static sites served at app:// with SPA routes; Node servers started with Electron's own Node on a free port), electron-builder.yml for macOS dmg and Windows nsis (plus Linux AppImage), an icon and a README. Shows which targets this computer can build and runs the build with a live log. Signing is optional and only uses a certificate you provide; otherwise builds are unsigned and the README says so.",
+    "zh-CN": "用 Electron + electron-builder 把现有网站或 Node 项目包装成桌面应用：自动识别静态网站（含 index.html 的 dist/）或 Node 服务，在项目里生成 desktop/ 目录——Electron 外壳（静态站点通过 app:// 加载并支持前端路由；Node 服务用 Electron 自带的 Node 在空闲端口启动）、面向 macOS dmg 和 Windows nsis（另含 Linux AppImage）的 electron-builder.yml、图标和说明。面板显示本机能打哪些安装包，并实时显示打包日志。签名可选，只使用你自己提供的证书；没有证书就不签名，并在说明里写明。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "electron",
+    "electron-builder",
+    "desktop app",
+    "installer",
+    "dmg",
+    "nsis",
+    "appimage",
+    "package",
+    "桌面应用",
+    "安装包",
+    "打包",
+    "网站转应用"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "app-installer-builder": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "应用安装包制作",
+          "en-US": "App Installer Builder"
+        },
+        "icon": "package",
+        "server": "app-installer-builder",
+        "resourceUri": "ui://app-installer-builder/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

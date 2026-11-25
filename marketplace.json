@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "app-installer-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/app-installer-builder",
+      "displayName": "App Installer Builder",
+      "displayName_i18n": {
+        "en": "App Installer Builder",
+        "zh-CN": "应用安装包制作"
+      },
+      "description": "Wrap an existing website or Node project as a desktop app with Electron and electron-builder: detects a static site (dist/ with index.html) or a Node server, generates desktop/ with the Electron shell (static sites served at app:// with SPA routes; Node servers started with Electron's own Node on a free port), electron-builder.yml for macOS dmg and Windows nsis (plus Linux AppImage), an icon and a README. Shows which targets this computer can build and runs the build with a live log. Signing is optional and only uses a certificate you provide; otherwise builds are unsigned and the README says so.",
+      "description_i18n": {
+        "en": "Wrap an existing website or Node project as a desktop app with Electron and electron-builder: detects a static site (dist/ with index.html) or a Node server, generates desktop/ with the Electron shell (static sites served at app:// with SPA routes; Node servers started with Electron's own Node on a free port), electron-builder.yml for macOS dmg and Windows nsis (plus Linux AppImage), an icon and a README. Shows which targets this computer can build and runs the build with a live log. Signing is optional and only uses a certificate you provide; otherwise builds are unsigned and the README says so.",
+        "zh-CN": "用 Electron + electron-builder 把现有网站或 Node 项目包装成桌面应用：自动识别静态网站（含 index.html 的 dist/）或 Node 服务，在项目里生成 desktop/ 目录——Electron 外壳（静态站点通过 app:// 加载并支持前端路由；Node 服务用 Electron 自带的 Node 在空闲端口启动）、面向 macOS dmg 和 Windows nsis（另含 Linux AppImage）的 electron-builder.yml、图标和说明。面板显示本机能打哪些安装包，并实时显示打包日志。签名可选，只使用你自己提供的证书；没有证书就不签名，并在说明里写明。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "electron",
+        "electron-builder",
+        "desktop app",
+        "installer",
+        "dmg",
+        "nsis",
+        "appimage",
+        "package",
+        "桌面应用",
+        "安装包",
+        "打包",
+        "网站转应用"
+      ],
+      "examplePrompts": [
+        "Turn this web app into a Mac and Windows desktop app",
+        "Package my Node server as a desktop app",
+        "Which installers can I build on this computer?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把这个网站做成 Mac 和 Windows 桌面应用",
+          "把我的 Node 服务打包成桌面应用",
+          "这台电脑能打哪些安装包？"
+        ]
+      }
     }
   ]
 }
