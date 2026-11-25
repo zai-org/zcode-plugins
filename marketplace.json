@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "ebook-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/ebook-maker",
+      "displayName": "Ebook Maker",
+      "displayName_i18n": {
+        "en": "Ebook Maker",
+        "zh-CN": "电子书制作"
+      },
+      "description": "Turn a folder of Markdown chapters, images and a cover into an EPUB 3 and a print-style PDF (A5/B6/A4): contents with page numbers, footnotes as linked notes or chapter endnotes, running heads, bookmarks and clickable links. Checks for missing images, broken internal links and anchors, undefined footnotes and missing metadata, and lists every external link. Preview chapters, edit metadata and chapter order in the panel. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a folder of Markdown chapters, images and a cover into an EPUB 3 and a print-style PDF (A5/B6/A4): contents with page numbers, footnotes as linked notes or chapter endnotes, running heads, bookmarks and clickable links. Checks for missing images, broken internal links and anchors, undefined footnotes and missing metadata, and lists every external link. Preview chapters, edit metadata and chapter order in the panel. Runs locally; no API keys.",
+        "zh-CN": "把一个文件夹里的 Markdown 章节、图片和封面做成 EPUB 3 电子书和适合打印的 PDF（A5 / B6 / A4）：带页码的目录、脚注（EPUB 可点跳转，PDF 为章末注）、页眉页码、书签和可点击的链接。检查漏图、坏的内部链接和锚点、未定义的脚注、缺少的书籍信息，并列出全部外部链接。面板里预览章节、编辑书籍信息和章节顺序。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "ebook",
+        "epub",
+        "pdf",
+        "markdown",
+        "book",
+        "publishing",
+        "footnotes",
+        "电子书",
+        "排版",
+        "出版",
+        "目录",
+        "脚注"
+      ],
+      "examplePrompts": [
+        "Make an EPUB and a PDF from the chapters in 书稿/",
+        "Check my book for missing images and broken links, and list the external links",
+        "Set the title, author and cover, put the preface first, then export A5 PDF"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 书稿/ 里的章节做成 EPUB 和 PDF",
+          "检查书稿里有没有漏图和坏链接，再把所有外部链接列出来",
+          "设置书名、作者和封面，把前言放到第一章，然后导出 A5 的 PDF"
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,58 @@
+{
+  "name": "ebook-maker",
+  "version": "0.1.0",
+  "description": "Turn a folder of Markdown chapters, images and a cover into an EPUB 3 and a print-style PDF (A5/B6/A4): contents with page numbers, footnotes as linked notes or chapter endnotes, running heads, bookmarks and clickable links. Checks for missing images, broken internal links and anchors, undefined footnotes and missing metadata, and lists every external link. Preview chapters, edit metadata and chapter order in the panel. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn a folder of Markdown chapters, images and a cover into an EPUB 3 and a print-style PDF (A5/B6/A4): contents with page numbers, footnotes as linked notes or chapter endnotes, running heads, bookmarks and clickable links. Checks for missing images, broken internal links and anchors, undefined footnotes and missing metadata, and lists every external link. Preview chapters, edit metadata and chapter order in the panel. Runs locally; no API keys.",
+    "zh-CN": "把一个文件夹里的 Markdown 章节、图片和封面做成 EPUB 3 电子书和适合打印的 PDF（A5 / B6 / A4）：带页码的目录、脚注（EPUB 可点跳转，PDF 为章末注）、页眉页码、书签和可点击的链接。检查漏图、坏的内部链接和锚点、未定义的脚注、缺少的书籍信息，并列出全部外部链接。面板里预览章节、编辑书籍信息和章节顺序。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ebook",
+    "epub",
+    "pdf",
+    "markdown",
+    "book",
+    "publishing",
+    "footnotes",
+    "电子书",
+    "排版",
+    "出版",
+    "目录",
+    "脚注"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "ebook-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "电子书制作",
+          "en-US": "Ebook Maker"
+        },
+        "icon": "book-open",
+        "server": "ebook-maker",
+        "resourceUri": "ui://ebook-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

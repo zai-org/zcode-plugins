@@ -1,0 +1,37 @@
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.spacer { flex:1; }
+.layout { display:grid; grid-template-columns: 270px minmax(0,1fr); gap: 12px; align-items:start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.meta { display:grid; grid-template-columns: 64px 1fr; gap:4px 6px; align-items:center; font-size:12px; }
+.meta input, .meta select, .meta textarea { width:100%; }
+.meta textarea { min-height: 44px; resize: vertical; }
+.chapters { display:flex; flex-direction:column; gap:3px; margin-top:6px; }
+.chap { display:flex; gap:4px; align-items:center; border:1px solid var(--line); border-radius:6px; padding:4px 6px; cursor:pointer; background:var(--panel); font-size:12px; }
+.chap.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.chap .t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chap .f { color: var(--muted); font-size: 11px; }
+.chap button { padding: 0 5px; line-height: 18px; font-size: 11px; }
+.tabs { display:flex; gap:4px; margin-bottom:8px; }
+.tabs button.on { background: var(--accent); border-color: var(--accent); color:#fff; }
+.preview { border:1px solid var(--line); border-radius:8px; background:#fff; color:#1a1a1a; padding: 18px 34px; max-height: 76vh; overflow:auto; font-family: "Songti SC", "Noto Serif CJK SC", serif; line-height:1.75; font-size: 14px; }
+.preview h1 { text-align:center; font-size: 22px; margin: 18px 0 20px; }
+.preview h2 { font-size: 17px; color: inherit; margin: 18px 0 8px; }
+.preview p { margin: 0 0 4px; text-align: justify; }
+.preview.cjk p { text-indent: 2em; }
+.preview li p, .preview blockquote p, .preview aside p { text-indent: 0; }
+.preview blockquote { margin: 10px 18px; color:#444; border-left:3px solid #ccc; padding-left: 10px; }
+.preview figure { text-align:center; margin: 14px 0; }
+.preview figure img { max-width: 100%; max-height: 420px; }
+.preview figcaption { font-size: 12px; color:#555; text-indent:0; }
+.preview pre { background:#f4f4f4; padding: 8px; white-space: pre-wrap; font-size: 12px; }
+.preview section.footnotes { border-top: 1px solid #bbb; margin-top: 24px; font-size: 12px; }
+.preview .missing { color: #b91c1c; text-indent: 0; }
+.preview table { border-collapse: collapse; } .preview th, .preview td { border:1px solid #999; padding: 2px 6px; }
+.issue { display:flex; gap:6px; align-items:baseline; padding: 4px 0; border-bottom: 1px dashed var(--line); cursor: pointer; font-size: 12px; }
+.issue .loc { color: var(--muted); white-space: nowrap; }
+.pages { display:flex; flex-wrap: wrap; gap: 10px; max-height: 78vh; overflow:auto; padding: 4px; }
+.pages canvas { box-shadow: 0 1px 4px rgba(0,0,0,.3); background:#fff; width: 220px; }
+.pages .pg { text-align:center; font-size: 11px; color: var(--muted); }
+.result { font-size: 12px; }
+#root.busy { cursor: progress; }
+#root.busy button { pointer-events: none; opacity: .6; }
