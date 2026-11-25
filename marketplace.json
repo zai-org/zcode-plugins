@@ -1673,6 +1673,38 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "websearch",
+      "displayName": "Websearch",
+      "displayName_i18n": {
+        "en": "Websearch",
+        "zh-CN": "网页搜索"
+      },
+      "source": "./external_plugins/websearch",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/websearch/icon.png",
+      "description": "ZCode 独立网页搜索：零依赖 MCP server，AnySearch / Exa / Parallel / Bing / SearXNG 自动回退，另带静态网页正文读取；所有引擎免 Key 可用。配置（引擎顺序、各引擎 Key）写在插件数据目录的 websearch.json——首次使用自动生成，装好后直接问模型「websearch 配置在哪」即可拿到具体路径。",
+      "description_i18n": {
+        "en": "Multi-engine web search for ZCode as a zero-dependency MCP server: AnySearch, Exa, Parallel, Bing and SearXNG chained with automatic fallback, plus a static page reader. Every engine works without a key; filling one in switches it to your own quota. Configuration (engine order, per-engine keys) is websearch.json inside the plugin data folder — created automatically on first use, and the tools report its exact path, so just ask the model for the websearch config location.",
+        "zh-CN": "ZCode 独立网页搜索：零依赖 MCP server，AnySearch / Exa / Parallel / Bing / SearXNG 自动回退，另带静态网页正文读取；所有引擎免 Key 可用。配置（引擎顺序、各引擎 Key）写在插件数据目录的 websearch.json——首次使用自动生成，装好后直接问模型「websearch 配置在哪」即可拿到具体路径。"
+      },
+      "version": "0.1.5",
+      "author": {
+        "name": "JochenYang",
+        "url": "https://github.com/JochenYang"
+      },
+      "category": "productivity",
+      "keywords": [
+        "websearch",
+        "search",
+        "web-search",
+        "mcp",
+        "bing",
+        "exa",
+        "parallel",
+        "searxng",
+        "anysearch"
+      ]
     }
   ]
 }

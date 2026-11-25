@@ -1,0 +1,87 @@
+{
+  "name": "websearch",
+  "version": "0.1.5",
+  "description": "Multi-engine web search for ZCode as a zero-dependency MCP server: AnySearch, Exa, Parallel, Bing and SearXNG chained with automatic fallback, plus a static page reader. Every engine works without a key; filling one in switches it to your own quota. Configuration (engine order, per-engine keys) is websearch.json inside the plugin data folder — created automatically on first use, and the tools report its exact path, so just ask the model for the websearch config location.",
+  "description_i18n": {
+    "en": "Multi-engine web search for ZCode as a zero-dependency MCP server: AnySearch, Exa, Parallel, Bing and SearXNG chained with automatic fallback, plus a static page reader. Every engine works without a key; filling one in switches it to your own quota. Configuration (engine order, per-engine keys) is websearch.json inside the plugin data folder — created automatically on first use, and the tools report its exact path, so just ask the model for the websearch config location.",
+    "zh-CN": "ZCode 独立网页搜索：零依赖 MCP server，AnySearch / Exa / Parallel / Bing / SearXNG 自动回退，另带静态网页正文读取；所有引擎免 Key 可用。配置（引擎顺序、各引擎 Key）写在插件数据目录的 websearch.json——首次使用自动生成，装好后直接问模型「websearch 配置在哪」即可拿到具体路径。"
+  },
+  "author": {
+    "name": "JochenYang",
+    "url": "https://github.com/JochenYang"
+  },
+  "license": "MIT",
+  "keywords": [
+    "websearch",
+    "search",
+    "web-search",
+    "mcp",
+    "bing",
+    "exa",
+    "parallel",
+    "searxng",
+    "anysearch"
+  ],
+  "userConfig": {
+    "order": {
+      "type": "string",
+      "title": "Engine order",
+      "description": "Comma-separated engine ids tried in order: anysearch / exa / parallel / bing / searxng",
+      "default": "anysearch,exa,parallel,bing,searxng"
+    },
+    "disabled": {
+      "type": "string",
+      "title": "Disabled engines",
+      "description": "Comma-separated engine ids to skip, e.g. exa,searxng; empty keeps all enabled",
+      "default": ""
+    },
+    "mode": {
+      "type": "string",
+      "title": "Retry mode",
+      "description": "fallback = start from the first engine every call; rotate = shift the start by one each call to spread free tiers",
+      "default": "fallback"
+    },
+    "limit": {
+      "type": "number",
+      "title": "Default result count",
+      "description": "1-10, used when a tool call omits limit",
+      "default": 10
+    },
+    "timeout_ms": {
+      "type": "number",
+      "title": "Total timeout (ms)",
+      "description": "One deadline covers the whole chain, 5000-60000; each engine gets the remaining budget",
+      "default": 20000
+    },
+    "bing_market": {
+      "type": "string",
+      "title": "Bing market",
+      "description": "auto = follow the query language; or fix it to zh / en",
+      "default": "auto"
+    },
+    "searxng_instances": {
+      "type": "string",
+      "title": "SearXNG instances",
+      "description": "One base URL per line, JSON API required; empty skips the engine",
+      "default": ""
+    },
+    "anysearch_key": {
+      "type": "string",
+      "title": "AnySearch key (optional)",
+      "description": "Empty uses the free tier; filling it in switches the engine to your own quota (Authorization: Bearer)",
+      "default": ""
+    },
+    "exa_key": {
+      "type": "string",
+      "title": "Exa key (optional)",
+      "description": "Empty uses the anonymous tier; filling it in switches the engine to your own quota (Authorization: Bearer)",
+      "default": ""
+    },
+    "parallel_key": {
+      "type": "string",
+      "title": "Parallel key (optional)",
+      "description": "Empty uses the anonymous tier; filling it in switches the engine to your own quota (x-api-key)",
+      "default": ""
+    }
+  }
+}
