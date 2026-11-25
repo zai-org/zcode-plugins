@@ -155,25 +155,48 @@ async function loadPdf(bytes: Uint8Array) {
 
 const normalize = (text: string) => text.toLowerCase().replace(/[\s_\-.:：()（）[\]【】/\\#*]+/g, "").replace(/\d+$/, "");
 
+/** AcroForm 生成名（c1_1、f1_01）normalize 后只剩单字母，不能拿来做前缀匹配。 */
+const GENERATED_LEAF = /^(?:[a-z]{1,3}\d+[a-z]?\d*)$/i;
+
+function isGeneratedLeaf(name: string): boolean {
+  const leaf = (name.split(".").pop() ?? name).replace(/\[\d+\]$/g, "");
+  return GENERATED_LEAF.test(leaf.replace(/[_-]/g, ""));
+}
+
+function matchScore(candidate: string, key: string): number {
+  if (!candidate || !key) return 0;
+  if (candidate === key) return 3;
+  if (candidate.length < 3 || key.length < 3) return 0;
+  if (candidate.startsWith(key) || key.startsWith(candidate)) return 2;
+  if (candidate.includes(key) || key.includes(candidate)) return 1;
+  return 0;
+}
+
 /** 按名称相似度给每个字段建议一列（找不到则留空）。 */
 export function suggestFields(info: FormInfo, columns: string[]): FieldSpec[] {
   const normalized = columns.map((column) => [column, normalize(column)] as const).filter(([, key]) => key);
   return info.fields
     .filter((field) => field.type !== "signature" && field.type !== "button")
     .map((field, index) => {
-      const candidates = [normalize(field.label), normalize(field.name.split(".").pop() ?? "")].filter(Boolean);
+      const leaf = field.name.split(".").pop() ?? "";
+      const labelNorm = normalize(field.label);
+      const leafNorm = normalize(leaf);
+      const preferLabel = isGeneratedLeaf(leaf) && !!labelNorm && labelNorm !== leafNorm;
+      const candidates = preferLabel ? [labelNorm] : [labelNorm, leafNorm].filter(Boolean);
       let best = "";
       let score = 0;
       for (const [column, key] of normalized) {
         for (const candidate of candidates) {
-          const value = candidate === key ? 3 : candidate.startsWith(key) || key.startsWith(candidate) ? 2 : candidate.includes(key) ? 1 : 0;
+          const value = matchScore(candidate, key);
           if (value > score) {
             score = value;
             best = column;
           }
         }
       }
-      return { id: `f${index + 1}`, kind: "acro" as const, name: field.name, label: field.label, source: best ? `{${best}}` : "" };
+      // 复选/单选不要绑到自由文本列；只有列名与标签完全一致时才建议 {列}（值为 是/yes 等）。
+      const source = best && (field.type === "checkbox" || field.type === "radio" ? score >= 3 : true) ? `{${best}}` : "";
+      return { id: `f${index + 1}`, kind: "acro" as const, name: field.name, label: field.label, source };
     });
 }
 
