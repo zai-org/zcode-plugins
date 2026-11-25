@@ -1,0 +1,58 @@
+{
+  "name": "offline-site-packer",
+  "version": "0.1.0",
+  "description": "Turn a built static website into an offline copy that opens by double-clicking index.html: crawls every internal page from the home page, rewrites root-relative, pretty and extension-less links (and CSS url()/@import, srcset) to relative file paths, copies only the files used, adds an offline full-text search box (MiniSearch, ⌘K) to every page, and reports broken links, missing files, external links and pages nothing links to. Writes a folder and a zip. No server, no network.",
+  "description_i18n": {
+    "en": "Turn a built static website into an offline copy that opens by double-clicking index.html: crawls every internal page from the home page, rewrites root-relative, pretty and extension-less links (and CSS url()/@import, srcset) to relative file paths, copies only the files used, adds an offline full-text search box (MiniSearch, ⌘K) to every page, and reports broken links, missing files, external links and pages nothing links to. Writes a folder and a zip. No server, no network.",
+    "zh-CN": "把构建好的静态网站做成离线版，双击 index.html 就能浏览：从首页出发爬取所有站内页面，把根路径、目录式和省略扩展名的链接（以及 CSS 的 url()/@import、srcset）改成相对文件路径，只复制用到的文件，给每个页面加上离线全文搜索（MiniSearch，⌘K），并报告坏链、缺失文件、外部链接和没被链接的页面。输出文件夹和 zip。不需要服务器，不联网。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "offline",
+    "static site",
+    "documentation",
+    "zip",
+    "file://",
+    "search",
+    "broken links",
+    "minisearch",
+    "离线",
+    "网站打包",
+    "文档",
+    "坏链检查"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "offline-site-packer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "网站离线打包",
+          "en-US": "Offline Site Packer"
+        },
+        "icon": "archive",
+        "server": "offline-site-packer",
+        "resourceUri": "ui://offline-site-packer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
