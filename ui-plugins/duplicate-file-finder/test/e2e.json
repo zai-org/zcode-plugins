@@ -1,0 +1,1 @@
+{ "prefix": "dupes", "folder": "整理", "pick": ["下载"], "uiEdit": { "row": 3, "key": "keep", "value": true }, "expectText": "合同-终版.pdf", "expectFiles": ["duplicates\\.csv$", "moved\\.csv$"] }
