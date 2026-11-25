@@ -1,0 +1,2 @@
+{ "prefix": "rename", "folder": "相册", "pick": ["photos"], "startSettings": { "template": "杭州-{n}" },
+  "uiEdit": { "row": 7, "key": "override", "value": "微信图片" }, "expectText": "杭州-001.jpg", "expectFiles": ["rename-plan\\.csv$", "rename-log-.*\\.csv$"] }
