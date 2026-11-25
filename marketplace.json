@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "store-screenshot-studio",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/store-screenshot-studio",
+      "displayName": "Store Screenshot Studio",
+      "displayName_i18n": {
+        "en": "Store Screenshot Studio",
+        "zh-CN": "应用商店截图制作"
+      },
+      "description": "Turn raw app screenshots into App Store and Google Play listing images: headline and subheadline, iPhone / Android / iPad device frames, solid or gradient backgrounds, several languages, and exact store pixel sizes (iPhone 6.9″/6.5″/5.5″, iPad 13″, Play phone/tablet) exported as opaque PNGs. Checks long headlines, missing translations and blurry screenshots. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn raw app screenshots into App Store and Google Play listing images: headline and subheadline, iPhone / Android / iPad device frames, solid or gradient backgrounds, several languages, and exact store pixel sizes (iPhone 6.9″/6.5″/5.5″, iPad 13″, Play phone/tablet) exported as opaque PNGs. Checks long headlines, missing translations and blurry screenshots. Runs locally; no API keys.",
+        "zh-CN": "把 App 原始截图做成 App Store 和 Google Play 的宣传截图：加主副标题、iPhone / 安卓 / iPad 设备边框、纯色或渐变背景，支持多语言，按商店要求的精确像素尺寸（iPhone 6.9″/6.5″/5.5″、iPad 13″、Google Play 手机/平板）导出无透明通道的 PNG。自动检查标题过长、缺少翻译和截图分辨率不足。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "app-store",
+        "google-play",
+        "screenshots",
+        "aso",
+        "mockup",
+        "device-frame",
+        "localization",
+        "ios",
+        "android",
+        "应用商店"
+      ],
+      "examplePrompts": [
+        "Make App Store screenshots from the images in screenshots/ — write a short headline for each in Chinese and English",
+        "Export the listing images for iPhone 6.9″, iPad and Google Play with a dark gradient background",
+        "Change the third headline in English to “Track every order” and export just that one"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 screenshots 文件夹里的截图做 App Store 宣传图，每张帮我写一句中英文标题",
+          "用深色渐变背景导出 iPhone 6.9″、iPad 和 Google Play 尺寸",
+          "把第三张的英文标题改成“Track every order”，只重新导出这一张"
+        ]
+      }
     }
   ]
 }
