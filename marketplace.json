@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "podcast-studio",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/podcast-studio",
+      "displayName": "Podcast Studio",
+      "displayName_i18n": {
+        "en": "Podcast Studio",
+        "zh-CN": "播客制作台"
+      },
+      "description": "Produce a podcast episode from the host and guest recordings: automatic track alignment, cuts applied to every track at once, noise reduction, two-pass loudness normalisation to -16 LUFS (or your target), intro and outro, export to MP3/WAV, plus a project you can reopen and edit. Waveform panel with drag-to-cut and preview. Runs locally with the ffmpeg on your computer; no API keys.",
+      "description_i18n": {
+        "en": "Produce a podcast episode from the host and guest recordings: automatic track alignment, cuts applied to every track at once, noise reduction, two-pass loudness normalisation to -16 LUFS (or your target), intro and outro, export to MP3/WAV, plus a project you can reopen and edit. Waveform panel with drag-to-cut and preview. Runs locally with the ffmpeg on your computer; no API keys.",
+        "zh-CN": "用主持人和嘉宾的录音制作一期播客：自动对齐音轨，所有音轨同步剪辑，降噪，两遍响度统一到 -16 LUFS（或自定目标），加片头片尾，导出 MP3/WAV，并保存可以再次打开修改的工程。面板显示波形，拖动即可剪掉一段，并可试听。在本地用电脑上的 ffmpeg 运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "podcast",
+        "audio",
+        "multitrack",
+        "align",
+        "loudness",
+        "lufs",
+        "noise reduction",
+        "mix",
+        "ffmpeg",
+        "播客",
+        "剪辑",
+        "响度",
+        "降噪"
+      ],
+      "examplePrompts": [
+        "Line up host.wav and guest.m4a, cut 12:30 to 14:05, add intro.mp3 and outro.mp3 and export an MP3 at -16 LUFS",
+        "Shorten every pause longer than 3 seconds and turn the guest down 2 dB",
+        "Reopen episode 12 and export a WAV too"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 主持人.wav 和 嘉宾.m4a 对齐，剪掉 12:30 到 14:05，加上片头片尾，导出 -16 LUFS 的 MP3",
+          "超过 3 秒的停顿都缩短一点，嘉宾声音调小 2 dB",
+          "重新打开第 12 期，再导出一份 WAV"
+        ]
+      }
     }
   ]
 }
