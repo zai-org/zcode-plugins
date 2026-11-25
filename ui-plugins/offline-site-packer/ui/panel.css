@@ -1,0 +1,13 @@
+.cols { display:grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap:8px 14px; }
+.fld { flex-direction:column; align-items:stretch; gap:2px; } .fld .lb { font-size:12px; color: var(--muted); } .fld input, .fld select { width:100%; }
+.hint { font-size:11px; color: var(--muted); } .grow { flex:1; } .chk { margin-right:10px; }
+.stats { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+.stat { border:1px solid var(--line); border-radius:8px; padding:6px 12px; min-width:90px; background: var(--panel); }
+.stat b { display:block; font-size:18px; } .stat span { font-size:12px; color: var(--muted); }
+.stat.bad b { color: var(--bad); } .stat.ok b { color: var(--ok); }
+.done { background: var(--okbg); color: var(--ok); padding:8px 10px; border-radius:6px; margin:6px 0; }
+.ok { color: var(--ok); } .warn { color: var(--warn); font-size:12px; margin-top:4px; }
+.ext { font-size:12px; margin:3px 0; word-break: break-all; }
+tr.brk td:nth-child(2) code { color: var(--bad); }
+td.num { white-space:nowrap; color: var(--muted); }
+table.data { margin-top:6px; font-size:12px; }

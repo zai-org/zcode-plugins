@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "offline-site-packer",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/offline-site-packer",
+      "displayName": "Offline Site Packer",
+      "displayName_i18n": {
+        "en": "Offline Site Packer",
+        "zh-CN": "网站离线打包"
+      },
+      "description": "Turn a built static website into an offline copy that opens by double-clicking index.html: crawls every internal page from the home page, rewrites root-relative, pretty and extension-less links (and CSS url()/@import, srcset) to relative file paths, copies only the files used, adds an offline full-text search box (MiniSearch, ⌘K) to every page, and reports broken links, missing files, external links and pages nothing links to. Writes a folder and a zip. No server, no network.",
+      "description_i18n": {
+        "en": "Turn a built static website into an offline copy that opens by double-clicking index.html: crawls every internal page from the home page, rewrites root-relative, pretty and extension-less links (and CSS url()/@import, srcset) to relative file paths, copies only the files used, adds an offline full-text search box (MiniSearch, ⌘K) to every page, and reports broken links, missing files, external links and pages nothing links to. Writes a folder and a zip. No server, no network.",
+        "zh-CN": "把构建好的静态网站做成离线版，双击 index.html 就能浏览：从首页出发爬取所有站内页面，把根路径、目录式和省略扩展名的链接（以及 CSS 的 url()/@import、srcset）改成相对文件路径，只复制用到的文件，给每个页面加上离线全文搜索（MiniSearch，⌘K），并报告坏链、缺失文件、外部链接和没被链接的页面。输出文件夹和 zip。不需要服务器，不联网。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "offline",
+        "static site",
+        "documentation",
+        "zip",
+        "file://",
+        "search",
+        "broken links",
+        "minisearch",
+        "离线",
+        "网站打包",
+        "文档",
+        "坏链检查"
+      ],
+      "examplePrompts": [
+        "Make an offline copy of the docs site in dist/",
+        "Check this site for broken links",
+        "Pack the help site into a zip that works without internet"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 dist 里的文档站做成离线版",
+          "检查这个网站有没有坏链",
+          "把帮助网站打包成不联网也能看的 zip"
+        ]
+      }
     }
   ]
 }
