@@ -1,0 +1,70 @@
+// 浏览器端到端测试：真实打包的 server（esbuild-wasm + TypeScript + React SSR）+ 官方 AppBridge 宿主 + 隔离 iframe 中的面板；
+// 再用 Chrome 以 file:// 打开生成的交互式组件目录页。需要 Chrome。
+import assert from "node:assert/strict";
+import { cp, mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { startHarness } from "./harness.mjs";
+
+const shots = process.env.E2E_SHOTS ?? join(tmpdir(), "design-to-components-shots");
+await mkdir(shots, { recursive: true });
+const workspace = await mkdtemp(join(tmpdir(), "dc-e2e-"));
+const samples = process.env.DC_SAMPLES ?? "/workspace/zcode-new-plugins/samples/components";
+await cp(samples, join(workspace, "设计稿"), { recursive: true });
+const A = (f: string) => readFile(join(samples, "agent", f), "utf8");
+const harness = await startHarness({ workspace });
+const step = (t: string) => process.stdout.write(`• ${t}\n`);
+try {
+  const { outer, frame, context } = await harness.open("?locale=zh-CN", { width: 1500, height: 1000 });
+  step("user creates the kit from the design");
+  await frame.locator("input.name").fill("Fieldnote UI");
+  await frame.locator("label", { hasText: "fieldnote-design.png" }).locator("input").check();
+  await frame.locator("button", { hasText: "创建" }).click();
+  await frame.locator(".design img").waitFor({ timeout: 30_000 });
+  step("agent reads the tokens and component list off the design, writes a first Button");
+  await harness.agent(outer, "dc_tokens", { tokens: JSON.parse(await A("tokens.json")) });
+  await harness.agent(outer, "dc_plan", { components: [{ name: "Button", states: ["primary", "secondary", "disabled", "loading"] }, { name: "TextField", states: ["default", "error"] }, { name: "Badge", states: ["success", "warning", "neutral"] }, { name: "Card", states: [] }] });
+  await harness.agent(outer, "dc_write", { files: { "Button.tsx": await A("Button.first-draft.tsx"), "Button.css": await A("Button.css") } });
+  await frame.locator(".badge.bad", { hasText: "2 个错误" }).waitFor({ timeout: 60_000 });
+  await frame.locator(".issue.error", { hasText: "onClik" }).waitFor();
+  await frame.locator(".issue a", { hasText: "src/Button.tsx:5" }).first().click();
+  await frame.locator("pre.code", { hasText: "onClik" }).waitFor();
+  await outer.screenshot({ path: join(shots, "02-type-errors.png") });
+  step("agent writes all four components; preview renders every state");
+  const files: Record<string, string> = {};
+  for (const f of ["Button", "TextField", "Badge", "Card"]) for (const e of ["tsx", "css"]) files[`${f}.${e}`] = await A(`${f}.${e}`);
+  await harness.agent(outer, "dc_write", { files });
+  await frame.locator(".badge.ok", { hasText: "编译通过" }).waitFor({ timeout: 60_000 });
+  await frame.locator(".tab", { hasText: "组件预览" }).click();
+  const pv = frame.frameLocator("iframe.pv");
+  await pv.locator("button.fn-button--primary", { hasText: "Save entry" }).waitFor();
+  await pv.locator(".fn-field--error small", { hasText: "Enter a valid email address" }).waitFor();
+  assert.equal(await pv.locator("button.fn-button--primary").first().evaluate((b) => getComputedStyle(b).backgroundColor), "rgb(31, 111, 92)");
+  assert.equal(await frame.locator(".plan .st.done").count(), 4);
+  await outer.screenshot({ path: join(shots, "01-design-vs-components.png") });
+  step("user tweaks the primary colour token");
+  await frame.locator('.tok:has(input[data-token="colors.primary"]) input.tv').fill("#0b4f8a");
+  await frame.locator(".tokens button", { hasText: "保存" }).click();
+  await frame.locator(".toast", { hasText: "设计变量已保存" }).waitFor({ timeout: 30_000 });
+  assert.equal(await frame.frameLocator("iframe.pv").locator("button.fn-button--primary").first().evaluate((b) => getComputedStyle(b).backgroundColor), "rgb(11, 79, 138)");
+  assert.match(await readFile(join(workspace, "ui-kit/fieldnote-ui/tokens.css"), "utf8"), /--color-primary: #0b4f8a;/);
+  step("the interactive catalog works from file://");
+  const page = await context.newPage();
+  const errs: string[] = [];
+  page.on("pageerror", (e) => errs.push(String(e)));
+  page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto(pathToFileURL(join(workspace, "ui-kit/fieldnote-ui/catalog/index.html")).href);
+  await page.locator("#Card .fn-card h3", { hasText: "Coastal path" }).waitFor();
+  await page.locator("#TextField input").first().fill("Evening swim");
+  assert.equal(await page.locator("#TextField input").first().inputValue(), "Evening swim");
+  await page.locator(".dc-head input[type=checkbox]").check();
+  await page.locator(".dc-catalog.dc-dark").waitFor();
+  await page.screenshot({ path: join(shots, "03-catalog.png"), fullPage: true });
+  assert.deepEqual(errs, []);
+  assert.deepEqual(harness.errors, []);
+  step(`ok — screenshots in ${shots}`);
+} finally {
+  await harness.close();
+}

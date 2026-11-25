@@ -1,0 +1,58 @@
+{
+  "name": "design-to-components",
+  "version": "0.1.0",
+  "description": "Turn a design or screenshot into a React component kit: keep design tokens (colours, fonts, font sizes, radii, spacing, shadows) and a component checklist in the panel, the agent writes TSX components with one example per state, and the plugin type-checks them with TypeScript (strict), renders every example next to the design, bundles them with esbuild-wasm into an interactive catalog page, and outputs tokens.css and tokens.ts. Flags hard-coded colours and missing states. Local only.",
+  "description_i18n": {
+    "en": "Turn a design or screenshot into a React component kit: keep design tokens (colours, fonts, font sizes, radii, spacing, shadows) and a component checklist in the panel, the agent writes TSX components with one example per state, and the plugin type-checks them with TypeScript (strict), renders every example next to the design, bundles them with esbuild-wasm into an interactive catalog page, and outputs tokens.css and tokens.ts. Flags hard-coded colours and missing states. Local only.",
+    "zh-CN": "把设计稿或截图做成 React 组件库：在面板里维护设计变量（颜色、字体、字号、圆角、间距、阴影）和组件清单，Agent 为每个组件写 TSX，每种状态一个示例；插件用 TypeScript（strict）做类型检查，把每个示例渲染出来与设计稿并排对照，用 esbuild-wasm 打包成可交互的组件目录页，并输出 tokens.css 和 tokens.ts。会提示写死的颜色和缺少的状态示例。全部在本地完成。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "components",
+    "design system",
+    "design tokens",
+    "tsx",
+    "typescript",
+    "storybook",
+    "esbuild",
+    "组件库",
+    "设计稿",
+    "设计变量",
+    "前端"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "design-to-components": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "设计稿转组件库",
+          "en-US": "Design To Components"
+        },
+        "icon": "component",
+        "server": "design-to-components",
+        "resourceUri": "ui://design-to-components/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

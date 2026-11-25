@@ -1,0 +1,21 @@
+.top { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:8px; } .grow { flex:1; }
+.chk { margin-left:6px; }
+.layout { display:grid; grid-template-columns: minmax(0,1.6fr) minmax(300px,1fr); gap:10px; }
+.layout.wd { grid-template-columns: minmax(0,1fr) minmax(0,1.4fr) minmax(300px,1fr); }
+.design { max-height: 82vh; overflow:auto; border:1px solid var(--line); border-radius:6px; } .design img { width:100%; display:block; }
+.center { min-width:0; display:flex; flex-direction:column; gap:6px; }
+iframe.pv { width:100%; height:78vh; border:1px solid var(--line); border-radius:6px; background:#fff; }
+pre.code { height:78vh; overflow:auto; margin:0; background: var(--panel); border-radius:6px; padding:10px; font-size:12px; }
+.tbar { display:flex; gap:2px; flex-wrap:wrap; } .tab { border:none; border-bottom:2px solid transparent; border-radius:0; background:none; font-size:12px; padding:4px 8px; }
+.tab.on { border-bottom-color: var(--accent); color: var(--accent); }
+.side { min-width:0; max-height: 84vh; overflow:auto; }
+.plan td { vertical-align: middle; } .st.done { color: var(--ok); } .st.error { color: var(--bad); } .st.todo { color: var(--muted); }
+td.num { white-space:nowrap; color: var(--muted); font-size:12px; }
+.issue { font-size:12px; margin:3px 0; } .issue .src { font-size:10px; border:1px solid var(--line); border-radius:4px; padding:0 4px; margin-right:4px; color: var(--muted); }
+.issue.error a { color: var(--bad); } .issue.warning a { color: var(--warn); }
+.tg { margin:6px 0; } .tgn { font-size:12px; font-weight:600; color: var(--muted); margin-bottom:3px; }
+.tok { display:grid; grid-template-columns: 30px 110px minmax(0,1fr); gap:6px; align-items:center; margin:2px 0; }
+.tok .tk { font-family: ui-monospace, monospace; font-size:12px; grid-column: 2; } .tok input.tv { grid-column: 3; font-size:12px; }
+.tok input[type=color] { grid-column: 1; width:28px; height:22px; }
+.flist { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0; } input.name { width:240px; }
+.small { font-size:12px; }
