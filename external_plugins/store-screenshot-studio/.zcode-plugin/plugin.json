@@ -1,0 +1,65 @@
+{
+  "name": "store-screenshot-studio",
+  "version": "0.1.0",
+  "description": "Turn raw app screenshots into App Store and Google Play listing images: headline and subheadline, iPhone / Android / iPad device frames, solid or gradient backgrounds, several languages, and exact store pixel sizes (iPhone 6.9″/6.5″/5.5″, iPad 13″, Play phone/tablet) exported as opaque PNGs. Checks long headlines, missing translations and blurry screenshots. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Turn raw app screenshots into App Store and Google Play listing images: headline and subheadline, iPhone / Android / iPad device frames, solid or gradient backgrounds, several languages, and exact store pixel sizes (iPhone 6.9″/6.5″/5.5″, iPad 13″, Play phone/tablet) exported as opaque PNGs. Checks long headlines, missing translations and blurry screenshots. Runs locally; no API keys.",
+    "zh-CN": "把 App 原始截图做成 App Store 和 Google Play 的宣传截图：加主副标题、iPhone / 安卓 / iPad 设备边框、纯色或渐变背景，支持多语言，按商店要求的精确像素尺寸（iPhone 6.9″/6.5″/5.5″、iPad 13″、Google Play 手机/平板）导出无透明通道的 PNG。自动检查标题过长、缺少翻译和截图分辨率不足。全部本地处理，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "app-store",
+    "google-play",
+    "screenshots",
+    "aso",
+    "mockup",
+    "device-frame",
+    "localization",
+    "ios",
+    "android",
+    "应用商店"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "store-screenshot-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "STORE_SHOTS_FONT": "${user_config.fontPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "应用商店截图制作",
+          "en-US": "Store Screenshot Studio"
+        },
+        "icon": "smartphone",
+        "server": "store-screenshot-studio",
+        "resourceUri": "ui://store-screenshot-studio/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "fontPath": {
+      "type": "string",
+      "default": "",
+      "title": "中文字体文件（可选）",
+      "description": "可选。标题文字使用的字体文件（.ttf/.otf/.ttc）完整路径。默认自动查找系统中文字体（macOS: 苹方 / 冬青黑体，Windows: 微软雅黑，Linux: Noto Sans CJK）。"
+    }
+  }
+}
