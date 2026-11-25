@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "product-photo-studio",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/product-photo-studio",
+      "displayName": "Product Photo Studio",
+      "displayName_i18n": {
+        "en": "Product Photo Studio",
+        "zh-CN": "电商商品图助手"
+      },
+      "description": "Batch-prepare e-commerce product photos: remove plain studio backgrounds, crop and normalise product size and position, add ground or drop shadows, and export white-background JPGs, transparent PNGs and marketplace sizes (Taobao, Amazon, Shopify, social). Tweak any photo on its own in the side panel. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Batch-prepare e-commerce product photos: remove plain studio backgrounds, crop and normalise product size and position, add ground or drop shadows, and export white-background JPGs, transparent PNGs and marketplace sizes (Taobao, Amazon, Shopify, social). Tweak any photo on its own in the side panel. Runs locally; no API keys.",
+        "zh-CN": "批量处理电商商品图：去掉纯色/浅色棚拍背景，自动裁切并统一商品大小和位置，加地面柔影或投影，导出白底 JPG、透明 PNG 和各平台尺寸（淘宝、拼多多、Amazon、Shopify、社媒）。不满意的图可以在侧栏单独调整。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "e-commerce",
+        "product-photo",
+        "white-background",
+        "remove-background",
+        "batch",
+        "taobao",
+        "amazon",
+        "shopify",
+        "商品图",
+        "白底图"
+      ],
+      "examplePrompts": [
+        "Turn every photo in products/ into 800×800 white-background main images and transparent PNGs",
+        "Make all product photos the same size with a soft shadow, Amazon 2000×2000",
+        "The perfume photo sits too high — lower it and export just that one again"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 products 文件夹里的商品照全部做成 800×800 白底主图和透明 PNG",
+          "把所有商品图统一大小、加柔和阴影，导出 Amazon 2000×2000",
+          "香水那张位置太靠上了，往下挪一点，只重新导出这一张"
+        ]
+      }
     }
   ]
 }
