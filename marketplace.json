@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "game-sfx-pack",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/game-sfx-pack",
+      "displayName": "Game SFX Pack",
+      "displayName_i18n": {
+        "en": "Game SFX Pack",
+        "zh-CN": "游戏音效素材包"
+      },
+      "description": "Make a game's sound effects from its event list: jump, coin, hit, explosion, button click and more are synthesised procedurally (reproducible, with variations you can re-roll and tweak), existing recordings are trimmed, loudness-matched and turned into seamless loops, and everything is exported by category as WAV/OGG with a manifest. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Make a game's sound effects from its event list: jump, coin, hit, explosion, button click and more are synthesised procedurally (reproducible, with variations you can re-roll and tweak), existing recordings are trimmed, loudness-matched and turned into seamless loops, and everything is exported by category as WAV/OGG with a manifest. Runs locally; no API keys.",
+        "zh-CN": "按游戏事件清单制作音效：跳跃、金币、受击、爆炸、按钮点击等用程序合成（可复现，可换变体、可微调），已有录音可以去首尾静音、统一响度、做成无缝循环，最后按分类导出 WAV/OGG 和清单。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "game",
+        "sound effects",
+        "sfx",
+        "sfxr",
+        "audio",
+        "loop",
+        "loudness",
+        "wav",
+        "ogg",
+        "游戏",
+        "音效",
+        "循环",
+        "响度"
+      ],
+      "examplePrompts": [
+        "Make sounds for my platformer: jump, coin pickup, hurt, death, button click and menu confirm",
+        "Turn rain.wav into a seamless loop and match it to the other sounds",
+        "Make the jump a bit higher and the explosion longer, then export OGG too"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "给我的平台跳跃游戏做一套音效：跳跃、拾取金币、受伤、死亡、按钮点击、菜单确认",
+          "把 rain.wav 做成无缝循环，音量和其他音效统一",
+          "跳跃声再高一点、爆炸再长一点，然后也导出 OGG"
+        ]
+      }
     }
   ]
 }
