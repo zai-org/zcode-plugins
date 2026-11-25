@@ -59,7 +59,9 @@ def prepare_template() -> str:
         try:
             os.kill(int(lock.read_text().strip()), 0)
             return "webapp node_modules master 预热进行中 (后台)"
-        except (ValueError, ProcessLookupError, PermissionError):
+        # Windows 上 os.kill(pid, 0) 对死 pid 抛 OSError(WinError 87)，
+        # 不是 POSIX 的 ProcessLookupError；只捕后者会让每个会话首轮都崩。
+        except (ValueError, OSError):
             lock.unlink(missing_ok=True)
     nm_root.mkdir(parents=True, exist_ok=True)
     log_path = nm_root / "prepare.log"
