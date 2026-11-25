@@ -1,0 +1,68 @@
+{
+  "name": "product-3d-showcase",
+  "version": "0.1.0",
+  "description": "Turn a glTF/GLB product model into a consistent set of marketing assets: multi-angle product images on white or transparent backgrounds with studio lighting and a soft ground shadow, a frame-exact 360° turntable video (WebM, plus MP4 with ffmpeg) and a self-contained web 3D viewer that works offline. Renders locally with three.js; no API keys.",
+  "description_i18n": {
+    "en": "Turn a glTF/GLB product model into a consistent set of marketing assets: multi-angle product images on white or transparent backgrounds with studio lighting and a soft ground shadow, a frame-exact 360° turntable video (WebM, plus MP4 with ffmpeg) and a self-contained web 3D viewer that works offline. Renders locally with three.js; no API keys.",
+    "zh-CN": "把 glTF/GLB 产品模型做成一整套统一风格的展示素材：白底或透明底的多角度产品图（影棚灯光、柔和地面阴影）、逐帧精确的 360° 旋转视频（WebM，装了 ffmpeg 再出 MP4），以及可离线打开的网页 3D 展示。用 three.js 在本地渲染，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "3d",
+    "product",
+    "gltf",
+    "glb",
+    "three.js",
+    "turntable",
+    "360",
+    "product photo",
+    "viewer",
+    "产品图",
+    "3D 展示",
+    "白底图",
+    "360 度"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "product-3d-showcase": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FFMPEG_PATH": "${user_config.ffmpegPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "产品 3D 展示",
+          "en-US": "Product 3D Showcase"
+        },
+        "icon": "box",
+        "server": "product-3d-showcase",
+        "resourceUri": "ui://product-3d-showcase/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "ffmpegPath": {
+      "type": "string",
+      "default": "",
+      "title": "ffmpeg 路径（可选）",
+      "description": "可选。只有把 360° 视频另存为 MP4 时需要 ffmpeg。默认在 PATH 和 /opt/homebrew/bin、/usr/local/bin 中查找。"
+    }
+  }
+}
