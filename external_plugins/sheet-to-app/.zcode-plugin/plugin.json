@@ -1,0 +1,60 @@
+{
+  "name": "sheet-to-app",
+  "version": "0.1.0",
+  "description": "Turn an inventory, booking or customer spreadsheet (.xlsx / .csv) into a small offline web app: infers field types, required fields, options and a key column, lists data problems in the sheet, and writes one HTML file with search, filters, sorting, add / edit / delete forms with validation, a highlight rule (e.g. low stock), CSV import / export and JSON backup. Data stays in the browser. The mapping is saved, so when the sheet changes the app is rebuilt with your settings kept. No server, no network.",
+  "description_i18n": {
+    "en": "Turn an inventory, booking or customer spreadsheet (.xlsx / .csv) into a small offline web app: infers field types, required fields, options and a key column, lists data problems in the sheet, and writes one HTML file with search, filters, sorting, add / edit / delete forms with validation, a highlight rule (e.g. low stock), CSV import / export and JSON backup. Data stays in the browser. The mapping is saved, so when the sheet changes the app is rebuilt with your settings kept. No server, no network.",
+    "zh-CN": "把库存、预约、客户等表格（.xlsx / .csv）变成一个离线小应用：自动识别字段类型、必填、选项和唯一编号列，列出表格里的数据问题，生成一个 HTML 文件，带搜索、筛选、排序、新增/修改/删除（含校验）、高亮规则（如库存不足）、CSV 导入导出和 JSON 备份。数据存在浏览器本地。字段映射会保存，表格更新后一键重新生成并保留设置。不需要服务器，不联网。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "spreadsheet",
+    "excel",
+    "csv",
+    "app",
+    "inventory",
+    "booking",
+    "crud",
+    "no-code",
+    "offline",
+    "表格",
+    "小应用",
+    "库存",
+    "预约",
+    "客户管理"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "sheet-to-app": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表格转小应用",
+          "en-US": "Sheet To App"
+        },
+        "icon": "table",
+        "server": "sheet-to-app",
+        "resourceUri": "ui://sheet-to-app/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
