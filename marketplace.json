@@ -1673,6 +1673,58 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sprite-animation-pack",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sprite-animation-pack",
+      "displayName": "Sprite Animation Pack",
+      "displayName_i18n": {
+        "en": "Sprite Animation Pack",
+        "zh-CN": "游戏角色动作包"
+      },
+      "description": "Turn a character's animation frames — a folder of PNGs or a whole sprite sheet — into a game-ready animation pack: actions grouped automatically, every frame lined up on the feet (or kept in place), frame timing and loops, a uniform-cell atlas PNG, Aseprite/Phaser JSON, a Godot 4 SpriteFrames .tres and Unity slicing notes. Preview each action with onion skin and nudge frames pixel by pixel. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a character's animation frames — a folder of PNGs or a whole sprite sheet — into a game-ready animation pack: actions grouped automatically, every frame lined up on the feet (or kept in place), frame timing and loops, a uniform-cell atlas PNG, Aseprite/Phaser JSON, a Godot 4 SpriteFrames .tres and Unity slicing notes. Preview each action with onion skin and nudge frames pixel by pixel. Runs locally; no API keys.",
+        "zh-CN": "把角色的动作帧（一文件夹 PNG 或一整张精灵图）整理成游戏可直接用的动作包：自动按动作分组，所有帧按脚底对齐（或保持原位），设置帧时长和循环，导出等格图集 PNG、Aseprite/Phaser JSON、Godot 4 SpriteFrames .tres 和 Unity 切片说明。面板里逐个动作播放预览，带洋葱皮，可逐像素微调。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "sprite",
+        "sprite sheet",
+        "animation",
+        "atlas",
+        "pixel art",
+        "godot",
+        "phaser",
+        "unity",
+        "aseprite",
+        "game",
+        "精灵图",
+        "动作",
+        "图集",
+        "游戏"
+      ],
+      "examplePrompts": [
+        "Slice hero.png into 32×32 cells — rows are idle, run and jump — and export a pack for Godot and Phaser",
+        "Line up the frames in art/knight/ on the feet, make attack play once at 15 fps",
+        "Export the runner at 4× for pixel-art scaling"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 hero.png 按 32×32 切开，三行分别是 idle、run、jump，导出 Godot 和 Phaser 用的动作包",
+          "把 art/knight/ 里的帧按脚底对齐，attack 只播一次、15 帧每秒",
+          "把 runner 放大 4 倍导出，像素风不要糊"
+        ]
+      }
     }
   ]
 }
