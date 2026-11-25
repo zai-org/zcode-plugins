@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="ui.css"><title></title></head>
+<body class="popup">
+  <header><img src="icons/icon32.png" alt="" width="20" height="20"><h1 id="name"></h1></header>
+  <p id="desc" class="muted"></p>
+  <div id="need" class="warn" hidden></div>
+  <button id="run" class="primary" data-i18n="run"></button>
+  <ol id="steps"></ol>
+  <div id="err" class="err" hidden></div>
+  <div id="result" hidden>
+    <h2 data-i18n="results"></h2>
+    <div id="sets"></div>
+  </div>
+  <footer><a href="#" id="opts" data-i18n="settings"></a><span id="when" class="muted"></span></footer>
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

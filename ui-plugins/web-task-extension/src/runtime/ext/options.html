@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="ui.css"><title></title></head>
+<body class="options">
+  <header><img src="icons/icon48.png" alt="" width="32" height="32"><div><h1 id="name"></h1><p id="desc" class="muted"></p></div></header>
+  <section>
+    <h2 data-i18n="settings"></h2>
+    <form id="form"></form>
+    <div class="row"><button id="save" class="primary" data-i18n="save"></button><span id="saved" class="ok" hidden data-i18n="saved"></span></div>
+  </section>
+  <section>
+    <h2 data-i18n="stepsTitle"></h2>
+    <ol id="steps"></ol>
+  </section>
+  <section>
+    <h2 data-i18n="permsTitle"></h2>
+    <p class="muted" data-i18n="permsIntro"></p>
+    <table id="perms"></table>
+  </section>
+  <script src="common.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
