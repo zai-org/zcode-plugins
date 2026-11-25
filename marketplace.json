@@ -10,9 +10,47 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
+    {
+      "name": "session-stats",
+      "componentTypes": [
+        "ui"
+      ],
+      "displayName": "Session Stats",
+      "displayName_i18n": {
+        "en": "Session Stats",
+        "zh-CN": "会话统计"
+      },
+      "source": "./external_plugins/session-stats",
+      "description": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",
+      "description_i18n": {
+        "en": "Session statistics for ZCode: turns/steps, model vs tool time, TTFT, TPS (average + latest request), token usage and cache hit rate. Zero third-party dependencies.",
+        "zh-CN": "会话统计：轮次/步数、模型/工具耗时、TTFT、TPS（会话平均+最近请求）、token 用量与缓存命中率。零第三方依赖。"
+      },
+      "version": "0.4.0",
+      "author": {
+        "name": "gary.liu",
+        "url": "https://github.com/huantest2024"
+      },
+      "homepage": "https://github.com/huantest2024/zcode-session-stats",
+      "repository": "https://github.com/huantest2024/zcode-session-stats",
+      "license": "MIT",
+      "keywords": [
+        "stats",
+        "usage",
+        "tokens",
+        "cache",
+        "ttft",
+        "tps",
+        "panel"
+      ],
+      "category": "developer-tools"
+    },
     {
       "name": "cloudbase-skills",
       "source": "./plugins/cloudbase-skills",
@@ -810,7 +848,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -833,7 +873,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -860,7 +902,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -887,7 +931,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -914,7 +960,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -941,7 +989,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -968,7 +1018,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -995,7 +1047,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1022,7 +1076,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1049,7 +1105,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1132,7 +1190,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
