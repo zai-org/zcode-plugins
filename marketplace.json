@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "course-video-packager",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/course-video-packager",
+      "displayName": "Course Video Packager",
+      "displayName_i18n": {
+        "en": "Course Video Packager",
+        "zh-CN": "课程视频整理"
+      },
+      "description": "Turn a full lecture recording into a publishing package: chapters planned from the transcript and long pauses, one video per chapter, subtitles cut and re-timed per chapter (SRT + VTT), a cover image for every chapter and the course, an outline (Markdown, JSON, CSV, chapter list for video descriptions) and a zip. Uses the ffmpeg on your computer; no API keys.",
+      "description_i18n": {
+        "en": "Turn a full lecture recording into a publishing package: chapters planned from the transcript and long pauses, one video per chapter, subtitles cut and re-timed per chapter (SRT + VTT), a cover image for every chapter and the course, an outline (Markdown, JSON, CSV, chapter list for video descriptions) and a zip. Uses the ffmpeg on your computer; no API keys.",
+        "zh-CN": "把整段课程录像整理成发布包：根据字幕内容和较长停顿规划章节，每章导出一段视频，字幕按章切分并重新对齐时间（SRT + VTT），每章和整门课都生成封面，附课程目录（Markdown、JSON、CSV、可贴到视频简介的章节时间）并打成 zip。使用电脑上已安装的 ffmpeg，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "course",
+        "lecture",
+        "video",
+        "chapters",
+        "subtitles",
+        "srt",
+        "education",
+        "ffmpeg",
+        "课程",
+        "录播课",
+        "章节",
+        "字幕"
+      ],
+      "examplePrompts": [
+        "Split lecture-03.mp4 into chapters based on what I talk about and build a publishing package",
+        "Use these chapter times and titles, cut the subtitles per chapter too",
+        "Rebuild the course package with faster cuts and a red cover colour"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 第3讲.mp4 按讲的内容分成章节，做成发布包",
+          "按我给的章节时间和标题切分，字幕也按章切开",
+          "用快速切分重新生成课程包，封面换成红色"
+        ]
+      }
     }
   ]
 }
