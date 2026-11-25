@@ -1,0 +1,58 @@
+{
+  "name": "help-center-builder",
+  "version": "0.1.0",
+  "description": "Turn a folder of Markdown / HTML docs into a static help center: home page with category cards, category pages, articles with breadcrumbs, sidebar, table of contents, related articles and previous / next, and instant full-text search that works offline (Chinese too). Incremental builds rewrite only the pages a change affects and list them with the reason. Broken links and anchors are reported. The output folder can be uploaded to any static host.",
+  "description_i18n": {
+    "en": "Turn a folder of Markdown / HTML docs into a static help center: home page with category cards, category pages, articles with breadcrumbs, sidebar, table of contents, related articles and previous / next, and instant full-text search that works offline (Chinese too). Incremental builds rewrite only the pages a change affects and list them with the reason. Broken links and anchors are reported. The output folder can be uploaded to any static host.",
+    "zh-CN": "把一个放 Markdown / HTML 文档的文件夹生成静态帮助中心：带分类卡片的首页、分类页，文章页有面包屑、侧边导航、目录、相关文章和上一篇 / 下一篇，还有离线可用的即时全文搜索（支持中文）。增量构建只重写受改动影响的页面，并列出原因；同时报告坏链和失效锚点。输出文件夹可直接上传到任意静态托管。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "help center",
+    "knowledge base",
+    "documentation",
+    "static site",
+    "markdown",
+    "faq",
+    "search",
+    "support",
+    "帮助中心",
+    "知识库",
+    "文档站",
+    "常见问题"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "help-center-builder": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "帮助中心制作",
+          "en-US": "Help Center Builder"
+        },
+        "icon": "life-buoy",
+        "server": "help-center-builder",
+        "resourceUri": "ui://help-center-builder/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

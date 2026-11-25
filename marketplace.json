@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "help-center-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/help-center-builder",
+      "displayName": "Help Center Builder",
+      "displayName_i18n": {
+        "en": "Help Center Builder",
+        "zh-CN": "帮助中心制作"
+      },
+      "description": "Turn a folder of Markdown / HTML docs into a static help center: home page with category cards, category pages, articles with breadcrumbs, sidebar, table of contents, related articles and previous / next, and instant full-text search that works offline (Chinese too). Incremental builds rewrite only the pages a change affects and list them with the reason. Broken links and anchors are reported. The output folder can be uploaded to any static host.",
+      "description_i18n": {
+        "en": "Turn a folder of Markdown / HTML docs into a static help center: home page with category cards, category pages, articles with breadcrumbs, sidebar, table of contents, related articles and previous / next, and instant full-text search that works offline (Chinese too). Incremental builds rewrite only the pages a change affects and list them with the reason. Broken links and anchors are reported. The output folder can be uploaded to any static host.",
+        "zh-CN": "把一个放 Markdown / HTML 文档的文件夹生成静态帮助中心：带分类卡片的首页、分类页，文章页有面包屑、侧边导航、目录、相关文章和上一篇 / 下一篇，还有离线可用的即时全文搜索（支持中文）。增量构建只重写受改动影响的页面，并列出原因；同时报告坏链和失效锚点。输出文件夹可直接上传到任意静态托管。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "help center",
+        "knowledge base",
+        "documentation",
+        "static site",
+        "markdown",
+        "faq",
+        "search",
+        "support",
+        "帮助中心",
+        "知识库",
+        "文档站",
+        "常见问题"
+      ],
+      "examplePrompts": [
+        "Build a help center from the docs folder",
+        "I edited a few articles; update the help center",
+        "Check the help docs for broken links"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 docs 文件夹生成帮助中心",
+          "我改了几篇文章，更新一下帮助中心",
+          "检查帮助文档里有没有坏链"
+        ]
+      }
     }
   ]
 }

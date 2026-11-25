@@ -1,0 +1,19 @@
+.top { display:flex; gap:8px; align-items:end; flex-wrap:wrap; }
+.fld { display:grid; gap:3px; }
+.fld .lb { font-size:12px; color:var(--muted); }
+.grow { flex:1; }
+.sum { padding:8px 10px; border-radius:8px; margin:8px 0; background:var(--okbg); color:var(--ok); }
+.sum.bad { background:var(--badbg); color:var(--bad); }
+.chips { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+.chip { border:1px solid var(--line); border-radius:12px; padding:1px 9px; font-size:12px; background:var(--bg); }
+.rb li, .iss div { margin:3px 0; }
+.rb code, .tree code { font: 12px ui-monospace, Menlo, monospace; }
+.why { display:inline-block; font-size:11px; padding:0 6px; border-radius:9px; background:var(--warnbg); color:var(--warn); margin-left:4px; }
+.iss .error { color:var(--bad); } .iss .warn { color:var(--warn); } .iss .info { color:var(--muted); }
+.tree { margin:0; padding-left:16px; }
+.tree li { margin:2px 0; }
+.tree a { cursor:pointer; color:var(--accent); }
+.tree a.on { font-weight:700; }
+iframe.pv { width:100%; height:720px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+.scroll { max-height:300px; overflow:auto; }
+ul.rb { padding-left:18px; margin:4px 0; }
