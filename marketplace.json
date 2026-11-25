@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "theme-from-design",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/theme-from-design",
+      "displayName": "Theme From Design",
+      "displayName_i18n": {
+        "en": "Theme From Design",
+        "zh-CN": "设计稿转店铺主题"
+      },
+      "description": "Turn a store design into a Shopify Online Store 2.0 theme: the plugin creates a valid theme skeleton (layout, header/footer section groups, JSON templates, base sections, settings with your brand colours and fonts, en + zh-CN locales); the agent writes sections from the design; every change is checked (Liquid syntax, section schemas, setting references, JSON template references) and the full check runs Shopify's theme-check offline. Preview pages with sample products next to the design at desktop and mobile widths, then package a zip for upload. Shopify only; no store login or upload.",
+      "description_i18n": {
+        "en": "Turn a store design into a Shopify Online Store 2.0 theme: the plugin creates a valid theme skeleton (layout, header/footer section groups, JSON templates, base sections, settings with your brand colours and fonts, en + zh-CN locales); the agent writes sections from the design; every change is checked (Liquid syntax, section schemas, setting references, JSON template references) and the full check runs Shopify's theme-check offline. Preview pages with sample products next to the design at desktop and mobile widths, then package a zip for upload. Shopify only; no store login or upload.",
+        "zh-CN": "把店铺设计稿做成 Shopify Online Store 2.0 主题：插件生成合规的主题骨架（layout、页眉/页脚 section 组、JSON 模板、基础 sections、带品牌色和字体的主题设置、英文和简体中文语言包），Agent 按设计稿写 section；每次修改都检查 Liquid 语法、section schema、设置引用和 JSON 模板引用，完整检查会离线运行 Shopify 官方 theme-check。面板用样例商品把页面渲染出来，与设计稿并排对照（桌面/手机），最后打包成可上传的 zip。仅支持 Shopify，不登录、不上传店铺。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "shopify",
+        "theme",
+        "liquid",
+        "online store 2.0",
+        "ecommerce",
+        "design to code",
+        "theme-check",
+        "店铺主题",
+        "设计稿",
+        "电商",
+        "主题开发",
+        "模板"
+      ],
+      "examplePrompts": [
+        "Build a Shopify theme from this homepage design",
+        "Add a newsletter section like the one in the design",
+        "Check the theme and package it for upload"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "按这张首页设计稿做一个 Shopify 主题",
+          "照设计稿加一个订阅邮件的 section",
+          "检查主题并打包成可上传的 zip"
+        ]
+      }
     }
   ]
 }
