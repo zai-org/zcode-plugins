@@ -1,0 +1,226 @@
+{
+ "run": {
+  "message": "运行任务"
+ },
+ "running": {
+  "message": "运行中…"
+ },
+ "results": {
+  "message": "结果"
+ },
+ "settings": {
+  "message": "设置"
+ },
+ "save": {
+  "message": "保存"
+ },
+ "saved": {
+  "message": "已保存"
+ },
+ "stepsTitle": {
+  "message": "执行的步骤"
+ },
+ "permsTitle": {
+  "message": "权限及用途"
+ },
+ "permsIntro": {
+  "message": "这个扩展只申请步骤需要的权限。只在你点“运行任务”时执行，不向任何地方发送数据；设置和结果只保存在本浏览器里。"
+ },
+ "timeoutLabel": {
+  "message": "每步最长等待（毫秒）"
+ },
+ "timeoutHelp": {
+  "message": "某一步等待元素或页面加载的最长时间，超时即失败。"
+ },
+ "needSettings": {
+  "message": "请先在设置里填写：$p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "rowsIn": {
+  "message": "“$p2$”共 $p1$ 行",
+  "placeholders": {
+   "p2": {
+    "content": "$2"
+   },
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "lastRun": {
+  "message": "上次运行 $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "stepN": {
+  "message": "第 $p1$ 步",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "logExtracted": {
+  "message": "第 $p2$ 页提取 $p1$ 行",
+  "placeholders": {
+   "p2": {
+    "content": "$2"
+   },
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "logSaved": {
+  "message": "已保存 $p1$（$p2$ 行）",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "logLinks": {
+  "message": "正在下载 $p1$ 个文件",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "logDone": {
+  "message": "完成"
+ },
+ "errTimeoutLoad": {
+  "message": "页面加载超时"
+ },
+ "errNoAccess": {
+  "message": "扩展没有 $p1$ 的访问权限。请把该网站加入任务后重新生成。",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "errNoResult": {
+  "message": "页面没有返回结果（可能已跳转）"
+ },
+ "errNoTab": {
+  "message": "没有可操作的标签页。请在目标网页上运行任务。"
+ },
+ "errSettings": {
+  "message": "请先在设置里填写：$p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dOpen": {
+  "message": "打开 $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dClick": {
+  "message": "点击 $p1$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dFill": {
+  "message": "在 $p1$ 填入 $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "dWait": {
+  "message": "等待 $p1$ 出现",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dWaitGone": {
+  "message": "等待 $p1$ 消失",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dWaitMs": {
+  "message": "等待 $p1$ 秒",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "dExtract": {
+  "message": "从每个 $p1$ 提取 $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "dExtractPages": {
+  "message": "从每个 $p1$ 提取 $p2$（最多 $p3$ 页）",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   },
+   "p3": {
+    "content": "$3"
+   }
+  }
+ },
+ "dDownload": {
+  "message": "把“$p1$”保存为 $p2$",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   },
+   "p2": {
+    "content": "$2"
+   }
+  }
+ },
+ "dDownloadLinks": {
+  "message": "下载 $p1$ 链接的文件",
+  "placeholders": {
+   "p1": {
+    "content": "$1"
+   }
+  }
+ },
+ "errNotWebPage": {
+  "message": "当前标签页不是网页。请先打开任务对应的网页，再点扩展图标。"
+ }
+}
