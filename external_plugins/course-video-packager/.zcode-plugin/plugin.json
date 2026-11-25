@@ -1,0 +1,74 @@
+{
+  "name": "course-video-packager",
+  "version": "0.1.0",
+  "description": "Turn a full lecture recording into a publishing package: chapters planned from the transcript and long pauses, one video per chapter, subtitles cut and re-timed per chapter (SRT + VTT), a cover image for every chapter and the course, an outline (Markdown, JSON, CSV, chapter list for video descriptions) and a zip. Uses the ffmpeg on your computer; no API keys.",
+  "description_i18n": {
+    "en": "Turn a full lecture recording into a publishing package: chapters planned from the transcript and long pauses, one video per chapter, subtitles cut and re-timed per chapter (SRT + VTT), a cover image for every chapter and the course, an outline (Markdown, JSON, CSV, chapter list for video descriptions) and a zip. Uses the ffmpeg on your computer; no API keys.",
+    "zh-CN": "把整段课程录像整理成发布包：根据字幕内容和较长停顿规划章节，每章导出一段视频，字幕按章切分并重新对齐时间（SRT + VTT），每章和整门课都生成封面，附课程目录（Markdown、JSON、CSV、可贴到视频简介的章节时间）并打成 zip。使用电脑上已安装的 ffmpeg，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "course",
+    "lecture",
+    "video",
+    "chapters",
+    "subtitles",
+    "srt",
+    "education",
+    "ffmpeg",
+    "课程",
+    "录播课",
+    "章节",
+    "字幕"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "course-video-packager": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}",
+        "FFMPEG_PATH": "${user_config.ffmpegPath}",
+        "COURSE_FONT": "${user_config.fontPath}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "课程视频整理",
+          "en-US": "Course Video Packager"
+        },
+        "icon": "graduation-cap",
+        "server": "course-video-packager",
+        "resourceUri": "ui://course-video-packager/panel.html",
+        "availability": "session"
+      }
+    ]
+  },
+  "userConfig": {
+    "ffmpegPath": {
+      "type": "string",
+      "default": "",
+      "title": "ffmpeg 路径（可选）",
+      "description": "可选。ffmpeg 可执行文件的完整路径。默认在 PATH 和 /opt/homebrew/bin、/usr/local/bin 中查找。"
+    },
+    "fontPath": {
+      "type": "string",
+      "default": "",
+      "title": "中文字体文件（可选）",
+      "description": "可选。封面文字使用的字体文件（.ttf/.otf/.ttc）。默认自动查找系统中文字体。"
+    }
+  }
+}
