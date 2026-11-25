@@ -1673,6 +1673,53 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "pdf-form-batch-fill",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/pdf-form-batch-fill",
+      "displayName": "PDF Form Batch Fill",
+      "displayName_i18n": {
+        "en": "PDF Form Batch Fill",
+        "zh-CN": "表单批量填写"
+      },
+      "description": "Fill one blank PDF form for every row of a roster (CSV/XLSX): map fields once in a side panel, place text boxes on forms without fields, check for missing values and text that overflows, then generate one PDF per person plus a merged file and a report. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Fill one blank PDF form for every row of a roster (CSV/XLSX): map fields once in a side panel, place text boxes on forms without fields, check for missing values and text that overflows, then generate one PDF per person plus a merged file and a report. Runs locally; no API keys.",
+        "zh-CN": "用一张名单（CSV/XLSX）批量填写同一份空白 PDF 表单：在侧栏里映射一次字段，没有表单域的 PDF 可直接在页面上拖出文字框；先检查漏填和文字超出，再为每个人生成一份 PDF，可另存合并文件和检查报告。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "pdf",
+        "form",
+        "batch",
+        "mail-merge",
+        "acroform",
+        "roster",
+        "excel",
+        "csv",
+        "报名表"
+      ],
+      "examplePrompts": [
+        "Fill 报名表.pdf for everyone in 学员名单.xlsx, one PDF per person named after them",
+        "Check which rows of the roster would overflow the address field",
+        "This PDF has no form fields — put name and phone in the boxes on page 1 for each row"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 学员名单.xlsx 批量填写 报名表.pdf，每人一份，文件名用姓名",
+          "检查名单里哪些人的地址会超出表格",
+          "这份 PDF 没有表单域，帮我把每个人的姓名和电话填到第一页对应的格子里"
+        ]
+      }
     }
   ]
 }

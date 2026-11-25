@@ -1,0 +1,20 @@
+.toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.spacer { flex:1; }
+.stage { position:relative; border:1px solid var(--line); border-radius:6px; overflow:auto; background:#888; min-height:200px; }
+.stage canvas { display:block; background:#fff; }
+.overlay { position:absolute; left:0; top:0; }
+.overlay.drawing { cursor: crosshair; }
+.overlay .box { position:absolute; border:1.5px dashed rgba(37,99,235,.55); background:rgba(37,99,235,.06); border-radius:2px; cursor:pointer; }
+.overlay .box.mapped { border-style:solid; }
+.overlay .box.box { border-color: rgba(147,51,234,.7); background: rgba(147,51,234,.08); cursor: move; }
+.overlay .box.bad { border-color: #dc2626; background: rgba(220,38,38,.12); }
+.overlay .box.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+.overlay .box.ghost { border: 1.5px solid #9333ea; }
+.fields input:not([type]) , .fields input[list] { width: 100%; min-width: 120px; }
+.fields input.num { width: 56px; }
+.fields tr.selected td { background: rgba(37,99,235,.08); }
+.fields .fname { font-weight: 600; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.small { font-size: 11px; }
+.scroll { max-height: 46vh; overflow:auto; }
+tr.clickable { cursor: pointer; }
+.split { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
