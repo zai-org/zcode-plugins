@@ -4,10 +4,10 @@ Calibrated judgment tools for ZCode agents, built on [TypeSafe Jev](https://docs
 
 ## What it does
 
-- Declares a `jev` MCP server (enabled with the plugin) that exposes eleven judgment tools: `jev_verify`, `jev_screen`, `jev_noul`, `jev_find`, `jev_rerank`, `jev_classify`, `jev_decide`, `jev_compare`, `jev_extract`, `jev_review`, `jev_gate`.
+- Declares a `jev` MCP server (enabled with the plugin) that exposes twelve judgment tools: `jev_verify`, `jev_screen`, `jev_noul`, `jev_find`, `jev_rerank`, `jev_classify`, `jev_decide`, `jev_compare`, `jev_extract`, `jev_audit`, `jev_review`, `jev_gate`.
 - Ships a `jev-judgment` skill that teaches the agent when to reach for a judgment tool instead of answering from its own reading — adapted from the canonical skill in the `@jkudish/jev-mcp` package.
 
-Typical uses: screen fetched or pasted text before it enters context, verify claims against cited evidence, classify support tickets against a shared catalog, pick between implementation options, review a diff before calling the task done, and gate completion claims against real test output.
+Typical uses: screen fetched or pasted text before it enters context, verify claims against cited evidence, classify support tickets against a shared catalog, pick between implementation options, audit extracted values against their source before trusting them, review a diff before calling the task done, and gate completion claims against real test output.
 
 ## Setup
 
@@ -18,7 +18,7 @@ Typical uses: screen fetched or pasted text before it enters context, verify cla
 
 ## Network access, dependencies, and side effects
 
-- The server is enabled with the plugin and started via `npx -y @jkudish/jev-mcp@0.10.0`: Node downloads that package (and its dependencies) from the npm registry on first run. The version is pinned; bump it deliberately.
+- The server is enabled with the plugin and started via `npx -y @jkudish/jev-mcp@0.15.0`: Node downloads that package (and its dependencies) from the npm registry on first run. The version is pinned; bump it deliberately.
 - Every tool call sends the input text to the TypeSafe Jev API (configurable to other Jev-compatible providers via the server's own configuration). Inputs leave the machine — do not send secrets or private source unless policy allows it.
 - Calls against the TypeSafe API are billed per input token to the API key's account; every successful result reports token usage.
 - The plugin writes no files, registers no hooks, and runs no commands other than the MCP server process itself.
