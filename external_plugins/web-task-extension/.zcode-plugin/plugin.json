@@ -1,0 +1,58 @@
+{
+  "name": "web-task-extension",
+  "version": "0.1.0",
+  "description": "Turn a browser chore you repeat into a Chrome / Edge extension. Describe it; it becomes steps (open, click, fill, wait, extract rows with fields across pages, download CSV / JSON or linked files) with user settings, and a Manifest V3 extension with a Run button popup, an options page, minimal permissions explained in plain words, and a store-ready zip. The manifest and code are validated (references, icons, permissions vs. steps, MV3 CSP, scripts, locales). No login automation.",
+  "description_i18n": {
+    "en": "Turn a browser chore you repeat into a Chrome / Edge extension. Describe it; it becomes steps (open, click, fill, wait, extract rows with fields across pages, download CSV / JSON or linked files) with user settings, and a Manifest V3 extension with a Run button popup, an options page, minimal permissions explained in plain words, and a store-ready zip. The manifest and code are validated (references, icons, permissions vs. steps, MV3 CSP, scripts, locales). No login automation.",
+    "zh-CN": "把你在浏览器里反复做的操作变成 Chrome / Edge 扩展。描述一下流程，就会整理成步骤（打开、点击、填写、等待、跨页提取带字段的数据、下载 CSV / JSON 或链接文件）和设置项，并生成 Manifest V3 扩展：带“运行任务”按钮的弹窗、设置页、最小权限及通俗的权限说明，以及可上传商店的 zip。自动校验 manifest 和代码（引用文件、图标、权限与步骤是否一致、MV3 CSP、脚本、多语言）。不做自动登录。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "chrome extension",
+    "browser extension",
+    "manifest v3",
+    "automation",
+    "web scraping",
+    "rpa",
+    "edge",
+    "浏览器扩展",
+    "自动化",
+    "网页操作",
+    "数据提取",
+    "插件"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "web-task-extension": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "网页操作转浏览器扩展",
+          "en-US": "Web Task Extension"
+        },
+        "icon": "puzzle",
+        "server": "web-task-extension",
+        "resourceUri": "ui://web-task-extension/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
