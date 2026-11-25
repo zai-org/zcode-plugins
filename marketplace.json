@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "doc-compare",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/doc-compare",
+      "displayName": "Doc Compare",
+      "displayName_i18n": {
+        "en": "Doc Compare",
+        "zh-CN": "文档版本对照"
+      },
+      "description": "Compare two versions of a contract, proposal or policy (DOCX, PDF, Markdown or TXT, even across formats): paragraphs are aligned and each change is shown word by word (character by character for Chinese), with changes to numbers flagged. Review side by side, mark each change confirmed or questioned with notes, and export an HTML/CSV report. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Compare two versions of a contract, proposal or policy (DOCX, PDF, Markdown or TXT, even across formats): paragraphs are aligned and each change is shown word by word (character by character for Chinese), with changes to numbers flagged. Review side by side, mark each change confirmed or questioned with notes, and export an HTML/CSV report. Runs locally; no API keys.",
+        "zh-CN": "对照合同、方案、制度等文件的两个版本（DOCX、PDF、Markdown、TXT，可以不同格式）：按段落对齐，逐词（中文逐字）标出增删改，涉及数字的改动单独标记。左右对照逐条审阅，标记“已确认 / 有疑问”并写备注，导出 HTML / CSV 对照报告。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "diff",
+        "compare",
+        "redline",
+        "contract",
+        "docx",
+        "pdf",
+        "version",
+        "review",
+        "对比",
+        "文档对照",
+        "合同",
+        "修订",
+        "版本"
+      ],
+      "examplePrompts": [
+        "Compare contract-v1.docx with contract-v2.pdf and flag changes to amounts and dates",
+        "What changed in the 2026 terms of service compared with 2025? Mark anything about data or AI as questioned",
+        "Export the comparison report with only the questioned changes"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "对比 合同-v1.docx 和 合同-v2.pdf，把涉及金额和日期的改动标出来",
+          "2026 版服务条款比 2025 版改了什么？涉及数据和 AI 的改动标成有疑问",
+          "只导出有疑问的改动，生成对照报告"
+        ]
+      }
     }
   ]
 }
