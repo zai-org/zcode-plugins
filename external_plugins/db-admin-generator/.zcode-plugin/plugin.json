@@ -1,0 +1,58 @@
+{
+  "name": "db-admin-generator",
+  "version": "0.1.0",
+  "description": "Turn a SQLite database into a working admin panel: reads the schema (tables, views, keys, foreign keys, CHECK options, required and unique columns), lets you pick tables, operations and roles (admin / editor / viewer), and generates a dependency-free Node.js server plus browser UI with sign-in, search, filters, sorting, paging and forms validated against the schema. The generated admin is then started against a temporary copy of the database and self-tested over HTTP (permissions, validation, CRUD, SQL injection). Your database is never modified. Postgres and MySQL are not supported yet.",
+  "description_i18n": {
+    "en": "Turn a SQLite database into a working admin panel: reads the schema (tables, views, keys, foreign keys, CHECK options, required and unique columns), lets you pick tables, operations and roles (admin / editor / viewer), and generates a dependency-free Node.js server plus browser UI with sign-in, search, filters, sorting, paging and forms validated against the schema. The generated admin is then started against a temporary copy of the database and self-tested over HTTP (permissions, validation, CRUD, SQL injection). Your database is never modified. Postgres and MySQL are not supported yet.",
+    "zh-CN": "把 SQLite 数据库变成能用的管理后台：读取表结构（表、视图、主键、外键、CHECK 选项、必填和唯一列），选择要管理的表、操作和角色（admin / editor / viewer），生成没有第三方依赖的 Node.js 服务器和网页界面，带登录、搜索、筛选、排序、分页，以及按数据库结构校验的表单。生成后会用数据库的临时副本实际启动，并通过 HTTP 自测（权限、校验、增删改查、SQL 注入）。不会修改你的数据库。暂不支持 Postgres 和 MySQL。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "database",
+    "sqlite",
+    "admin panel",
+    "crud",
+    "back office",
+    "roles",
+    "node",
+    "generator",
+    "数据库",
+    "管理后台",
+    "增删改查",
+    "权限"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "db-admin-generator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "数据库转管理后台",
+          "en-US": "DB Admin Generator"
+        },
+        "icon": "database",
+        "server": "db-admin-generator",
+        "resourceUri": "ui://db-admin-generator/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
