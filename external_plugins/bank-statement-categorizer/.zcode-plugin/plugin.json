@@ -1,0 +1,59 @@
+{
+  "name": "bank-statement-categorizer",
+  "version": "0.1.0",
+  "description": "Categorise bank, card and payment-app statement exports (.csv/.xlsx, Chinese or English) with keyword rules you can edit, fix any transaction by hand, spot uncategorised and double-counted rows, and see totals by category and month. Export a categorised Excel file, CSV and an HTML report; keep your rules for next month. Runs locally; no bank login, no API keys.",
+  "description_i18n": {
+    "en": "Categorise bank, card and payment-app statement exports (.csv/.xlsx, Chinese or English) with keyword rules you can edit, fix any transaction by hand, spot uncategorised and double-counted rows, and see totals by category and month. Export a categorised Excel file, CSV and an HTML report; keep your rules for next month. Runs locally; no bank login, no API keys.",
+    "zh-CN": "把银行卡、信用卡、支付软件导出的流水（.csv/.xlsx，中英文都行）按可编辑的关键词规则自动分类，可逐笔手动改分类，标出未分类和可能重复计入的交易，按分类和月份汇总收支。导出分类后的 Excel、CSV 和 HTML 报告，规则可以下个月继续用。在本地运行，不需要登录银行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bank statement",
+    "expenses",
+    "budget",
+    "categorize",
+    "personal finance",
+    "csv",
+    "账单",
+    "流水",
+    "记账",
+    "分类",
+    "支出统计",
+    "支付宝",
+    "微信账单"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "bank-statement-categorizer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "账单自动分类",
+          "en-US": "Statement Categorizer"
+        },
+        "icon": "wallet",
+        "server": "bank-statement-categorizer",
+        "resourceUri": "ui://bank-statement-categorizer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
