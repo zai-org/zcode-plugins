@@ -1,0 +1,40 @@
+{
+  "name": "@penova/plugin-brand-kit-studio",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node --experimental-strip-types scripts/e2e.mts"
+  },
+  "zcode": {
+    "title": "Brand Kit Studio",
+    "assets": {
+      "@resvg/resvg-wasm/index_bg.wasm": "resvg.wasm"
+    }
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@resvg/resvg-wasm": "2.6.2",
+    "fontkit": "2.0.4",
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@types/node": "25.5.0",
+    "@types/pngjs": "6.0.5",
+    "esbuild": "^0.25.12",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.2",
+    "vitest": "4.1.4"
+  }
+}
