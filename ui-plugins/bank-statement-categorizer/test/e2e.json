@@ -1,0 +1,3 @@
+{ "prefix": "statement", "folder": "账单", "pick": ["bank-2026-10.csv", "支付宝-2026-11.csv"],
+  "edit": { "set": [{ "row": 10, "values": { "category": "餐饮 Dining" } }] },
+  "expectText": "未分类", "expectFiles": ["categorised\\.xlsx$", "report\\.html$"] }
