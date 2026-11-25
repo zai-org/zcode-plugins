@@ -1,0 +1,60 @@
+{
+  "name": "share-redactor",
+  "version": "0.1.0",
+  "description": "Redact personal data before you share a file: finds phone numbers, ID-card numbers, bank card numbers, emails, optional amounts and any names or terms you give in PDF, DOCX, XLSX, CSV, TXT and Markdown. Confirm each hit in the panel (keep a value everywhere with one click, draw extra boxes on PDF pages), then export redacted copies. PDFs are flattened to images with black boxes so no text layer survives, and every output is re-read to check that no original value remains. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Redact personal data before you share a file: finds phone numbers, ID-card numbers, bank card numbers, emails, optional amounts and any names or terms you give in PDF, DOCX, XLSX, CSV, TXT and Markdown. Confirm each hit in the panel (keep a value everywhere with one click, draw extra boxes on PDF pages), then export redacted copies. PDFs are flattened to images with black boxes so no text layer survives, and every output is re-read to check that no original value remains. Runs locally; no API keys.",
+    "zh-CN": "分享文件前先脱敏：在 PDF、DOCX、XLSX、CSV、TXT、Markdown 里找出手机号、身份证号、银行卡号、邮箱、金额（可选）以及你给出的姓名和关键词。在面板里逐处确认（一键保留某个值，或在 PDF 页面上手动框选），然后导出脱敏副本。PDF 按页转成图片再涂黑，不留文字层；导出后重新读取每个文件，确认原值一个都没剩。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "redact",
+    "redaction",
+    "privacy",
+    "pii",
+    "anonymize",
+    "pdf",
+    "docx",
+    "xlsx",
+    "脱敏",
+    "隐私",
+    "打码",
+    "涂黑",
+    "手机号",
+    "身份证"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "share-redactor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "分享前资料脱敏",
+          "en-US": "Share Redactor"
+        },
+        "icon": "eye-off",
+        "server": "share-redactor",
+        "resourceUri": "ui://share-redactor/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
