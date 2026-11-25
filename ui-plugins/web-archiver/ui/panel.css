@@ -1,0 +1,30 @@
+.toolbar { display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; padding-bottom:8px; border-bottom:1px solid var(--line); margin-bottom:8px; }
+.toolbar textarea { flex:1; min-width: 320px; height: 58px; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+.toolbar .opts { display:flex; flex-direction:column; gap:4px; font-size:12px; }
+.layout { display:grid; grid-template-columns: 300px minmax(0,1fr); gap: 12px; align-items:start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.entry { border:1px solid var(--line); border-radius:8px; padding:6px 8px; margin-bottom:6px; background: var(--panel); }
+.entry .t { font-weight:600; font-size:12.5px; }
+.entry .u { color: var(--muted); font-size: 11px; word-break: break-all; }
+.cap { display:flex; gap:6px; align-items:center; font-size:12px; padding:3px 4px; border-radius:5px; cursor:pointer; margin-top:3px; }
+.cap:hover { background: var(--bg); }
+.cap.sel { background: var(--accent); color:#fff; }
+.cap.sel .badge { background: rgba(255,255,255,.25); color:#fff; }
+.tabs { display:flex; gap:4px; margin-bottom:8px; align-items:center; }
+.tabs button.on { background: var(--accent); border-color: var(--accent); color:#fff; }
+.reader { border:1px solid var(--line); border-radius:8px; background:#fff; color:#1d1d1f; padding: 16px 30px; max-height: 74vh; overflow:auto; font: 15px/1.75 -apple-system, "PingFang SC", "Microsoft YaHei", serif; }
+.reader img { max-width:100%; height:auto; }
+.reader pre { white-space: pre-wrap; background:#f5f5f5; padding: 8px; }
+.reader table { border-collapse: collapse; } .reader td, .reader th { border:1px solid #ccc; padding: 2px 6px; }
+.reader .archive-meta { font: 12px/1.5 system-ui, sans-serif; color:#555; border:1px solid #ddd; background:#fafafa; border-radius:8px; padding:8px 12px; margin-bottom: 18px; }
+.diff p { margin: 4px 0; padding: 4px 8px; border-radius: 4px; font-size: 13px; }
+.diff .same { color: var(--muted); }
+.diff .add { background: var(--okbg); border-left: 4px solid var(--ok); }
+.diff .del { background: var(--badbg); border-left: 4px solid var(--bad); text-decoration: line-through; }
+.diff .mod { border-left: 4px solid var(--warn); background: var(--panel); }
+.diff ins { background: #abf2bc; color:#111; text-decoration: none; }
+.diff del { background: #ffcecb; color:#111; }
+.shot img { max-width: 100%; border:1px solid var(--line); }
+.result { font-size: 12px; } .result .bad { color: var(--bad); } .result .ok { color: var(--ok); }
+#root.busy { cursor: progress; }
+#root.busy button { pointer-events: none; opacity: .6; }
