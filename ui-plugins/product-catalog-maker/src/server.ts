@@ -38,6 +38,31 @@ const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/**
+ * 保存前检查项目引用的文件：不存在、0 字节、或内容不像所写的格式时给出提示（仍然保存，TEST-FINDINGS #9）。
+ */
+async function checkRefs(ws: Workspace, refs: [string, unknown][]): Promise<string[]> {
+  const out: string[] = [];
+  const sniff = (b: Buffer, ext: string) => {
+    if (ext === "pdf") return b.toString("latin1", 0, 1024).includes("%PDF-");
+    if (ext === "png") return b[0] === 0x89 && b.toString("ascii", 1, 4) === "PNG";
+    if (ext === "jpg" || ext === "jpeg") return b[0] === 0xff && b[1] === 0xd8;
+    if (ext === "webp") return b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP";
+    if (ext === "xlsx") return b[0] === 0x50 && b[1] === 0x4b;
+    if (ext === "csv" || ext === "tsv" || ext === "txt") return !b.subarray(0, 8192).includes(0);
+    return true;
+  };
+  for (const [label, ref] of refs) {
+    if (typeof ref !== "string" || !ref) continue;
+    let b: Buffer;
+    try { b = await ws.read(ref, 300 * 1024 * 1024); } catch { out.push(`${label} ${ref} not found`); continue; }
+    if (!b.length) { out.push(`${label} ${ref} is empty (0 bytes)`); continue; }
+    const ext = ref.toLowerCase().split(".").pop() ?? "";
+    if (!sniff(b, ext)) out.push(`${label} ${ref} does not look like a .${ext} file`);
+  }
+  return out;
+}
+
 export function createServer(options: ServerOptions) {
   const ws = new Workspace(options.workspaceRoot);
   const { server, tool } = createKitServer({
@@ -279,7 +304,8 @@ export function createServer(options: ServerOptions) {
       const project = await normalizeProject(value);
       const target = /\.json$/i.test(path) ? path : `${path}.catalogmaker.json`;
       const written = await ws.write(target, JSON.stringify(project, null, 2) + "\n");
-      return { text: `Saved ${written}.`, structured: { kind: "saved", path: written, project } };
+      const warnings = await checkRefs(ws, [["Table", project.table], ["Logo", (project as any).style?.logo]]);
+      return { text: `Saved ${written}.${warnings.length ? `\nCheck:\n${warnings.map((w) => `- ${w}`).join("\n")}` : ""}`, structured: { kind: "saved", path: written, project, warnings } };
     },
   );
 
