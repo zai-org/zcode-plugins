@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Census of India 1911",
+    "headerRows": 1,
+    "rows": [
+      ["City", "A. Production of raw materials", "I. Exploitation of the surface of the earth", "II. Extraction of minerals", "B. Preparation and supply of material substances", "III. Industry"],
+      ["INDIA", "7,244", "7,227", "17", "1,856", "1,127"],
+      ["ALL CITIES", "653", "645", "8", "5,707", "3,006"],
+      ["Calcutta", "399", "396", "3", "5,225", "2,105"],
+      ["Bombay", "225", "209", "16", "6,187", "3,298"],
+      ["Madras", "595", "592", "3", "5,639", "2,703"],
+      ["Rangoon", "312", "312", "..", "5,936", "2,727"],
+      ["Delhi", "793", "744", "49", "7,010", "4,008"],
+      ["Ahmadabad", "348", "346", "2", "7,628", "5,335"]
+    ],
+    "uncertain": [[4, 2], [4, 4]],
+    "bounds": { "x": 0, "y": 75, "width": 955, "height": 990 }
+  }
+]

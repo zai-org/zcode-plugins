@@ -1,0 +1,2 @@
+purchase-photo.jpg: synthetic purchase list rendered for these tests (fictional shop), photographed look added in code; CC0. purchase.transcription.json is a hand transcription of it.
+census-india-1911.jpg: "Census of India, 1911 (1912)", Internet Archive Book Images, Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Census_of_India,_1911_(1912)_(14754826166).jpg), no known copyright restrictions. census.transcription.json is a hand transcription of its left columns.

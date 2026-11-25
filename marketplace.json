@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "table-scan-to-excel",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/table-scan-to-excel",
+      "displayName": "Table Scan to Excel",
+      "displayName_i18n": {
+        "en": "Table Scan to Excel",
+        "zh-CN": "扫描表格转 Excel"
+      },
+      "description": "Turn a photo or scan of a table (invoice, statement, printed form) into an Excel file you can trust. The agent reads the image; the plugin checks every subtotal and total against the numbers above it, flags unreadable cells and text in number columns, and shows the image next to an editable table so you can fix and confirm cells. Exports .xlsx with merged cells, real numbers and highlighted comments, or CSV. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a photo or scan of a table (invoice, statement, printed form) into an Excel file you can trust. The agent reads the image; the plugin checks every subtotal and total against the numbers above it, flags unreadable cells and text in number columns, and shows the image next to an editable table so you can fix and confirm cells. Exports .xlsx with merged cells, real numbers and highlighted comments, or CSV. Runs locally; no API keys.",
+        "zh-CN": "把表格照片或扫描件（发票、对账单、纸质表单）变成可信的 Excel。由 Agent 看图识别；插件逐一核对小计、合计和上面的数字是否对得上，标出看不清的格子和数字列里的非数字，并把原图和可编辑表格并排显示，方便逐格修改、确认。导出的 .xlsx 保留合并单元格、数字为真正的数值，存疑格子带底色和批注；也可导出 CSV。全部本地处理，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "ocr",
+        "table",
+        "excel",
+        "xlsx",
+        "csv",
+        "scan",
+        "invoice",
+        "data-entry",
+        "表格识别",
+        "图片转表格",
+        "扫描件"
+      ],
+      "examplePrompts": [
+        "Turn this photo of a purchase list (receipt.jpg) into an Excel file",
+        "Check whether the totals in statement.png add up, then export it to xlsx",
+        "Convert all the scanned tables in scans/ to CSV"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把这张采购单照片（采购单.jpg）转成 Excel",
+          "看看 对账单.png 里的合计对不对，然后导出 xlsx",
+          "把 scans 文件夹里的表格扫描件都转成 CSV"
+        ]
+      }
     }
   ]
 }
