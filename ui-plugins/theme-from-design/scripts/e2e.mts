@@ -1,0 +1,62 @@
+// 浏览器端到端测试：真实打包的 server（含离线 theme-check）+ 官方 AppBridge 宿主 + 隔离 iframe 中的面板。需要 Chrome。
+import assert from "node:assert/strict";
+import { cp, mkdir, mkdtemp, readFile, readdir, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { startHarness } from "./harness.mjs";
+
+const shots = process.env.E2E_SHOTS ?? join(tmpdir(), "theme-from-design-shots");
+await mkdir(shots, { recursive: true });
+const workspace = await mkdtemp(join(tmpdir(), "theme-e2e-"));
+await cp(process.env.THEME_SAMPLES ?? "/workspace/zcode-new-plugins/samples/theme", join(workspace, "设计稿"), { recursive: true });
+const harness = await startHarness({ workspace });
+const step = (t: string) => process.stdout.write(`• ${t}\n`);
+try {
+  const { outer, frame } = await harness.open("?locale=zh-CN", { width: 1400, height: 1000 });
+  step("user names the theme, ticks the design and creates it");
+  await frame.locator("input.name").fill("Hearth & Bean");
+  await frame.locator("label", { hasText: "hearth-bean-home.png" }).locator("input").check();
+  await frame.locator("button", { hasText: "创建主题" }).click();
+  await frame.locator(".device iframe").waitFor({ timeout: 120_000 });
+  await frame.locator(".badge", { hasText: "无错误" }).waitFor();
+  step("agent applies the brand and writes the sections from the design");
+  const agentDir = join(workspace, "设计稿/agent");
+  const files: Record<string, string> = {};
+  for (const d of ["sections", "templates", "assets"]) for (const f of await readdir(join(agentDir, d))) if (!f.startsWith("broken")) files[`${d}/${f}`] = await readFile(join(agentDir, d, f), "utf8");
+  const settings = JSON.parse(await readFile(join(workspace, "themes/hearth-bean/config/settings_data.json"), "utf8"));
+  Object.assign(settings.current, { color_background: "#f6f1e7", color_text: "#2b2118", color_accent: "#2f5d50", color_muted: "#7a6a58", type_heading_font: "playfair_display_n7", type_body_font: "lora_n4", radius: 16 });
+  files["config/settings_data.json"] = JSON.stringify(settings, null, 2);
+  const en = JSON.parse(await readFile(join(workspace, "themes/hearth-bean/locales/en.default.json"), "utf8"));
+  en.newsletter = { email: "Email address", subscribe: "Subscribe", thanks: "Thanks for subscribing!" };
+  files["locales/en.default.json"] = JSON.stringify(en, null, 2);
+  await harness.agent(outer, "theme_write", { files });
+  await frame.frameLocator(".device iframe").locator("text=Coffee worth slowing down for").waitFor({ timeout: 60_000 });
+  await frame.frameLocator(".device iframe").locator("text=Join the roast list").waitFor();
+  await outer.screenshot({ path: join(shots, "01-design-vs-preview.png") });
+  step("user runs the full check: Shopify theme-check finds the missing zh-CN translations");
+  await frame.locator("button", { hasText: "完整检查" }).click();
+  await frame.locator(".issue", { hasText: "MatchingTranslations" }).first().waitFor({ timeout: 120_000 });
+  assert.equal(await frame.locator(".issue .src", { hasText: "theme-check" }).count(), 3);
+  await frame.locator(".issue a", { hasText: "locales/zh-CN.json" }).first().click();
+  await frame.locator(".source pre").waitFor();
+  await frame.locator(".source button", { hasText: "关闭" }).click();
+  await outer.screenshot({ path: join(shots, "02-theme-check.png") });
+  step("agent adds the translations; user checks the mobile layout and packages the theme");
+  const zh = JSON.parse(await readFile(join(workspace, "themes/hearth-bean/locales/zh-CN.json"), "utf8"));
+  zh.newsletter = { email: "邮箱地址", subscribe: "订阅", thanks: "感谢订阅！" };
+  await harness.agent(outer, "theme_write", { files: { "locales/zh-CN.json": JSON.stringify(zh, null, 2) } });
+  await frame.locator("button", { hasText: "完整检查" }).click();
+  await frame.locator(".badge", { hasText: "无错误" }).waitFor({ timeout: 120_000 });
+  await frame.locator(".small", { hasText: "已含 Shopify theme-check" }).waitFor();
+  await frame.locator(".tab", { hasText: "手机" }).click();
+  await frame.locator("select.tpl").selectOption("product");
+  await frame.frameLocator(".device iframe").locator("text=Linen Shirt").first().waitFor({ timeout: 60_000 });
+  await outer.screenshot({ path: join(shots, "03-mobile-product.png") });
+  await frame.locator("button", { hasText: "打包 zip" }).click();
+  await frame.locator(".toast", { hasText: "themes/hearth-bean.zip" }).waitFor({ timeout: 120_000 });
+  assert.ok((await stat(join(workspace, "themes/hearth-bean.zip"))).size > 10_000);
+  assert.deepEqual(harness.errors, []);
+  step(`ok — screenshots in ${shots}`);
+} finally {
+  await harness.close();
+}

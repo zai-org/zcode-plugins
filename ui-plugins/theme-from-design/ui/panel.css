@@ -1,0 +1,26 @@
+.top { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+.grow { flex:1; }
+.small { font-size:11px; }
+.badge.bad { background: var(--badbg); color: var(--bad); } .badge.warn { background: var(--warnbg); color: var(--warn); } .badge.ok { color: var(--ok, #16a34a); }
+.tbar { display:flex; gap:6px; align-items:center; border-bottom:1px solid var(--line); padding-bottom:6px; margin-bottom:8px; flex-wrap:wrap; }
+.tab { border:none; border-bottom:2px solid transparent; border-radius:0; background:none; }
+.tab.on { border-bottom-color: var(--accent); color: var(--accent); }
+.cmp { display:inline-flex; gap:4px; align-items:center; margin-left:8px; }
+.main { display:grid; grid-template-columns: 1fr; gap:10px; }
+.main.withdesign { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+.device { height: 62vh; min-height: 360px; overflow:hidden; border:1px solid var(--line); border-radius:6px; background:#fff; }
+.device.mobile { max-width: 390px; margin: 0 auto; width: 100%; }
+.device iframe { border:0; transform-origin: 0 0; display:block; background:#fff; }
+.design { height: 62vh; min-height:360px; overflow:auto; border:1px solid var(--line); border-radius:6px; background: var(--panel); }
+.design figure { margin:0; } .design figcaption { font-size:11px; color:var(--muted); padding:4px 8px; } .design img { width:100%; display:block; }
+.rerr { background: var(--badbg); color: var(--bad); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:12px; }
+.split { display:grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr); gap:10px; margin-top:10px; }
+.issues .issue { display:flex; gap:8px; align-items:baseline; font-size:12px; margin:3px 0; flex-wrap:wrap; }
+.issue.error .chk { color: var(--bad); } .issue.warning .chk { color: var(--warn); }
+.issue .src { font-size:10px; border:1px solid var(--line); border-radius:4px; padding:0 4px; color: var(--muted); }
+.issue .chk { font-weight:600; }
+.files { font-size:12px; max-height: 220px; overflow:auto; }
+.source { position:fixed; inset:24px; background: var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; box-shadow: 0 8px 30px rgba(0,0,0,.2); display:flex; flex-direction:column; z-index:20; }
+.source pre { flex:1; overflow:auto; font-size:12px; background: var(--panel); padding:8px; margin:6px 0 0; }
+.flist { display:flex; flex-wrap:wrap; gap:4px 14px; margin:6px 0; }
+input.name { width: 240px; }
