@@ -1,0 +1,59 @@
+{
+  "name": "citation-checker",
+  "version": "0.1.0",
+  "description": "Check a report against its sources: every sentence with a number, a quotation or a citation marker is matched to the closest passage in your PDFs, saved web pages, Word, Markdown or text files. Numbers are compared by value (万/亿/million, %, ‰, percentage points, rounding allowed), quotations must be verbatim, and claims with no supporting passage are flagged. Click any claim to jump to the source page or paragraph with the passage highlighted, record verdicts, and export the check table (HTML/CSV). Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Check a report against its sources: every sentence with a number, a quotation or a citation marker is matched to the closest passage in your PDFs, saved web pages, Word, Markdown or text files. Numbers are compared by value (万/亿/million, %, ‰, percentage points, rounding allowed), quotations must be verbatim, and claims with no supporting passage are flagged. Click any claim to jump to the source page or paragraph with the passage highlighted, record verdicts, and export the check table (HTML/CSV). Runs locally; no API keys.",
+    "zh-CN": "把报告和参考资料放进来，逐条核对：报告里带数字、引号原话或引用标记的句子，都去 PDF、保存的网页、Word、Markdown、TXT 资料里找最接近的原文。数字按数值比对（支持万/亿/million、%、‰、百分点和四舍五入），引文要求逐字一致，找不到依据的句子单独标出。点任一条可跳回资料对应页/段并高亮原文，可记录结论并导出核对表（HTML/CSV）。全部本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "citation",
+    "fact check",
+    "source check",
+    "references",
+    "numbers",
+    "quotes",
+    "report review",
+    "引用核对",
+    "事实核查",
+    "数据核对",
+    "参考文献",
+    "引文",
+    "研究报告"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "citation-checker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "引用来源核对",
+          "en-US": "Citation Checker"
+        },
+        "icon": "check",
+        "server": "citation-checker",
+        "resourceUri": "ui://citation-checker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
