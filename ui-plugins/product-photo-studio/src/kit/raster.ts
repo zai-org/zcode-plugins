@@ -73,16 +73,21 @@ function orient(image: Raster, orientation: number): Raster {
 
 export function decodeImage(bytes: Uint8Array, name = "image"): Raster {
   try {
-    if (bytes[0] === 0x89 && bytes[1] === 0x50) {
+    if (bytes.length >= 2 && bytes[0] === 0x89 && bytes[1] === 0x50) {
       const png = PNG.sync.read(Buffer.from(bytes));
       return { width: png.width, height: png.height, data: new Uint8ClampedArray(png.data.buffer, png.data.byteOffset, png.data.length) };
     }
-    if (bytes[0] === 0xff && bytes[1] === 0xd8) {
+    if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8) {
       const image = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 1024, maxResolutionInMP: 200 });
       return orient({ width: image.width, height: image.height, data: new Uint8ClampedArray(image.data.buffer) }, jpegOrientation(bytes));
     }
   } catch (error) {
     throw new KitError("bad_image", `Cannot decode ${name}: ${error instanceof Error ? error.message : error}`);
+  }
+  const base = name.split(/[\\/]/).pop() ?? name;
+  const looksNamedRaster = !bytes.length || /\.(png|jpe?g)$/i.test(base);
+  if (looksNamedRaster) {
+    throw new KitError("bad_image", `${name}: not a valid PNG or JPEG (empty, corrupt, or the file is not an image).`);
   }
   throw new KitError("unsupported_image", `${name}: only PNG and JPEG are supported (convert WebP/HEIC first).`);
 }
