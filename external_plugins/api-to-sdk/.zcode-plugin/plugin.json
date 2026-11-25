@@ -1,0 +1,58 @@
+{
+  "name": "api-to-sdk",
+  "version": "0.1.0",
+  "description": "Turn an OpenAPI 3.0 / 3.1 spec (YAML or JSON) into a typed TypeScript SDK package: types for every schema, a dependency-free fetch client with one method per operation (path, query and header parameters, JSON / multipart / form bodies, bearer / API key / basic auth, timeouts, ApiError with the parsed error body), a README and an example that calls every operation, plus a mock server built from the spec's examples. Verified automatically: strict TypeScript compile, then every operation is called against the mock and checked against the spec.",
+  "description_i18n": {
+    "en": "Turn an OpenAPI 3.0 / 3.1 spec (YAML or JSON) into a typed TypeScript SDK package: types for every schema, a dependency-free fetch client with one method per operation (path, query and header parameters, JSON / multipart / form bodies, bearer / API key / basic auth, timeouts, ApiError with the parsed error body), a README and an example that calls every operation, plus a mock server built from the spec's examples. Verified automatically: strict TypeScript compile, then every operation is called against the mock and checked against the spec.",
+    "zh-CN": "把 OpenAPI 3.0 / 3.1 规范（YAML 或 JSON）生成带完整类型的 TypeScript SDK 包：每个数据结构都有类型；基于 fetch、没有依赖的客户端，每个接口一个方法（路径/查询/请求头参数，JSON / multipart / 表单请求体，Bearer / API Key / Basic 认证，超时，带解析后错误内容的 ApiError）；附 README、调用全部接口的示例，以及用规范示例搭建的模拟服务器。自动验证：TypeScript 严格模式编译，再逐个调用每个接口并按规范检查。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "openapi",
+    "swagger",
+    "sdk",
+    "typescript",
+    "api client",
+    "codegen",
+    "mock server",
+    "fetch",
+    "接口",
+    "SDK",
+    "代码生成",
+    "模拟服务器"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "api-to-sdk": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "接口转 SDK",
+          "en-US": "API To SDK"
+        },
+        "icon": "code",
+        "server": "api-to-sdk",
+        "resourceUri": "ui://api-to-sdk/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
