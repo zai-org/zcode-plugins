@@ -5,6 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { PDFDocument } from "pdf-lib";
 import { beforeAll, describe, expect, it } from "vitest";
+import { suggestFields, type FormField, type FormInfo } from "../src/form.ts";
 import { createServer } from "../src/server.ts";
 import { makeChineseForm, makeRoster } from "./fixtures.ts";
 
@@ -111,4 +112,59 @@ describe("pdf-form-batch-fill", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/outside_workspace/);
   });
+
+  it("does not map a City column onto W-9 tax-classification checkboxes", async () => {
+    const info: FormInfo = {
+      pages: [{ width: 612, height: 792 }],
+      hasXfa: false,
+      fields: [
+        field("topmostSubform[0].Page1[0].f1_01[0]", "Name", "text"),
+        field("topmostSubform[0].Page1[0].f1_02[0]", "Business name", "text"),
+        field("topmostSubform[0].Page1[0].f1_07[0]", "Address", "text"),
+        field("topmostSubform[0].Page1[0].f1_08[0]", "City", "text"),
+        field("topmostSubform[0].Page1[0].c1_1[0]", "Individual/sole proprietor", "checkbox"),
+        field("topmostSubform[0].Page1[0].c1_1[1]", "C Corporation", "checkbox"),
+        field("c1_2", "c1_2", "checkbox"),
+      ],
+    };
+    const mapped = Object.fromEntries(suggestFields(info, ["Name", "Business", "Address", "City", "EIN"]).map((s) => [s.label || s.name, s.source]));
+    expect(mapped["Name"]).toBe("{Name}");
+    expect(mapped["Address"]).toBe("{Address}");
+    expect(mapped["City"]).toBe("{City}");
+    expect(mapped["Individual/sole proprietor"]).toBe("");
+    expect(mapped["C Corporation"]).toBe("");
+    expect(mapped["c1_2"]).toBe("");
+
+    await writeFile(join(workspace, "w9-city.csv"), "Name,Business,Address,City,EIN\nJane Doe,Doe LLC,1 Main St,Springfield,12-3456789\n");
+    const opened = await call("form_open", { pdf: "fw9.pdf", roster: "w9-city.csv" });
+    const boxes = opened.structuredContent.template.fields.filter((f: any) => {
+      const typ = opened.structuredContent.info.fields.find((x: any) => x.name === f.name)?.type;
+      return typ === "checkbox" || typ === "radio";
+    });
+    expect(boxes.every((f: any) => !f.source || !/\{City\}/.test(f.source))).toBe(true);
+    expect(boxes.some((f: any) => f.source === "{City}")).toBe(false);
+  });
+
+  it("reports overflow when an AcroForm field is shorter than the value", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([400, 200]);
+    const short = doc.getForm().createTextField("shortname");
+    short.setMaxLength(8);
+    short.addToPage(page, { x: 20, y: 150, width: 360, height: 24 });
+    await writeFile(join(workspace, "short.pdf"), await doc.save());
+    await writeFile(join(workspace, "short.csv"), "Name\nVeryLongNameIndeed\n");
+    const result = await call("form_generate", {
+      template: {
+        pdf: "short.pdf",
+        roster: "short.csv",
+        fields: [{ id: "a", kind: "acro", name: "shortname", source: "{Name}" }],
+        output: { dir: "short-out", fileName: "x.pdf", flatten: false, merged: false },
+      },
+    });
+    expect(result.structuredContent.issues.some((i: any) => i.kind === "overflow" && /8/.test(i.message))).toBe(true);
+  });
 });
+
+function field(name: string, label: string, type: FormField["type"]): FormField {
+  return { name, label, type, page: 0, rect: [0, 0, 100, 20], multiline: false };
+}
