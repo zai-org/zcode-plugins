@@ -127,6 +127,22 @@ export function coerceSettings(fields: Field[], input: Record<string, unknown> |
   return out;
 }
 
+/**
+ * 把 _edit 里的列名解析成列 key：先精确匹配 key，再精确匹配中/英文标题，
+ * 最后忽略大小写和空白再比一次；行里已有的字段名也算。找不到返回 undefined。
+ */
+export function resolveColumnKey(cols: Column[], name: string, row?: Row): string | undefined {
+  if (cols.some((c) => c.key === name)) return name;
+  const exact = cols.find((c) => c.label[0] === name || c.label[1] === name);
+  if (exact) return exact.key;
+  const norm = (x: string) => x.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+  const n = norm(name);
+  const loose = cols.find((c) => norm(c.key) === n || norm(c.label[0]) === n || norm(c.label[1]) === n);
+  if (loose) return loose.key;
+  if (row && Object.prototype.hasOwnProperty.call(row, name)) return name;
+  return undefined;
+}
+
 export function coerceCell(column: Column | undefined, value: unknown): unknown {
   if (!column) return value;
   if (column.type === "number") {
@@ -276,10 +292,13 @@ export function createApp(def: AppDef, options: { workspaceRoot: string; assetRo
         }
         const cols = def.columns(project);
         const byKey = new Map(cols.map((c) => [c.key, c]));
+        const unknown = new Set<string>();
         for (const s of args.set ?? []) {
           const row = project.rows[s.row];
           if (!row) { notes.push(`Row #${s.row} does not exist.`); continue; }
-          for (const [k, v] of Object.entries(s.values)) {
+          for (const [name, v] of Object.entries(s.values)) {
+            const k = resolveColumnKey(cols, name, row);
+            if (k === undefined) { unknown.add(name); continue; }
             const c = byKey.get(k);
             if (c?.readOnly) { notes.push(`${k} is calculated and cannot be edited.`); continue; }
             row[k] = coerceCell(c, v);
@@ -290,10 +309,15 @@ export function createApp(def: AppDef, options: { workspaceRoot: string; assetRo
           if (!def.newRow) throw new KitError("no_add", "This tool does not support adding rows.");
           for (const a of args.add) {
             const row = def.newRow(project);
-            for (const [k, v] of Object.entries(a)) row[k] = coerceCell(byKey.get(k), v);
+            for (const [name, v] of Object.entries(a)) {
+              const k = resolveColumnKey(cols, name, row);
+              if (k === undefined) { unknown.add(name); continue; }
+              row[k] = coerceCell(byKey.get(k), v);
+            }
             project.rows.push(row);
           }
         }
+        if (unknown.size) notes.push(`Warning: ignored unknown column(s) ${[...unknown].map((u) => `“${u}”`).join(", ")}. Use a column key or its label: ${cols.map((c) => `${c.key} (${c.label[0]} / ${c.label[1]})`).join(", ")}.`);
         if (args.remove?.length) {
           const drop = new Set(args.remove);
           project.rows = project.rows.filter((_, i) => !drop.has(i));
