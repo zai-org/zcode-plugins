@@ -1,0 +1,1 @@
+{ "prefix": "mask", "folder": "外包", "pick": ["会员数据-给外包.csv"], "uiEdit": { "row": 8, "key": "method", "value": "generalize" }, "expectText": "138****1234", "expectFiles": ["masked\\.csv$", "masked\\.xlsx$", "masking-report\\.md$"] }

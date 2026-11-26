@@ -1,0 +1,58 @@
+{
+  "name": "dataset-masker",
+  "version": "0.1.0",
+  "description": "Make a safe copy of a spreadsheet with personal data before you hand it to an outsourcer, a vendor or an AI tool. Names, phone numbers, emails, ID and bank card numbers, addresses and birthdays are found automatically; choose per column to mask part of it (138****1234), hash it, replace it with a consistent pseudonym (用户0001), coarsen it (just the city, just the year), clean phone numbers and emails out of free-text notes, or drop the column. It warns if anything personal is still left. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Make a safe copy of a spreadsheet with personal data before you hand it to an outsourcer, a vendor or an AI tool. Names, phone numbers, emails, ID and bank card numbers, addresses and birthdays are found automatically; choose per column to mask part of it (138****1234), hash it, replace it with a consistent pseudonym (用户0001), coarsen it (just the city, just the year), clean phone numbers and emails out of free-text notes, or drop the column. It warns if anything personal is still left. Runs locally; no API keys.",
+    "zh-CN": "把含个人信息的表格交给外包、供应商或 AI 工具之前，先做一份安全的副本。自动识别姓名、手机号、邮箱、身份证号、银行卡号、地址和生日；每列可选：部分遮盖（138****1234）、哈希、替换成一致的化名（用户0001）、泛化（只留城市、只留年份）、清除备注里夹带的手机号和邮箱，或直接删除该列。如果还有个人信息残留会提醒你。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mask",
+    "anonymize",
+    "pseudonymize",
+    "pii",
+    "gdpr",
+    "privacy",
+    "redact",
+    "数据脱敏",
+    "隐私",
+    "个人信息",
+    "匿名化",
+    "手机号打码"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "dataset-masker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "数据脱敏",
+          "en-US": "Dataset Masker"
+        },
+        "icon": "eye-off",
+        "server": "dataset-masker",
+        "resourceUri": "ui://dataset-masker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
