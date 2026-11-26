@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
-import { buildInvoices, money, qtyOf } from "../src/invoice.ts";
+import { buildInvoices, detectCurrency, money, qtyOf } from "../src/invoice.ts";
 import { connect } from "../src/kit/testing.ts";
 import { createServer } from "../src/server.ts";
 
@@ -75,5 +75,44 @@ describe("invoice tools on the sample sheet", () => {
     const { call } = await connect(createServer({ workspaceRoot: ws, assetRoot: join(HERE, "..") }));
     await expect(call("invoice_open", { inputs: ["x.csv"] })).rejects.toMatchObject({ code: "columns_not_found" });
     await expect(call("invoice_open", { inputs: ["../x.csv"] })).rejects.toMatchObject({ code: "outside_workspace" });
+  });
+});
+
+// 回归测试：$320.00 不能被当成人民币（FIX-QUEUE-100）
+describe("currency from the sheet", () => {
+  it("detects codes, prefixed and bare symbols", () => {
+    expect(detectCurrency("$320.00")).toBe("USD");
+    expect(detectCurrency("US$ 5")).toBe("USD");
+    expect(detectCurrency("HK$1,200")).toBe("HKD");
+    expect(detectCurrency("320 EUR")).toBe("EUR");
+    expect(detectCurrency("£9.99")).toBe("GBP");
+    expect(detectCurrency("RMB 100")).toBe("CNY");
+    expect(detectCurrency("100港元")).toBe("HKD");
+    expect(detectCurrency("¥500")).toBe("CNY");
+    expect(detectCurrency("¥500", "JPY")).toBe("JPY");
+    expect(detectCurrency("单价 (USD)")).toBe("USD");
+    expect(detectCurrency(320)).toBeUndefined();
+    expect(detectCurrency("320")).toBeUndefined();
+  });
+  it("bills $320.00 in USD even when the default is CNY", () => {
+    const { invoices, issues } = buildInvoices([
+      { invoice: "", client: "Acme", address: "x", item: "Design", qty: 1, price: "$320.00", tax: 0 },
+      { invoice: "", client: "Acme", address: "x", item: "Hosting", qty: 2, price: "15", tax: 0 },
+      { invoice: "", client: "李", address: "y", item: "咨询", qty: 1, price: "¥1,000", tax: 0 },
+    ], { ...base, taxRate: 0 });
+    expect(invoices.map((i) => [i.client, i.currency, i.total])).toEqual([["Acme", "USD", 350], ["李", "CNY", 1000]]);
+    expect(money(invoices[0].total, invoices[0].currency)).toBe("$350.00");
+    expect(issues.filter((i) => i.level === "error")).toEqual([]);
+    expect(issues.some((i) => i.level === "info" && i.message.includes("USD"))).toBe(true);
+  });
+  it("uses a currency column and flags mixed or unknown currencies", () => {
+    const { invoices, issues } = buildInvoices([
+      { invoice: "A1", client: "A", address: "x", item: "a", qty: 1, price: 10, tax: 0, currency: "eur" },
+      { invoice: "A2", client: "B", address: "x", item: "b", qty: 1, price: "$5", tax: 0 },
+      { invoice: "A2", client: "B", address: "x", item: "c", qty: 1, price: "€5", tax: 0 },
+      { invoice: "A3", client: "C", address: "x", item: "d", qty: 1, price: 1, tax: 0, currency: "doubloons" },
+    ], base);
+    expect(invoices[0].currency).toBe("EUR");
+    expect(issues.filter((i) => i.level === "error").map((i) => i.row)).toEqual([2, 3]);
   });
 });
