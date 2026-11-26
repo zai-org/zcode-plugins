@@ -1,0 +1,34 @@
+{
+  "name": "malo-browser",
+  "version": "0.2.0",
+  "description": "Agent browser runtime and scripted web demo tool: a daemon hands out port leases with isolated, profile-backed browser sessions that agents drive through 27 session tools (snapshots with iframe content, typed input, login handoff, network capture), plus a visible Electron stage, hidden 1080p30 recording with evidence files, a director console and a loopback control API.",
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/malo-browser",
+  "repository": "https://github.com/Lumos-789/malo-browser",
+  "license": "MIT",
+  "keywords": [
+    "agent-browser",
+    "browser-automation",
+    "browser",
+    "electron",
+    "agent",
+    "daemon",
+    "demo",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Malo Browser",
+    "shortDescription": "An agent browser runtime with a scripted demo tool",
+    "longDescription": "Malo Browser is an agent browser runtime: its daemon hands out loopback port leases, each lease hosts isolated, profile-backed browser sessions with persistent login state, and agents drive them through 27 session tools - structured snapshots with iframe content, clicks, typed input, assertions, login handoff windows and network capture. The same app runs a scripted Electron stage for live web demos with hidden 1920x1080@30fps recording, evidence files, a director console and a loopback control API.",
+    "developerName": "Lumos-789",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Run commands"
+    ]
+  }
+}
