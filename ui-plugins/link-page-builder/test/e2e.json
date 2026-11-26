@@ -1,0 +1,1 @@
+{ "prefix": "linkpage", "folder": "主页", "pick": ["links.yaml"], "startSettings": { "pageUrl": "https://lin.example" }, "uiEdit": { "row": 3, "key": "title", "value": "我的视频" }, "expectText": "4 link(s)", "expectFiles": ["index\\.html$", "qr\\.png$", "qr\\.svg$"] }
