@@ -1,0 +1,29 @@
+{
+  "name": "fancycursive",
+  "displayName": "FancyCursive",
+  "displayName_i18n": {
+    "en": "FancyCursive",
+    "zh-CN": "FancyCursive 花体字与连笔字标"
+  },
+  "version": "1.0.0",
+  "description": "Convert plain text into copy-paste Unicode cursive and decorated fancy styles, search curated Unicode symbols, decorate display names with platform character-limit checks, and render true-outline connected-script PNG/SVG lettering.",
+  "description_i18n": {
+    "en": "Convert plain text into copy-paste Unicode cursive and decorated fancy styles, search curated Unicode symbols, decorate display names with platform character-limit checks, and render true-outline connected-script PNG/SVG lettering.",
+    "zh-CN": "将文本转换为可复制粘贴的 Unicode 花体与花式样式、检索常用符号、按平台规则装饰昵称，并生成透明 PNG 与真轮廓连笔 SVG 字标。"
+  },
+  "author": {
+    "name": "Nurul Widad",
+    "url": "https://fancycursive.com/?utm_source=zcode&utm_medium=plugin"
+  },
+  "homepage": "https://fancycursive.com/?utm_source=zcode&utm_medium=plugin",
+  "license": "MIT",
+  "keywords": [
+    "cursive",
+    "fancy-text",
+    "unicode",
+    "symbols",
+    "svg",
+    "lettering",
+    "mcp"
+  ]
+}

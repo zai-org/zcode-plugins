@@ -1673,6 +1673,48 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "fancycursive",
+      "source": "./external_plugins/fancycursive",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/fancycursive/icon.png",
+      "displayName": "FancyCursive",
+      "displayName_i18n": {
+        "en": "FancyCursive",
+        "zh-CN": "FancyCursive 花体字与连笔字标"
+      },
+      "description": "Convert plain text into copy-paste Unicode cursive and decorated fancy styles, search curated Unicode symbols, decorate display names with platform character-limit checks, and render true-outline connected-script PNG/SVG lettering.",
+      "description_i18n": {
+        "en": "Convert plain text into copy-paste Unicode cursive and decorated fancy styles, search curated Unicode symbols, decorate display names with platform character-limit checks, and render true-outline connected-script PNG/SVG lettering.",
+        "zh-CN": "将文本转换为可复制粘贴的 Unicode 花体与花式样式、检索常用符号、按平台规则装饰昵称，并生成透明 PNG 与真轮廓连笔 SVG 字标。"
+      },
+      "version": "1.0.0",
+      "author": {
+        "name": "Nurul Widad",
+        "url": "https://fancycursive.com/?utm_source=zcode&utm_medium=plugin"
+      },
+      "category": "productivity",
+      "keywords": [
+        "cursive",
+        "fancy-text",
+        "unicode",
+        "symbols",
+        "svg",
+        "lettering",
+        "mcp"
+      ],
+      "examplePrompts": [
+        "Convert \"Hello José!\" into copy-paste cursive and bold script text.",
+        "Decorate the display name \"Amelia\" with frames for an Instagram profile.",
+        "Render \"Amelia Rose\" in Alex Brush connected-script lettering as PNG and SVG."
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 \"Hello José!\" 转成可复制粘贴的花体和粗花体文字。",
+          "给 Instagram 昵称 \"Amelia\" 生成带装饰框的花体方案，并检查长度限制。",
+          "用 Alex Brush 字体把 \"Amelia Rose\" 渲染成连笔透明 PNG 和真轮廓 SVG。"
+        ]
+      }
     }
   ]
 }
