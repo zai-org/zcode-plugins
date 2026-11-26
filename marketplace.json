@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "dataset-masker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/dataset-masker",
+      "displayName": "Dataset Masker",
+      "displayName_i18n": {
+        "en": "Dataset Masker",
+        "zh-CN": "数据脱敏"
+      },
+      "description": "Make a safe copy of a spreadsheet with personal data before you hand it to an outsourcer, a vendor or an AI tool. Names, phone numbers, emails, ID and bank card numbers, addresses and birthdays are found automatically; choose per column to mask part of it (138****1234), hash it, replace it with a consistent pseudonym (用户0001), coarsen it (just the city, just the year), clean phone numbers and emails out of free-text notes, or drop the column. It warns if anything personal is still left. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Make a safe copy of a spreadsheet with personal data before you hand it to an outsourcer, a vendor or an AI tool. Names, phone numbers, emails, ID and bank card numbers, addresses and birthdays are found automatically; choose per column to mask part of it (138****1234), hash it, replace it with a consistent pseudonym (用户0001), coarsen it (just the city, just the year), clean phone numbers and emails out of free-text notes, or drop the column. It warns if anything personal is still left. Runs locally; no API keys.",
+        "zh-CN": "把含个人信息的表格交给外包、供应商或 AI 工具之前，先做一份安全的副本。自动识别姓名、手机号、邮箱、身份证号、银行卡号、地址和生日；每列可选：部分遮盖（138****1234）、哈希、替换成一致的化名（用户0001）、泛化（只留城市、只留年份）、清除备注里夹带的手机号和邮箱，或直接删除该列。如果还有个人信息残留会提醒你。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "mask",
+        "anonymize",
+        "pseudonymize",
+        "pii",
+        "gdpr",
+        "privacy",
+        "redact",
+        "数据脱敏",
+        "隐私",
+        "个人信息",
+        "匿名化",
+        "手机号打码"
+      ],
+      "examplePrompts": [
+        "Mask the personal data in 会员数据-给外包.csv before I send it out",
+        "Hash the phone numbers so the vendor can still match repeat customers",
+        "Drop the ID card column"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 会员数据-给外包.csv 里的个人信息脱敏后再发出去",
+          "手机号做哈希，让对方还能识别回头客",
+          "身份证号这一列直接删掉"
+        ]
+      }
     }
   ]
 }
