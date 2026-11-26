@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "changelog-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/changelog-builder",
+      "displayName": "Changelog Builder",
+      "displayName_i18n": {
+        "en": "Changelog Builder",
+        "zh-CN": "更新日志生成"
+      },
+      "description": "Write release notes without copying commit messages by hand: point it at a git repository and get a CHANGELOG.md grouped by version and by type — features, fixes, performance, breaking changes — plus a clean HTML/Markdown release note for the newest version. Works with Conventional Commits, Chinese prefixes such as 新增/修复 and plain “Add…/Fix…” messages. Reword, re-type or drop entries in a table before exporting. Reads git locally; no GitHub token or API keys.",
+      "description_i18n": {
+        "en": "Write release notes without copying commit messages by hand: point it at a git repository and get a CHANGELOG.md grouped by version and by type — features, fixes, performance, breaking changes — plus a clean HTML/Markdown release note for the newest version. Works with Conventional Commits, Chinese prefixes such as 新增/修复 and plain “Add…/Fix…” messages. Reword, re-type or drop entries in a table before exporting. Reads git locally; no GitHub token or API keys.",
+        "zh-CN": "不用再手动复制提交记录写发布说明：选一个 git 仓库，按版本和类型（新功能、问题修复、性能优化、不兼容变更……）生成 CHANGELOG.md，并为最新版本生成一份整洁的 HTML / Markdown 发布说明。支持 Conventional Commits、“新增/修复”这样的中文前缀，以及普通的 “Add…/Fix…” 提交信息。导出前可以在表格里改写说明、调整类型或去掉条目。在本地读取 git，无需 GitHub 令牌或 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "changelog",
+        "release notes",
+        "conventional commits",
+        "git log",
+        "version history",
+        "semver",
+        "更新日志",
+        "发布说明",
+        "版本记录",
+        "提交记录"
+      ],
+      "examplePrompts": [
+        "Make a changelog for shop-app, call the unreleased part v1.2.0",
+        "Only the latest release, headings in English",
+        "Write release notes I can paste into GitHub"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "给 shop-app 生成更新日志，未发布的部分叫 v1.2.0",
+          "只要最新一个版本，标题用英文",
+          "生成可以直接贴到 GitHub Release 的发布说明"
+        ]
+      }
     }
   ]
 }
