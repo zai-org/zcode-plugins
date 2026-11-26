@@ -1,0 +1,1 @@
+{ "prefix": "card", "folder": "名片", "pick": ["team.xlsx", "logo.png"], "startSettings": { "company": "青禾科技" }, "uiEdit": { "row": 2, "key": "title", "value": "高级产品经理" }, "expectText": "4 cards", "expectFiles": ["cards-print\\.pdf$", "cards-a4\\.pdf$", "contacts\\.vcf$"] }
