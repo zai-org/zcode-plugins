@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "certificate-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/certificate-maker",
+      "displayName": "Certificate Maker",
+      "displayName_i18n": {
+        "en": "Certificate Maker",
+        "zh-CN": "证书奖状批量"
+      },
+      "description": "Turn a certificate background image (PNG/JPG) and a list of names into print-ready certificates: place text lines with {column} placeholders by position, size, colour and alignment, and long names shrink to fit automatically. Check empty names, fix the list in the panel, preview the first certificate and export one combined PDF plus one PDF per person. Chinese text uses a font already on your computer. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a certificate background image (PNG/JPG) and a list of names into print-ready certificates: place text lines with {column} placeholders by position, size, colour and alignment, and long names shrink to fit automatically. Check empty names, fix the list in the panel, preview the first certificate and export one combined PDF plus one PDF per person. Chinese text uses a font already on your computer. Runs locally; no API keys.",
+        "zh-CN": "用一张证书底图（PNG/JPG）和一份名单批量生成可打印的证书、奖状：用带 {列名} 的文字行设置位置、字号、颜色和对齐，名字太长会自动缩小。检查空名字，在面板里修改名单、预览第一张证书，导出合并的 PDF 和每人一份的 PDF。中文使用电脑上已有的字体。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "certificate",
+        "award",
+        "diploma",
+        "batch",
+        "pdf",
+        "names",
+        "证书",
+        "奖状",
+        "荣誉证书",
+        "批量",
+        "结业证书",
+        "年会"
+      ],
+      "examplePrompts": [
+        "Make certificates from 颁奖/certificate-bg.png for everyone in 颁奖/winners.xlsx",
+        "The last row has no name — it should be 宋雨桐",
+        "Move the award line a little lower and export the PDFs"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 颁奖/certificate-bg.png 给 颁奖/winners.xlsx 里的每个人做证书",
+          "最后一行没有名字，应该是宋雨桐",
+          "奖项那一行往下挪一点，然后导出 PDF"
+        ]
+      }
     }
   ]
 }

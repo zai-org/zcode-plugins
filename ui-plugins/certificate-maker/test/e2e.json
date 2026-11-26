@@ -1,0 +1,2 @@
+{ "prefix": "certificate", "folder": "颁奖", "pick": ["certificate-bg.png", "winners.xlsx"],
+  "uiEdit": { "row": 4, "key": "姓名", "value": "宋雨桐" }, "expectText": "林小满", "expectFiles": ["certificates\\.pdf$", "5-宋雨桐\\.pdf$"] }
