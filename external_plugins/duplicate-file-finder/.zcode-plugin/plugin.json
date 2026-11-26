@@ -1,0 +1,57 @@
+{
+  "name": "duplicate-file-finder",
+  "version": "0.1.0",
+  "description": "Find files that are exact copies of each other in your folders — compared by size and SHA-256 content hash, never by name — and see how much space they waste. One copy per group is kept automatically (the original-looking name, not “copy” or “(1)”), you can change which one, then export a report or move the extra copies into a review folder. Nothing is ever deleted, and moved files can be restored. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Find files that are exact copies of each other in your folders — compared by size and SHA-256 content hash, never by name — and see how much space they waste. One copy per group is kept automatically (the original-looking name, not “copy” or “(1)”), you can change which one, then export a report or move the extra copies into a review folder. Nothing is ever deleted, and moved files can be restored. Runs locally; no API keys.",
+    "zh-CN": "找出文件夹里内容完全相同的文件——按大小和 SHA-256 内容哈希比对，不看文件名——并算出浪费了多少空间。每组自动保留一份（像原件的那个，不带“副本”“(1)”），你可以改选保留哪个，然后导出报告，或把多余副本移到待删文件夹。绝不直接删除文件，移走的文件还能放回原处。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "duplicates",
+    "duplicate files",
+    "dedupe",
+    "sha256",
+    "clean up",
+    "disk space",
+    "重复文件",
+    "查重",
+    "去重",
+    "清理",
+    "副本"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "duplicate-file-finder": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "重复文件查找",
+          "en-US": "Duplicate File Finder"
+        },
+        "icon": "copy",
+        "server": "duplicate-file-finder",
+        "resourceUri": "ui://duplicate-file-finder/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
