@@ -1,0 +1,56 @@
+{
+  "name": "markdown-to-docx",
+  "version": "0.1.0",
+  "description": "Turn Markdown notes and docs into real Word documents that colleagues can open and edit: headings become Word heading styles (navigation pane and table of contents work), and lists, tables, code blocks, quotes, links and local images all come across. Set the Chinese and English fonts separately, add a table of contents and page numbers, and convert files one by one or merge them into a single document. Runs locally; no conversion service or API keys.",
+  "description_i18n": {
+    "en": "Turn Markdown notes and docs into real Word documents that colleagues can open and edit: headings become Word heading styles (navigation pane and table of contents work), and lists, tables, code blocks, quotes, links and local images all come across. Set the Chinese and English fonts separately, add a table of contents and page numbers, and convert files one by one or merge them into a single document. Runs locally; no conversion service or API keys.",
+    "zh-CN": "把 Markdown 笔记和文档转成同事能直接打开、编辑的 Word 文档：标题变成 Word 的标题样式（导航窗格和目录都能用），列表、表格、代码块、引用、链接和本地图片都会保留。中文和英文字体可以分开设置，可加目录和页码，可以逐个转换，也可以合并成一个文档。在本地运行，不用在线转换服务，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "markdown to word",
+    "md to docx",
+    "convert markdown",
+    "word document",
+    "docx",
+    "table of contents",
+    "Markdown 转 Word",
+    "md 转 docx",
+    "文档转换",
+    "合并文档"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "markdown-to-docx": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "Markdown 转 Word",
+          "en-US": "Markdown to Word"
+        },
+        "icon": "file-text",
+        "server": "markdown-to-docx",
+        "resourceUri": "ui://markdown-to-docx/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
