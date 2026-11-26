@@ -3,7 +3,7 @@ import { mapHeaders } from "./kit/columns.ts";
 import { writeXlsx } from "./kit/sheet.ts";
 import { readTable } from "./kit/table.ts";
 import { KitError, safeFileName } from "./kit/workspace.ts";
-import { buildInvoices, invoiceTooLong, money, previewHtml, renderPdf, type Line, type Settings } from "./invoice.ts";
+import { buildInvoices, detectCurrency, invoiceTooLong, money, previewHtml, renderPdf, type Line, type Settings } from "./invoice.ts";
 
 export const NAME = "invoice-maker";
 export const VERSION = "0.1.0";
@@ -16,6 +16,7 @@ const ALIASES = {
   qty: ["数量", "quantity", "hours", "工时"],
   price: ["单价", "价格", "unit price", "rate", "price"],
   tax: ["税率", "tax rate", "vat", "tax %", "tax"],
+  currency: ["币种", "货币", "currency", "curr", "ccy"],
 };
 
 const settingsOf = (p: { settings: Record<string, unknown> }) => p.settings as unknown as Settings;
@@ -51,16 +52,20 @@ const def: AppDef = {
     { key: "qty", label: ["数量", "Qty"], type: "number" },
     { key: "price", label: ["单价", "Price"], type: "number" },
     { key: "tax", label: ["税率 %", "Tax %"], type: "number" },
+    { key: "currency", label: ["币种", "Currency"] },
     { key: "_number", label: ["归入发票", "On invoice"], readOnly: true },
     { key: "_amount", label: ["金额", "Amount"], type: "number", readOnly: true },
   ],
-  newRow: () => ({ invoice: "", client: "", address: "", item: "", qty: 1, price: 0, tax: "" }),
+  newRow: () => ({ invoice: "", client: "", address: "", item: "", qty: 1, price: 0, tax: "", currency: "" }),
   async load({ ws, files }) {
     const table = await readTable(ws, files[0]);
     const map = mapHeaders(table.columns, ALIASES);
     const missing = ["client", "item", "price"].filter((k) => !map[k]);
     if (missing.length) throw new KitError("columns_not_found", `Could not find column(s) for ${missing.join(", ")}. Columns in the file: ${table.columns.join(", ")}. Rename them (e.g. 客户 / client, 项目 / item, 单价 / price) and open again.`);
     const rows = table.rows.map((r) => Object.fromEntries(Object.keys(ALIASES).map((k) => [k, map[k] ? r[map[k]!] ?? "" : k === "qty" ? 1 : ""])));
+    // 单价列标题里写了币种（如“单价 (USD)”）而表里没有币种列时，用标题里的币种
+    const headCur = !map.currency && map.price ? detectCurrency(map.price) : undefined;
+    if (headCur) for (const r of rows) r.currency = headCur;
     return { rows, meta: { columns: map, sheet: table.sheet } };
   },
   compute(project) {
@@ -69,12 +74,14 @@ const def: AppDef = {
     const numberOf = new Map<number, { n: string; a: number }>();
     for (const inv of invoices) for (const l of inv.lines) numberOf.set(l.index, { n: inv.number, a: l.amount });
     for (const inv of invoices) if (invoiceTooLong(inv)) issues.push({ level: "warn", row: inv.lines[0].index, message: `Invoice ${inv.number} has ${inv.lines.length} lines; v0.1 fits about 20 lines on one page / 行数过多可能放不下一页` });
-    const total = invoices.reduce((a, i) => a + i.total, 0);
+    const byCur = new Map<string, number>();
+    for (const i of invoices) byCur.set(i.currency, (byCur.get(i.currency) ?? 0) + i.total);
+    const totalText = byCur.size ? [...byCur].map(([c, t]) => money(t, c)).join(" + ") : money(0, s.currency);
     return {
       rows: project.rows.map((r, i) => ({ ...r, _number: numberOf.get(i)?.n ?? "", _amount: numberOf.get(i)?.a ?? 0 })),
       issues,
-      summary: `${invoices.length} invoice(s) from ${project.rows.length} line(s); grand total ${money(total, s.currency)} (incl. tax). 共 ${invoices.length} 张发票，含税合计 ${money(total, s.currency)}。`,
-      stats: { invoices: invoices.length, lines: project.rows.length, total: money(total, s.currency) },
+      summary: `${invoices.length} invoice(s) from ${project.rows.length} line(s); grand total ${totalText} (incl. tax). 共 ${invoices.length} 张发票，含税合计 ${totalText}。`,
+      stats: { invoices: invoices.length, lines: project.rows.length, total: totalText },
       preview: previewHtml(invoices[0], s, invoices.length),
     };
   },
@@ -106,11 +113,11 @@ const def: AppDef = {
         const s = settingsOf(ctx.project);
         const { invoices } = buildInvoices(lines(ctx.project.rows), s);
         const xlsx = await writeXlsx([
-          { name: "Invoices", headers: ["Invoice", "Client", "Date", "Due", "Subtotal", "Tax", "Total", "Currency"], rows: invoices.map((i) => [i.number, i.client, i.date, i.due, i.subtotal, i.tax, i.total, s.currency]), numberFormat: { 4: "#,##0.00", 5: "#,##0.00", 6: "#,##0.00" } },
+          { name: "Invoices", headers: ["Invoice", "Client", "Date", "Due", "Subtotal", "Tax", "Total", "Currency"], rows: invoices.map((i) => [i.number, i.client, i.date, i.due, i.subtotal, i.tax, i.total, i.currency]), numberFormat: { 4: "#,##0.00", 5: "#,##0.00", 6: "#,##0.00" } },
           { name: "Lines", headers: ["Invoice", "Client", "Item", "Qty", "Price", "Tax %", "Amount", "Tax"], rows: invoices.flatMap((i) => i.lines.map((l) => [i.number, i.client, l.item, l.q, l.p, l.t, l.amount, l.taxAmount])) },
         ]);
-        const csv = toCsv(["Invoice", "Client", "Date", "Due", "Subtotal", "Tax", "Total", "Currency"], invoices.map((i) => [i.number, i.client, i.date, i.due, i.subtotal, i.tax, i.total, s.currency]));
-        const html = htmlPage("Invoices", `<h1>${s.seller || "Invoices"}</h1>` + htmlTable(["Invoice", "Client", "Date", "Due", "Total"], invoices.map((i) => [i.number, i.client, i.date, i.due, money(i.total, s.currency)])));
+        const csv = toCsv(["Invoice", "Client", "Date", "Due", "Subtotal", "Tax", "Total", "Currency"], invoices.map((i) => [i.number, i.client, i.date, i.due, i.subtotal, i.tax, i.total, i.currency]));
+        const html = htmlPage("Invoices", `<h1>${s.seller || "Invoices"}</h1>` + htmlTable(["Invoice", "Client", "Date", "Due", "Total"], invoices.map((i) => [i.number, i.client, i.date, i.due, money(i.total, i.currency)])));
         return [await ctx.write("invoices.xlsx", xlsx), await ctx.write("invoices.csv", csv), await ctx.write("invoices.html", html)];
       },
     },
