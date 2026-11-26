@@ -1,0 +1,1 @@
+{ "prefix": "seo", "folder": "网站", "pick": ["site"], "uiEdit": { "row": 0, "key": "title", "value": "关于青禾茶业 · 福鼎白茶的种植与制作" }, "expectText": "1 edited", "expectFiles": ["pages/.*about\\.html$", "audit\\.csv$"] }
