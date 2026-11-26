@@ -1,0 +1,59 @@
+{
+  "name": "raffle-draw",
+  "version": "0.1.0",
+  "description": "Run lucky draws and random team splits that anyone can check. Pick the participant list, set the prizes (like 一等奖×1, 二等奖×3, 三等奖×5) and a seed, and the winners are drawn with SHA-256 based random numbers — the same list and seed always give the same result, and an audit log records every step so the draw can be verified later. Weight by number of tickets, exclude people, lock a winner and re-draw the rest. Or split everyone into balanced groups, with each department spread evenly. Runs locally; no lottery service or API keys.",
+  "description_i18n": {
+    "en": "Run lucky draws and random team splits that anyone can check. Pick the participant list, set the prizes (like 一等奖×1, 二等奖×3, 三等奖×5) and a seed, and the winners are drawn with SHA-256 based random numbers — the same list and seed always give the same result, and an audit log records every step so the draw can be verified later. Weight by number of tickets, exclude people, lock a winner and re-draw the rest. Or split everyone into balanced groups, with each department spread evenly. Runs locally; no lottery service or API keys.",
+    "zh-CN": "做谁都能核对的抽奖和随机分组。选上参与者名单，设好奖项（如 一等奖×1, 二等奖×3, 三等奖×5）和随机种子，就用基于 SHA-256 的随机数抽出中奖者——同样的名单和种子永远得到同样的结果，过程记录写下每一步，事后可以验证。可以按抽奖券数加权、排除某些人、锁定某个中奖者后重抽其余名额。也可以把所有人随机分组，并让每个部门平均分到各组。在本地运行，不用抽奖服务，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "raffle",
+    "lucky draw",
+    "lottery",
+    "random picker",
+    "random groups",
+    "team split",
+    "seed",
+    "抽奖",
+    "年会抽奖",
+    "随机分组",
+    "分组",
+    "公平抽签",
+    "抽签"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "raffle-draw": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "抽奖分组工具",
+          "en-US": "Raffle & Grouping"
+        },
+        "icon": "gift",
+        "server": "raffle-draw",
+        "resourceUri": "ui://raffle-draw/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
