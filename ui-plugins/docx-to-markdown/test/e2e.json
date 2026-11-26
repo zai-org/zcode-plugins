@@ -1,0 +1,1 @@
+{ "prefix": "docx2md", "folder": "文档", "pick": ["员工手册.docx"], "uiEdit": { "row": 0, "key": "out", "value": "handbook" }, "expectText": "handbook.md", "expectFiles": ["handbook\\.md$", "handbook_images/image1\\.png$"] }

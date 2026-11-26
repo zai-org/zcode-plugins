@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "docx-to-markdown",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/docx-to-markdown",
+      "displayName": "Word to Markdown",
+      "displayName_i18n": {
+        "en": "Word to Markdown",
+        "zh-CN": "Word 转 Markdown"
+      },
+      "description": "Move Word documents into a notes app, wiki, static site or Git repository as clean Markdown: headings, bold and italic, lists (including nested ones), tables, links, quotes and code come across, and embedded pictures are saved into an images folder with working relative links. Convert many files at once and rename the outputs. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Move Word documents into a notes app, wiki, static site or Git repository as clean Markdown: headings, bold and italic, lists (including nested ones), tables, links, quotes and code come across, and embedded pictures are saved into an images folder with working relative links. Convert many files at once and rename the outputs. Runs locally; no upload or API keys.",
+        "zh-CN": "把 Word 文档转成干净的 Markdown，放进笔记软件、知识库、静态网站或 Git 仓库：标题、粗体斜体、列表（含多级）、表格、链接、引用和代码都会保留，文档里的图片会存到图片文件夹，并用相对路径正确链接。可以一次转换多个文件，输出文件名可改。在本地运行，不上传文件，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "word to markdown",
+        "docx to md",
+        "convert docx",
+        "markdown",
+        "notes",
+        "wiki",
+        "obsidian",
+        "Word 转 Markdown",
+        "docx 转 md",
+        "文档转换",
+        "图片提取"
+      ],
+      "examplePrompts": [
+        "Convert 员工手册.docx to Markdown",
+        "Convert every Word file in 资料 and add a YAML title",
+        "Keep Word's heading levels as they are"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 员工手册.docx 转成 Markdown",
+          "把 资料 文件夹里的 Word 都转成 md，并加 YAML 标题",
+          "标题层级保持和 Word 一样"
+        ]
+      }
     }
   ]
 }
