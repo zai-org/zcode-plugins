@@ -1,0 +1,1 @@
+{ "prefix": "todos", "folder": "代码", "pick": ["shop-app"], "uiEdit": { "row": 3, "key": "owner", "value": "chen" }, "expectText": "chen", "expectFiles": ["todos\\.csv$", "TODO\\.md$"] }
