@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "link-page-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/link-page-builder",
+      "displayName": "Link Page Builder",
+      "displayName_i18n": {
+        "en": "Link Page Builder",
+        "zh-CN": "个人链接主页"
+      },
+      "description": "Make your own “link in bio” page in minutes: your name, a short bio, a round photo and a stack of link buttons, in one of six themes. Everything is in a single index.html — no scripts, no trackers, no external files — so you can upload it to any host or share it from your own domain, plus a QR code that points to it. Edit links in a table, highlight the important one, hide old ones. Runs locally; no account on a link-page service or API keys.",
+      "description_i18n": {
+        "en": "Make your own “link in bio” page in minutes: your name, a short bio, a round photo and a stack of link buttons, in one of six themes. Everything is in a single index.html — no scripts, no trackers, no external files — so you can upload it to any host or share it from your own domain, plus a QR code that points to it. Edit links in a table, highlight the important one, hide old ones. Runs locally; no account on a link-page service or API keys.",
+        "zh-CN": "几分钟做好自己的“个人链接主页”：名字、一句简介、圆形头像和一列链接按钮，有六种主题可选。所有内容都在一个 index.html 里——没有脚本、没有追踪、不引用外部文件——可以上传到任何空间或放在自己的域名下，还会生成指向主页的二维码。在表格里编辑链接，重要的可以突出显示，旧的可以隐藏。在本地运行，不用注册链接主页服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "link in bio",
+        "links page",
+        "personal page",
+        "bio link",
+        "landing page",
+        "qr code",
+        "个人主页",
+        "链接主页",
+        "简介链接",
+        "二维码"
+      ],
+      "examplePrompts": [
+        "Build my links page from links.yaml with the sunset theme",
+        "Highlight the shop link and hide the 2025 page",
+        "Make a QR code for https://lin.example"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 links.yaml 做我的链接主页，主题用日落",
+          "突出网店链接，隐藏 2025 年的活动页",
+          "给 https://lin.example 生成二维码"
+        ]
+      }
     }
   ]
 }
