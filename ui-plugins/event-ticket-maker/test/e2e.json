@@ -1,0 +1,1 @@
+{ "prefix": "ticket", "folder": "活动", "pick": ["guests.csv"], "startSettings": { "event": "青禾产品发布会" }, "uiEdit": { "row": 2, "key": "seat", "value": "B-20" }, "expectText": "8 tickets", "expectFiles": ["tickets\\.pdf$", "checkin\\.xlsx$"] }
