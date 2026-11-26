@@ -1673,6 +1673,58 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "ics-calendar-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/ics-calendar-builder",
+      "displayName": "Calendar File Builder",
+      "displayName_i18n": {
+        "en": "Calendar File Builder",
+        "zh-CN": "表格转日历"
+      },
+      "description": "Turn an event spreadsheet into a calendar file that Apple Calendar, Google Calendar, Outlook and phones can import. Pick the sheet with titles, dates and times, and get a standard .ics with time zones done properly (daylight saving included), all-day and multi-day events, reminders like 15 minutes or 1 day before, and repeats such as every week, every other week, Mon/Wed/Fri, workdays, monthly or yearly with a count or end date. Also get one .ics per event to send around and a printable schedule. Runs locally; no calendar account or API keys.",
+      "description_i18n": {
+        "en": "Turn an event spreadsheet into a calendar file that Apple Calendar, Google Calendar, Outlook and phones can import. Pick the sheet with titles, dates and times, and get a standard .ics with time zones done properly (daylight saving included), all-day and multi-day events, reminders like 15 minutes or 1 day before, and repeats such as every week, every other week, Mon/Wed/Fri, workdays, monthly or yearly with a count or end date. Also get one .ics per event to send around and a printable schedule. Runs locally; no calendar account or API keys.",
+        "zh-CN": "把活动表格变成 Apple 日历、Google 日历、Outlook 和手机都能导入的日历文件。选上写有标题、日期和时间的表格，就能得到标准的 .ics 文件：时区处理正确（包括夏令时），支持全天和跨多天的活动、提前 15 分钟或 1 天等提醒，以及每周、每两周、每周一三五、工作日、每月、每年等重复规则，可设次数或截止日期。还能给每个活动单独导出 .ics 方便转发，并生成可打印的日程表。在本地运行，不用登录日历账号，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "ics",
+        "icalendar",
+        "calendar",
+        "schedule",
+        "event",
+        "import calendar",
+        "reminder",
+        "recurring",
+        "日历",
+        "日程",
+        "ics 文件",
+        "导入日历",
+        "提醒",
+        "活动安排"
+      ],
+      "examplePrompts": [
+        "Make a calendar file from events.xlsx called 青禾 12 月日程",
+        "Add a 10-minute reminder to every event",
+        "Export one .ics per event and a printable schedule"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 events.xlsx 做一个日历文件，名字叫 青禾 12 月日程",
+          "每个活动都加提前 10 分钟提醒",
+          "每个活动单独导出 .ics，再出一份可打印的日程表"
+        ]
+      }
     }
   ]
 }

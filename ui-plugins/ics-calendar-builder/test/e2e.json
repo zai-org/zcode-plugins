@@ -1,0 +1,1 @@
+{ "prefix": "ics", "folder": "日程", "pick": ["events.xlsx"], "startSettings": { "calName": "青禾日程" }, "uiEdit": { "row": 2, "key": "location", "value": "5 楼大会议室" }, "expectText": "8 events", "expectFiles": ["青禾日程\\.ics$", "schedule\\.html$"] }
