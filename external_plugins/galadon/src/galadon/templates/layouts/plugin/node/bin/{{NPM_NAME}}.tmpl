@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec node "$HERE/src/index.js" "$@"

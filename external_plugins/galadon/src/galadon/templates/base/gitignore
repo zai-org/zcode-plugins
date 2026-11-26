@@ -1,0 +1,10 @@
+.agents/
+.galadon/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/

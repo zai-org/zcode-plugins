@@ -1,0 +1,39 @@
+import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
+import process from "node:process";
+
+export const PROJECT = "{{PROJECT}}";
+export const VERSION = "0.1.0";
+
+export function health() {
+  return { ok: true, project: PROJECT, version: VERSION };
+}
+
+export function createApp() {
+  return createServer((request, response) => {
+    if (request.url !== "/health.json") {
+      const body = JSON.stringify({ ok: false, error: "not found" });
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(body);
+      return;
+    }
+    const body = JSON.stringify(health());
+    response.writeHead(200, {
+      "content-type": "application/json",
+      "content-length": Buffer.byteLength(body),
+    });
+    response.end(body);
+  });
+}
+
+export function main() {
+  const host = process.env.HOST ?? "127.0.0.1";
+  const port = Number(process.env.PORT ?? "8000");
+  createApp().listen(port, host, () => {
+    console.log(`${PROJECT} listening on http://${host}:${port}`);
+  });
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}

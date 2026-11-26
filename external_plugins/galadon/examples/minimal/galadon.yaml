@@ -1,0 +1,27 @@
+project: minimal
+template: api
+role: solo
+
+deploy:
+  adapter: ssh
+  env: test
+  build: "mkdir -p dist && cp server.py dist/ && git rev-parse --short HEAD > dist/commit.txt"
+  migrate: ""
+  release: ""
+  probe_url: "https://minimal.example.com/health.json"
+  probe_expect: "{{COMMIT}}"
+  artifact: "dist"
+  options:
+    host: 203.0.113.10
+    user: root
+    remote_root: /srv/minimal
+    service: minimal
+    domain: minimal.example.com
+    listen: 127.0.0.1:18790
+    exec_start: "/usr/bin/python3 /srv/minimal/current/server.py"
+    caddy_block: minimal
+
+checks:
+  build: "python3 -m py_compile server.py"
+  test: "python3 -m unittest discover -s tests -v"
+  timeout: 120

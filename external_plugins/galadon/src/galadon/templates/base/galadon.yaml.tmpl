@@ -1,0 +1,30 @@
+project: {{PROJECT}}
+template: {{TEMPLATE}}
+role: {{ROLE}}
+layout: {{LAYOUT}}
+stack: {{STACK}}
+
+paths:
+  # Stage artifacts. `retro` lives beside short-term progress in a layout;
+  # a project without a layout keeps the 0.2.x wiki/retro.md.
+  spec: spec/spec.md
+  evidence: verify/evidence.md
+  retro: {{RETRO}}
+  release: release/release.json
+
+deploy:
+  adapter: local
+  env: test
+  build: ""
+  migrate: ""
+  release: ""
+  probe_url: ""
+  probe_expect: ""
+  artifact: ""
+
+checks:
+  # Required: set the real commands. Empty values make `galadon check` fail
+  # loudly instead of passing a do-nothing gate.
+  build: "{{BUILD_CHECK}}"
+  test: "{{TEST_CHECK}}"
+  timeout: 300

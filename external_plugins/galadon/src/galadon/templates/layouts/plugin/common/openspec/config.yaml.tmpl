@@ -1,0 +1,16 @@
+schema: spec-driven
+
+# Shown to the agent when it creates a change. Keep it short.
+context: |
+  {{PROJECT}} is a distributable agent plugin. OpenSpec is the construction-plan
+  layer, not the product truth: product behaviour lives in spec/spec.md. A
+  change starts as openspec/changes/<change-id>/ and passes `galadon check`
+  before it ships.
+
+rules:
+  proposal:
+    - "Name the acceptance check the change must pass."
+  tasks:
+    - "Keep each task small enough to land in one commit."
+  design:
+    - "Record the alternatives you rejected and why."
