@@ -1,0 +1,57 @@
+{
+  "name": "test-data-generator",
+  "version": "0.1.0",
+  "description": "Make realistic fake data for demos, tests and training — Chinese or English names, mobile numbers, emails, cities and addresses, companies, dates, amounts, member levels with the mix you want, IDs, UUIDs and codes like ORD-1234-AB. Describe the columns in a small table (or load a schema sheet), choose how many rows, and export CSV, Excel, JSON or SQL. Everything is invented, and the same seed always gives the same data. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Make realistic fake data for demos, tests and training — Chinese or English names, mobile numbers, emails, cities and addresses, companies, dates, amounts, member levels with the mix you want, IDs, UUIDs and codes like ORD-1234-AB. Describe the columns in a small table (or load a schema sheet), choose how many rows, and export CSV, Excel, JSON or SQL. Everything is invented, and the same seed always gives the same data. Runs locally; no API keys.",
+    "zh-CN": "为演示、测试和培训生成逼真的假数据——中英文姓名、手机号、邮箱、城市和地址、公司名、日期、金额、按你想要的比例分布的会员等级、编号、UUID 和 ORD-1234-AB 这样的代码。在小表格里描述各列（或载入字段定义表），选好行数，导出 CSV、Excel、JSON 或 SQL。所有数据都是编造的，相同的随机种子永远生成相同的数据。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "fake data",
+    "test data",
+    "mock data",
+    "sample data",
+    "faker",
+    "seed data",
+    "测试数据",
+    "假数据",
+    "模拟数据",
+    "造数据",
+    "演示数据"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "test-data-generator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "测试数据生成",
+          "en-US": "Test Data Generator"
+        },
+        "icon": "dices",
+        "server": "test-data-generator",
+        "resourceUri": "ui://test-data-generator/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
