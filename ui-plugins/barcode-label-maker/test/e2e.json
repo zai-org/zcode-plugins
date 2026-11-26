@@ -1,0 +1,2 @@
+{ "prefix": "labels", "folder": "店铺", "pick": ["products.xlsx"], "startSettings": { "sheet": "a4-3x8" },
+  "uiEdit": { "row": 2, "key": "qty", "value": "6" }, "expectText": "EAN13", "expectFiles": ["labels\\.pdf$", "barcodes\\.csv$"] }

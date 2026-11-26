@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "barcode-label-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/barcode-label-maker",
+      "displayName": "Barcode Label Maker",
+      "displayName_i18n": {
+        "en": "Barcode Label Maker",
+        "zh-CN": "条码标签打印"
+      },
+      "description": "Turn a product sheet into barcode labels: EAN-13 and UPC-A with check-digit verification, Code 128 for SKUs and anything else, with product name and price, laid out on common A4/Letter label sheets (3×8, 4×10, 2×7, 5×13, 3×10). Set copies per product, skip labels already used on a sheet, fix codes in the panel and export a print-ready PDF plus SVG barcodes. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a product sheet into barcode labels: EAN-13 and UPC-A with check-digit verification, Code 128 for SKUs and anything else, with product name and price, laid out on common A4/Letter label sheets (3×8, 4×10, 2×7, 5×13, 3×10). Set copies per product, skip labels already used on a sheet, fix codes in the panel and export a print-ready PDF plus SVG barcodes. Runs locally; no API keys.",
+        "zh-CN": "把商品表做成条码标签：EAN-13、UPC-A 自动核对校验位，货号等其他内容用 Code 128，可带品名和价格，按常见 A4/Letter 不干胶标签纸（3×8、4×10、2×7、5×13、3×10）排版。可设每个商品打印几张、跳过半张纸上已用的标签，在面板里修正条码，导出可直接打印的 PDF 和 SVG 条码。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "barcode",
+        "ean-13",
+        "upc",
+        "code 128",
+        "labels",
+        "sku",
+        "price tag",
+        "条码",
+        "条形码",
+        "标签打印",
+        "价签",
+        "货号",
+        "不干胶"
+      ],
+      "examplePrompts": [
+        "Make barcode labels for 店铺/products.xlsx on A4 3×8 label paper",
+        "Print 6 labels for the mug, and start at label 10 because the sheet is partly used",
+        "Export the label PDF and SVG barcodes"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 店铺/products.xlsx 做条码标签，用 A4 3×8 的标签纸",
+          "马克杯打 6 张，标签纸前 9 个已经用掉了，从第 10 个开始",
+          "导出标签 PDF 和 SVG 条码"
+        ]
+      }
     }
   ]
 }
