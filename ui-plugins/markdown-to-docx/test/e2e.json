@@ -1,0 +1,1 @@
+{ "prefix": "md2docx", "folder": "文档", "pick": ["产品说明书.md"], "startSettings": { "toc": true }, "uiEdit": { "row": 0, "key": "out", "value": "会员系统说明" }, "expectText": "会员系统说明.docx", "expectFiles": ["会员系统说明\\.docx$"] }
