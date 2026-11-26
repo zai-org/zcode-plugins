@@ -1,0 +1,60 @@
+{
+  "name": "ics-calendar-builder",
+  "version": "0.1.0",
+  "description": "Turn an event spreadsheet into a calendar file that Apple Calendar, Google Calendar, Outlook and phones can import. Pick the sheet with titles, dates and times, and get a standard .ics with time zones done properly (daylight saving included), all-day and multi-day events, reminders like 15 minutes or 1 day before, and repeats such as every week, every other week, Mon/Wed/Fri, workdays, monthly or yearly with a count or end date. Also get one .ics per event to send around and a printable schedule. Runs locally; no calendar account or API keys.",
+  "description_i18n": {
+    "en": "Turn an event spreadsheet into a calendar file that Apple Calendar, Google Calendar, Outlook and phones can import. Pick the sheet with titles, dates and times, and get a standard .ics with time zones done properly (daylight saving included), all-day and multi-day events, reminders like 15 minutes or 1 day before, and repeats such as every week, every other week, Mon/Wed/Fri, workdays, monthly or yearly with a count or end date. Also get one .ics per event to send around and a printable schedule. Runs locally; no calendar account or API keys.",
+    "zh-CN": "把活动表格变成 Apple 日历、Google 日历、Outlook 和手机都能导入的日历文件。选上写有标题、日期和时间的表格，就能得到标准的 .ics 文件：时区处理正确（包括夏令时），支持全天和跨多天的活动、提前 15 分钟或 1 天等提醒，以及每周、每两周、每周一三五、工作日、每月、每年等重复规则，可设次数或截止日期。还能给每个活动单独导出 .ics 方便转发，并生成可打印的日程表。在本地运行，不用登录日历账号，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ics",
+    "icalendar",
+    "calendar",
+    "schedule",
+    "event",
+    "import calendar",
+    "reminder",
+    "recurring",
+    "日历",
+    "日程",
+    "ics 文件",
+    "导入日历",
+    "提醒",
+    "活动安排"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "ics-calendar-builder": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表格转日历",
+          "en-US": "Calendar File Builder"
+        },
+        "icon": "calendar",
+        "server": "ics-calendar-builder",
+        "resourceUri": "ui://ics-calendar-builder/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
