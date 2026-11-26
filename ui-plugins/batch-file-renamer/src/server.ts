@@ -120,7 +120,7 @@ const def: AppDef = {
         project.meta.lastRename = moves;
         // 改完后把规则复位，避免再次套用模板（例如 {n} 重新编号）
         Object.assign(project.settings, NEUTRAL);
-        const log = await write(`rename-log-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.csv`, toCsv(["from", "to"], moves.map((m) => [m.from, m.to])));
+        const log = await write(`rename-log-${localStamp()}.csv`, toCsv(["from", "to"], moves.map((m) => [m.from, m.to])));
         return { files: [log], note: `Renamed ${moves.length} file(s). The rules were reset so the new names stay as they are.` };
       },
     },
@@ -141,6 +141,12 @@ const def: AppDef = {
     },
   ],
 };
+
+/** 日志文件名用本机时间（不是 UTC），如 2026-11-25_17-58-03。 */
+export function localStamp(d = new Date()) {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
 
 export function createServer(options: { workspaceRoot: string; assetRoot: string; log?: (line: string) => void }) {
   return createApp(def, options).server;
