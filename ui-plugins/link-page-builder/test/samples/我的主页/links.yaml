@@ -1,0 +1,20 @@
+name: 林小满
+bio: 青禾茶业创始人 · 福鼎白茶 · 每周分享喝茶笔记
+avatar: avatar.jpg
+theme: forest
+links:
+  - title: 网店：青禾茶业
+    url: https://tea.example/shop
+    icon: 🍵
+    highlight: true
+  - title: 喝茶笔记（博客）
+    url: https://tea.example/blog
+    icon: 📝
+  - title: 发邮件给我
+    url: mailto:lin@tea.example
+    icon: ✉️
+  - title: 视频号
+    url: tea.example/video
+  - title: 旧活动页
+    url: https://tea.example/2025
+    hidden: true
