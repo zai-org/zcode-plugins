@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kling-ai-global": {
+      "type": "http",
+      "url": "https://kling.ai/mcp/plugin",
+      "enabled": true
+    }
+  }
+}

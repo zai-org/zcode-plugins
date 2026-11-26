@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kling-ai-china": {
+      "type": "http",
+      "url": "https://klingai.com/mcp/plugin",
+      "enabled": true
+    }
+  }
+}
