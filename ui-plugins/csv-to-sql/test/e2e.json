@@ -1,0 +1,1 @@
+{ "prefix": "csvsql", "folder": "数据库", "pick": ["会员名单.csv"], "startSettings": { "dialect": "postgres" }, "uiEdit": { "row": 1, "key": "name", "value": "name" }, "expectText": "PRIMARY KEY", "expectFiles": ["\\.postgres\\.sql$", "\\.schema\\.sql$"] }

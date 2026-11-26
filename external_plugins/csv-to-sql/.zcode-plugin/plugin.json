@@ -1,0 +1,57 @@
+{
+  "name": "csv-to-sql",
+  "version": "0.1.0",
+  "description": "Load a spreadsheet into a database without writing SQL by hand: get a ready-to-run script for SQLite, MySQL or PostgreSQL with a CREATE TABLE whose column types are worked out from the data, a suggested primary key, and INSERT statements with every quote, newline and empty value escaped correctly. Review and change the schema in a table first — names, types, nullable, key, which columns to keep. Runs locally; no database connection or API keys.",
+  "description_i18n": {
+    "en": "Load a spreadsheet into a database without writing SQL by hand: get a ready-to-run script for SQLite, MySQL or PostgreSQL with a CREATE TABLE whose column types are worked out from the data, a suggested primary key, and INSERT statements with every quote, newline and empty value escaped correctly. Review and change the schema in a table first — names, types, nullable, key, which columns to keep. Runs locally; no database connection or API keys.",
+    "zh-CN": "不用手写 SQL 就能把表格导入数据库：生成可以直接运行的 SQLite、MySQL 或 PostgreSQL 脚本，包含按数据推断列类型的 CREATE TABLE、建议的主键，以及把引号、换行、空值都正确转义的 INSERT 语句。导出前可以在表格里检查和修改表结构——列名、类型、是否可空、主键、导入哪些列。在本地运行，不连接数据库，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "csv to sql",
+    "insert statements",
+    "create table",
+    "sqlite",
+    "mysql",
+    "postgresql",
+    "import",
+    "表格转 SQL",
+    "建表语句",
+    "导入数据库",
+    "INSERT"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "csv-to-sql": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表格转 SQL",
+          "en-US": "CSV to SQL"
+        },
+        "icon": "database",
+        "server": "csv-to-sql",
+        "resourceUri": "ui://csv-to-sql/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
