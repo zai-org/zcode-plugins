@@ -1,0 +1,1 @@
+{ "prefix": "sheets", "folder": "销售", "pick": ["门店销售-2026Q4.xlsx", "线上订单-11月.csv"], "uiEdit": { "row": 0, "key": "c5", "value": "第一单" }, "expectText": "Amount (元)→金额", "expectFiles": ["merged\\.xlsx$", "merged\\.csv$"] }
