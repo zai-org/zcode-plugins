@@ -1,0 +1,16 @@
+{
+  "app": {
+    "title": "青禾茶业",
+    "welcome": "欢迎回来，{username}！",
+    "cart": "购物车里有 {count, plural, other {# 件商品}}"
+  },
+  "checkout": {
+    "pay": "立即支付",
+    "total": "合计：%s",
+    "coupon": "已使用优惠券 {code}",
+    "points": ""
+  },
+  "errors": { "network": "网络错误，请重试" },
+  "steps": ["选择", "支付", "完成"],
+  "legacy": { "banner": "双十一大促" }
+}
