@@ -1,0 +1,1 @@
+{ "prefix": "raffle", "folder": "年会", "pick": ["participants.csv"], "startSettings": { "seed": "2026-annual" }, "uiEdit": { "row": 0, "key": "weight", "value": "5" }, "expectText": "9 winners from 38 people", "expectFiles": ["result\\.xlsx$", "audit\\.json$"] }
