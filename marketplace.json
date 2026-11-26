@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sheet-merge-split",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sheet-merge-split",
+      "displayName": "Sheet Merge & Split",
+      "displayName_i18n": {
+        "en": "Sheet Merge & Split",
+        "zh-CN": "表格合并拆分"
+      },
+      "description": "Combine many Excel/CSV files — and every sheet inside a workbook — into one table, even when their columns are named differently (日期/Date, 金额/Amount (元)), with a column showing where each row came from. Or split one table into a sheet or a file per store, region, person or any other column. Missing columns are reported, numbers stay numbers. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Combine many Excel/CSV files — and every sheet inside a workbook — into one table, even when their columns are named differently (日期/Date, 金额/Amount (元)), with a column showing where each row came from. Or split one table into a sheet or a file per store, region, person or any other column. Missing columns are reported, numbers stay numbers. Runs locally; no API keys.",
+        "zh-CN": "把很多个 Excel/CSV 文件——连同工作簿里的每个工作表——合并成一张表，列名不一样也能对齐（日期/Date、金额/Amount (元)），并加一列记录每行来自哪里。也可以把一张表按门店、地区、负责人等任意列拆成多个工作表或多个文件。缺少的列会提示，数字保持数字格式。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "merge excel",
+        "combine csv",
+        "split sheet",
+        "consolidate",
+        "append",
+        "合并表格",
+        "拆分表格",
+        "汇总",
+        "多个工作表",
+        "按列拆分"
+      ],
+      "examplePrompts": [
+        "Merge 门店销售-2026Q4.xlsx (all sheets) and 线上订单-11月.csv into one table",
+        "Treat 营业额 and Revenue as the same column",
+        "Split the table by 门店 into one file per store"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 门店销售-2026Q4.xlsx（所有工作表）和 线上订单-11月.csv 合并成一张表",
+          "营业额和 Revenue 算同一列",
+          "按门店拆分，每个门店一个文件"
+        ]
+      }
     }
   ]
 }
