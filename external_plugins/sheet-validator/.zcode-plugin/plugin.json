@@ -1,0 +1,57 @@
+{
+  "name": "sheet-validator",
+  "version": "0.1.0",
+  "description": "Catch bad data before you import, submit or send a spreadsheet: missing values, duplicate IDs, wrong phone numbers and emails, impossible dates like 2025-13-01, numbers out of range, values outside an allowed list, wrong formats. Write rules in plain lines like “工号: required, unique” — a starting set is suggested from your data — then fix the flagged cells right in the table and export a marked-up Excel and the list of problems. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Catch bad data before you import, submit or send a spreadsheet: missing values, duplicate IDs, wrong phone numbers and emails, impossible dates like 2025-13-01, numbers out of range, values outside an allowed list, wrong formats. Write rules in plain lines like “工号: required, unique” — a starting set is suggested from your data — then fix the flagged cells right in the table and export a marked-up Excel and the list of problems. Runs locally; no API keys.",
+    "zh-CN": "在导入系统、提交或发出表格之前先把错误数据揪出来：漏填、编号重复、手机号和邮箱写错、2025-13-01 这样不存在的日期、数字超出范围、不在可选值里、格式不对。规则用一行一句的大白话写，比如“工号: required, unique”——打开时会根据数据自动生成一份初始规则——然后直接在表格里改正标出的单元格，导出标注好的 Excel 和问题清单。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "validate",
+    "data quality",
+    "check spreadsheet",
+    "required",
+    "duplicates",
+    "import check",
+    "数据校验",
+    "表格检查",
+    "必填",
+    "重复",
+    "格式检查"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "sheet-validator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表格数据校验",
+          "en-US": "Sheet Validator"
+        },
+        "icon": "list-checks",
+        "server": "sheet-validator",
+        "resourceUri": "ui://sheet-validator/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

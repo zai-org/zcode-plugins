@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sheet-validator",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sheet-validator",
+      "displayName": "Sheet Validator",
+      "displayName_i18n": {
+        "en": "Sheet Validator",
+        "zh-CN": "表格数据校验"
+      },
+      "description": "Catch bad data before you import, submit or send a spreadsheet: missing values, duplicate IDs, wrong phone numbers and emails, impossible dates like 2025-13-01, numbers out of range, values outside an allowed list, wrong formats. Write rules in plain lines like “工号: required, unique” — a starting set is suggested from your data — then fix the flagged cells right in the table and export a marked-up Excel and the list of problems. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Catch bad data before you import, submit or send a spreadsheet: missing values, duplicate IDs, wrong phone numbers and emails, impossible dates like 2025-13-01, numbers out of range, values outside an allowed list, wrong formats. Write rules in plain lines like “工号: required, unique” — a starting set is suggested from your data — then fix the flagged cells right in the table and export a marked-up Excel and the list of problems. Runs locally; no API keys.",
+        "zh-CN": "在导入系统、提交或发出表格之前先把错误数据揪出来：漏填、编号重复、手机号和邮箱写错、2025-13-01 这样不存在的日期、数字超出范围、不在可选值里、格式不对。规则用一行一句的大白话写，比如“工号: required, unique”——打开时会根据数据自动生成一份初始规则——然后直接在表格里改正标出的单元格，导出标注好的 Excel 和问题清单。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "validate",
+        "data quality",
+        "check spreadsheet",
+        "required",
+        "duplicates",
+        "import check",
+        "数据校验",
+        "表格检查",
+        "必填",
+        "重复",
+        "格式检查"
+      ],
+      "examplePrompts": [
+        "Check 员工花名册.csv before I import it into the HR system",
+        "工号 must be unique and 月薪 between 3000 and 100000",
+        "Export only the rows that pass"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "导入人事系统前帮我检查一下 员工花名册.csv",
+          "工号不能重复，月薪要在 3000 到 100000 之间",
+          "只导出合格的行"
+        ]
+      }
     }
   ]
 }
