@@ -1,0 +1,18 @@
+{
+  "name": "linkbunny-placement-checker",
+  "displayName": "LinkBunny Placement Checker",
+  "version": "0.1.0",
+  "description": "Check whether a public page links to an expected URL and whether the link uses nofollow.",
+  "description_i18n": {
+    "en": "Check whether a public page links to an expected URL and whether the link uses nofollow.",
+    "zh-CN": "检查公开网页是否链接到指定网址，以及该链接是否带有 nofollow 属性。"
+  },
+  "author": {
+    "name": "LinkBunny",
+    "url": "https://getlinkbunny.com"
+  },
+  "homepage": "https://getlinkbunny.com/tools/backlink-placement-checker?utm_source=zcode&utm_medium=marketplace&utm_campaign=placement_checker",
+  "license": "MIT",
+  "mcpServers": "./.mcp.json",
+  "keywords": ["backlinks", "nofollow", "mcp"]
+}
