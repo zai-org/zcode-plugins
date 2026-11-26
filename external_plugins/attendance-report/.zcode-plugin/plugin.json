@@ -1,0 +1,60 @@
+{
+  "name": "attendance-report",
+  "version": "0.1.0",
+  "description": "Turn the raw punch records from your time clock or attendance app into a monthly attendance report. Pick the export, set the shift hours, grace minutes, flexible start, lunch break, overtime rule, rest days and holidays, and see for each person and day the first and last punch, late arrivals, early leaves, missing punches, absences and overtime. Fix a forgotten punch or mark leave and business trips right in the table, then export a summary workbook and one workbook per person for them to check. Runs locally; no HR system or API keys.",
+  "description_i18n": {
+    "en": "Turn the raw punch records from your time clock or attendance app into a monthly attendance report. Pick the export, set the shift hours, grace minutes, flexible start, lunch break, overtime rule, rest days and holidays, and see for each person and day the first and last punch, late arrivals, early leaves, missing punches, absences and overtime. Fix a forgotten punch or mark leave and business trips right in the table, then export a summary workbook and one workbook per person for them to check. Runs locally; no HR system or API keys.",
+    "zh-CN": "把考勤机或打卡应用导出的原始打卡记录，变成每月的考勤统计。选上导出文件，设置上下班时间、迟到宽限、弹性上班、午休、加班规则、休息日和节假日，就能看到每个人每天的首末次打卡、迟到、早退、缺卡、缺勤和加班。忘打卡的可以直接在表里补，请假、出差也在表里标注，然后导出汇总表和每人一份的明细给本人核对。在本地运行，不用人事系统，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "attendance",
+    "time clock",
+    "punch",
+    "clock in",
+    "late",
+    "overtime",
+    "timesheet",
+    "考勤",
+    "打卡",
+    "迟到",
+    "早退",
+    "加班",
+    "缺卡",
+    "考勤统计"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "attendance-report": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "考勤统计",
+          "en-US": "Attendance Report"
+        },
+        "icon": "clock",
+        "server": "attendance-report",
+        "resourceUri": "ui://attendance-report/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

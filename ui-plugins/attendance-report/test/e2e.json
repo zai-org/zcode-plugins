@@ -1,0 +1,1 @@
+{ "prefix": "attend", "folder": "考勤", "pick": ["punches.xlsx"], "uiEdit": { "row": 0, "key": "note", "value": "出差" }, "expectText": "6 people · 2026-11", "expectFiles": ["attendance-2026-11\\.xlsx$", "people/.+\\.xlsx$"] }
