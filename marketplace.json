@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sheet-diff",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sheet-diff",
+      "displayName": "Sheet Diff",
+      "displayName_i18n": {
+        "en": "Sheet Diff",
+        "zh-CN": "表格对比"
+      },
+      "description": "Compare two versions of a spreadsheet — last month's and this month's price list, two exports of a customer list — and see exactly which rows were added, which were removed and which cells changed, old value next to new. Rows are matched by an ID column such as 货号, so re-sorted rows are not flagged; small number differences and extra spaces can be ignored. Export a highlighted Excel, a change list and a report. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Compare two versions of a spreadsheet — last month's and this month's price list, two exports of a customer list — and see exactly which rows were added, which were removed and which cells changed, old value next to new. Rows are matched by an ID column such as 货号, so re-sorted rows are not flagged; small number differences and extra spaces can be ignored. Export a highlighted Excel, a change list and a report. Runs locally; no API keys.",
+        "zh-CN": "对比同一张表格的两个版本——上个月和这个月的价目表、两次导出的客户名单——准确看出新增了哪些行、删除了哪些行、哪些单元格改了，旧值新值并排显示。按货号这类编号列匹配行，排序变了也不会误报；可以忽略细小的数字差异和多余空格。可导出标色的 Excel、变化清单和报告。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "compare excel",
+        "diff",
+        "spreadsheet compare",
+        "changes",
+        "price list",
+        "version",
+        "表格对比",
+        "Excel 对比",
+        "找不同",
+        "变化",
+        "差异"
+      ],
+      "examplePrompts": [
+        "What changed between 价目表-10月.xlsx and 价目表-11月.xlsx?",
+        "Match rows by 门店 and 货号",
+        "Ignore differences smaller than 0.01"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "价目表-10月.xlsx 和 价目表-11月.xlsx 有哪些变化？",
+          "按 门店+货号 匹配行",
+          "忽略小于 0.01 的差异"
+        ]
+      }
     }
   ]
 }
