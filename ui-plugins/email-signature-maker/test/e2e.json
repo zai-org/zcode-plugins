@@ -1,0 +1,1 @@
+{ "prefix": "sig", "folder": "签名", "pick": ["team.csv"], "startSettings": { "company": "青禾科技" }, "uiEdit": { "row": 2, "key": "title", "value": "高级产品经理" }, "expectText": "5 signatures", "expectFiles": ["index\\.html$", "signatures/ming\\.html$"] }

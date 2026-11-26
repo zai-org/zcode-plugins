@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "email-signature-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/email-signature-maker",
+      "displayName": "Email Signature Maker",
+      "displayName_i18n": {
+        "en": "Email Signature Maker",
+        "zh-CN": "邮件签名批量"
+      },
+      "description": "Give everyone on the team the same polished email signature. Pick the staff list, enter the company name, website and logo address, choose one of three templates and your colour, and get one signature file per person that pastes cleanly into Gmail, Outlook or Apple Mail — built with tables and inline styles the way email needs. Each person also gets a plain-text version, and an index page shows every signature with install steps. Runs locally; no signature service or API keys.",
+      "description_i18n": {
+        "en": "Give everyone on the team the same polished email signature. Pick the staff list, enter the company name, website and logo address, choose one of three templates and your colour, and get one signature file per person that pastes cleanly into Gmail, Outlook or Apple Mail — built with tables and inline styles the way email needs. Each person also gets a plain-text version, and an index page shows every signature with install steps. Runs locally; no signature service or API keys.",
+        "zh-CN": "让全公司用上统一、好看的邮件签名。选上员工名单，填好公司名、网址和 logo 地址，挑一个模板和主题色，就会给每个人生成一份签名文件，能干净地粘贴到 Gmail、Outlook 或 Apple Mail——用表格和内联样式写成，符合邮件的要求。每人还有一份纯文本版本，另有一个汇总页列出所有签名和设置步骤。在本地运行，不用签名服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "email signature",
+        "signature",
+        "html signature",
+        "gmail signature",
+        "outlook signature",
+        "team",
+        "邮件签名",
+        "签名",
+        "企业邮箱签名",
+        "统一签名"
+      ],
+      "examplePrompts": [
+        "Make email signatures for everyone in team.csv at 青禾科技",
+        "Use the logo-on-the-side template with logo https://qinghe.example/logo.png",
+        "Add a disclaimer and our blog link"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 team.csv 给青禾科技每个人做邮件签名",
+          "用 logo 在左的模板，logo 地址是 https://qinghe.example/logo.png",
+          "加一段免责声明和博客链接"
+        ]
+      }
     }
   ]
 }
