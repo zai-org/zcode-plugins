@@ -1,0 +1,1 @@
+{ "prefix": "fakedata", "folder": "测试", "pick": ["客户表结构.csv"], "startSettings": { "count": 200 }, "uiEdit": { "row": 1, "key": "arg", "value": "" }, "expectText": "C0001", "expectFiles": ["test-data\\.csv$", "test-data\\.xlsx$", "test-data\\.json$", "test-data\\.sql$"] }
