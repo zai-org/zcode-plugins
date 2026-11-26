@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "menu-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/menu-maker",
+      "displayName": "Menu Maker",
+      "displayName_i18n": {
+        "en": "Menu Maker",
+        "zh-CN": "餐厅菜单制作"
+      },
+      "description": "Keep your menu in a spreadsheet and get a good-looking printed menu and a phone-friendly web menu from it. Sections, prices with dotted leaders, chef's picks, spice levels, vegetarian and allergen tags, and English names side by side — in a classic, two-column or compact layout on A4, A5 or Letter. Add the web menu's address and a QR code is printed on the menu for guests to scan. Change a price or mark a dish sold out and export again. Runs locally; no menu service or API keys.",
+      "description_i18n": {
+        "en": "Keep your menu in a spreadsheet and get a good-looking printed menu and a phone-friendly web menu from it. Sections, prices with dotted leaders, chef's picks, spice levels, vegetarian and allergen tags, and English names side by side — in a classic, two-column or compact layout on A4, A5 or Letter. Add the web menu's address and a QR code is printed on the menu for guests to scan. Change a price or mark a dish sold out and export again. Runs locally; no menu service or API keys.",
+        "zh-CN": "菜单放在表格里维护，就能生成好看的打印菜单和适合手机看的电子菜单。分类、带虚线引导的价格、招牌推荐、辣度、素食和过敏原标记、中英文菜名并排——经典单栏、双栏或紧凑版式，A4、A5 或 Letter 纸张。填上电子菜单的网址，打印菜单上会印出二维码给客人扫。改价格、标记售罄后重新导出即可。在本地运行，不用菜单服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "menu",
+        "restaurant menu",
+        "menu pdf",
+        "qr menu",
+        "bilingual menu",
+        "cafe",
+        "菜单",
+        "餐厅菜单",
+        "电子菜单",
+        "扫码点餐",
+        "价目表"
+      ],
+      "examplePrompts": [
+        "Make a menu from 菜单.xlsx called 青禾小馆",
+        "Two columns on A4, mark Mapo Tofu as a chef's pick",
+        "Add a QR code to https://tea.example/menu"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 菜单.xlsx 做菜单，店名叫青禾小馆",
+          "A4 双栏，把麻婆豆腐设成推荐",
+          "加一个指向 https://tea.example/menu 的二维码"
+        ]
+      }
     }
   ]
 }
