@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "todo-collector",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/todo-collector",
+      "displayName": "TODO Collector",
+      "displayName_i18n": {
+        "en": "TODO Collector",
+        "zh-CN": "代码待办汇总"
+      },
+      "description": "Get every TODO, FIXME, HACK and BUG comment in your code into one list: owners from TODO(name), urgency from !!! or “urgent”, and, in a git repo, who wrote each one and when — so old forgotten items stand out. Set priorities and owners in the table, then export a CSV you can import as issues or a TODO.md checklist grouped by priority, owner or file. Runs locally; no issue tracker account or API keys.",
+      "description_i18n": {
+        "en": "Get every TODO, FIXME, HACK and BUG comment in your code into one list: owners from TODO(name), urgency from !!! or “urgent”, and, in a git repo, who wrote each one and when — so old forgotten items stand out. Set priorities and owners in the table, then export a CSV you can import as issues or a TODO.md checklist grouped by priority, owner or file. Runs locally; no issue tracker account or API keys.",
+        "zh-CN": "把代码里所有的 TODO、FIXME、HACK、BUG 注释汇总成一张清单：从 TODO(名字) 读出负责人，从 !!! 或“紧急”判断优先级；在 git 仓库里还能看到每条是谁、什么时候写的，放了很久被遗忘的一眼就能看出来。在表格里设好优先级和负责人，再导出可以导入任务系统的 CSV，或者按优先级、负责人、文件分组的 TODO.md 清单。在本地运行，不需要任务系统账号或 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "todo",
+        "fixme",
+        "code comments",
+        "technical debt",
+        "git blame",
+        "issue list",
+        "代码待办",
+        "技术债",
+        "TODO 清单",
+        "注释"
+      ],
+      "examplePrompts": [
+        "Collect the TODOs in shop-app",
+        "Group them by owner and give the cart ones to chen",
+        "Also collect NOTE comments"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "汇总 shop-app 里的 TODO",
+          "按负责人分组，购物车相关的分给 chen",
+          "把 NOTE 注释也收进来"
+        ]
+      }
     }
   ]
 }
