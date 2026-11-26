@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "docx-mail-merge",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/docx-mail-merge",
+      "displayName": "DOCX Mail Merge",
+      "displayName_i18n": {
+        "en": "DOCX Mail Merge",
+        "zh-CN": "Word 批量套打"
+      },
+      "description": "Fill a Word template’s {{field}} placeholders from a spreadsheet to make one .docx per row — offer letters, contracts, notices, certificates — with all formatting, tables, headers and footers kept. Check missing columns and empty values, fix data in the panel, preview the first document and export the files plus a zip. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Fill a Word template’s {{field}} placeholders from a spreadsheet to make one .docx per row — offer letters, contracts, notices, certificates — with all formatting, tables, headers and footers kept. Check missing columns and empty values, fix data in the panel, preview the first document and export the files plus a zip. Runs locally; no API keys.",
+        "zh-CN": "用表格批量填写 Word 模板里的 {{字段}}，每行生成一份 .docx（录用通知、合同、通知书、证明等），格式、表格、页眉页脚原样保留。检查缺少的列和空值，在面板里改数据、预览第一份文档，导出全部文件和 zip 压缩包。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "mail merge",
+        "docx",
+        "word",
+        "template",
+        "batch",
+        "letters",
+        "contracts",
+        "套打",
+        "批量生成",
+        "word 模板",
+        "邮件合并",
+        "录用通知",
+        "合同"
+      ],
+      "examplePrompts": [
+        "Use 人事/offer-template.docx and 人事/new-hires.xlsx to make one offer letter per person, named after the person",
+        "Alex Turner reports to 王磊 — fill that in",
+        "Generate the Word files and a zip"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 人事/offer-template.docx 和 人事/new-hires.xlsx 给每个人生成一份录用通知书，文件名用姓名",
+          "Alex Turner 的上级填王磊",
+          "生成 Word 文件并打包成 zip"
+        ]
+      }
     }
   ]
 }

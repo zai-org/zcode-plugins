@@ -1,0 +1,2 @@
+{ "prefix": "merge", "folder": "人事", "pick": ["offer-template.docx", "new-hires.xlsx"], "startSettings": { "fileName": "{姓名}-录用通知书" },
+  "uiEdit": { "row": 2, "key": "上级", "value": "王磊" }, "expectText": "李明-录用通知书.docx", "expectFiles": ["李明-录用通知书\\.docx$", "all-documents\\.zip$"] }

@@ -1,0 +1,59 @@
+{
+  "name": "docx-mail-merge",
+  "version": "0.1.0",
+  "description": "Fill a Word template’s {{field}} placeholders from a spreadsheet to make one .docx per row — offer letters, contracts, notices, certificates — with all formatting, tables, headers and footers kept. Check missing columns and empty values, fix data in the panel, preview the first document and export the files plus a zip. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Fill a Word template’s {{field}} placeholders from a spreadsheet to make one .docx per row — offer letters, contracts, notices, certificates — with all formatting, tables, headers and footers kept. Check missing columns and empty values, fix data in the panel, preview the first document and export the files plus a zip. Runs locally; no API keys.",
+    "zh-CN": "用表格批量填写 Word 模板里的 {{字段}}，每行生成一份 .docx（录用通知、合同、通知书、证明等），格式、表格、页眉页脚原样保留。检查缺少的列和空值，在面板里改数据、预览第一份文档，导出全部文件和 zip 压缩包。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mail merge",
+    "docx",
+    "word",
+    "template",
+    "batch",
+    "letters",
+    "contracts",
+    "套打",
+    "批量生成",
+    "word 模板",
+    "邮件合并",
+    "录用通知",
+    "合同"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "docx-mail-merge": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "Word 批量套打",
+          "en-US": "DOCX Mail Merge"
+        },
+        "icon": "file-text",
+        "server": "docx-mail-merge",
+        "resourceUri": "ui://docx-mail-merge/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
