@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "license-report",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/license-report",
+      "displayName": "License Report",
+      "displayName_i18n": {
+        "en": "License Report",
+        "zh-CN": "依赖许可证清单"
+      },
+      "description": "Know what licences you ship: scan a Node.js project's installed dependencies (direct and transitive, npm, yarn or pnpm) and get every package's licence normalised to SPDX, classed as permissive, weak copyleft, strong copyleft, proprietary or unknown. GPL/AGPL and missing licences are flagged until you review them; fix a licence by hand and add a note. Export an Excel report for legal and a THIRD_PARTY_NOTICES.txt to ship with your app. Runs locally on node_modules; no online lookup or API keys.",
+      "description_i18n": {
+        "en": "Know what licences you ship: scan a Node.js project's installed dependencies (direct and transitive, npm, yarn or pnpm) and get every package's licence normalised to SPDX, classed as permissive, weak copyleft, strong copyleft, proprietary or unknown. GPL/AGPL and missing licences are flagged until you review them; fix a licence by hand and add a note. Export an Excel report for legal and a THIRD_PARTY_NOTICES.txt to ship with your app. Runs locally on node_modules; no online lookup or API keys.",
+        "zh-CN": "弄清楚你的产品里带了哪些许可证：扫描 Node.js 项目已安装的依赖（直接和间接依赖，npm、yarn、pnpm 都支持），把每个包的许可证规范成 SPDX 名称，并分成宽松、弱 copyleft、强 copyleft、专有和未知几类。GPL/AGPL 和没写许可证的包会被标出，直到你审核过为止；可以手动修正许可证并写备注。导出给法务看的 Excel 报告，以及随产品发布的 THIRD_PARTY_NOTICES.txt。在本地读取 node_modules，不联网查询，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "license report",
+        "open source licenses",
+        "third party notices",
+        "spdx",
+        "gpl",
+        "copyleft",
+        "npm",
+        "node_modules",
+        "许可证",
+        "开源协议",
+        "第三方声明",
+        "合规"
+      ],
+      "examplePrompts": [
+        "List the licences of web-app's dependencies",
+        "Which packages are GPL or have no licence?",
+        "Make THIRD_PARTY_NOTICES.txt for the release"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "列出 web-app 所有依赖的许可证",
+          "哪些包是 GPL 或者没写许可证？",
+          "为发布版生成 THIRD_PARTY_NOTICES.txt"
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,1 @@
+{ "prefix": "licenses", "folder": "项目", "setup": "test/make-project.mjs", "pick": ["web-app"], "uiEdit": { "row": 5, "key": "license", "value": "BSD-2-Clause" }, "expectText": "1 to review", "expectFiles": ["license-report\\.xlsx$", "THIRD_PARTY_NOTICES\\.txt$"] }
