@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "placement-checker": {
+      "type": "http",
+      "url": "https://mcp.getlinkbunny.com/mcp"
+    }
+  }
+}
