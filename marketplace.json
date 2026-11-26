@@ -118,6 +118,56 @@
       ]
     },
     {
+      "name": "kling-ai-global-plugin",
+      "source": "./external_plugins/kling-ai-global-plugin",
+      "description": "Connect ZCode to Kling AI Global's official OAuth MCP plugin for image and video generation. Uses credits from a Global Kling account.",
+      "description_i18n": {
+        "en": "Connect ZCode to Kling AI Global's official OAuth MCP plugin for image and video generation. Uses credits from a Global Kling account.",
+        "zh-CN": "将 ZCode 连接到可灵 Global 官方 OAuth MCP 插件，用于图片与视频生成；生成会使用 Global 可灵账号的积分。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Kling AI",
+        "url": "https://kling.ai"
+      },
+      "homepage": "https://github.com/klingai-tech/claude-plugin",
+      "category": "other",
+      "keywords": [
+        "kling",
+        "mcp",
+        "plugin",
+        "image-generation",
+        "video-generation",
+        "oauth",
+        "global"
+      ]
+    },
+    {
+      "name": "kling-ai-china-plugin",
+      "source": "./external_plugins/kling-ai-china-plugin",
+      "description": "Connect ZCode to Kling AI China's official OAuth MCP plugin for image and video generation. Uses credits from a China Kling account.",
+      "description_i18n": {
+        "en": "Connect ZCode to Kling AI China's official OAuth MCP plugin for image and video generation. Uses credits from a China Kling account.",
+        "zh-CN": "将 ZCode 连接到可灵中国区官方 OAuth MCP 插件，用于图片与视频生成；生成会使用可灵中国区账号的积分。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Kling AI",
+        "url": "https://klingai.com"
+      },
+      "homepage": "https://github.com/klingai-tech/claude-plugin-cn",
+      "category": "other",
+      "keywords": [
+        "kling",
+        "mcp",
+        "plugin",
+        "image-generation",
+        "video-generation",
+        "oauth",
+        "china"
+      ]
+    },
+    {
       "name": "autoresearch",
       "source": "./external_plugins/autoresearch",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/autoresearch/icon.png",

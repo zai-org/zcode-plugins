@@ -1,0 +1,25 @@
+{
+  "name": "kling-ai-china-plugin",
+  "version": "0.1.0",
+  "description": "Connect ZCode to Kling AI China's official OAuth MCP plugin for image and video generation. Uses credits from a China Kling account.",
+  "description_i18n": {
+    "en": "Connect ZCode to Kling AI China's official OAuth MCP plugin for image and video generation. Uses credits from a China Kling account.",
+    "zh-CN": "将 ZCode 连接到可灵中国区官方 OAuth MCP 插件，用于图片与视频生成；生成会使用可灵中国区账号的积分。"
+  },
+  "author": {
+    "name": "Kling AI",
+    "url": "https://klingai.com"
+  },
+  "homepage": "https://github.com/klingai-tech/claude-plugin-cn",
+  "repository": "https://github.com/klingai-tech/claude-plugin-cn",
+  "keywords": [
+    "kling",
+    "mcp",
+    "plugin",
+    "image-generation",
+    "video-generation",
+    "oauth",
+    "china"
+  ],
+  "mcpServers": ".mcp.json"
+}
