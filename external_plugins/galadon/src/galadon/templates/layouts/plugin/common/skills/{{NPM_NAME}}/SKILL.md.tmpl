@@ -1,0 +1,27 @@
+---
+name: {{NPM_NAME}}
+description: Run the {{PROJECT}} command line plugin and report whether it is installed and working. Use when the user asks about {{PROJECT}} status, version or liveness.
+---
+
+# {{PROJECT}}
+
+## When to use
+
+- The user asks whether {{PROJECT}} is installed or working.
+- The user asks for its version.
+- Another skill needs a cheap liveness check before running a longer flow.
+
+## Commands
+
+```bash
+{{NPM_NAME}} --version
+{{NPM_NAME}} ping --json
+```
+
+`ping --json` prints `{"ok": true, ...}`; a non-zero exit means the plugin is
+not usable, so report the failure instead of retrying blindly.
+
+## Limits
+
+This skill only reports liveness. It does not deploy, install or configure the
+plugin; say so when the user asks for those.
