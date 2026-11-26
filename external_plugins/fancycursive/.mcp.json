@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "fancycursive": {
+      "type": "http",
+      "url": "https://mcp.fancycursive.com/mcp?source=zcode",
+      "enabled": true,
+      "timeoutMs": 30000
+    }
+  }
+}
