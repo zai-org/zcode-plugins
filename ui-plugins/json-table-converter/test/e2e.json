@@ -1,0 +1,1 @@
+{ "prefix": "jsontable", "folder": "接口数据", "pick": ["orders-api.json"], "startSettings": { "explode": "items" }, "uiEdit": { "row": 0, "key": "c5", "value": "杭州市" }, "expectText": "data.orders", "expectFiles": ["table\\.xlsx$", "data\\.json$", "data\\.jsonl$"] }
