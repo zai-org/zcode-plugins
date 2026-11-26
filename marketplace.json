@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "raffle-draw",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/raffle-draw",
+      "displayName": "Raffle & Grouping",
+      "displayName_i18n": {
+        "en": "Raffle & Grouping",
+        "zh-CN": "抽奖分组工具"
+      },
+      "description": "Run lucky draws and random team splits that anyone can check. Pick the participant list, set the prizes (like 一等奖×1, 二等奖×3, 三等奖×5) and a seed, and the winners are drawn with SHA-256 based random numbers — the same list and seed always give the same result, and an audit log records every step so the draw can be verified later. Weight by number of tickets, exclude people, lock a winner and re-draw the rest. Or split everyone into balanced groups, with each department spread evenly. Runs locally; no lottery service or API keys.",
+      "description_i18n": {
+        "en": "Run lucky draws and random team splits that anyone can check. Pick the participant list, set the prizes (like 一等奖×1, 二等奖×3, 三等奖×5) and a seed, and the winners are drawn with SHA-256 based random numbers — the same list and seed always give the same result, and an audit log records every step so the draw can be verified later. Weight by number of tickets, exclude people, lock a winner and re-draw the rest. Or split everyone into balanced groups, with each department spread evenly. Runs locally; no lottery service or API keys.",
+        "zh-CN": "做谁都能核对的抽奖和随机分组。选上参与者名单，设好奖项（如 一等奖×1, 二等奖×3, 三等奖×5）和随机种子，就用基于 SHA-256 的随机数抽出中奖者——同样的名单和种子永远得到同样的结果，过程记录写下每一步，事后可以验证。可以按抽奖券数加权、排除某些人、锁定某个中奖者后重抽其余名额。也可以把所有人随机分组，并让每个部门平均分到各组。在本地运行，不用抽奖服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "raffle",
+        "lucky draw",
+        "lottery",
+        "random picker",
+        "random groups",
+        "team split",
+        "seed",
+        "抽奖",
+        "年会抽奖",
+        "随机分组",
+        "分组",
+        "公平抽签",
+        "抽签"
+      ],
+      "examplePrompts": [
+        "Draw 一等奖×1, 二等奖×3, 三等奖×5 from participants.csv with seed 2026-annual",
+        "Lock the first prize winner and re-draw the rest",
+        "Split everyone into 4 groups balanced by department"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 participants.csv 抽 一等奖×1、二等奖×3、三等奖×5，种子用 2026-annual",
+          "锁定一等奖，其他重抽",
+          "把所有人分成 4 组，各部门平均分配"
+        ]
+      }
     }
   ]
 }
