@@ -10,7 +10,7 @@ Autonomous code review and testing agent for ZCode. Provides dedicated audit age
 
 ## Prerequisites
 
-Install `bugx-cli` (`>=0.1.4`) locally before enabling this plugin:
+Install `bugx-cli` (`>=0.1.5`) locally before enabling this plugin:
 
 ```bash
 # Python (>=3.11)

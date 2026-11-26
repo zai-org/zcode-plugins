@@ -1,6 +1,6 @@
 {
   "name": "bugx",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Autonomous code review and testing agent. Catches hidden deep bugs for developers, automates black-box, functional, and performance testing for QA, and ensures rock-solid software delivery.",
   "description_i18n": {
     "en": "Autonomous code review and testing agent. Catches hidden deep bugs for developers, automates black-box, functional, and performance testing for QA, and ensures rock-solid software delivery.",
