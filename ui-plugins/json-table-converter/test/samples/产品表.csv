@@ -1,0 +1,4 @@
+id,name,price,in_stock,spec.weight,spec.origin,tags
+TEA-001,西湖龙井,179,true,250g,杭州,绿茶;明前
+TEA-003,白茶饼,268,false,357g,福鼎,白茶
+CUP-010,公道杯,69.5,true,,景德镇,
