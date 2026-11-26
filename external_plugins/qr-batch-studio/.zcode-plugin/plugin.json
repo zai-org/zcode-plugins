@@ -1,0 +1,58 @@
+{
+  "name": "qr-batch-studio",
+  "version": "0.1.0",
+  "description": "Make QR codes in bulk from a sheet: web links, text, Wi-Fi logins, contact cards (vCard), email, phone and SMS, with your colours, an optional centre logo and labels. Problems such as empty content, links without https://, codes that are too dense and low contrast are flagged; edit the list in the panel, preview the codes and export PNG (plus zip), SVG and an A4 print sheet. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Make QR codes in bulk from a sheet: web links, text, Wi-Fi logins, contact cards (vCard), email, phone and SMS, with your colours, an optional centre logo and labels. Problems such as empty content, links without https://, codes that are too dense and low contrast are flagged; edit the list in the panel, preview the codes and export PNG (plus zip), SVG and an A4 print sheet. Runs locally; no API keys.",
+    "zh-CN": "用一张表批量生成二维码：网址、文字、WiFi 连接、电子名片（vCard）、邮箱、电话和短信，可设置颜色、中间 Logo 和名称标签。自动标出内容为空、网址缺少 https://、码太密、颜色对比不够等问题；在面板里修改清单、预览二维码，导出 PNG（含 zip）、SVG 矢量和 A4 打印页 PDF。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "qr code",
+    "qrcode",
+    "wifi qr",
+    "vcard",
+    "batch",
+    "print",
+    "logo",
+    "二维码",
+    "批量二维码",
+    "WiFi 二维码",
+    "名片二维码",
+    "扫码"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "qr-batch-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "二维码批量生成",
+          "en-US": "QR Batch Studio"
+        },
+        "icon": "qr-code",
+        "server": "qr-batch-studio",
+        "resourceUri": "ui://qr-batch-studio/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

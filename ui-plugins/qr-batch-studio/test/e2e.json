@@ -1,0 +1,2 @@
+{ "prefix": "qr", "folder": "门店", "pick": ["qr-list.xlsx", "logo.png"], "startSettings": { "ecc": "H" },
+  "uiEdit": { "row": 8, "key": "content", "value": "https://penova.example/survey" }, "expectText": "访客 WiFi", "expectFiles": ["qr-png\\.zip$", "qr-sheet\\.pdf$"] }
