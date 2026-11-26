@@ -1,0 +1,1 @@
+{ "prefix": "sitemap", "folder": "网站", "pick": ["site"], "startSettings": { "baseUrl": "https://tea.example" }, "uiEdit": { "row": 4, "key": "changefreq", "value": "weekly" }, "expectText": "5 broken links", "expectFiles": ["sitemap\\.xml$", "robots\\.txt$", "link-report\\.csv$"] }
