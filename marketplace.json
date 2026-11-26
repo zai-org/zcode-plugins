@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "json-table-converter",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/json-table-converter",
+      "displayName": "JSON ⇄ Table Converter",
+      "displayName_i18n": {
+        "en": "JSON ⇄ Table Converter",
+        "zh-CN": "JSON 表格互转"
+      },
+      "description": "Open an API response, export or log file in JSON or JSON Lines as a normal table — nested fields become columns like customer.city, lists are joined or kept, and a list of line items can become one row per item — then edit it and save as Excel or CSV. It works the other way too: a spreadsheet with columns like spec.weight becomes properly nested JSON with real numbers and true/false. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Open an API response, export or log file in JSON or JSON Lines as a normal table — nested fields become columns like customer.city, lists are joined or kept, and a list of line items can become one row per item — then edit it and save as Excel or CSV. It works the other way too: a spreadsheet with columns like spec.weight becomes properly nested JSON with real numbers and true/false. Runs locally; no API keys.",
+        "zh-CN": "把 JSON 或 JSON Lines 格式的接口返回、导出文件、日志打开成普通表格——嵌套字段变成 customer.city 这样的列，列表可以连接或保留，订单明细这样的列表还能展开成每项一行——编辑后存成 Excel 或 CSV。反过来也行：带 spec.weight 这类列名的表格可以转成正确嵌套的 JSON，数字和 true/false 都是真正的类型。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "json",
+        "jsonl",
+        "ndjson",
+        "csv",
+        "excel",
+        "flatten",
+        "convert",
+        "api response",
+        "JSON 转 Excel",
+        "表格转 JSON",
+        "嵌套",
+        "数据转换"
+      ],
+      "examplePrompts": [
+        "Turn orders-api.json into an Excel sheet",
+        "One row per item in items",
+        "Convert 产品表.csv to nested JSON with tags as an array"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 orders-api.json 转成 Excel 表格",
+          "items 里每个商品一行",
+          "把 产品表.csv 转成嵌套 JSON，tags 变成数组"
+        ]
+      }
     }
   ]
 }
