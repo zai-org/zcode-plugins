@@ -1,0 +1,1 @@
+{ "prefix": "menu", "folder": "餐厅", "pick": ["菜单.xlsx"], "startSettings": { "title": "青禾小馆" }, "uiEdit": { "row": 1, "key": "price", "value": "18" }, "expectText": "9 dishes in 4 sections", "expectFiles": ["menu\\.pdf$", "menu\\.html$"] }
