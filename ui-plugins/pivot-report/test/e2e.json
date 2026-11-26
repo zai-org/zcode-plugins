@@ -1,0 +1,1 @@
+{ "prefix": "pivot", "folder": "报表", "pick": ["订单明细-2026.xlsx"], "startSettings": { "rows": "门店", "col": "品类" }, "edit": { "settings": { "percent": "total" } }, "expectText": "天猫旗舰店", "expectFiles": ["pivot\\.xlsx$", "pivot\\.csv$", "pivot\\.html$"] }
