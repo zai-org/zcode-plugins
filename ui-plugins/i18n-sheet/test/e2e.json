@@ -1,0 +1,1 @@
+{ "prefix": "i18n", "folder": "前端", "pick": ["en.json", "zh.json", "ja.yml"], "uiEdit": { "row": 1, "key": "l1", "value": "欢迎回来，{name}！" }, "expectText": "13 keys", "expectFiles": ["locales/zh\\.json$", "locales/ja\\.yml$", "translations\\.xlsx$"] }

@@ -1,0 +1,7 @@
+ja:
+  app:
+    title: 青禾茶業
+    welcome: "おかえりなさい、{name}さん！"
+  checkout:
+    pay: Pay now
+    total: "合計：%s"

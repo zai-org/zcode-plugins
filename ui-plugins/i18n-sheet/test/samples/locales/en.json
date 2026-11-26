@@ -1,0 +1,15 @@
+{
+  "app": {
+    "title": "Qinghe Tea",
+    "welcome": "Welcome back, {name}!",
+    "cart": "You have {count, plural, one {# item} other {# items}} in your cart"
+  },
+  "checkout": {
+    "pay": "Pay now",
+    "total": "Total: %s",
+    "coupon": "Coupon <b>{code}</b> applied",
+    "points": "You earned {{points}} points"
+  },
+  "errors": { "network": "Network error, please retry", "timeout": "Request timed out" },
+  "steps": ["Choose", "Pay", "Done"]
+}
