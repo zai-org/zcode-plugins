@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "name-badge-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/name-badge-maker",
+      "displayName": "Badge & Tent Card Maker",
+      "displayName_i18n": {
+        "en": "Badge & Tent Card Maker",
+        "zh-CN": "胸牌桌签制作"
+      },
+      "description": "Print name badges and table tent cards for an event straight from the attendee list. Pick the list (and your logo), enter the event name and date, and get badges laid out on A4 with cut marks — the name is sized to fit, with organisation, title, and a coloured band for each role such as guest, speaker or staff. Tent cards fold in half with the name readable from both sides. Five badge sizes, optional QR code of each attendee's code, Chinese and English names. Runs locally; no design service or API keys.",
+      "description_i18n": {
+        "en": "Print name badges and table tent cards for an event straight from the attendee list. Pick the list (and your logo), enter the event name and date, and get badges laid out on A4 with cut marks — the name is sized to fit, with organisation, title, and a coloured band for each role such as guest, speaker or staff. Tent cards fold in half with the name readable from both sides. Five badge sizes, optional QR code of each attendee's code, Chinese and English names. Runs locally; no design service or API keys.",
+        "zh-CN": "直接用参会名单打印活动胸牌和桌签。选上名单（和 logo），填好活动名称和日期，就能得到排在 A4 上、带裁切角线的胸牌——名字自动调整到合适大小，下面是单位、职位，底部按身份（嘉宾、讲师、工作人员等）印不同颜色的色条。桌签对折后两面都能看到名字。五种胸牌尺寸，可选印每位参会者编号的二维码，中英文名都支持。在本地运行，不用设计服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "name badge",
+        "badge",
+        "tent card",
+        "table card",
+        "place card",
+        "event",
+        "conference",
+        "胸牌",
+        "胸卡",
+        "桌签",
+        "台卡",
+        "会议",
+        "活动物料"
+      ],
+      "examplePrompts": [
+        "Make badges from attendees.xlsx for 2026 青禾产品大会",
+        "Use 90×120 badges, sort by role and add QR codes",
+        "Print tent cards without the organisation"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 attendees.xlsx 给 2026 青禾产品大会做胸牌",
+          "换成 90×120 的胸牌，按身份排序，加上二维码",
+          "打印桌签，不显示单位"
+        ]
+      }
     }
   ]
 }
