@@ -1,0 +1,1 @@
+{ "prefix": "clean", "folder": "客户", "pick": ["客户名单-导出.csv"], "uiEdit": { "row": 4, "key": "c5", "value": "800" }, "expectText": "lin.xm@qinghe.cn", "expectFiles": ["cleaned\\.xlsx$", "cleaned\\.csv$", "changes\\.csv$"] }

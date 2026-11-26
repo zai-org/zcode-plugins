@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "csv-cleaner",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/csv-cleaner",
+      "displayName": "CSV Cleaner",
+      "displayName_i18n": {
+        "en": "CSV Cleaner",
+        "zh-CN": "表格数据清洗"
+      },
+      "description": "Clean up a messy CSV or Excel export in one pass — stray and double spaces, full-width digits and letters, money text like ¥1,280.00, mixed date formats, upper-case emails, phone numbers with dashes and brackets, empty rows and columns, and duplicate rows. Column types are detected for you, every change is listed, and values that can't be cleaned are flagged. Chinese-Excel GBK CSVs open correctly. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Clean up a messy CSV or Excel export in one pass — stray and double spaces, full-width digits and letters, money text like ¥1,280.00, mixed date formats, upper-case emails, phone numbers with dashes and brackets, empty rows and columns, and duplicate rows. Column types are detected for you, every change is listed, and values that can't be cleaned are flagged. Chinese-Excel GBK CSVs open correctly. Runs locally; no API keys.",
+        "zh-CN": "一次清洗乱糟糟的 CSV 或 Excel 导出：多余和连续空格、全角数字字母、¥1,280.00 这样的金额文本、五花八门的日期格式、大写邮箱、带横线括号的电话、空行空列和重复行。自动识别列类型，每处修改都有记录，清洗不了的值会标出来。中文 Excel 导出的 GBK 编码 CSV 也能正确打开。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "csv",
+        "excel",
+        "clean",
+        "data cleaning",
+        "dedupe",
+        "normalize",
+        "dates",
+        "phone",
+        "数据清洗",
+        "去重",
+        "表格整理",
+        "全角半角",
+        "日期格式"
+      ],
+      "examplePrompts": [
+        "Clean up 客户名单-导出.csv",
+        "Treat two rows with the same 客户名称 as duplicates",
+        "Export the cleaned Excel and the change log"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 客户名单-导出.csv 清洗一下",
+          "客户名称相同就算重复",
+          "导出清洗后的 Excel 和修改记录"
+        ]
+      }
     }
   ]
 }
