@@ -1,0 +1,58 @@
+{
+  "name": "coupon-code-generator",
+  "version": "0.1.0",
+  "description": "Generate batches of unique coupon, gift and redeem codes and printable cards from a small campaign sheet. Set a pattern like XXXX-XXXX, a prefix per batch, and a character set without look-alike letters, with an optional check character so typos are caught. Codes come from a seed, so the same campaign always gives the same codes, and a list of codes you have already issued is never reused. Export a CSV for your shop system and a cards PDF with value, code, expiry and a QR code that can open your redeem page. Runs locally; no coupon service or API keys.",
+  "description_i18n": {
+    "en": "Generate batches of unique coupon, gift and redeem codes and printable cards from a small campaign sheet. Set a pattern like XXXX-XXXX, a prefix per batch, and a character set without look-alike letters, with an optional check character so typos are caught. Codes come from a seed, so the same campaign always gives the same codes, and a list of codes you have already issued is never reused. Export a CSV for your shop system and a cards PDF with value, code, expiry and a QR code that can open your redeem page. Runs locally; no coupon service or API keys.",
+    "zh-CN": "用一张简单的活动批次表，批量生成不重复的优惠码、礼品码、兑换码和可打印的兑换卡。设定码型（如 XXXX-XXXX）、每批的前缀和不含易混字符的字符集，还可以在末尾加校验位，输错能发现。兑换码由种子生成，同一个活动永远得到同样的码；已经发出的码清单也可以选上，绝不会重复。导出给店铺系统用的 CSV，以及印有面值、兑换码、有效期和二维码（可直达兑换页）的兑换卡 PDF。在本地运行，不用发券服务，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "coupon code",
+    "promo code",
+    "voucher",
+    "gift card",
+    "redeem code",
+    "discount code",
+    "兑换码",
+    "优惠码",
+    "优惠券",
+    "券码",
+    "礼品卡",
+    "激活码"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "coupon-code-generator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "兑换码批量生成",
+          "en-US": "Coupon Code Generator"
+        },
+        "icon": "ticket-percent",
+        "server": "coupon-code-generator",
+        "resourceUri": "ui://coupon-code-generator/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
