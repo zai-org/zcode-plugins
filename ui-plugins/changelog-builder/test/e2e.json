@@ -1,0 +1,1 @@
+{ "prefix": "changelog", "folder": "项目", "setup": "test/make-repo.mjs", "pick": ["shop-app"], "startSettings": { "next": "v1.2.0" }, "uiEdit": { "row": 0, "key": "summary", "value": "生日优惠券" }, "expectText": "生日优惠券", "expectFiles": ["CHANGELOG\\.md$", "release-notes\\.html$"] }
