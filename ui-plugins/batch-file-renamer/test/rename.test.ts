@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { newName, plan, type Rules } from "../src/rename.ts";
 import { connect } from "../src/kit/testing.ts";
-import { createServer } from "../src/server.ts";
+import { createServer, localStamp } from "../src/server.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const R: Rules = { find: "", replace: "", regex: false, template: "{name}", start: 1, pad: 3, case: "keep", extCase: "lower", spaces: "keep", sort: "name" };
@@ -48,6 +48,9 @@ describe("rename tools", () => {
     await c.call("rename_edit", { project: "trip", set: [{ row: 4, values: { override: "微信图片" } }] });
     const x = await c.call("rename_export", { project: "trip" });
     expect(x.text).toMatch(/Renamed 5/);
+    const logName = JSON.stringify(x).match(/rename-log-([\d_-]+)\.csv/)?.[1];
+    expect(logName).toMatch(/^\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d$/);
+    expect(Math.abs(Date.parse(logName!.replace("_", "T").replace(/-(\d\d)-(\d\d)$/, ":$1:$2")) - Date.now())).toBeLessThan(120_000);
     const names = (await readdir(join(root, "相册"))).sort();
     expect(names).toEqual(["keep.md", "notes  draft FINAL.txt", "微信图片.jpg", "报价单 (1).pdf", "报价单 (2).pdf", "杭州-001.jpg", "杭州-002.jpg", "杭州-003.jpg", "杭州-004.png"].sort());
     const again = await c.call("rename_status", { project: "trip" });
@@ -55,5 +58,20 @@ describe("rename tools", () => {
     await c.call("rename_export", { project: "trip", formats: ["undo"] });
     expect((await readdir(join(root, "相册"))).sort()).toContain("IMG_20261103_101522.JPG");
     expect((await readdir(join(root, "相册"))).sort()).toContain("WeChat Image_20261106.jpg");
+  });
+});
+
+// 回归测试：改名日志的文件名用本机时间，不用 UTC（FIX-QUEUE-100）
+describe("log file name", () => {
+  it("uses local time", () => {
+    const tz = process.env.TZ;
+    try {
+      process.env.TZ = "Asia/Shanghai";
+      expect(localStamp(new Date("2026-11-25T20:30:05Z"))).toBe("2026-11-26_04-30-05");
+      process.env.TZ = "America/Puerto_Rico";
+      expect(localStamp(new Date("2026-11-25T02:03:04Z"))).toBe("2026-11-24_22-03-04");
+    } finally {
+      if (tz === undefined) delete process.env.TZ; else process.env.TZ = tz;
+    }
   });
 });
