@@ -25,6 +25,31 @@ function enc(r: Record<string, unknown>, kind: Kind): { e?: Encoded; err?: strin
 }
 const copies = (r: Record<string, unknown>) => { const n = num(r.qty); return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 1; };
 
+/**
+ * 不同的行最后印出同一个条码时给警告（扫码时分不出是哪件商品）。
+ * 特别是 12 位数字补上校验位之后，可能刚好和另一行已写全的 13 位条码一样。
+ */
+export function duplicateBarcodes(rows: Project["rows"], kind: Kind): Issue[] {
+  const seen = new Map<string, number[]>();
+  rows.forEach((r, i) => {
+    const { e } = enc(r, kind);
+    if (!e) return;
+    const k = e.kind === "code128" ? e.text : e.text.replace(/^0(?=\d{12}$)/, "");
+    seen.set(k, [...(seen.get(k) ?? []), i]);
+  });
+  const out: Issue[] = [];
+  for (const idx of seen.values()) {
+    if (idx.length < 2) continue;
+    for (const i of idx) {
+      const others = idx.filter((j) => j !== i).map((j) => `#${j}${rows[j].sku ? ` ${rows[j].sku}` : ""}`).join(", ");
+      const { e } = enc(rows[i], kind);
+      const computed = e?.warn?.startsWith("Check digit") ? ` after adding check digit ${e.text.slice(-1)}` : "";
+      out.push({ level: "warn", row: i, key: "barcode", message: `Barcode ${e?.human}${computed} is the same as row ${others} — a scanner can't tell these items apart / 条码与第 ${others} 行重复${computed ? "（补校验位后）" : ""}` });
+    }
+  }
+  return out;
+}
+
 const def: AppDef = {
   name: NAME,
   version: VERSION,
@@ -70,6 +95,7 @@ const def: AppDef = {
       total += e ? copies(r) : 0;
       return { ...r, _type: e?.kind.toUpperCase() ?? "", _human: e?.human ?? "" };
     });
+    for (const w of duplicateBarcodes(p.rows, kind)) issues.push(w);
     const sheet = SHEETS[String(p.settings.sheet)] ?? SHEETS["a4-3x8"];
     const per = sheet.cols * sheet.rows;
     const pages = Math.ceil((total + Number(p.settings.skip ?? 0)) / per);
