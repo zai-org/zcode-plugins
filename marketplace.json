@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "pivot-report",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/pivot-report",
+      "displayName": "Pivot Report",
+      "displayName_i18n": {
+        "en": "Pivot Report",
+        "zh-CN": "透视汇总报表"
+      },
+      "description": "Turn a detail table into a summary report the way an Excel pivot table does — group by store, category, salesperson or anything else, spread months or quarters across the top, and sum, count or average a value — without fiddling with Excel's pivot menus. Percentages, top N and a bar chart included; export a clean Excel report, CSV or a printable HTML page. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a detail table into a summary report the way an Excel pivot table does — group by store, category, salesperson or anything else, spread months or quarters across the top, and sum, count or average a value — without fiddling with Excel's pivot menus. Percentages, top N and a bar chart included; export a clean Excel report, CSV or a printable HTML page. Runs locally; no API keys.",
+        "zh-CN": "像 Excel 数据透视表一样把明细表变成汇总报表——按门店、品类、销售员或任意字段分组，把月份或季度横向展开，对数值求和、计数或求平均——不用再折腾 Excel 的透视表菜单。支持百分比、前 N 名和条形图；可导出整洁的 Excel 报表、CSV 或可打印的 HTML 页面。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "pivot table",
+        "summary",
+        "group by",
+        "report",
+        "sales report",
+        "aggregate",
+        "透视表",
+        "汇总",
+        "分组统计",
+        "销售报表",
+        "月报"
+      ],
+      "examplePrompts": [
+        "Summarise 订单明细-2026.xlsx: sales by store and month",
+        "Show each store's share of the total",
+        "Only the top 5 products by amount"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "汇总 订单明细-2026.xlsx：按门店和月份统计销售额",
+          "显示每个门店占总额的百分比",
+          "只看金额前 5 的商品"
+        ]
+      }
     }
   ]
 }
