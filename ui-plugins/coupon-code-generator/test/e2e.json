@@ -1,0 +1,1 @@
+{ "prefix": "coupon", "folder": "活动券", "pick": ["campaign.csv"], "startSettings": { "seed": "winter-2026", "brand": "青禾小馆" }, "uiEdit": { "row": 1, "key": "note", "value": "仅限首单使用" }, "expectText": "72 codes in 3 batches", "expectFiles": ["codes\\.csv$", "coupon-cards\\.pdf$"] }
