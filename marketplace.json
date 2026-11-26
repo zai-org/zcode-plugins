@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "event-ticket-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/event-ticket-maker",
+      "displayName": "Event Tickets",
+      "displayName_i18n": {
+        "en": "Event Tickets",
+        "zh-CN": "活动门票签到"
+      },
+      "description": "Issue QR-code tickets for your event and run check-in from a spreadsheet. Pick the guest list, enter the event name, time and place, and every guest gets a unique, hard-to-guess ticket code. Print three tickets per A4 page with a tear-off stub, or export one PDF per guest to send out, plus a check-in workbook with a signature column. On the day, pick the scanner's export together with the guest list to see who has arrived — unknown, mistyped and repeated scans are flagged. Codes stay the same when you reopen the list. Runs locally; no ticketing service or API keys.",
+      "description_i18n": {
+        "en": "Issue QR-code tickets for your event and run check-in from a spreadsheet. Pick the guest list, enter the event name, time and place, and every guest gets a unique, hard-to-guess ticket code. Print three tickets per A4 page with a tear-off stub, or export one PDF per guest to send out, plus a check-in workbook with a signature column. On the day, pick the scanner's export together with the guest list to see who has arrived — unknown, mistyped and repeated scans are flagged. Codes stay the same when you reopen the list. Runs locally; no ticketing service or API keys.",
+        "zh-CN": "用一张表格给活动发二维码门票、做签到。选上嘉宾名单，填好活动名称、时间和地点，每位嘉宾都会拿到一个唯一、难以猜到的票号。可以 A4 一页打印 3 张带撕线存根的门票，也可以每人导出一份 PDF 电子票发出去，另附一份带签名栏的签到表。活动当天，把扫码枪导出的记录和名单一起选上，就能看到谁已经到场——不在名单上的、输错的、重复扫的都会标出来。重新打开名单时票号保持不变。在本地运行，不用票务服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "event ticket",
+        "ticket",
+        "qr ticket",
+        "check-in",
+        "guest list",
+        "admission",
+        "门票",
+        "电子票",
+        "二维码门票",
+        "签到",
+        "签到表",
+        "入场"
+      ],
+      "examplePrompts": [
+        "Make tickets from guests.csv for 青禾产品发布会 on 2026-11-28 14:00",
+        "Export one ticket PDF per guest",
+        "Here are the door scans (scans.csv) — who hasn't arrived?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 guests.csv 给青禾产品发布会做门票，时间 2026-11-28 14:00",
+          "每位嘉宾导出一张电子票",
+          "这是门口的扫码记录 scans.csv，还有谁没到？"
+        ]
+      }
     }
   ]
 }
