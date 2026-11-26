@@ -1,0 +1,57 @@
+{
+  "name": "i18n-sheet",
+  "version": "0.1.0",
+  "description": "See every translation of your app side by side: open the locale files (JSON or YAML) and get one row per key and one column per language. Missing and empty strings, placeholders that don't match ({name}, %s, {{count}}…), changed HTML tags and text that was never translated are flagged. Fix things in the grid, hand an Excel sheet to translators, import their sheet back and write the locale files out in the same format. Runs locally; no translation service or API keys.",
+  "description_i18n": {
+    "en": "See every translation of your app side by side: open the locale files (JSON or YAML) and get one row per key and one column per language. Missing and empty strings, placeholders that don't match ({name}, %s, {{count}}…), changed HTML tags and text that was never translated are flagged. Fix things in the grid, hand an Excel sheet to translators, import their sheet back and write the locale files out in the same format. Runs locally; no translation service or API keys.",
+    "zh-CN": "把应用的所有语言文案放在一起看：打开各语言的文案文件（JSON 或 YAML），每个键一行、每种语言一列。缺失和空着的文案、对不上的占位符（{name}、%s、{{count}}……）、改动了的 HTML 标签、还没翻译的文字都会标出来。直接在表格里修改，导出 Excel 交给翻译，翻译好的表格再导回来，最后按原格式写回文案文件。在本地运行，不用翻译服务，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "i18n",
+    "localization",
+    "translation",
+    "locale json",
+    "missing translations",
+    "placeholders",
+    "多语言",
+    "国际化",
+    "翻译表",
+    "文案",
+    "语言包"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "i18n-sheet": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "多语言文案表",
+          "en-US": "i18n Sheet"
+        },
+        "icon": "languages",
+        "server": "i18n-sheet",
+        "resourceUri": "ui://i18n-sheet/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
