@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "printable-calendar",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/printable-calendar",
+      "displayName": "Printable Calendar",
+      "displayName_i18n": {
+        "en": "Printable Calendar",
+        "zh-CN": "可打印日历"
+      },
+      "description": "Print a calendar for the year with your holidays and events already written in. Get a monthly calendar with a page per month and big boxes to write in, and a year-at-a-glance page. Optionally pick a list of dates — holidays, make-up working days, birthdays, trips, deadlines — or type holidays straight into the settings. Choose the year and months, Monday or Sunday start, A4 or Letter, Chinese and English labels, week numbers and your colour. Runs locally; no design service or API keys.",
+      "description_i18n": {
+        "en": "Print a calendar for the year with your holidays and events already written in. Get a monthly calendar with a page per month and big boxes to write in, and a year-at-a-glance page. Optionally pick a list of dates — holidays, make-up working days, birthdays, trips, deadlines — or type holidays straight into the settings. Choose the year and months, Monday or Sunday start, A4 or Letter, Chinese and English labels, week numbers and your colour. Runs locally; no design service or API keys.",
+        "zh-CN": "打印一份已经写好节假日和你自己安排的日历。生成每月一页、格子够大可以手写的月历，以及一页看全年的年历。可以选一份日期清单——节假日、调休补班、生日、出差、截止日——也可以直接在设置里输入节假日。年份和月份、每周从周一还是周日开始、A4 或 Letter、中英文、周数和主题色都能选。在本地运行，不用设计服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "calendar",
+        "printable calendar",
+        "monthly calendar",
+        "year calendar",
+        "planner",
+        "holidays",
+        "pdf",
+        "日历",
+        "月历",
+        "年历",
+        "台历",
+        "可打印",
+        "节假日"
+      ],
+      "examplePrompts": [
+        "Make a 2027 calendar with events.csv titled 青禾 2027",
+        "Start weeks on Sunday, English labels, Letter paper",
+        "Add 2027-06-09 Dragon Boat holiday and show week numbers"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 events.csv 做 2027 年日历，标题 青禾 2027",
+          "每周从周日开始，英文，Letter 纸",
+          "加上 2027-06-09 端午假期，显示周数"
+        ]
+      }
     }
   ]
 }
