@@ -1,0 +1,57 @@
+{
+  "name": "sheet-diff",
+  "version": "0.1.0",
+  "description": "Compare two versions of a spreadsheet — last month's and this month's price list, two exports of a customer list — and see exactly which rows were added, which were removed and which cells changed, old value next to new. Rows are matched by an ID column such as 货号, so re-sorted rows are not flagged; small number differences and extra spaces can be ignored. Export a highlighted Excel, a change list and a report. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Compare two versions of a spreadsheet — last month's and this month's price list, two exports of a customer list — and see exactly which rows were added, which were removed and which cells changed, old value next to new. Rows are matched by an ID column such as 货号, so re-sorted rows are not flagged; small number differences and extra spaces can be ignored. Export a highlighted Excel, a change list and a report. Runs locally; no API keys.",
+    "zh-CN": "对比同一张表格的两个版本——上个月和这个月的价目表、两次导出的客户名单——准确看出新增了哪些行、删除了哪些行、哪些单元格改了，旧值新值并排显示。按货号这类编号列匹配行，排序变了也不会误报；可以忽略细小的数字差异和多余空格。可导出标色的 Excel、变化清单和报告。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "compare excel",
+    "diff",
+    "spreadsheet compare",
+    "changes",
+    "price list",
+    "version",
+    "表格对比",
+    "Excel 对比",
+    "找不同",
+    "变化",
+    "差异"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "sheet-diff": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "表格对比",
+          "en-US": "Sheet Diff"
+        },
+        "icon": "git-compare",
+        "server": "sheet-diff",
+        "resourceUri": "ui://sheet-diff/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
