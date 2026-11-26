@@ -1,0 +1,1 @@
+{ "prefix": "badge", "folder": "会议", "pick": ["attendees.xlsx"], "startSettings": { "event": "2026 青禾产品大会" }, "uiEdit": { "row": 4, "key": "role", "value": "志愿者" }, "expectText": "10 badges", "expectFiles": ["badges\\.pdf$", "tent-cards\\.pdf$"] }
