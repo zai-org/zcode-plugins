@@ -1,0 +1,1 @@
+{ "prefix": "photos", "folder": "照片", "pick": ["手机相册"], "startSettings": { "naming": "date-name" }, "uiEdit": { "row": 7, "key": "date", "value": "2024-02-02 12:00" }, "expectText": "20261002_091500_PXL_0001.jpg", "expectFiles": ["organize-plan\\.csv$", "organize-log\\.csv$"] }
