@@ -1,0 +1,3 @@
+{ "prefix": "invoice", "folder": "账单", "pick": ["invoices-2026-11.xlsx"], "startSettings": { "seller": "Penova Labs", "taxRate": 6 },
+  "edit": { "settings": { "sellerInfo": "Sheridan, WY · billing@penova.example", "notes": "请在付款期限内转账，备注发票号。Please include the invoice number with your payment." } },
+  "uiEdit": { "row": 3, "key": "qty", "value": "5" }, "expectText": "INV-0003", "expectFiles": ["all-invoices\\.pdf$", "invoices\\.xlsx$"] }

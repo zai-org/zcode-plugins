@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "invoice-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/invoice-maker",
+      "displayName": "Invoice Maker",
+      "displayName_i18n": {
+        "en": "Invoice Maker",
+        "zh-CN": "批量开发票"
+      },
+      "description": "Turn a sheet of line items (.xlsx/.csv) into numbered PDF invoices: rows are grouped by invoice number or client, amounts, tax and totals are calculated, and bad numbers or missing clients are flagged. Fix any cell in the panel, preview the invoice and export one PDF per invoice plus an Excel/CSV ledger. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Turn a sheet of line items (.xlsx/.csv) into numbered PDF invoices: rows are grouped by invoice number or client, amounts, tax and totals are calculated, and bad numbers or missing clients are flagged. Fix any cell in the panel, preview the invoice and export one PDF per invoice plus an Excel/CSV ledger. Runs locally; no API keys.",
+        "zh-CN": "把一张明细表（.xlsx/.csv）批量做成带编号的 PDF 发票：按发票号或客户自动分组，计算金额、税额和合计，标出数字错误、缺少客户等问题。在面板里直接改单元格、预览发票，导出每张一个 PDF，另附 Excel/CSV 开票台账。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "invoice",
+        "billing",
+        "pdf",
+        "freelancer",
+        "tax",
+        "ledger",
+        "发票",
+        "账单",
+        "开票",
+        "报价",
+        "自由职业"
+      ],
+      "examplePrompts": [
+        "Make invoices from billing/invoices-2026-11.xlsx with 6% tax, our company name Penova Labs, due in 30 days",
+        "Change the support hours for Northwind to 5 and switch the invoices to USD in English",
+        "Export the invoices as PDFs and the ledger"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 账单/invoices-2026-11.xlsx 开发票，税率 6%，开票方 Penova Labs，30 天内付款",
+          "把 Northwind 的支持工时改成 5 小时，发票改成美元、英文",
+          "导出 PDF 发票和开票台账"
+        ]
+      }
     }
   ]
 }
