@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "business-card-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/business-card-maker",
+      "displayName": "Business Card Maker",
+      "displayName_i18n": {
+        "en": "Business Card Maker",
+        "zh-CN": "名片批量制作"
+      },
+      "description": "Make business cards for the whole team from one spreadsheet. Pick the staff list and your logo, set the company name and website, and get a print-shop PDF (one page per side, with bleed, crop marks and trim boxes) plus an A4 sheet for printing in the office. Each card can carry a QR code that saves the person straight into a phone's contacts, and every person also gets a .vcf contact file. Three front designs, 90×54, 85×55 or US sizes, Chinese and English side by side. Runs locally; no design service or API keys.",
+      "description_i18n": {
+        "en": "Make business cards for the whole team from one spreadsheet. Pick the staff list and your logo, set the company name and website, and get a print-shop PDF (one page per side, with bleed, crop marks and trim boxes) plus an A4 sheet for printing in the office. Each card can carry a QR code that saves the person straight into a phone's contacts, and every person also gets a .vcf contact file. Three front designs, 90×54, 85×55 or US sizes, Chinese and English side by side. Runs locally; no design service or API keys.",
+        "zh-CN": "一张员工表就能给全公司批量做名片。选上员工名单和公司 logo，填好公司名和网址，就能得到给印刷厂的 PDF（每面一页，带出血、裁切线和成品框）和办公室自己打印用的 A4 拼版。名片上可以印二维码，手机一扫就存进通讯录；每个人还会单独导出一份 .vcf 电子名片。三种正面版式，90×54、85×55 或美式尺寸，中英双语。在本地运行，不用设计服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "business card",
+        "name card",
+        "vcard",
+        "vcf",
+        "qr code",
+        "print",
+        "bleed",
+        "crop marks",
+        "名片",
+        "批量名片",
+        "电子名片",
+        "名片二维码",
+        "印刷"
+      ],
+      "examplePrompts": [
+        "Make business cards from team.xlsx with logo.png for 青禾科技",
+        "Use the centred template and put the QR code on the front",
+        "Export the print PDF and everyone's vCard"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 team.xlsx 和 logo.png 给青禾科技做名片",
+          "换成居中版式，二维码印在正面",
+          "导出印刷 PDF 和每个人的电子名片"
+        ]
+      }
     }
   ]
 }
