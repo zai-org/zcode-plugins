@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "test-data-generator",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/test-data-generator",
+      "displayName": "Test Data Generator",
+      "displayName_i18n": {
+        "en": "Test Data Generator",
+        "zh-CN": "测试数据生成"
+      },
+      "description": "Make realistic fake data for demos, tests and training — Chinese or English names, mobile numbers, emails, cities and addresses, companies, dates, amounts, member levels with the mix you want, IDs, UUIDs and codes like ORD-1234-AB. Describe the columns in a small table (or load a schema sheet), choose how many rows, and export CSV, Excel, JSON or SQL. Everything is invented, and the same seed always gives the same data. Runs locally; no API keys.",
+      "description_i18n": {
+        "en": "Make realistic fake data for demos, tests and training — Chinese or English names, mobile numbers, emails, cities and addresses, companies, dates, amounts, member levels with the mix you want, IDs, UUIDs and codes like ORD-1234-AB. Describe the columns in a small table (or load a schema sheet), choose how many rows, and export CSV, Excel, JSON or SQL. Everything is invented, and the same seed always gives the same data. Runs locally; no API keys.",
+        "zh-CN": "为演示、测试和培训生成逼真的假数据——中英文姓名、手机号、邮箱、城市和地址、公司名、日期、金额、按你想要的比例分布的会员等级、编号、UUID 和 ORD-1234-AB 这样的代码。在小表格里描述各列（或载入字段定义表），选好行数，导出 CSV、Excel、JSON 或 SQL。所有数据都是编造的，相同的随机种子永远生成相同的数据。在本地运行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "fake data",
+        "test data",
+        "mock data",
+        "sample data",
+        "faker",
+        "seed data",
+        "测试数据",
+        "假数据",
+        "模拟数据",
+        "造数据",
+        "演示数据"
+      ],
+      "examplePrompts": [
+        "Generate 500 fake customers with name, phone, email, city and signup date",
+        "Make 会员等级 70% 普通, 25% 银卡, 5% 金卡",
+        "Export as SQL inserts for table customers"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成 500 个假客户：姓名、手机、邮箱、城市、注册日期",
+          "会员等级 70% 普通、25% 银卡、5% 金卡",
+          "导出成 customers 表的 SQL INSERT"
+        ]
+      }
     }
   ]
 }
