@@ -1,0 +1,1 @@
+{ "prefix": "cal", "folder": "日历", "pick": ["events.csv"], "startSettings": { "title": "青禾 2027" }, "uiEdit": { "row": 2, "key": "title", "value": "项目启动会（上午）" }, "expectText": "12 months from 2027-01", "expectFiles": ["calendar-2027-monthly\\.pdf$", "calendar-2027-year\\.pdf$"] }
