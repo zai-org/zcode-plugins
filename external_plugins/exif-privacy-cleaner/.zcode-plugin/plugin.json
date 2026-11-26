@@ -1,0 +1,58 @@
+{
+  "name": "exif-privacy-cleaner",
+  "version": "0.1.0",
+  "description": "See what your photos give away before you share them — GPS location, phone or camera model, the time taken, software, comments, XMP/IPTC and PNG text — and write clean copies with all of it removed, or only the location. JPEG, PNG and WebP are cleaned without re-encoding, so quality is untouched, colours stay right and portrait photos stay upright. Originals are never changed. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "See what your photos give away before you share them — GPS location, phone or camera model, the time taken, software, comments, XMP/IPTC and PNG text — and write clean copies with all of it removed, or only the location. JPEG, PNG and WebP are cleaned without re-encoding, so quality is untouched, colours stay right and portrait photos stay upright. Originals are never changed. Runs locally; no API keys.",
+    "zh-CN": "分享照片前，先看看照片里藏了什么——GPS 位置、手机或相机型号、拍摄时间、软件、备注、XMP/IPTC 和 PNG 文本——然后导出清除了这些信息（或只清除位置）的副本。JPEG、PNG、WebP 不重新压缩，画质不变、颜色不变，竖拍照片也不会变横。原图绝不改动。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "exif",
+    "metadata",
+    "gps",
+    "location",
+    "privacy",
+    "strip",
+    "remove exif",
+    "照片隐私",
+    "去除定位",
+    "元数据",
+    "清除 EXIF",
+    "拍摄信息"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "exif-privacy-cleaner": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "照片隐私信息清除",
+          "en-US": "EXIF Privacy Cleaner"
+        },
+        "icon": "shield-check",
+        "server": "exif-privacy-cleaner",
+        "resourceUri": "ui://exif-privacy-cleaner/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
