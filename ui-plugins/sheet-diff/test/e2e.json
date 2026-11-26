@@ -1,0 +1,1 @@
+{ "prefix": "sheetdiff", "folder": "价目表", "pick": ["价目表-10月.xlsx", "价目表-11月.xlsx"], "uiEdit": { "row": 0, "key": "note", "value": "已通知门店" }, "expectText": "西湖龙井（明前）", "expectFiles": ["diff\\.xlsx$", "changes\\.csv$", "diff\\.html$"] }
