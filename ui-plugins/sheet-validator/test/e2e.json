@@ -1,0 +1,1 @@
+{ "prefix": "validate", "folder": "人事", "pick": ["员工花名册.csv"], "uiEdit": { "row": 5, "key": "c6", "value": "20000" }, "expectText": "不是有效日期", "expectFiles": ["checked\\.xlsx$", "errors\\.csv$", "valid-rows\\.csv$"] }
