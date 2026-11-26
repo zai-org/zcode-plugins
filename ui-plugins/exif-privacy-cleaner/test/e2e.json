@@ -1,0 +1,1 @@
+{ "prefix": "exifclean", "folder": "整理", "pick": ["要发出去的照片"], "startSettings": { "output": "folder" }, "uiEdit": { "row": 1, "key": "clean", "value": false }, "expectText": "iPhone 15", "expectFiles": ["clean/.*客厅\\.jpg$", "privacy-report\\.csv$"] }
