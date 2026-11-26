@@ -1,0 +1,57 @@
+{
+  "name": "json-to-types",
+  "version": "0.1.0",
+  "description": "Paste-free type generation: point it at sample JSON — an API response, a config file, a JSONL log — and get TypeScript interfaces, Zod schemas, JSON Schema, Python dataclasses and Go structs. Multiple samples are merged so fields that are sometimes missing become optional and nulls become nullable; dates, emails and URLs are recognised; nested objects get proper names. Mark fields and add descriptions in a table before exporting. Runs locally; no API keys.",
+  "description_i18n": {
+    "en": "Paste-free type generation: point it at sample JSON — an API response, a config file, a JSONL log — and get TypeScript interfaces, Zod schemas, JSON Schema, Python dataclasses and Go structs. Multiple samples are merged so fields that are sometimes missing become optional and nulls become nullable; dates, emails and URLs are recognised; nested objects get proper names. Mark fields and add descriptions in a table before exporting. Runs locally; no API keys.",
+    "zh-CN": "不用复制粘贴就能生成类型：选一份示例 JSON——接口返回、配置文件、JSONL 日志——生成 TypeScript 接口、Zod 校验、JSON Schema、Python dataclass 和 Go 结构体。多个样本会合并推断，有时缺失的字段标为可选，出现 null 的标为可空；能识别日期、邮箱和网址；嵌套对象会起好名字。导出前可在表格里调整字段并写说明。在本地运行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "json to typescript",
+    "zod",
+    "json schema",
+    "pydantic",
+    "dataclass",
+    "go struct",
+    "types",
+    "codegen",
+    "类型定义",
+    "接口类型",
+    "JSON 转 TS"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "json-to-types": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "JSON 生成类型定义",
+          "en-US": "JSON to Types"
+        },
+        "icon": "file-code",
+        "server": "json-to-types",
+        "resourceUri": "ui://json-to-types/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

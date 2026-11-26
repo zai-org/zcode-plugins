@@ -1,0 +1,1 @@
+{ "prefix": "jsontypes", "folder": "接口", "pick": ["orders-api.json"], "startSettings": { "path": "data.orders", "rootName": "Order" }, "uiEdit": { "row": 0, "key": "description", "value": "订单编号" }, "expectText": "export interface Order", "expectFiles": ["types\\.ts$", "schema\\.zod\\.ts$", "schema\\.json$", "models\\.py$", "models\\.go$"] }
