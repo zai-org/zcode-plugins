@@ -1,0 +1,1 @@
+{"prefix": "contrast", "folder": "设计", "pick": ["theme"], "startSettings": {"level": "AA"}, "uiEdit": {"row": 0, "key": "usage", "value": "large"}, "expectText": "pair(s) checked", "expectFiles": ["fixed/", "contrast-report\\.md$", "contrast-report\\.csv$"]}
