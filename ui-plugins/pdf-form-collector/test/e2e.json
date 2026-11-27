@@ -1,0 +1,1 @@
+{"prefix": "formcollect", "folder": "报名", "pick": ["returned-forms"], "uiEdit": {"row": 0, "key": "include", "value": false}, "expectText": "form(s)", "expectFiles": ["responses\\.xlsx$", "responses\\.csv$"]}
