@@ -1,0 +1,24 @@
+/* 品牌配色（示例） */
+:root {
+  --color-bg: #FFFFFF;
+  --color-surface: #F5F5F4;
+  --color-text: #1C1917;
+  --color-text-muted: #A8A29E;
+  --color-link: #3B82F6;
+  --color-primary: #F97316;
+  --color-on-primary: #FFFFFF;
+  --color-border: #E7E5E4;
+  --button-bg: var(--color-primary);
+  --button-text: var(--color-on-primary);
+}
+
+.dark {
+  --color-bg: #1C1917;
+  --color-text: #F5F5F4;
+  --color-text-muted: #57534E;
+}
+
+.badge-warning {
+  color: #FACC15;
+  background-color: var(--color-surface);
+}

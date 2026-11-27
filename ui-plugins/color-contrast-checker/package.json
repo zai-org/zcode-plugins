@@ -1,0 +1,32 @@
+{
+  "name": "@penova/plugin-color-contrast-checker",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node --experimental-strip-types scripts/e2e.mts"
+  },
+  "zcode": {
+    "title": "Contrast Checker"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/core": "2.0.0",
+    "@modelcontextprotocol/ext-apps": "2.0.0",
+    "@types/node": "25.5.0",
+    "esbuild": "^0.25.12",
+    "playwright-core": "1.59.1",
+    "typescript": "6.0.2",
+    "vitest": "4.1.4"
+  }
+}
