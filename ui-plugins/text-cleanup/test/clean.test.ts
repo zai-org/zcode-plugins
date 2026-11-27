@@ -19,6 +19,8 @@ describe("rules", () => {
     expect(applyRule("punct", "see a.b.c, ok")).toBe("see a.b.c, ok");
     expect(applyRule("punct", "结束了.")).toBe("结束了。");
     expect(applyRule("punct", "地点(A区)")).toBe("地点（A区）");
+    expect(applyRule("punct", "地点:3楼,价格:12元")).toBe("地点：3楼，价格：12元");
+    expect(applyRule("punct", "时间 10:30")).toBe("时间 10:30");
     expect(applyRule("ellipsis", "太长了...真的--很长")).toBe("太长了……真的——很长");
     expect(applyRule("quotes", '他说:"今天不错"')).toBe("他说:“今天不错”");
     expect(applyRule("quotes", 'say "hi" ok')).toBe('say "hi" ok');
