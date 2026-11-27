@@ -1,0 +1,59 @@
+{
+  "name": "sql-er-diagram",
+  "version": "0.1.0",
+  "description": "Draw an entity-relationship diagram and a data dictionary straight from your SQL schema. Open CREATE TABLE scripts in MySQL, PostgreSQL or SQLite syntax: tables, columns, types, primary keys, foreign keys (inline, table-level or ALTER TABLE) and comments (COMMENT '…' or COMMENT ON) are read automatically. Add missing relationships or column notes in the table, hide columns you don't want on the diagram, then export the diagram as SVG and PNG plus a data dictionary in Excel and Markdown. Runs locally; no database connection or API keys.",
+  "description_i18n": {
+    "en": "Draw an entity-relationship diagram and a data dictionary straight from your SQL schema. Open CREATE TABLE scripts in MySQL, PostgreSQL or SQLite syntax: tables, columns, types, primary keys, foreign keys (inline, table-level or ALTER TABLE) and comments (COMMENT '…' or COMMENT ON) are read automatically. Add missing relationships or column notes in the table, hide columns you don't want on the diagram, then export the diagram as SVG and PNG plus a data dictionary in Excel and Markdown. Runs locally; no database connection or API keys.",
+    "zh-CN": "直接从 SQL 建表脚本画出数据库 ER 图并生成数据字典。打开 MySQL、PostgreSQL 或 SQLite 写法的 CREATE TABLE 脚本，自动读取表、字段、类型、主键、外键（字段内、表级或 ALTER TABLE）和注释（COMMENT '…' 或 COMMENT ON）。可以在表格里补上缺少的关系或字段说明、隐藏不想画的字段，然后导出 SVG 和 PNG 结构图，以及 Excel 和 Markdown 数据字典。在本地运行，不连接数据库，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "er diagram",
+    "erd",
+    "database schema",
+    "data dictionary",
+    "ddl",
+    "mysql",
+    "postgresql",
+    "sqlite",
+    "数据库结构图",
+    "ER 图",
+    "数据字典",
+    "表结构",
+    "建表语句"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "sql-er-diagram": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "数据库结构图",
+          "en-US": "SQL ER Diagram"
+        },
+        "icon": "database",
+        "server": "sql-er-diagram",
+        "resourceUri": "ui://sql-er-diagram/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
