@@ -1,0 +1,1 @@
+{"prefix": "screen", "folder": "HR", "pick": ["招聘"], "startSettings": {}, "uiEdit": {"row": 0, "key": "status", "value": "面试"}, "expectText": "candidate", "expectFiles": ["shortlist\\.xlsx$", "shortlist\\.md$"]}
