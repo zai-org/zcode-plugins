@@ -1,0 +1,34 @@
+{
+  "name": "make-it-a-bit-better",
+  "version": "0.3.0",
+  "description": "An autonomous product-polish loop: every round opens a mandatory fresh brainstorm (3 perspective subagents), picks one small angle, implements, verifies and commits it, and logs it in a per-project ledger; oversized ideas go to an icebox. A bit better, round after round.",
+  "author": {
+    "name": "Lumos-789",
+    "url": "https://github.com/Lumos-789"
+  },
+  "homepage": "https://github.com/Lumos-789/make-it-a-bit-better",
+  "repository": "https://github.com/Lumos-789/make-it-a-bit-better",
+  "license": "MIT",
+  "keywords": [
+    "polish",
+    "iteration",
+    "continuous-improvement",
+    "product",
+    "brainstorm",
+    "codex",
+    "zcode",
+    "dsh"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Make It a Bit Better",
+    "shortDescription": "One small verified improvement per round",
+    "longDescription": "Runs an autonomous product-polish loop: every round opens a mandatory brainstorm from three forced perspectives, picks one small angle capped at three files or about a hundred lines, implements and verifies it, commits it, and logs the round in a per-project ledger that a bundled checker validates. Good ideas too big for one round wait in an icebox; a red check is reverted rather than shipped.",
+    "developerName": "Lumos-789",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write with confirmation"
+    ]
+  }
+}
