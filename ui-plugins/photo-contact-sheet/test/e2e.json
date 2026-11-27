@@ -1,0 +1,1 @@
+{"prefix": "contact", "folder": "拍摄", "pick": ["shoot"], "startSettings": {"title": "茶馆拍摄", "rows": 3}, "uiEdit": {"row": 0, "key": "include", "value": false}, "expectText": "photo(s) on", "expectFiles": ["contact-sheet\\.pdf$", "contact-sheet-1\\.jpg$", "contact-sheet\\.csv$"]}
