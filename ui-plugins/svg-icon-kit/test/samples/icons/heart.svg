@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 18" data-name="Layer 1"><title>heart</title><path fill="red" onclick="alert(1)" d="M10 17.5 8.55 16.2C3.4 11.5 0 8.4 0 4.6 0 1.5 2.4 0 5.5 0c1.74 0 3.41.81 4.5 2.09C11.09.81 12.76 0 14.5 0 17.58 0 20 1.5 20 4.6c0 3.8-3.4 6.9-8.55 11.6z"/></svg>

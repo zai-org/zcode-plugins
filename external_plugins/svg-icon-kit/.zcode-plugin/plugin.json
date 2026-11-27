@@ -1,0 +1,58 @@
+{
+  "name": "svg-icon-kit",
+  "version": "0.1.0",
+  "description": "Turn a folder of SVG icons from different designers and tools into one tidy icon set. It strips editor leftovers from Inkscape, Sketch, Figma and Illustrator, removes scripts and event handlers, adds a missing viewBox, pads icons to a square and makes single-colour icons use currentColor so they take the text colour. Rename icons, recolour them or keep their original colours, then export optimised SVGs, one sprite.svg, React components and a preview page. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Turn a folder of SVG icons from different designers and tools into one tidy icon set. It strips editor leftovers from Inkscape, Sketch, Figma and Illustrator, removes scripts and event handlers, adds a missing viewBox, pads icons to a square and makes single-colour icons use currentColor so they take the text colour. Rename icons, recolour them or keep their original colours, then export optimised SVGs, one sprite.svg, React components and a preview page. Runs locally; no upload or API keys.",
+    "zh-CN": "把来自不同设计师、不同软件的一堆 SVG 图标整理成一套：去掉 Inkscape、Sketch、Figma、Illustrator 留下的多余内容，删除脚本和事件属性，补上缺失的 viewBox、补成正方形，单色图标改成 currentColor，跟随文字颜色。可以改名、改颜色或保留原色，然后导出优化后的 SVG、一个 sprite.svg 雪碧图、React 组件和预览页。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "svg",
+    "icons",
+    "svg sprite",
+    "currentColor",
+    "react icons",
+    "svg optimize",
+    "icon set",
+    "SVG 图标",
+    "雪碧图",
+    "图标库",
+    "图标组件",
+    "SVG 优化"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "svg-icon-kit": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "SVG 图标库整理",
+          "en-US": "SVG Icon Kit"
+        },
+        "icon": "shapes",
+        "server": "svg-icon-kit",
+        "resourceUri": "ui://svg-icon-kit/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

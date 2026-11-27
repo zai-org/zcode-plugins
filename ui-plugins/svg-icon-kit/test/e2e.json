@@ -1,0 +1,1 @@
+{"prefix": "svgkit", "folder": "设计", "pick": ["icons"], "uiEdit": {"row": 1, "key": "name", "value": "house"}, "expectText": "icon(s)", "expectFiles": ["optimized/house\\.svg$", "sprite\\.svg$", "components/", "index\\.html$", "icons\\.csv$"]}
