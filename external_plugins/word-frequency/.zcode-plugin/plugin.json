@@ -1,0 +1,57 @@
+{
+  "name": "word-frequency",
+  "version": "0.1.0",
+  "description": "Count which words come up most in your documents and turn them into a word cloud. Open text or Markdown files, or a whole folder; Chinese is split into real words and English is lower-cased, with common stopwords (的, 了, the, and…) removed and your own stopwords added on top. Optionally count two- and three-word phrases. Drop words you don't want, fold synonyms together (顾客 into 客户, AI into 人工智能), then export a frequency table with per-file counts, a CSV and a word cloud in SVG and PNG with your choice of shape and colours. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Count which words come up most in your documents and turn them into a word cloud. Open text or Markdown files, or a whole folder; Chinese is split into real words and English is lower-cased, with common stopwords (的, 了, the, and…) removed and your own stopwords added on top. Optionally count two- and three-word phrases. Drop words you don't want, fold synonyms together (顾客 into 客户, AI into 人工智能), then export a frequency table with per-file counts, a CSV and a word cloud in SVG and PNG with your choice of shape and colours. Runs locally; no account or API keys.",
+    "zh-CN": "统计文档里出现最多的词，并生成词云图。打开文本、Markdown 文件或整个文件夹，中文按词切分、英文统一小写，自动去掉“的、了、the、and”等停用词，也可以加自己的停用词，还能统计二元、三元词组。不要的词可以去掉，同义词可以合并（“顾客”并到“客户”、“AI”并到“人工智能”），最后导出带分文件统计的词频表、CSV，以及可选形状和配色的词云 SVG 和 PNG。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "word frequency",
+    "word cloud",
+    "text analysis",
+    "keywords",
+    "stopwords",
+    "词频",
+    "词云",
+    "关键词",
+    "文本分析",
+    "分词",
+    "高频词"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "word-frequency": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "词频统计词云",
+          "en-US": "Word Frequency"
+        },
+        "icon": "cloud",
+        "server": "word-frequency",
+        "resourceUri": "ui://word-frequency/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
