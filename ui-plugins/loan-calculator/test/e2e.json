@@ -1,0 +1,1 @@
+{ "prefix": "loan", "folder": "房贷", "pick": ["plans.csv"], "startSettings": { "title": "首套房贷款方案" }, "uiEdit": { "row": 0, "key": "rate", "value": "3.0" }, "expectText": "3 plans", "expectFiles": ["loan-schedule\\.xlsx$", "loan-report\\.html$"] }

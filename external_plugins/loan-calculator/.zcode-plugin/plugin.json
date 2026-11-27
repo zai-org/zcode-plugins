@@ -1,0 +1,59 @@
+{
+  "name": "loan-calculator",
+  "version": "0.1.0",
+  "description": "Compare mortgage and loan plans side by side before you sign. Enter each plan's amount, yearly rate, term and repayment method — equal monthly payments or equal principal — and add prepayments that shorten the term or lower the payment, or rate changes from a given month. See the first and highest monthly payment, total interest, payoff date and how much interest each plan saves, with a remaining-balance chart. Export a workbook with a month-by-month schedule for every plan and a chart page to share. Runs locally; no bank account or API keys.",
+  "description_i18n": {
+    "en": "Compare mortgage and loan plans side by side before you sign. Enter each plan's amount, yearly rate, term and repayment method — equal monthly payments or equal principal — and add prepayments that shorten the term or lower the payment, or rate changes from a given month. See the first and highest monthly payment, total interest, payoff date and how much interest each plan saves, with a remaining-balance chart. Export a workbook with a month-by-month schedule for every plan and a chart page to share. Runs locally; no bank account or API keys.",
+    "zh-CN": "签合同之前，把几种房贷、贷款方案放在一起比一比。填好每个方案的金额、年利率、期限和还款方式（等额本息或等额本金），还可以加上提前还款（缩短期限或减少月供）和某月起的利率调整。立即看到首月和最高月供、总利息、还清时间，以及每个方案能省多少利息，并附剩余本金曲线图。导出包含每个方案逐月还款计划的 Excel 和可分享的图表网页。在本地运行，不用登录银行，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "loan calculator",
+    "mortgage",
+    "amortization",
+    "prepayment",
+    "interest",
+    "repayment schedule",
+    "房贷计算",
+    "贷款计算",
+    "等额本息",
+    "等额本金",
+    "提前还款",
+    "还款计划",
+    "月供"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "loan-calculator": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "贷款分期计算",
+          "en-US": "Loan Calculator"
+        },
+        "icon": "calculator",
+        "server": "loan-calculator",
+        "resourceUri": "ui://loan-calculator/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

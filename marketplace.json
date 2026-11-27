@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "loan-calculator",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/loan-calculator",
+      "displayName": "Loan Calculator",
+      "displayName_i18n": {
+        "en": "Loan Calculator",
+        "zh-CN": "贷款分期计算"
+      },
+      "description": "Compare mortgage and loan plans side by side before you sign. Enter each plan's amount, yearly rate, term and repayment method — equal monthly payments or equal principal — and add prepayments that shorten the term or lower the payment, or rate changes from a given month. See the first and highest monthly payment, total interest, payoff date and how much interest each plan saves, with a remaining-balance chart. Export a workbook with a month-by-month schedule for every plan and a chart page to share. Runs locally; no bank account or API keys.",
+      "description_i18n": {
+        "en": "Compare mortgage and loan plans side by side before you sign. Enter each plan's amount, yearly rate, term and repayment method — equal monthly payments or equal principal — and add prepayments that shorten the term or lower the payment, or rate changes from a given month. See the first and highest monthly payment, total interest, payoff date and how much interest each plan saves, with a remaining-balance chart. Export a workbook with a month-by-month schedule for every plan and a chart page to share. Runs locally; no bank account or API keys.",
+        "zh-CN": "签合同之前，把几种房贷、贷款方案放在一起比一比。填好每个方案的金额、年利率、期限和还款方式（等额本息或等额本金），还可以加上提前还款（缩短期限或减少月供）和某月起的利率调整。立即看到首月和最高月供、总利息、还清时间，以及每个方案能省多少利息，并附剩余本金曲线图。导出包含每个方案逐月还款计划的 Excel 和可分享的图表网页。在本地运行，不用登录银行，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "loan calculator",
+        "mortgage",
+        "amortization",
+        "prepayment",
+        "interest",
+        "repayment schedule",
+        "房贷计算",
+        "贷款计算",
+        "等额本息",
+        "等额本金",
+        "提前还款",
+        "还款计划",
+        "月供"
+      ],
+      "examplePrompts": [
+        "Compare the plans in plans.csv",
+        "Add a 200,000 prepayment in 2029-01 that shortens the term",
+        "What if the rate drops to 2.9% from 2028?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "对比 plans.csv 里的几种贷款方案",
+          "2029 年 1 月提前还 20 万，缩短期限",
+          "如果 2028 年起利率降到 2.9% 会怎样？"
+        ]
+      }
     }
   ]
 }
