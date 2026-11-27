@@ -1,0 +1,58 @@
+{
+  "name": "step-guide-maker",
+  "version": "0.1.0",
+  "description": "Turn a folder of screenshots into a step-by-step guide: numbered steps with titles and text, highlight boxes, pixelated private details and crops, exported as a self-contained HTML page, Markdown with images, and a PDF. Write the steps in a simple Markdown file next to the screenshots (`## title`, text, and optional `框:` / `打码:` / `裁剪:` lines in percent), or fill them in per row. When a step has no box, it can draw one automatically around what changed since the previous screenshot. Checks duplicate screenshots, steps text that doesn't match the number of screenshots, steps without a title, boxes outside the image, login screens with nothing blurred and tiny screenshots. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Turn a folder of screenshots into a step-by-step guide: numbered steps with titles and text, highlight boxes, pixelated private details and crops, exported as a self-contained HTML page, Markdown with images, and a PDF. Write the steps in a simple Markdown file next to the screenshots (`## title`, text, and optional `框:` / `打码:` / `裁剪:` lines in percent), or fill them in per row. When a step has no box, it can draw one automatically around what changed since the previous screenshot. Checks duplicate screenshots, steps text that doesn't match the number of screenshots, steps without a title, boxes outside the image, login screens with nothing blurred and tiny screenshots. Runs locally; no account or API keys.",
+    "zh-CN": "把一文件夹截图做成图文步骤教程：带编号的步骤标题和说明、高亮框、敏感信息马赛克、裁剪，导出为单文件 HTML 网页、Markdown（附图片）和 PDF。步骤可以写在截图旁边的 Markdown 文件里（`## 标题`、说明，以及可选的 `框:` / `打码:` / `裁剪:` 百分比坐标），也可以逐行填写。没有写框的步骤，可以自动框出和上一张截图相比变化的区域。会检查重复截图、步骤数和截图数对不上、没有标题的步骤、超出图片的框、没打码的登录页面和太小的截图。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "screenshot",
+    "tutorial",
+    "guide",
+    "how-to",
+    "SOP",
+    "steps",
+    "教程",
+    "步骤",
+    "截图",
+    "操作手册",
+    "图文教程",
+    "打码"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "step-guide-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "步骤教程生成",
+          "en-US": "Step Guide Maker"
+        },
+        "icon": "list-ordered",
+        "server": "step-guide-maker",
+        "resourceUri": "ui://step-guide-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
