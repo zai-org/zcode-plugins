@@ -1,0 +1,58 @@
+{
+  "name": "meeting-minutes",
+  "version": "0.1.0",
+  "description": "Turn rough meeting notes or a transcript into proper minutes. It picks out the date, attendees, agenda, decisions, open questions and action items, works out who owns each action and when it's due (\"周五前\", \"下周一\", \"by Friday\", \"next Monday\" are resolved against the meeting date), and flags actions with no owner or deadline. Fix anything in the table, then export a Word document, Markdown and a calendar file with one reminder per deadline. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Turn rough meeting notes or a transcript into proper minutes. It picks out the date, attendees, agenda, decisions, open questions and action items, works out who owns each action and when it's due (\"周五前\", \"下周一\", \"by Friday\", \"next Monday\" are resolved against the meeting date), and flags actions with no owner or deadline. Fix anything in the table, then export a Word document, Markdown and a calendar file with one reminder per deadline. Runs locally; no upload or API keys.",
+    "zh-CN": "把零散的会议笔记或逐字稿整理成规范的会议纪要：识别日期、参会人、议程、决定、待定问题和行动项，找出每个行动项的负责人和截止日期（“周五前”“下周一”“by Friday”等按会议日期换算），没有负责人或截止日期的会提示出来。在表格里修改后，导出 Word 纪要、Markdown 和日历文件（每个截止日期一条提醒）。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "meeting minutes",
+    "action items",
+    "meeting notes",
+    "transcript",
+    "ics",
+    "decisions",
+    "会议纪要",
+    "行动项",
+    "会议记录",
+    "逐字稿",
+    "待办",
+    "周会"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "meeting-minutes": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "会议纪要整理",
+          "en-US": "Meeting Minutes"
+        },
+        "icon": "notebook-pen",
+        "server": "meeting-minutes",
+        "resourceUri": "ui://meeting-minutes/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
