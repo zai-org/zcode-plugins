@@ -1,0 +1,1 @@
+{"prefix": "gantt", "folder": "项目", "pick": ["tasks.csv"], "startSettings": {"title": "小程序上线计划", "holidays": "2026-12-25"}, "uiEdit": {"row": 4, "key": "duration", "value": "5"}, "expectText": "critical path", "expectFiles": ["gantt\\.svg$", "gantt\\.png$", "schedule\\.xlsx$"]}
