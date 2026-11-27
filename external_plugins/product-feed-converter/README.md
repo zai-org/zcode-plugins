@@ -34,7 +34,7 @@ Output goes to `product-feed-converter/<project>/` in the workspace.
 ## Scope (v0.1)
 
 - Files follow the published import layouts; this plugin is not affiliated with Shopify, WooCommerce or any ads platform and does not upload anything.
-- Images must already be online (full https URLs).
+- Images must already be online. Full https URLs work as they are; relative paths such as `img/a.jpg` are joined to the store URL when one is set.
 
 ## Privacy, network and files
 
