@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "pinyin-annotator",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/pinyin-annotator",
+      "displayName": "Pinyin Annotator",
+      "displayName_i18n": {
+        "en": "Pinyin Annotator",
+        "zh-CN": "拼音标注"
+      },
+      "description": "Put pinyin above Chinese text for children's readers, lessons and character cards. Open a text or Markdown file; every character gets its reading from a word-aware dictionary, and the polyphonic characters (多音字) are listed with their context and possible readings. Places where dictionaries usually go wrong, such as 还书, 朝阳, 数星星, 种花 and adverbial 地, are flagged with the likely correct reading so you can confirm it in one edit, or fix a whole word everywhere with a custom reading. Choose tone marks, tone numbers or no tones, flowing text or a 田字格 grid, then export ruby HTML, an A4 PDF, printable character cards and a plain pinyin text. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Put pinyin above Chinese text for children's readers, lessons and character cards. Open a text or Markdown file; every character gets its reading from a word-aware dictionary, and the polyphonic characters (多音字) are listed with their context and possible readings. Places where dictionaries usually go wrong, such as 还书, 朝阳, 数星星, 种花 and adverbial 地, are flagged with the likely correct reading so you can confirm it in one edit, or fix a whole word everywhere with a custom reading. Choose tone marks, tone numbers or no tones, flowing text or a 田字格 grid, then export ruby HTML, an A4 PDF, printable character cards and a plain pinyin text. Runs locally; no account or API keys.",
+        "zh-CN": "给中文加注拼音，做儿童读物、课文和生字卡。打开文本或 Markdown 文件，每个字按词语上下文自动注音，多音字逐个列出上下文和可选读音。“还书”“朝阳”“数星星”“种花”和状语“地”这类拼音库常读错的地方会标出建议读音，确认一下就能改；也可以用自定义词语一次改掉全文同一个词。可选声调符号、数字声调或不标调，正文或田字格版式，导出注音 HTML、A4 PDF、可打印的生字卡和纯拼音文本。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "pinyin",
+        "chinese",
+        "ruby",
+        "tone marks",
+        "polyphone",
+        "character cards",
+        "拼音",
+        "注音",
+        "多音字",
+        "生字卡",
+        "田字格",
+        "识字",
+        "儿童读物"
+      ],
+      "examplePrompts": [
+        "Add pinyin to lesson.txt",
+        "Fix the polyphones it flags",
+        "Make character cards for 朝背种数"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "给 lesson.txt 加拼音",
+          "把标出来的多音字改对",
+          "给“朝背种数”做生字卡"
+        ]
+      }
     }
   ]
 }
