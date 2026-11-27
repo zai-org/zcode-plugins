@@ -1,0 +1,58 @@
+{
+  "name": "color-contrast-checker",
+  "version": "0.1.0",
+  "description": "Check your colour tokens against WCAG contrast rules and fix the pairs that are hard to read. Open your CSS, SCSS or JSON design tokens: text-on-background pairs are found from your CSS rules and token names (including dark-theme overrides and var() chains), or you list them yourself. Every pair shows its ratio and AA/AAA result, with the nearest passing colour — same hue, just lighter or darker — as a suggested fix. Accept fixes or type your own colour, see every pair re-checked, then export fixed token files and a report. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Check your colour tokens against WCAG contrast rules and fix the pairs that are hard to read. Open your CSS, SCSS or JSON design tokens: text-on-background pairs are found from your CSS rules and token names (including dark-theme overrides and var() chains), or you list them yourself. Every pair shows its ratio and AA/AAA result, with the nearest passing colour — same hue, just lighter or darker — as a suggested fix. Accept fixes or type your own colour, see every pair re-checked, then export fixed token files and a report. Runs locally; no upload or API keys.",
+    "zh-CN": "按 WCAG 对比度标准检查配色变量，修正看不清的组合。打开 CSS、SCSS 或 JSON 设计令牌，会根据 CSS 规则和变量名（包括深色主题覆盖和 var() 引用）找出文字和背景的组合，也可以自己列。每组显示对比度和 AA/AAA 结果，并给出最接近的达标颜色（色相不变，只调深浅）。接受修正或填自己的颜色，所有组合会重新检查，最后导出修正后的令牌文件和报告。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "WCAG",
+    "contrast",
+    "accessibility",
+    "a11y",
+    "design tokens",
+    "CSS variables",
+    "colour contrast",
+    "对比度",
+    "无障碍",
+    "配色检查",
+    "设计令牌",
+    "色彩可访问性"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "color-contrast-checker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "配色无障碍检查",
+          "en-US": "Contrast Checker"
+        },
+        "icon": "contrast",
+        "server": "color-contrast-checker",
+        "resourceUri": "ui://color-contrast-checker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
