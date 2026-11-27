@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "size-chart-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/size-chart-maker",
+      "displayName": "Size Chart Maker",
+      "displayName_i18n": {
+        "en": "Size Chart Maker",
+        "zh-CN": "尺码表制作"
+      },
+      "description": "Make size-chart images for product pages from a measurement sheet. Open a CSV or Excel file with one row per size (S/M/L, 160/84A, 36…) and one column per measurement (chest, length, shoulder, sleeve…; numbers or ranges like 88-92). Typos such as a letter O instead of 0 and measurements that shrink as the size grows are flagged so you can fix them. Show centimetres, inches or both, headers in Chinese, English or both, pick a clean, bold or boutique style and highlight the recommended size, then export a sharp PNG, an SVG, an HTML table to paste into your shop page and a cleaned Excel file. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Make size-chart images for product pages from a measurement sheet. Open a CSV or Excel file with one row per size (S/M/L, 160/84A, 36…) and one column per measurement (chest, length, shoulder, sleeve…; numbers or ranges like 88-92). Typos such as a letter O instead of 0 and measurements that shrink as the size grows are flagged so you can fix them. Show centimetres, inches or both, headers in Chinese, English or both, pick a clean, bold or boutique style and highlight the recommended size, then export a sharp PNG, an SVG, an HTML table to paste into your shop page and a cleaned Excel file. Runs locally; no account or API keys.",
+        "zh-CN": "用尺寸数据做商品详情页的尺码表图片。打开 CSV 或 Excel 尺寸表：每行一个尺码（S/M/L、160/84A、36…），每列一项尺寸（胸围、衣长、肩宽、袖长…，可写数字或 88-92 这样的范围）。会标出把 0 打成字母 O 之类的错误，以及尺码变大尺寸反而变小的可疑数据，改好后再出图。可显示厘米、英寸或两者，表头中文、英文或中英，选简洁、醒目或精品样式，高亮推荐尺码，导出清晰的 PNG、SVG、可直接贴到店铺页面的 HTML 表格和整理后的 Excel。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "size chart",
+        "size guide",
+        "measurement",
+        "product page",
+        "ecommerce",
+        "尺码表",
+        "尺寸表",
+        "尺码对照",
+        "详情页",
+        "淘宝",
+        "电商",
+        "厘米英寸"
+      ],
+      "examplePrompts": [
+        "Make a size chart from sizes.csv",
+        "Show cm and inches with bilingual headers",
+        "Highlight size L and export the PNG"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 sizes.csv 做一张尺码表",
+          "显示厘米和英寸，表头中英双语",
+          "高亮 L 码，导出 PNG"
+        ]
+      }
     }
   ]
 }
