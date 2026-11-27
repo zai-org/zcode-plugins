@@ -1,0 +1,1 @@
+{"prefix": "reorder", "folder": "仓库", "pick": ["stock.xlsx", "sales.xlsx"], "startSettings": {"buyer": "Penova 茶铺"}, "uiEdit": {"row": 0, "key": "order", "value": "120"}, "expectText": "to reorder", "expectFiles": ["reorder-plan\\.xlsx$", "all-purchase-orders\\.pdf$"]}
