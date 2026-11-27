@@ -1,0 +1,1 @@
+{"prefix": "fontsub", "folder": "字体", "pick": ["官网"], "startSettings": {}, "uiEdit": {"row": 1, "key": "use", "value": "headings"}, "expectText": "font", "expectFiles": ["\\.woff2$", "fonts\\.css$", "preview\\.png$"]}
