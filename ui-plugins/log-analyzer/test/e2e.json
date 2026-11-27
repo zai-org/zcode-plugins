@@ -1,0 +1,1 @@
+{"prefix": "logs", "folder": "server", "pick": ["logs"], "startSettings": {"site": "teashop.example"}, "uiEdit": {"row": 1, "key": "include", "value": false}, "expectText": "visitor IP", "expectFiles": ["access-report\\.html$", "pages\\.csv$", "errors\\.csv$"]}
