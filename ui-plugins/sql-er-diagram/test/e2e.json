@@ -1,0 +1,1 @@
+{"prefix": "erd", "folder": "db", "pick": ["shop-schema.sql"], "startSettings": {"title": "茶铺小店 ER 图"}, "uiEdit": {"row": 8, "key": "fk", "value": "categories.id"}, "expectText": "relationship(s)", "expectFiles": ["er-diagram\\.svg$", "er-diagram\\.png$", "data-dictionary\\.xlsx$", "data-dictionary\\.md$"]}
