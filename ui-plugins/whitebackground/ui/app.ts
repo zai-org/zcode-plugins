@@ -1,6 +1,6 @@
 import css from "./kit.css";
 import appCss from "./app.css";
-import { applyTheme, call, h, initHost, locale, onHostContext, onToolResult, openLink, put, toast } from "./kit.ts";
+import { applyTheme, bytesToDataUrl, call, h, initHost, locale, onHostContext, onToolResult, openLink, put, readBlob, readJson, toast } from "./kit.ts";
 
 type L = [string, string];
 const t = (zh: string, en: string) => (locale() === "zh" ? zh : en);
@@ -32,6 +32,8 @@ const PRESETS = [
 ];
 
 const PRICING = "https://whitebackground.app/pricing";
+const STATE_URI = "ui://whitebackground/state.json";
+const PREVIEW_URI = "ui://whitebackground/preview.png";
 
 type CanvasResult = {
   path?: string;
@@ -178,9 +180,29 @@ export function startApp(name: string, version: string) {
     );
   }
 
+  async function loadState() {
+    try {
+      const snapshot = await readJson<{ canvas?: CanvasResult | null; editor?: EditorResult | null }>(STATE_URI);
+      if (snapshot.canvas?.path) {
+        let previewDataUrl = typeof snapshot.canvas.previewDataUrl === "string" ? snapshot.canvas.previewDataUrl : state.canvas?.previewDataUrl;
+        try {
+          previewDataUrl = bytesToDataUrl(await readBlob(PREVIEW_URI));
+        } catch {
+          // Keep a data URL already present in the snapshot, if any.
+        }
+        applyResult("canvas_create", { ...snapshot.canvas, previewDataUrl });
+      }
+      if (snapshot.editor?.url) applyResult("editor_open", snapshot.editor);
+    } catch {
+      // No saved panel state yet (or the host cannot read the resource).
+    }
+    render();
+  }
+
   onToolResult((value) => {
     applyResult(undefined, value);
     render();
+    void loadState();
   });
   onHostContext(() => {
     applyTheme();
@@ -188,8 +210,8 @@ export function startApp(name: string, version: string) {
   });
   applyTheme();
   render();
-  initHost(name, version).then(() => {
+  initHost(name, version).then(async () => {
     applyTheme();
-    render();
+    await loadState();
   }).catch((error) => toast(String(error?.message ?? error), "error"));
 }

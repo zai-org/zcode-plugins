@@ -1,3 +1,3 @@
 import { startApp } from "./app.ts";
 
-startApp("whitebackground", "0.1.0");
+startApp("whitebackground", "0.1.1");

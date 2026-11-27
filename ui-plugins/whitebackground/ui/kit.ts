@@ -81,6 +81,22 @@ export function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
+/** 读取插件资源（JSON 文本）。 */
+export async function readJson<T = Record<string, unknown>>(uri: string): Promise<T> {
+  await ready();
+  const result = await app!.readServerResource({ uri });
+  const first = result.contents[0] as { text?: string; blob?: string } | undefined;
+  const text = first?.text ?? (typeof first?.blob === "string" ? new TextDecoder().decode(base64ToBytes(first.blob)) : undefined);
+  if (!text) throw new ToolError("host_error", `Empty resource ${uri}`);
+  return JSON.parse(text) as T;
+}
+
+export function bytesToDataUrl(bytes: Uint8Array, mime = "image/png"): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
 /** 由用户点击触发：把一句话发到对话里交给 Agent。 */
 
 /** Ask the host to open a URL (MCP Apps openLinks). Falls back to showing the URL if the host has no opener. */
