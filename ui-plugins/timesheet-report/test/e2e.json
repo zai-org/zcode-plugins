@@ -1,0 +1,1 @@
+{"prefix": "timesheet", "folder": "工作室", "pick": ["logs"], "startSettings": {"rates": "青禾茶饮 = 300\n青禾茶饮/小程序 = 360\n北辰律所 = 450", "yourName": "Penova 设计工作室", "from": "2026-11-01", "to": "2026-11-30"}, "uiEdit": {"row": 7, "key": "billable", "value": false}, "expectText": "billable after rounding", "expectFiles": ["timesheet\\.xlsx$", "statements/.+\\.pdf$", "summary\\.csv$"]}
