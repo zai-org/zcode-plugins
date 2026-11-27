@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "subtitle-editor",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/subtitle-editor",
+      "displayName": "Subtitle Editor",
+      "displayName_i18n": {
+        "en": "Subtitle Editor",
+        "zh-CN": "字幕校对转换"
+      },
+      "description": "Fix subtitles that drift or read too fast. Open an SRT, WebVTT or ASS file, shift everything by a few seconds, convert between frame rates, or line it up with two sync points. Edit any cue's text or times, split long cues and merge short ones, and see every overlap, too-fast reading speed, overlong line and blink-and-miss cue flagged with the new timing. Export clean SRT, VTT and ASS files plus a check report. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Fix subtitles that drift or read too fast. Open an SRT, WebVTT or ASS file, shift everything by a few seconds, convert between frame rates, or line it up with two sync points. Edit any cue's text or times, split long cues and merge short ones, and see every overlap, too-fast reading speed, overlong line and blink-and-miss cue flagged with the new timing. Export clean SRT, VTT and ASS files plus a check report. Runs locally; no upload or API keys.",
+        "zh-CN": "修正跑偏或读不过来的字幕：打开 SRT、WebVTT 或 ASS 文件，整体平移几秒、换算帧率，或者用两个同步点对齐。可以直接改每条字幕的文字和时间，拆开过长的、合并过短的；重叠、读速过快、单行过长和一闪而过的字幕都会按新时间标出来。导出 SRT、VTT、ASS 和检查报告。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "subtitles",
+        "SRT",
+        "WebVTT",
+        "ASS",
+        "subtitle sync",
+        "subtitle shift",
+        "frame rate",
+        "reading speed",
+        "字幕",
+        "字幕平移",
+        "字幕格式转换",
+        "时间轴"
+      ],
+      "examplePrompts": [
+        "Shift episode.srt 1.5 seconds later",
+        "Convert this ASS file to SRT and VTT",
+        "Check my subtitles for overlaps and lines that are too fast to read"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 episode.srt 整体延后 1.5 秒",
+          "把这个 ASS 字幕转成 SRT 和 VTT",
+          "检查字幕有没有重叠和读不过来的地方"
+        ]
+      }
     }
   ]
 }

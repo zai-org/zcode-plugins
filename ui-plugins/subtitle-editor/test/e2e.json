@@ -1,0 +1,1 @@
+{"prefix": "subtitle", "folder": "字幕", "pick": ["episode.srt"], "startSettings": {"offset": "1.5"}, "uiEdit": {"row": 5, "key": "action", "value": "merge"}, "expectText": "cue(s) in", "expectFiles": ["\\.srt$", "\\.vtt$", "\\.ass$", "-checks\\.csv$"]}
