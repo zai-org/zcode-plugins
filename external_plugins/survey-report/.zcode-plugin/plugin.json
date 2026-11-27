@@ -1,0 +1,58 @@
+{
+  "name": "survey-report",
+  "version": "0.1.0",
+  "description": "Turn a survey export into a finished report. Drop in the spreadsheet from your form tool — one row per response — and every question gets its type detected (single choice, multiple choice, rating, NPS, number or open text), a bar or pie chart, counts and percentages. Rename questions, switch chart types, leave questions out, and cross-tab everything by one question such as age group or channel. Export a one-page HTML report, an A4 PDF and an Excel workbook with the numbers, cross-tabs and every open answer. Runs locally; no form-tool login or API keys.",
+  "description_i18n": {
+    "en": "Turn a survey export into a finished report. Drop in the spreadsheet from your form tool — one row per response — and every question gets its type detected (single choice, multiple choice, rating, NPS, number or open text), a bar or pie chart, counts and percentages. Rename questions, switch chart types, leave questions out, and cross-tab everything by one question such as age group or channel. Export a one-page HTML report, an A4 PDF and an Excel workbook with the numbers, cross-tabs and every open answer. Runs locally; no form-tool login or API keys.",
+    "zh-CN": "把问卷导出表变成一份完整报告。放入问卷工具导出的表格（每行一份回答），每道题自动识别题型（单选、多选、评分、NPS、数字、开放题），生成柱状图或饼图、人数和占比。可以改题目文字、换图表、去掉某些题，还能按一道题（如年龄段、渠道）对所有题做交叉分析。导出网页报告、A4 PDF 和 Excel（含统计、交叉表和全部文字回答）。在本地运行，不用登录问卷平台，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "survey",
+    "questionnaire",
+    "survey report",
+    "NPS",
+    "cross-tab",
+    "form results",
+    "问卷",
+    "问卷星",
+    "调查报告",
+    "满意度",
+    "交叉分析",
+    "问卷统计"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "survey-report": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "问卷结果报告",
+          "en-US": "Survey Report"
+        },
+        "icon": "bar-chart",
+        "server": "survey-report",
+        "resourceUri": "ui://survey-report/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
