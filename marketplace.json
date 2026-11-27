@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "math-worksheet",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/math-worksheet",
+      "displayName": "Math Worksheet",
+      "displayName_i18n": {
+        "en": "Math Worksheet",
+        "zh-CN": "口算练习生成"
+      },
+      "description": "Print arithmetic drills with an answer key in seconds. Pick a grade preset — adding and subtracting within 20, within 100 with or without carrying, times tables, division with remainders, 3-digit sums, 2-digit multiplication — or set your own operations and number ranges. Choose how many problems, horizontal or vertical (column) layout and fill-in-the-blank problems like □ + 5 = 12; change the set number for a fresh sheet, or keep the same number to print the same one again. Edit any problem and it stays when you regenerate. Export the worksheet with a name, time and score line, a matching answer key in red, and a CSV. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Print arithmetic drills with an answer key in seconds. Pick a grade preset — adding and subtracting within 20, within 100 with or without carrying, times tables, division with remainders, 3-digit sums, 2-digit multiplication — or set your own operations and number ranges. Choose how many problems, horizontal or vertical (column) layout and fill-in-the-blank problems like □ + 5 = 12; change the set number for a fresh sheet, or keep the same number to print the same one again. Edit any problem and it stays when you regenerate. Export the worksheet with a name, time and score line, a matching answer key in red, and a CSV. Runs locally; no account or API keys.",
+        "zh-CN": "几秒钟打印口算练习和答案。选年级题型（20 以内加减、100 以内进位/不进位加减、表内乘除、有余数的除法、三位数加减、两位数乘法等），或者自己设运算和数字范围。设题数、横式或竖式、挖空题（□ + 5 = 12）；换一个题组编号就是一套新题，编号不变就能重印同一套。可以改任何一道题，重新生成时保留。导出带姓名、用时、得分栏的练习卷，红色答案卷和 CSV。在本地运行，无需账号或 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "math worksheet",
+        "arithmetic",
+        "times tables",
+        "mental math",
+        "answer key",
+        "口算",
+        "口算题",
+        "练习卷",
+        "加减法",
+        "乘法口诀",
+        "竖式",
+        "小学数学"
+      ],
+      "examplePrompts": [
+        "Make 60 grade-2 addition and subtraction problems with carrying",
+        "Times tables, 5 per row, with an answer key",
+        "Another set like last week's"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "出 60 道二年级进位退位加减法",
+          "表内乘除，每行 5 题，带答案",
+          "再出一套新的"
+        ]
+      }
     }
   ]
 }
