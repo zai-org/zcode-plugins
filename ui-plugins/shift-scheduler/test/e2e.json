@@ -1,0 +1,1 @@
+{"prefix": "shifts", "folder": "门店", "pick": ["staff.csv"], "startSettings": {"weekStart": "2026-11-30"}, "uiEdit": {"row": 2, "key": "sun", "value": "休"}, "expectText": "slot(s) filled", "expectFiles": ["rota\\.xlsx$", "rota\\.html$", "ics/.+\\.ics$"]}
