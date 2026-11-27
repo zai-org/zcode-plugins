@@ -1,0 +1,58 @@
+{
+  "name": "timesheet-report",
+  "version": "0.1.0",
+  "description": "Turn time logs into client statements. Open a CSV or Excel export from your time tracker, or a sheet you keep by hand, and it totals the hours by client, project and person. It applies your hourly rates and rounding, leaves internal work unbilled, and flags duplicates, overlapping times and entries with no rate. Export an Excel summary and one statement PDF per client, ready to send with an invoice. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Turn time logs into client statements. Open a CSV or Excel export from your time tracker, or a sheet you keep by hand, and it totals the hours by client, project and person. It applies your hourly rates and rounding, leaves internal work unbilled, and flags duplicates, overlapping times and entries with no rate. Export an Excel summary and one statement PDF per client, ready to send with an invoice. Runs locally; no upload or API keys.",
+    "zh-CN": "把工时记录整理成给客户的结算单：打开计时工具导出的 CSV / Excel 或自己记的表格，按客户、项目和成员汇总工时，套用小时费率和取整规则，内部工作不计费，并提示重复记录、时间段重叠和没有费率的条目。导出 Excel 汇总和每个客户一份结算单 PDF，可以和发票一起发。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "timesheet",
+    "time tracking",
+    "billable hours",
+    "hourly rate",
+    "freelance",
+    "client statement",
+    "工时统计",
+    "工时表",
+    "计费工时",
+    "结算单",
+    "自由职业",
+    "项目工时"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "timesheet-report": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "工时统计",
+          "en-US": "Timesheet Report"
+        },
+        "icon": "timer",
+        "server": "timesheet-report",
+        "resourceUri": "ui://timesheet-report/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
