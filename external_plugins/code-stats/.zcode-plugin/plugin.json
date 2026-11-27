@@ -1,0 +1,58 @@
+{
+  "name": "code-stats",
+  "version": "0.1.0",
+  "description": "Count the lines of code in a project: code, comment and blank lines for 40+ languages, totals per folder, and the largest files. It respects the project's .gitignore, skips node_modules, .git and build folders, and flags minified or generated files so they don't inflate the numbers. Exclude folders or patterns, untick single files, then export an HTML report with a bar chart, an Excel workbook and a CSV summary. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Count the lines of code in a project: code, comment and blank lines for 40+ languages, totals per folder, and the largest files. It respects the project's .gitignore, skips node_modules, .git and build folders, and flags minified or generated files so they don't inflate the numbers. Exclude folders or patterns, untick single files, then export an HTML report with a bar chart, an Excel workbook and a CSV summary. Runs locally; no upload or API keys.",
+    "zh-CN": "统计一个项目的代码量：40 多种语言的代码行、注释行、空行，按文件夹汇总，并列出最大的文件。遵守项目的 .gitignore，跳过 node_modules、.git 和构建目录，并提示压缩或自动生成的文件，避免把数字撑大。可以排除文件夹或规则、取消单个文件，然后导出带柱状图的 HTML 报告、Excel 明细和 CSV 汇总。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code stats",
+    "lines of code",
+    "loc",
+    "cloc",
+    "sloc",
+    "code metrics",
+    "project size",
+    "代码统计",
+    "代码行数",
+    "代码量",
+    "注释率",
+    "项目规模"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "code-stats": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "代码统计报告",
+          "en-US": "Code Stats"
+        },
+        "icon": "file-code",
+        "server": "code-stats",
+        "resourceUri": "ui://code-stats/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
