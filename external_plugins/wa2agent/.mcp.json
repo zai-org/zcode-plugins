@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "wa2agent": {
+      "type": "http",
+      "url": "${user_config.WA_VAULT_URL}",
+      "headers": {
+        "Authorization": "Bearer ${user_config.WA_VAULT_TOKEN}"
+      }
+    }
+  }
+}
