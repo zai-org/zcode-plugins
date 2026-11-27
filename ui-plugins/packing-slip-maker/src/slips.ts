@@ -51,11 +51,11 @@ export function maskPhone(p: string) {
   return p.replace(/\d/g, (d) => (n++ >= 3 && n <= total - 4 ? "*" : d));
 }
 
-/** 按货号（和规格）汇总拣货数量；按库位排序，便于一趟走完。 */
+/** 按货号汇总拣货数量（货号已区分规格；同一货号在不同订单里品名 / 规格写法不同也算一行，没有货号时按品名 + 规格）；按库位排序，便于一趟走完。 */
 export function pickList(orders: Order[]) {
   const map = new Map<string, { sku: string; item: string; variant: string; location: string; qty: number; orders: string[] }>();
   for (const o of orders) for (const l of o.lines) {
-    const k = `${l.sku}\u0000${l.variant}`;
+    const k = l.sku ? `sku\u0000${l.sku.trim().toUpperCase()}` : `item\u0000${l.item}\u0000${l.variant}`;
     const e = map.get(k) ?? { sku: l.sku, item: l.item, variant: l.variant, location: l.location, qty: 0, orders: [] };
     e.qty += l.qty;
     if (!e.orders.includes(o.number)) e.orders.push(o.number);
