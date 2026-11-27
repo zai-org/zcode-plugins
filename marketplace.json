@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "font-subsetter",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/font-subsetter",
+      "displayName": "Font Subsetter",
+      "displayName_i18n": {
+        "en": "Font Subsetter",
+        "zh-CN": "网页字体瘦身"
+      },
+      "description": "Shrink web fonts to just the characters your site uses — a 10–20 MB Chinese font usually becomes a few dozen KB. Pick the site or project folder: it finds the fonts (.ttf, .otf, .ttc, .woff, .woff2) and the pages (HTML, Vue/Svelte, JS/TS, CSS, Markdown, JSON, YAML, subtitles…), collects the characters that are really shown (code comments and HTML markup are skipped), and subsets each font with HarfBuzz, keeping OpenType features and variable-font axes. A display font can keep only the heading characters. Warns about characters the font doesn't have (with file and line), fonts whose license flag forbids embedding, and outputs that are still large. Exports WOFF2/WOFF (optionally TTF/OTF), a ready-to-use fonts.css, chars.txt, a size report and a preview image drawn with the subset fonts themselves. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Shrink web fonts to just the characters your site uses — a 10–20 MB Chinese font usually becomes a few dozen KB. Pick the site or project folder: it finds the fonts (.ttf, .otf, .ttc, .woff, .woff2) and the pages (HTML, Vue/Svelte, JS/TS, CSS, Markdown, JSON, YAML, subtitles…), collects the characters that are really shown (code comments and HTML markup are skipped), and subsets each font with HarfBuzz, keeping OpenType features and variable-font axes. A display font can keep only the heading characters. Warns about characters the font doesn't have (with file and line), fonts whose license flag forbids embedding, and outputs that are still large. Exports WOFF2/WOFF (optionally TTF/OTF), a ready-to-use fonts.css, chars.txt, a size report and a preview image drawn with the subset fonts themselves. Runs locally; no account or API keys.",
+        "zh-CN": "把网页字体裁到只剩网站真正用到的字——一个 10–20 MB 的中文字体通常只剩几十 KB。选择网站或项目文件夹：自动找到字体（.ttf、.otf、.ttc、.woff、.woff2）和页面文件（HTML、Vue/Svelte、JS/TS、CSS、Markdown、JSON、YAML、字幕等），收集真正会显示的字（代码注释和 HTML 标记不算），用 HarfBuzz 裁剪每个字体，保留 OpenType 特性和可变字体轴。标题字体可以只保留标题里的字。会提示字体里缺的字（带文件和行号）、许可标记禁止嵌入的字体、裁完仍然偏大的字体。导出 WOFF2/WOFF（可选 TTF/OTF）、可直接引用的 fonts.css、chars.txt、体积报告，以及用裁好的字体本身画出的预览图。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "font",
+        "subset",
+        "webfont",
+        "woff2",
+        "fontmin",
+        "glyph",
+        "字体",
+        "字体子集",
+        "字体压缩",
+        "网页字体",
+        "中文字体",
+        "瘦身"
+      ],
+      "examplePrompts": [
+        "Subset the fonts in the 官网 folder for the site",
+        "Use the serif font only for headings",
+        "Export WOFF2 and the CSS"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 官网 文件夹里的字体按网站用到的字裁小",
+          "宋体只用于标题",
+          "导出 WOFF2 和 CSS"
+        ]
+      }
     }
   ]
 }
