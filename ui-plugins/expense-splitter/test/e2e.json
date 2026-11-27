@@ -1,0 +1,1 @@
+{"prefix": "split", "folder": "大理旅行", "pick": ["expenses.csv"], "startSettings": {"title": "大理国庆游"}, "uiEdit": {"row": 2, "key": "amount", "value": "400"}, "expectText": "transfer", "expectFiles": ["settlement\\.xlsx$", "settlement\\.png$"]}
