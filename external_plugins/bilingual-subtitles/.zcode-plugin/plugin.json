@@ -1,0 +1,58 @@
+{
+  "name": "bilingual-subtitles",
+  "version": "0.1.0",
+  "description": "Merge two subtitle tracks — say Chinese and English — into one bilingual track, paired by timing. Lines that were split differently in each language are joined automatically, unmatched lines are shown so you can move or drop them, and you can fix any text or time before exporting bilingual SRT, WebVTT or a styled ASS with separate font size and colour for each language. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Merge two subtitle tracks — say Chinese and English — into one bilingual track, paired by timing. Lines that were split differently in each language are joined automatically, unmatched lines are shown so you can move or drop them, and you can fix any text or time before exporting bilingual SRT, WebVTT or a styled ASS with separate font size and colour for each language. Runs locally; no upload or API keys.",
+    "zh-CN": "把两种语言的字幕（比如中文和英文）按时间合并成一条双语字幕。两种语言断句不同的地方会自动拼在一起，没配上的字幕会单独列出，方便挪动或删掉；导出前可以改任何文字和时间，然后导出双语 SRT、WebVTT，或者上下两种字号颜色的 ASS。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bilingual subtitles",
+    "dual subtitles",
+    "merge subtitles",
+    "SRT",
+    "ASS",
+    "WebVTT",
+    "双语字幕",
+    "中英字幕",
+    "字幕合并",
+    "中英双语",
+    "ASS 样式",
+    "字幕对齐"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "bilingual-subtitles": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "双语字幕合并",
+          "en-US": "Bilingual Subtitles"
+        },
+        "icon": "captions",
+        "server": "bilingual-subtitles",
+        "resourceUri": "ui://bilingual-subtitles/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
