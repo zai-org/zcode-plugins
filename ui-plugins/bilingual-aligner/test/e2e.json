@@ -1,0 +1,1 @@
+{"prefix": "align", "folder": "翻译", "pick": ["隐私政策.txt", "privacy-policy-en.docx"], "startSettings": {}, "uiEdit": {"row": 0, "key": "include", "value": false}, "expectText": "sentence pair", "expectFiles": ["aligned\\.xlsx$", "aligned\\.tmx$", "aligned\\.tsv$", "aligned\\.html$"]}
