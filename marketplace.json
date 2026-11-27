@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "code-stats",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/code-stats",
+      "displayName": "Code Stats",
+      "displayName_i18n": {
+        "en": "Code Stats",
+        "zh-CN": "代码统计报告"
+      },
+      "description": "Count the lines of code in a project: code, comment and blank lines for 40+ languages, totals per folder, and the largest files. It respects the project's .gitignore, skips node_modules, .git and build folders, and flags minified or generated files so they don't inflate the numbers. Exclude folders or patterns, untick single files, then export an HTML report with a bar chart, an Excel workbook and a CSV summary. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Count the lines of code in a project: code, comment and blank lines for 40+ languages, totals per folder, and the largest files. It respects the project's .gitignore, skips node_modules, .git and build folders, and flags minified or generated files so they don't inflate the numbers. Exclude folders or patterns, untick single files, then export an HTML report with a bar chart, an Excel workbook and a CSV summary. Runs locally; no upload or API keys.",
+        "zh-CN": "统计一个项目的代码量：40 多种语言的代码行、注释行、空行，按文件夹汇总，并列出最大的文件。遵守项目的 .gitignore，跳过 node_modules、.git 和构建目录，并提示压缩或自动生成的文件，避免把数字撑大。可以排除文件夹或规则、取消单个文件，然后导出带柱状图的 HTML 报告、Excel 明细和 CSV 汇总。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "code stats",
+        "lines of code",
+        "loc",
+        "cloc",
+        "sloc",
+        "code metrics",
+        "project size",
+        "代码统计",
+        "代码行数",
+        "代码量",
+        "注释率",
+        "项目规模"
+      ],
+      "examplePrompts": [
+        "How many lines of code are in tea-shop, by language?",
+        "Leave out the scripts folder and the vendor files",
+        "Export the report as HTML and Excel"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "统计一下 tea-shop 项目每种语言有多少行代码",
+          "不要算 scripts 文件夹和 vendor 里的文件",
+          "导出 HTML 报告和 Excel"
+        ]
+      }
     }
   ]
 }
