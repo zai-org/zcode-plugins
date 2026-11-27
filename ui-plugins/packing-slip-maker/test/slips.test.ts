@@ -39,6 +39,15 @@ describe("orders", () => {
     ]);
     expect(pickList(orders).map((x) => [x.location, x.sku, x.qty, x.orders.join("+")])).toEqual([["A-02", "A", 1, "2"], ["B-01", "B", 5, "1+2"], ["", "C", 1, "3"]]);
   });
+
+  it("totals one SKU on one pick line even when orders spell its name or variant differently", () => {
+    const { orders } = groupOrders([
+      { order: "1", sku: "TEA-100", item: "明前龙井 100g", variant: "袋装", qty: 2, location: "A-01" },
+      { order: "2", sku: "TEA-100", item: "Longjing 100g", variant: "Pouch", qty: 3, location: "A-01" },
+    ]);
+    const pick = pickList(orders);
+    expect(pick.map((x) => [x.sku, x.item, x.qty, x.orders.join("+")])).toEqual([["TEA-100", "明前龙井 100g", 5, "1+2"]]);
+  });
   it("masks phones and encodes Code 128", () => {
     expect(maskPhone("13812345678")).toBe("138****5678");
     expect(maskPhone("+1 415 555 0142")).toBe("+1 41* *** 0142");
@@ -54,7 +63,7 @@ describe("tools", () => {
     await cp(join(HERE, "samples"), join(root, "发货"), { recursive: true });
     const c = await connect(createServer({ workspaceRoot: root, assetRoot: root }));
     const o = await c.call("slips_open", { inputs: ["发货/orders.csv"], project: "1122", settings: { shop: "Penova 茶铺" } });
-    expect(o.data.stats).toEqual({ orders: 6, items: 20, skus: 10, gifts: 2 });
+    expect(o.data.stats).toEqual({ orders: 6, items: 20, skus: 9, gifts: 2 });
     const lv = o.data.issues.map((i: { level: string; row?: number }) => `${i.level}@${i.row}`);
     expect(lv).toEqual(["info@7", "warn@8"]);
     expect(o.data.preview).toContain("138****5678");
