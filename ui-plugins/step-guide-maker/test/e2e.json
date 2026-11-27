@@ -1,0 +1,1 @@
+{"prefix": "steps", "folder": "截图", "pick": ["优惠券教程"], "startSettings": {}, "uiEdit": {"row": 5, "key": "include", "value": false}, "expectText": "step", "expectFiles": ["guide\\.html$", "guide\\.md$", "guide\\.pdf$"]}
