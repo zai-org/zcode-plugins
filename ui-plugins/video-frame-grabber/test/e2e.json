@@ -1,0 +1,1 @@
+{"prefix": "frames", "folder": "视频", "pick": ["茶课第3讲.mp4"], "startSettings": {"sceneThreshold": 0.03}, "uiEdit": {"row": 0, "key": "label", "value": "封面"}, "expectText": "frame", "expectFiles": ["frames/.*\\.jpg$", "contact-sheet\\.png$", "frames\\.csv$"]}
