@@ -81,7 +81,9 @@ function drawStatement(k: PdfKit, p: Project, a: ReturnType<typeof analyse>, r: 
     const last = i === box.length - 1;
     page.drawRectangle({ x: m + i * bw + 2, y: y - 40, width: bw - 4, height: 46, color: last ? accent : hexRgb("#f3f4f6") });
     k.text(page, l, m + i * bw + 10, y - 8, { size: 8.5, color: last ? "#ffffff" : "#6b7280" });
-    k.text(page, v, m + i * bw + 10, y - 28, { size: 12, bold: true, color: last ? "#ffffff" : "#111827", maxWidth: bw - 16 });
+    let vs = 12; // shrink long amounts to fit the card instead of cutting them off
+    while (vs > 8 && k.width(v, vs, true) > bw - 16) vs -= 0.5;
+    k.text(page, v, m + i * bw + 10, y - 28, { size: vs, bold: true, color: last ? "#ffffff" : "#111827", maxWidth: bw - 16 });
   });
   y -= 66;
   k.text(page, a.mode === "whole" ? "阶梯（全额）Tiers — whole" : "阶梯（超额累进）Tiers — progressive", m, y, { size: 10, bold: true });
