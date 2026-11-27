@@ -1,0 +1,58 @@
+{
+  "name": "photo-contact-sheet",
+  "version": "0.1.0",
+  "description": "Turn a folder of photos into a printable contact sheet: a neat grid of thumbnails with file names or your own captions, page numbers and an optional title. Choose the paper, orientation, columns and rows, whether photos show whole or fill their cell, and a black or white background. Reorder or leave out photos, then export a PDF to print or send for selection, plus a JPG of every page. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Turn a folder of photos into a printable contact sheet: a neat grid of thumbnails with file names or your own captions, page numbers and an optional title. Choose the paper, orientation, columns and rows, whether photos show whole or fill their cell, and a black or white background. Reorder or leave out photos, then export a PDF to print or send for selection, plus a JPG of every page. Runs locally; no upload or API keys.",
+    "zh-CN": "把一文件夹的照片排成可打印的小样表：整齐的缩略图网格，下面是文件名或自己写的说明，带页码和可选标题。可以选纸张、方向、每行张数和每页行数，照片完整显示或填满格子，白底或黑底。调整顺序、去掉不要的照片，然后导出 PDF 打印或发给客户选片，每页另有一张 JPG。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "contact sheet",
+    "photo proof",
+    "thumbnail grid",
+    "photo index",
+    "PDF",
+    "photography",
+    "小样表",
+    "照片目录",
+    "选片",
+    "缩略图 PDF",
+    "照片索引",
+    "打样"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "photo-contact-sheet": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "照片小样表",
+          "en-US": "Photo Contact Sheet"
+        },
+        "icon": "layout-grid",
+        "server": "photo-contact-sheet",
+        "resourceUri": "ui://photo-contact-sheet/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
