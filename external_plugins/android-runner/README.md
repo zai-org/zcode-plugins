@@ -20,6 +20,7 @@ node scripts/ar.js doctor          # environment self-check
 node scripts/ar.js devices         # devices and emulators
 node scripts/ar.js use <serial>    # remember the target device
 node scripts/ar.js run             # build → install → launch
+node scripts/ar.js rebuild         # clean transform/dex caches, then build
 node scripts/ar.js logcat          # logcat, filtered to the app process
 ```
 
@@ -42,7 +43,7 @@ Anything undetected can be passed explicitly: `--module`, `--variant`, `--flavor
 
 - **The JDK must match the Gradle version.** The plugin reads `gradle-wrapper.properties` and `gradle.properties` (e.g. a legacy `-XX:MaxPermSize` only works on Java 8) and auto-picks a compatible JDK, preferring the one configured by the project.
 - Pin one: `ar java <path or 17 / corretto-17>` (saved per project); `ar java --clear` restores auto; one-off with `--java-home` or `AR_JAVA_HOME`. The panel's environment section can switch it too. Or use the `/android-java` shortcut.
-- Multi-channel projects (`channel.txt` + `productFlavors`) default to the `official` **debug** variant — runs and builds stay on debug and never build every channel at once. Pass `--flavor <name>` for one specific channel (still debug only). With several detected flavors and no `official`, the plugin asks you to choose; when no flavor name can be detected at all, it falls back to a plain debug build (the panel also accepts a typed name).
+- Multi-channel projects (`channel.txt` + `productFlavors`) default to the `official` **debug** variant — runs and builds stay on debug and never build every channel at once. Pass `--flavor <name>` for one specific channel (still debug only). With several flavors and no `official`/`dev`, the first one is used automatically (switchable in the panel); multi-dimension flavors fall back to a plain debug build with relaxed APK matching; unknown flavors also fall back to plain debug.
 - Pin a channel: `ar flavor <name>` (saved per project, `ar flavor --clear` restores auto), the panel's Flavor dropdown, or `/android-flavor`; one-off with `--flavor <name>`.
 - The panel's Flavor row supports both a dropdown and free input: when flavors are generated dynamically, type the name and click Apply (or use `/android-flavor <name>`).
 
@@ -53,6 +54,20 @@ Anything undetected can be passed explicitly: `--module`, `--variant`, `--flavor
 - ZCode currently marks every MCP tool as approval-required (even with `readOnlyHint`), so avoid tool polling for status.
 - Running `ar.js` through the agent's shell may still trigger Bash approval; prefer the panel, or use full-access mode.
 - The plugin **does not modify project files by default** (no auto-created `local.properties`); builds pass the SDK via `ANDROID_HOME`.
+
+## Clean & rebuild
+
+- `node ar.js rebuild` (panel "清理重建") cleans build caches then builds; `node ar.js clean` only cleans.
+- `--scope stale` (default) removes only `transforms`/`dex` caches — fastest; `intermediates` removes the whole intermediates dir; `gradle` runs `:module:clean`.
+- When Gradle fails with `defined multiple times` / `Duplicate class` / `DexArchiveMergerException`, the failure message points to clean & rebuild (usually stale incremental caches).
+- The clean result prints removed directories and freed space.
+
+## Mirroring
+
+- Panel "投屏" button or `node ar.js mirror [--serial <serial>]` opens the device screen on the computer via [scrcpy](https://github.com/Genymobile/scrcpy) (mouse/keyboard control).
+- Requires scrcpy on the host: macOS `brew install scrcpy`, Windows `winget install --id Genymobile.scrcpy -e`, Ubuntu `sudo apt install scrcpy`; use `--scrcpy <path>` or `AR_SCRCPY` for custom locations.
+- One window per device; close it to end, or run `node ar.js mirror --stop`. `--stay-awake` is added by default; append more with `--scrcpy-arg`.
+- The embedded in-panel mirror from upstream 1.5 (WebCodecs + bundled server) is experimental and not ported yet; the external scrcpy window is more stable.
 
 ## Side effects and safety
 
@@ -69,6 +84,7 @@ Anything undetected can be passed explicitly: `--module`, `--variant`, `--flavor
 - Node.js 18+ on `PATH` (starts the MCP server)
 - Android SDK with `platform-tools/adb`
 - A Gradle Wrapper (`gradlew`) in the project
+- Optional: [scrcpy](https://github.com/Genymobile/scrcpy) for mirroring
 
 ## Structure
 
@@ -79,7 +95,7 @@ scripts/mcp-server.mjs      # MCP server: tools, resources, background jobs
 scripts/ar.js               # CLI core: detection, devices, build, install, launch, logcat
 scripts/project-info.js     # module / APK / package detection
 skills/android-runner/      # skill instructions
-commands/                   # /android-run, /android-doctor, /android-devices, /android-panel
+commands/                   # /android-run, /android-doctor, /android-devices, /android-panel, /android-flavor, /android-java, /android-mirror
 ```
 
 ## License

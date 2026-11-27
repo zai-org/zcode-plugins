@@ -10,7 +10,7 @@
 - 模拟器:列出 AVD,一键启动并等待就绪(最多 180 秒)
 - 应用:包名、模块/变体、Flavor(可下拉/输入)、**构建任务与实际模式(单渠道 debug / 普通 debug)**、APK 大小/时间和完整路径
 - 环境:SDK / adb / JDK / Gradle 实时探测结果
-- 操作:运行(编译→安装→启动)、编译、安装、启动、停止、重启、日志、环境自检、卸载、清数据
+- 操作:运行(编译→安装→启动)、编译、**清理重建**、安装、启动、停止、重启、**投屏(scrcpy)**、日志、环境自检、卸载、清数据
 - 控制台:编译/安装/启动的实时流式输出;日志标签页是实时 logcat
 
 **命令行**(`scripts/ar.js`,零依赖)
@@ -20,7 +20,9 @@ node scripts/ar.js doctor          # 环境自检
 node scripts/ar.js devices         # 设备与模拟器
 node scripts/ar.js use <serial>    # 记住目标设备
 node scripts/ar.js run             # 编译 → 安装 → 启动
+node scripts/ar.js rebuild         # 清理 transform/dex 缓存后重新编译
 node scripts/ar.js logcat          # 只看本应用进程的日志
+node scripts/ar.js mirror          # 投屏到电脑(scrcpy 外部窗口)
 ```
 
 完整命令:`ar.js --help`。
@@ -42,7 +44,7 @@ node scripts/ar.js logcat          # 只看本应用进程的日志
 
 - **JDK 必须和 Gradle 版本匹配**。插件会读 `gradle-wrapper.properties` 与 `gradle.properties`(例如老工程的 `-XX:MaxPermSize` 只能用 Java 8),自动挑选兼容的 JDK;工程里配置的 JDK 优先。
 - 想固定用某个 JDK:`ar java <路径 或 17 / corretto-17>`(按工程记住);`ar java --clear` 恢复自动;单次可用 `--java-home` 或环境变量 `AR_JAVA_HOME`。面板「环境」区也能切换。 也可以用 `/android-java` 快捷命令。
-- 多渠道工程(`channel.txt` + `productFlavors`)默认打 `official` 的 debug 包,**运行/编译始终是 debug**,不会切 release,也不会一次编所有渠道;需要某渠道时加 `--flavor <名字>`(仍然只编该渠道的 debug)。多 flavor 且没有 `official` 时会提示你先选;如果完全解析不到 flavor 名称,则默认按普通 debug 构建(面板里也可以直接输入名字)。
+- 多渠道工程(`channel.txt` + `productFlavors`)默认打 `official` 的 debug 包,**运行/编译始终是 debug**,不会切 release,也不会一次编所有渠道;需要某渠道时加 `--flavor <名字>`(仍然只编该渠道的 debug)。多 flavor 且没有 `official`/`dev` 时自动取第一个(面板可切换);**多维度** flavor 组合名无法静态确定,按普通 debug 构建并放宽 APK 匹配;完全解析不到 flavor 名称时也默认普通 debug。
 - 想固定某个渠道:`ar flavor <名字>`(按工程记住,`ar flavor --clear` 恢复自动),或面板「应用」区的 Flavor 下拉、`/android-flavor` 命令;单次用 `--flavor <名字>`。
 - 面板「应用」区的 Flavor 支持**下拉选择 + 直接输入**:静态解析不到动态 flavor 时,输入名字点「应用」即可(也支持 `/android-flavor 名字`)。
 
@@ -53,6 +55,20 @@ node scripts/ar.js logcat          # 只看本应用进程的日志
 - ZCode 当前会把所有 MCP 工具标为需要审批(即使 `readOnlyHint`),所以不要用工具轮询状态。
 - 聊天里让 agent 直接跑 `ar.js` 仍可能触发 Bash 审批;优先用面板,或切换到完全访问模式。
 - 插件**默认不修改工程文件**(不再自动写 `local.properties`),构建通过 `ANDROID_HOME` 传给 Gradle。
+
+## 清理重建
+
+- `node ar.js rebuild`（面板「清理重建」）先清构建缓存再编译；`node ar.js clean` 只清理。
+- `--scope stale`（默认）只清 `transforms`/`dex` 等缓存，最快；`intermediates` 清整个中间产物；`gradle` 执行 `:module:clean`。
+- 编译失败命中 `defined multiple times` / `Duplicate class` / `DexArchiveMergerException` 时,会直接提示清理重建(通常是增量缓存残留)。
+- 清理后会打印实际删除的目录和释放空间。
+
+## 投屏
+
+- 面板「投屏」按钮或 `node ar.js mirror [--serial <序列号>]`,用 [scrcpy](https://github.com/Genymobile/scrcpy) 在电脑上打开手机画面,可鼠标键盘操作。
+- 需要本机安装 scrcpy:macOS `brew install scrcpy`、Windows `winget install --id Genymobile.scrcpy -e`、Ubuntu `sudo apt install scrcpy`;装在非常规位置用 `--scrcpy <路径>` 或 `AR_SCRCPY`。
+- 每台设备一个窗口;关闭窗口即结束,也可 `node ar.js mirror --stop`。默认附带 `--stay-awake`,可用 `--scrcpy-arg` 追加参数。
+- 内嵌到 ZCode 面板的投屏是上游 1.5 的实验特性(WebCodecs + 自带 server),本期未移植;外部 scrcpy 窗口体验更稳。
 
 ## 副作用与安全
 
@@ -69,6 +85,7 @@ node scripts/ar.js logcat          # 只看本应用进程的日志
 - Node.js 18+,且在 `PATH` 中(用于启动 MCP 服务器)
 - Android SDK(含 `platform-tools/adb`)
 - 工程自带 Gradle Wrapper(`gradlew`)
+- 投屏需要本机安装 [scrcpy](https://github.com/Genymobile/scrcpy)(可选)
 
 ## 目录结构
 
@@ -79,7 +96,7 @@ scripts/mcp-server.mjs      # MCP 服务器:工具、资源、后台作业
 scripts/ar.js               # 命令行核心:探测、设备、编译、安装、启动、日志
 scripts/project-info.js     # 模块 / APK / 包名探测
 skills/android-runner/      # 技能说明
-commands/                   # /android-run, /android-doctor, /android-devices, /android-panel
+commands/                   # /android-run, /android-doctor, /android-devices, /android-panel, /android-flavor, /android-java, /android-mirror
 ```
 
 ## License

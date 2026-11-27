@@ -34,10 +34,13 @@ node "${ZCODE_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/ar.js" <命令> [参�
 | `use <serial>` / `use --emulator <名>` | 记住目标设备 / 启动 AVD(最多等 180s)并选中 |
 | `run` | 编译 → 安装 → 启动 |
 | `build` | 仅编译(无设备也可) |
+| `clean [--scope stale\|intermediates\|gradle]` | 清理构建缓存 |
+| `rebuild [--scope ...]` | 清理缓存后重新编译(清理重建) |
 | `install` | 仅安装(Android 11+ 先 `--fastdeploy`,失败回退全量;**签名不一致自动卸载重装**) |
 | `launch` / `stop` / `restart` | 启动 / 强停 / 重启(resolve-activity,失败回退 monkey) |
 | `uninstall` / `clear-data` | 卸载 / 清数据(**破坏性**) |
 | `logcat` | 持续输出,优先只看本应用进程 |
+| `mirror [--serial]` | 用 scrcpy 投屏到电脑(外部窗口;`--stop` 关闭) |
 | `java [路径\|版本]` | 查看/记住本工程使用的 JDK(`--clear` 恢复自动) |
 | `flavor [名字]` | 查看/记住本工程的 productFlavor(`--clear` 恢复自动,默认 official) |
 | `doctor` | 环境自检报告 |
@@ -61,6 +64,10 @@ node "${ZCODE_PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts/ar.js" <命令> [参�
 **运行到设备**:优先让用户点面板的「运行到设备」;若走命令行则 `ar run`。自动选设备顺序:--serial > 工程记住的偏好 > 恰好一台在线设备。多台且无偏好时脚本退出码 2 并列出设备 —— 和用户确认后 `ar use <serial>` 记住,或用面板点「设为当前」。
 
 **日志**:面板的「日志」标签页是实时流;命令行 `ar logcat` 用 Bash 的 `run_in_background`,只把关键行(崩溃/ANR)读给用户。
+
+**投屏**:用户说投屏/看手机画面时,优先让用户点面板「投屏」;命令行 `ar mirror` 需要本机安装 scrcpy(未安装时把 brew/winget/apt 命令给用户)。外部 scrcpy 窗口关闭即结束,`ar mirror --stop` 可统一关闭。
+
+**清理重建**:编译失败若出现 `defined multiple times` / `Duplicate class` / `DexArchiveMergerException`,先建议 `ar rebuild`(面板「清理重建」),默认只清 transform/dex 缓存;必要时用 `--scope intermediates` 或 `--scope gradle`。
 
 **排查**:先面板里点「环境自检」或 `ar doctor`,把 ❌ 项和修复建议直接给用户。
 

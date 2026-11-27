@@ -45,7 +45,57 @@ function discoverModules(root, configured = 'app') {
   }).sort((a, b) => a.localeCompare(b));
 }
 
-/** 取从 openIndex 处的 `{` 匹配到的整块内容(忽略字符串里的括号,够用)。 */
+function capitalize(text) {
+  const value = String(text || '');
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+}
+
+/* ------------------------------------------------------------------ */
+/* 多渠道（productFlavors）探测                                         */
+/* ------------------------------------------------------------------ */
+
+/** 去掉注释，字符串内容原样保留，避免把注释里的示例渠道当成真实声明。 */
+function stripComments(text) {
+  let out = '';
+  let quote = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (quote) {
+      out += ch;
+      if (ch === '\\') {
+        out += next || '';
+        i++;
+      } else if (ch === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      out += ch;
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+      out += '\n';
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      i += 2;
+      while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) {
+        if (text[i] === '\n') out += '\n';
+        i++;
+      }
+      i++;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
+}
+
+/** 返回 text 中 openIndex 处左花括号所配对的块内容；未闭合返回空串。 */
 function blockAt(text, openIndex) {
   let depth = 0;
   let quote = '';
@@ -56,117 +106,239 @@ function blockAt(text, openIndex) {
       else if (ch === quote) quote = '';
       continue;
     }
-    if (ch === '"' || ch === "'") { quote = ch; continue; }
-    if (ch === '{') depth++;
-    else if (ch === '}') {
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === '{') {
+      depth++;
+    } else if (ch === '}') {
       depth--;
       if (depth === 0) return text.slice(openIndex + 1, i);
     }
   }
-  return text.slice(openIndex + 1);
+  return '';
 }
 
-/** 静态读取 module 的 productFlavors(渠道插件也会注册 flavor,这里一并识别)。 */
-function discoverFlavors(root, module) {
-  if (!root) return [];
-  const dir = moduleDirectory(root, module);
-  const text = read(path.join(dir, 'build.gradle')) + '\n' + read(path.join(dir, 'build.gradle.kts'));
-  const names = new Set();
-  const blockRe = /productFlavors\s*\{/g;
-  let match;
-  while ((match = blockRe.exec(text)) !== null) {
-    const block = blockAt(text, blockRe.lastIndex - 1);
-    for (const item of block.matchAll(/^\s*([A-Za-z_][\w]*)\s*(?:\{|$)/gm)) {
-      const name = item[1];
-      if (['configureEach', 'all', 'create', 'register', 'maybeCreate', 'each'].includes(name)) continue;
-      names.add(name);
-    }
-    for (const item of block.matchAll(/(?:create|register|maybeCreate)\s*\(\s*['"]([\w]+)['"]/g)) names.add(item[1]);
+/** Gradle DSL 上的同名方法，不是渠道名。 */
+const FLAVOR_DSL_WORDS = new Set([
+  'configureEach', 'all', 'each', 'create', 'register', 'maybeCreate', 'getByName', 'getAt',
+  'withType', 'matching', 'named', 'whenObjectAdded', 'whenObjectRemoved'
+]);
+
+/** 收集 productFlavors 块内顶层的渠道名，兼容 official { } 与 create("official") 两种写法。 */
+function collectFlavorNames(block, names) {
+  const add = (name) => {
+    const value = String(name || '').trim();
+    if (!value || FLAVOR_DSL_WORDS.has(value)) return;
+    if (!/^[\w$.-]+$/.test(value)) return;
+    if (!names.some((item) => item.toLowerCase() === value.toLowerCase())) names.push(value);
+  };
+  for (const match of block.matchAll(/\b(?:create|register|maybeCreate|getByName)\s*\(\s*['"]([^'"]+)['"]/g)) {
+    add(match[1]);
   }
-  // 静态解析可能遇到循环/create(变量) 等动态写法:从已构建的输出目录反推 flavor
-  const apkRoot = path.join(dir, 'build', 'outputs', 'apk');
-  const skip = new Set(['debug', 'release', 'androidtest', 'test', 'rebuildchannel', 'channel', 'outputs']);
-  try {
-    for (const entry of fs.readdirSync(apkRoot, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      if (skip.has(entry.name.toLowerCase())) continue;
-      let looksLikeFlavor = false;
-      try {
-        looksLikeFlavor = fs.readdirSync(path.join(apkRoot, entry.name), { withFileTypes: true })
-          .some((sub) => sub.isDirectory() && /^(debug|release)/i.test(sub.name));
-      } catch (_) { /* 空目录 */ }
-      if (!looksLikeFlavor) {
-        try {
-          looksLikeFlavor = fs.readdirSync(path.join(apkRoot, entry.name)).some((file) => /\.apk$/i.test(file));
-        } catch (_) { /* 忽略 */ }
-      }
-      if (looksLikeFlavor) names.add(entry.name);
+  let depth = 0;
+  let quote = '';
+  let word = '';
+  for (let i = 0; i < block.length; i++) {
+    const ch = block[i];
+    if (quote) {
+      if (ch === '\\') i++;
+      else if (ch === quote) quote = '';
+      continue;
     }
-  } catch (_) { /* 还没有构建产物 */ }
-  return Array.from(names).sort();
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      word = '';
+      continue;
+    }
+    if (ch === '{') {
+      if (depth === 0) add(word);
+      word = '';
+      depth++;
+      continue;
+    }
+    if (ch === '}') {
+      depth = Math.max(0, depth - 1);
+      word = '';
+      continue;
+    }
+    if (depth === 0) {
+      if (/[\w$]/.test(ch)) word += ch;
+      else if (!/\s/.test(ch)) word = '';
+    }
+  }
+  return names;
 }
 
-/** 是否存在 flavor 配置(即使名字没解析出来,也绝不能退化成 assembleDebug 全渠道构建)。 */
-function hasFlavorConfig(root, module) {
-  if (!root) return false;
+/** 静态解析模块 build.gradle(.kts) 里声明的渠道。 */
+function declaredFlavors(source) {
+  const names = [];
+  for (const match of source.matchAll(/\bproductFlavors\s*\{/g)) {
+    const open = match.index + match[0].length - 1;
+    collectFlavorNames(blockAt(source, open), names);
+  }
+  return names;
+}
+
+const NOT_FLAVOR_DIRS = new Set(['debug', 'release', 'androidtest', 'test', 'rebuildchannel', 'channel', 'outputs']);
+
+/** 已构建过的工程可以从产物目录反推动态生成的渠道。 */
+function artifactFlavors(root, module) {
+  const base = path.join(moduleDirectory(root, module), 'build', 'outputs', 'apk');
+  const names = [];
+  let entries = [];
+  try { entries = fs.readdirSync(base, { withFileTypes: true }); } catch (_) { return names; }
+  for (const entry of entries) {
+    const lower = entry.name.toLowerCase();
+    if (!entry.isDirectory() || lower.startsWith('.') || NOT_FLAVOR_DIRS.has(lower)) continue;
+    try {
+      const children = fs.readdirSync(path.join(base, entry.name), { withFileTypes: true });
+      if (children.some((child) => child.isDirectory() && NOT_FLAVOR_DIRS.has(child.name.toLowerCase()))) {
+        names.push(entry.name);
+      }
+    } catch (_) { /* 目录可能正在被 Gradle 重建 */ }
+  }
+  return names;
+}
+
+/** 统计 flavorDimensions 的维度数；未声明时用各 flavor 的 dimension 值兜底。 */
+function dimensionCount(source, flavors) {
+  const names = new Set();
+  for (const match of source.matchAll(/\bflavorDimensions\b[^\n]*/g)) {
+    for (const literal of match[0].matchAll(/['"]([^'"]+)['"]/g)) names.add(literal[1].toLowerCase());
+  }
+  if (names.size) return names.size;
+  for (const match of source.matchAll(/\bdimension\s*=?\s*['"]([^'"]+)['"]/g)) names.add(match[1].toLowerCase());
+  return names.size || (flavors.length > 1 ? 1 : 0);
+}
+
+/** 产物目录里出现 apk/<a>/<b>/<debug|release>/ 即为多维度组合。 */
+function hasMultiDimensionOutputs(root, module) {
+  const base = path.join(moduleDirectory(root, module), 'build', 'outputs', 'apk');
+  let first = [];
+  try { first = fs.readdirSync(base, { withFileTypes: true }); } catch (_) { return false; }
+  for (const entry of first) {
+    if (!entry.isDirectory() || NOT_FLAVOR_DIRS.has(entry.name.toLowerCase())) continue;
+    let children = [];
+    try { children = fs.readdirSync(path.join(base, entry.name), { withFileTypes: true }); } catch (_) { continue; }
+    for (const child of children) {
+      if (child.isDirectory() && !NOT_FLAVOR_DIRS.has(child.name.toLowerCase())) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 识别多渠道工程：静态解析优先（无需构建），解析不到才用产物反推（应对循环生成的动态渠道）。
+ * 两者不做合并——残留的构建产物不该改变一个已经声明清楚的工程。
+ */
+function discoverFlavors(root, module) {
+  if (!root) return { flavors: [], source: 'none', hasConfig: false, dimensionCount: 0, multiDimension: false };
   const dir = moduleDirectory(root, module);
-  const text = read(path.join(dir, 'build.gradle')) + '\n' + read(path.join(dir, 'build.gradle.kts'));
-  return /productFlavors\s*\{|flavorDimensions\b/.test(text);
+  const declared = [];
+  let dimensions = 0;
+  let hasConfig = false;
+  for (const file of ['build.gradle', 'build.gradle.kts']) {
+    const raw = read(path.join(dir, file));
+    if (!raw) continue;
+    const source = stripComments(raw);
+    if (/\bproductFlavors\b|\bflavorDimensions\b/.test(source)) hasConfig = true;
+    const names = declaredFlavors(source);
+    declared.push(...names);
+    dimensions = Math.max(dimensions, dimensionCount(source, names));
+  }
+  const unique = (names) => {
+    const result = [];
+    for (const name of names) {
+      if (!result.some((item) => item.toLowerCase() === name.toLowerCase())) result.push(name);
+    }
+    return result;
+  };
+  const flavors = declared.length ? unique(declared) : unique(artifactFlavors(root, module));
+  const source = declared.length ? 'gradle' : flavors.length ? 'artifacts' : 'none';
+  return {
+    flavors,
+    source,
+    hasConfig,
+    dimensionCount: dimensions,
+    multiDimension: dimensions >= 2 || hasMultiDimensionOutputs(root, module)
+  };
 }
 
+/* ------------------------------------------------------------------ */
+/* APK 定位                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 定位 APK。
+ * - 指定 flavor 时只看包含该渠道的产物目录，绝不回退到无渠道的 outputs/apk/<variant>。
+ * - relaxed 用于多维度渠道：精确匹配失败后接受任一以变体名结尾的产物。
+ * - plainOnly 用于「识别不到 flavor、默认普通 debug」：只认 outputs/apk/<variant>。
+ */
 function findApk(root, module, variant, explicit, flavor, options) {
-  const plainOnly = !!(options && options.plainOnly);
   if (!root) return null;
   if (explicit) return { path: path.resolve(root, explicit), applicationId: '' };
+  const opts = options || {};
+  const relaxed = !!opts.relaxed;
+  const plainOnly = !!opts.plainOnly;
+  variant = (variant || 'debug').trim();
+  flavor = (flavor || '').trim();
+  const full = flavor ? capitalize(flavor) + capitalize(variant) : variant;
   const base = path.join(moduleDirectory(root, module), 'build', 'outputs', 'apk');
-  const variantLower = variant.toLowerCase();
-  const flavorLower = (flavor || '').toLowerCase();
-  const variants = flavorLower
-    ? new Set([`${flavorLower}${variantLower}`])
-    : new Set([variantLower]);
-  const matchesVariant = (name) => {
-    const value = String(name || '').toLowerCase();
-    if (variants.has(value)) return true;
-    if (plainOnly) return false;
-    // 没有 flavor 信息时,允许 <flavor><variant> 这种 AGP 命名
-    return !flavorLower && value.endsWith(variantLower);
+  const relativePart = (file) => path.relative(base, path.resolve(file)).split(path.sep);
+  const inFlavor = (file) => !flavor || relativePart(file).some((part) => part.toLowerCase() === flavor.toLowerCase());
+  const inPlainVariant = (file) => {
+    const parts = relativePart(file);
+    return parts.length > 1 && parts[0].toLowerCase() === variant.toLowerCase();
+  };
+  const matches = (name) => {
+    const lower = String(name || '').toLowerCase();
+    if (!lower) return false;
+    if (plainOnly) return lower === variant.toLowerCase();
+    const exact = lower === full.toLowerCase() || (!!flavor && lower === (flavor + variant).toLowerCase());
+    if (exact) return true;
+    return relaxed && lower.endsWith(variant.toLowerCase());
   };
   const candidates = [];
-  function visit(dir, depth) {
+  const loose = [];
+  const collect = (list, file, applicationId, universal) => {
+    const resolved = path.resolve(file);
+    if (!resolved.startsWith(base + path.sep) || !inFlavor(resolved)) return;
+    if (plainOnly && !inPlainVariant(resolved)) return;
+    try {
+      const stat = fs.statSync(resolved);
+      if (stat.isFile()) {
+        list.push({ path: resolved, applicationId: applicationId || '', universal: universal !== false, modifiedAt: stat.mtimeMs });
+      }
+    } catch (_) { /* Gradle may be replacing outputs while the sidebar refreshes. */ }
+  };
+  const visit = (dir, depth) => {
     if (depth > 4) return;
     const metadata = read(path.join(dir, 'output-metadata.json'));
     if (metadata) {
       try {
         const data = JSON.parse(metadata);
-        if (matchesVariant(data.variantName)) {
+        const exact = matches(data.variantName);
+        if (exact) {
           for (const element of data.elements || []) {
             if (!element.outputFile || !/\.apk$/i.test(element.outputFile)) continue;
-            const file = path.resolve(dir, element.outputFile);
-            if (!file.startsWith(base + path.sep)) continue;
-            try {
-              const stat = fs.statSync(file);
-              if (stat.isFile()) candidates.push({ path: file, applicationId: data.applicationId || '', universal: !(element.filters || []).length, modifiedAt: stat.mtimeMs });
-            } catch (_) { /* Gradle may be replacing outputs while the sidebar refreshes. */ }
+            collect(candidates, path.resolve(dir, element.outputFile), data.applicationId, !(element.filters || []).length);
           }
         }
       } catch (_) { /* incomplete metadata during build */ }
     }
-    // AGP 3.x 使用 output.json(数组),没有 output-metadata.json
     const legacy = read(path.join(dir, 'output.json'));
     if (legacy) {
       try {
         const list = JSON.parse(legacy);
         for (const item of Array.isArray(list) ? list : []) {
-          const data = (item && item.apkData) || {};
-          if (!matchesVariant(data.fullName || data.baseName)) continue;
-          const relative = item.path || data.outputFile || '';
-          if (!relative || !/\.apk$/i.test(relative)) continue;
-          const file = path.resolve(dir, relative);
-          if (!file.startsWith(base + path.sep)) continue;
-          try {
-            const stat = fs.statSync(file);
-            if (stat.isFile()) candidates.push({ path: file, applicationId: '', universal: !(data.splits || []).length, modifiedAt: stat.mtimeMs });
-          } catch (_) { /* 构建中间态 */ }
+          const apkData = item.apkData || {};
+          const name = apkData.fullName || apkData.baseName || item.outputFile;
+          if (!matches(name)) continue;
+          const relative = item.path || apkData.outputFile;
+          if (!relative) continue;
+          collect(candidates, path.resolve(dir, relative), '', !(apkData.splits || []).length);
         }
       } catch (_) { /* 不完整的 output.json */ }
     }
@@ -175,80 +347,59 @@ function findApk(root, module, variant, explicit, flavor, options) {
         if (entry.isDirectory()) visit(path.join(dir, entry.name), depth + 1);
       }
     } catch (_) { /* not built yet */ }
-  }
-  visit(base, 0);
-  if (candidates.length) {
-    candidates.sort((a, b) => Number(b.universal) - Number(a.universal) || b.modifiedAt - a.modifiedAt);
-    return candidates[0];
-  }
-
-  // 目录回退:有 flavor 时严格限定在 <flavor> 下,避免拿到旧的、无 flavor 的包
-  const flavorName = flavor || '';
-  const dirs = [];
-  if (flavorName) {
-    dirs.push(path.join(base, flavorName, variantLower));
-    dirs.push(path.join(base, flavorName));
-  } else {
-    dirs.push(path.join(base, variantLower));
-  }
-  const mtime = (file) => {
-    try { return fs.statSync(file).mtimeMs; } catch (_) { return 0; }
   };
+  visit(base, 0);
+  const newest = (list) =>
+    list.slice().sort((a, b) => Number(b.universal) - Number(a.universal) || b.modifiedAt - a.modifiedAt)[0];
+  if (candidates.length) return newest(candidates);
+  if (loose.length) return newest(loose);
+
+  // 目录回退：自定义输出目录不一定写元数据
+  const dirs = flavor ? [path.join(base, flavor, variant), path.join(base, flavor)] : [path.join(base, variant)];
   for (const dir of dirs) {
     try {
       const apks = fs.readdirSync(dir).filter((file) => /\.apk$/i.test(file)).map((file) => path.join(dir, file));
-      apks.sort((a, b) => mtime(b) - mtime(a));
+      apks.sort((a, b) => {
+        try { return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs; } catch (_) { return 0; }
+      });
       if (apks.length) return { path: apks[0], applicationId: '' };
-    } catch (_) { /* 继续找下一个布局 */ }
+    } catch (_) { /* missing output */ }
   }
 
-  if (plainOnly) {
-    return { path: path.join(base, variantLower, `${module.split(':').pop()}-${variantLower}.apk`), applicationId: '' };
-  }
-
-  // 兜底:channel 重建或自定义输出目录;有 flavor 时只认带 flavor 的路径
-  const loose = [];
-  (function walk(current, depth) {
-    if (depth > 4) return;
-    let entries = [];
-    try { entries = fs.readdirSync(current, { withFileTypes: true }); } catch (_) { return; }
-    for (const entry of entries) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        walk(full, depth + 1);
-      } else if (/\.apk$/i.test(entry.name)) {
-        let stat;
-        try { stat = fs.statSync(full); } catch (_) { continue; }
-        if (!stat.isFile()) continue;
-        const lower = full.toLowerCase();
-        if (flavorLower && !lower.includes(flavorLower)) continue;
-        loose.push({
-          path: full,
-          modifiedAt: stat.mtimeMs,
-          matchesVariant: lower.includes(variantLower)
-        });
+  // 多维度 / channel 重建：接受任一以变体名结尾的产物
+  if (!plainOnly) {
+    const fallback = [];
+    (function walk(current, depth) {
+      if (depth > 4) return;
+      let entries = [];
+      try { entries = fs.readdirSync(current, { withFileTypes: true }); } catch (_) { return; }
+      for (const entry of entries) {
+        const fullPath = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          walk(fullPath, depth + 1);
+        } else if (/\.apk$/i.test(entry.name)) {
+          const parts = relativePart(fullPath);
+          if (!parts.some((part) => part.toLowerCase() === variant.toLowerCase())) continue;
+          if (!inFlavor(fullPath)) continue;
+          let stat;
+          try { stat = fs.statSync(fullPath); } catch (_) { continue; }
+          if (stat.isFile()) fallback.push({ path: fullPath, applicationId: '', universal: true, modifiedAt: stat.mtimeMs });
+        }
       }
-    }
-  })(base, 0);
-  if (loose.length) {
-    loose.sort((a, b) => Number(b.matchesVariant) - Number(a.matchesVariant) || b.modifiedAt - a.modifiedAt);
-    return { path: loose[0].path, applicationId: '', loose: true };
+    })(base, 0);
+    if (fallback.length) return newest(fallback);
   }
-  const expectedDir = flavorLower
-    ? path.join(base, flavorLower, variantLower)
-    : path.join(base, variantLower);
-  const expectedName = flavorLower
-    ? `${module.split(':').pop()}-${flavorLower}-${variantLower}.apk`
-    : `${module.split(':').pop()}-${variantLower}.apk`;
-  return { path: path.join(expectedDir, expectedName), applicationId: '' };
+
+  if (flavor) return { path: '', applicationId: '', flavorMissing: true };
+  return { path: path.join(base, variant, module.split(':').pop() + '-' + variant + '.apk'), applicationId: '' };
 }
 
 function apkInfo(candidate) {
-  if (!candidate) return null;
+  if (!candidate || !candidate.path) return null;
   try {
     const stat = fs.statSync(candidate.path);
     return stat.isFile() ? { path: candidate.path, name: path.basename(candidate.path), size: stat.size, modifiedAt: stat.mtimeMs } : null;
   } catch (_) { return null; }
 }
 
-module.exports = { discoverModules, discoverFlavors, hasFlavorConfig, moduleDirectory, findApk, apkInfo };
+module.exports = { discoverModules, moduleDirectory, discoverFlavors, findApk, apkInfo };

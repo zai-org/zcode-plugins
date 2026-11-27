@@ -224,11 +224,13 @@
       <div class="actions">
         <button class="primary" id="act-run">▶ 运行到设备</button>
         <button id="act-build">⚒ 编译</button>
+        <button id="act-rebuild" title="清理 transform/dex 缓存后重新编译">🧹 清理重建</button>
         <button id="act-install">⤓ 安装 APK</button>
         <button id="act-launch">↗ 启动应用</button>
         <button id="act-stop">■ 停止应用</button>
         <button id="act-restart">⟳ 重启应用</button>
         <button id="act-logcat">≣ 日志</button>
+        <button id="act-mirror" title="用 scrcpy 打开手机画面窗口">⧉ 投屏</button>
         <button id="act-doctor">✓ 环境自检</button>
         <span class="grow"></span>
         <button class="danger" id="act-uninstall">卸载</button>
@@ -271,7 +273,7 @@
  * ============================================================== */
 
 const SURFACE = 'android-runner';
-const VERSION = '0.4.8'; // 与 .zcode-plugin/plugin.json 保持一致
+const VERSION = '0.6.0'; // 与 .zcode-plugin/plugin.json 保持一致
 const PROTOCOL = '2026-01-26';
 
 const pending = new Map();
@@ -429,10 +431,10 @@ function render() {
   } else if (st.devices.filter((d) => d.state === 'device').length > 1 && !currentSerial()) {
     banner.className = 'banner show warn';
     banner.textContent = '检测到多台在线设备,请先点设备卡片上的「设为当前」选择目标设备。';
-  } else if (st.app && st.app.flavorAmbiguous) {
+  } else if (st.app && st.app.multiDimension) {
     banner.className = 'banner show warn';
-    banner.textContent = '工程有多个 productFlavor,请先在下方「应用」区选择 Flavor 再运行。';
-  } else if (st.app && st.app.flavorUnknown) {
+    banner.textContent = '工程是多维度 flavor,组合名无法静态确定,将按普通 debug 构建;需要时可在「应用」区输入组合名。';
+  } else if (st.app && st.app.flavorSource === 'unknown') {
     banner.className = 'banner show warn';
     banner.textContent = '未识别到 flavor,将按普通 debug 构建;如工程有多渠道,可在下方「应用」区输入名字后点「应用」。';
   } else {
@@ -504,39 +506,49 @@ function render() {
   const flavorOptions = flavors
     .map((name) => `<option value="${esc(name)}"${name === flavorPref ? ' selected' : ''}>${esc(name)}</option>`)
     .join('');
-  const showFlavorRow = flavors.length > 0 || app.flavorAmbiguous || app.flavorUnknown || !!flavorPref;
+  const source = app.flavorSource || 'plain';
+  const isMulti = !!app.multiDimension;
+  const showFlavorRow = flavors.length > 0 || source === 'unknown' || isMulti || source === 'auto-first' || !!flavorPref;
   const flavorRow = showFlavorRow
     ? `<div class="kv-row"><span class="kv-k">Flavor</span><span class="kv-v"><span class="flavor-edit">
-        ${flavors.length ? `<select id="flavorSelect" title="只影响 debug;不会一次编所有渠道"><option value=""${flavorPref ? '' : ' selected'}>自动(默认 official)</option>${flavorOptions}</select>` : ''}
-        <input id="flavorInput" type="text" placeholder="${flavors.length ? '或输入其他' : (app.flavorAmbiguous ? '输入 flavor' : '可留空')}" value="${esc(flavorPref)}" />
+        ${flavors.length ? `<select id="flavorSelect" title="只影响 debug;不会一次编所有渠道"><option value=""${flavorPref ? '' : ' selected'}>${isMulti ? '自动(多维度 → 普通 debug)' : '自动(official / 首个)'}</option>${flavorOptions}</select>` : ''}
+        <input id="flavorInput" type="text" placeholder="${flavors.length ? '或输入其他' : (source === 'unknown' || isMulti ? '输入 flavor' : '可留空')}" value="${esc(flavorPref)}" />
         <button id="flavorApply" title="按输入的 flavor 构建 debug">应用</button>
       </span></span></div>`
     : '';
-  const buildMode = app.flavor
-    ? `单渠道 ${app.flavor} 的 debug`
-    : app.flavorAmbiguous
-      ? '需先选择 Flavor(不会一次编所有渠道)'
-      : app.flavorUnknown
-        ? '普通 debug(未识别到 flavor)'
+  const buildMode = isMulti
+    ? '多维度 → 普通 debug'
+    : source === 'unknown'
+      ? '普通 debug(未识别到 flavor)'
+      : app.flavor
+        ? `单渠道 ${app.flavor} 的 debug`
         : '普通 debug';
-  const flavorSource = flavorPref
-    ? `本工程记住 → ${app.flavor || '(空)'}`
-    : app.flavor
-      ? `自动 → ${app.flavor}`
-      : app.flavorUnknown
-        ? '未识别,默认 debug'
+  const sourceLabels = {
+    configured: `参数 --flavor → ${app.flavor}`,
+    remembered: `本工程记住 → ${app.flavor}`,
+    single: `唯一 flavor → ${app.flavor}`,
+    official: '自动 → official',
+    dev: '自动 → dev',
+    'auto-first': `自动取第一个 → ${app.flavor}`,
+    'multi-dimension': '多维度 → 普通 debug',
+    unknown: '未识别,默认 debug',
+    plain: ''
+  };
+  const flavorSource = sourceLabels[source] || '';
+  const flavorHint = source === 'auto-first'
+    ? kvRow('Flavor 提示', `多个 flavor 且没有 official/dev,已自动选用 ${app.flavor};可在上面切换`)
+    : source === 'unknown'
+      ? kvRow('Flavor 提示', '有 flavor 配置但未解析出名称,默认按普通 debug 构建;可输入指定')
+      : isMulti
+        ? kvRow('Flavor 提示', '多维度和 flavor 组合无法静态确定,按普通 debug 构建;需要可输入组合名')
         : '';
   $('appKv').innerHTML = [
     kvRow('包名', app.packageName || '未识别', app.packageName ? 'ok' : 'bad'),
     kvRow('模块 / 变体', `${app.module || 'app'} · ${app.variantFull || `${app.flavor ? app.flavor + ' ' : ''}${app.variant || 'debug'}`}`),
     flavorRow,
     flavorSource ? kvRow('Flavor 来源', flavorSource) : '',
-    app.flavorAmbiguous
-      ? kvRow('Flavor 提示', `多个:${flavors.join('、')} —— 先选一个再运行`, 'bad')
-      : app.flavorUnknown
-        ? kvRow('Flavor 提示', '未识别到 flavor,默认按 debug 构建;可输入指定')
-        : '',
-    kvRow('构建任务', `${app.task || '(未知)'} · ${buildMode}`, app.flavorAmbiguous ? 'bad' : 'ok', app.task || ''),
+    flavorHint,
+    kvRow('构建任务', `${app.task || '(未知)'} · ${buildMode}`, 'ok', app.task || ''),
     apk
       ? kvRow('APK', `${esc(apk.name)} · ${fmtSize(apk.size)} · ${fmtAgo(apk.modifiedAt)}`, '', apk.path)
       : kvRow('APK', '尚未构建', 'bad'),
@@ -561,7 +573,12 @@ function render() {
     kvRow('JDK', env.javaHome ? `${env.javaHome}${env.javaVersion ? ' · ' + env.javaVersion : ''}` : '未探测到', env.javaHome ? 'ok' : 'bad'),
     env.javaNote ? kvRow('JDK 说明', env.javaNote) : '',
     jdkRow,
-    kvRow('Gradle', env.gradleVersion ? 'v' + env.gradleVersion : '未知')
+    kvRow('Gradle', env.gradleVersion ? 'v' + env.gradleVersion : '未知'),
+    kvRow(
+      '投屏(scrcpy)',
+      (st.mirror && st.mirror.available) ? st.mirror.path : `未安装 · ${(st.mirror && st.mirror.hint) || '需要 scrcpy'}`,
+      st.mirror && st.mirror.available ? 'ok' : 'bad'
+    )
   ].join('');
 
   updateButtons();
@@ -586,13 +603,13 @@ function updateButtons() {
   const ready = st ? st.devices.filter((d) => d.state === 'device') : [];
   // 多设备且未选择目标时,ar.js 无法决定装到哪台,先让用户选
   const ambiguous = ready.length > 1 && !currentSerial();
-  const flavorAmbiguous = !!(st && st.app && st.app.flavorAmbiguous);
-  const projectAction = hasProject && !flavorAmbiguous;
+  const projectAction = hasProject;
   const deviceAction = projectAction && !ambiguous;
   const deviceAppAction = deviceAction && hasPkg;
   const set = (id, enabled) => { $(id).disabled = !enabled || busy; };
   set('act-run', deviceAction);
   set('act-build', projectAction);
+  set('act-rebuild', projectAction);
   set('act-install', deviceAction);
   set('act-launch', deviceAppAction);
   set('act-stop', deviceAppAction);
@@ -601,6 +618,11 @@ function updateButtons() {
   set('act-uninstall', deviceAppAction);
   set('act-cleardata', deviceAppAction);
   $('act-logcat').disabled = !hasProject || ambiguous || busy;
+  const mirrorInfo = (st && st.mirror) || {};
+  const mirrorSerial = currentSerial();
+  const mirroring = !!(mirrorSerial && (mirrorInfo.serials || []).includes(mirrorSerial));
+  $('act-mirror').textContent = mirroring ? '⏹ 停止投屏' : '⧉ 投屏';
+  set('act-mirror', !!mirrorSerial);
 }
 
 /* ============================================================== *
@@ -703,6 +725,9 @@ function pollJob(jobId, action) {
       consoleWrite(res.output, { mode: 'output' });
       if (res.output.includes('自动卸载重装')) {
         showNotice('签名不一致或版本回退,已自动卸载重装 —— 设备上该应用的本地数据已被清空。');
+      }
+      if (res.output.includes('构建缓存残留') || res.output.includes('清理重建')) {
+        showNotice('检测到构建缓存残留(重复类/重复定义),建议点「清理重建」后重试。');
       }
     }
     if (res.running) {
@@ -835,12 +860,32 @@ function askConfirm(title, body, okLabel) {
 function wire() {
   $('act-run').onclick = () => runAction('run', { label: '运行(编译→安装→启动)' });
   $('act-build').onclick = () => runAction('build', { label: '编译' });
+  $('act-rebuild').onclick = () => runAction('rebuild', { label: '清理重建' });
   $('act-install').onclick = () => runAction('install', { label: '安装 APK' });
   $('act-launch').onclick = () => runAction('launch', { label: '启动应用' });
   $('act-stop').onclick = () => runAction('stop', { label: '停止应用' });
   $('act-restart').onclick = () => runAction('restart', { label: '重启应用' });
   $('act-doctor').onclick = () => runAction('doctor', { label: '环境自检' });
   $('act-logcat').onclick = () => startLogcat();
+  $('act-mirror').onclick = async () => {
+    const serial = currentSerial();
+    if (!serial) {
+      showNotice('请先选择目标设备');
+      return;
+    }
+    const running = ((state.status && state.status.mirror && state.status.mirror.serials) || []).includes(serial);
+    try {
+      const result = await callTool('panel_mirror', { action: running ? 'stop' : 'start', serial });
+      if (result && result.ok === false) {
+        showNotice(result.hint ? `未找到 scrcpy,请先安装:${result.hint}` : (result.error || '投屏失败'));
+        return;
+      }
+      showNotice(running ? `已停止投屏:${serial}` : `已打开投屏窗口:${serial}`);
+      await refreshStatus(true);
+    } catch (error) {
+      showNotice('投屏失败:' + error.message);
+    }
+  };
 
   $('act-uninstall').onclick = async () => {
     const pkg = state.status?.app?.packageName;

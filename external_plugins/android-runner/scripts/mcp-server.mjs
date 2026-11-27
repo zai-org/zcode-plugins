@@ -17,6 +17,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
 import os from 'node:os';
+import mirror from './mirror.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const AR = join(HERE, 'ar.js');
@@ -301,7 +302,8 @@ async function collectStatus({ force = false } = {}) {
       avds: [],
       preference: null,
       env: null,
-      app: null
+      app: null,
+      mirror: mirrorStatus()
     };
     statusCache = { at: Date.now(), data };
     return data;
@@ -344,12 +346,17 @@ async function collectStatus({ force = false } = {}) {
       flavor: infoJson.flavor || '',
       flavorPreference: infoJson.flavorPreference || '',
       flavors: Array.isArray(infoJson.flavors) ? infoJson.flavors : [],
+      flavorSource: infoJson.flavorSource || 'plain',
+      flavorsSource: infoJson.flavorsSource || 'none',
+      dimensionCount: infoJson.dimensionCount || 0,
+      multiDimension: !!infoJson.multiDimension,
+      flavorAuto: !!infoJson.flavorAuto,
       variantFull: infoJson.variantFull || '',
-      flavorAmbiguous: !!infoJson.flavorAmbiguous,
       flavorUnknown: !!infoJson.flavorUnknown,
       task: infoJson.task || '',
       apk: infoJson.apk || null
-    }
+    },
+    mirror: mirrorStatus()
   };
   statusCache = { at: Date.now(), data };
   return data;
@@ -362,6 +369,8 @@ async function collectStatus({ force = false } = {}) {
 /** action → ar.js 参数 */
 const ACTION_ARGS = {
   build: ['build'],
+  clean: ['clean'],
+  rebuild: ['rebuild'],
   install: ['install'],
   run: ['run'],
   launch: ['launch'],
@@ -549,6 +558,70 @@ function startLogcat(serial, project) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 投屏（scrcpy 外部窗口）                                              */
+/* ------------------------------------------------------------------ */
+
+const mirrorProcs = new Map();
+let scrcpyCache = { at: 0, value: null };
+
+function scrcpyStatus() {
+  if (scrcpyCache.value && Date.now() - scrcpyCache.at < 30000) return scrcpyCache.value;
+  const found = mirror.findScrcpy(process.env.AR_SCRCPY || '');
+  const value = { available: !!found, path: found || '', hint: mirror.installHint() };
+  scrcpyCache = { at: Date.now(), value };
+  return value;
+}
+
+function mirrorStatus() {
+  return Object.assign({}, scrcpyStatus(), { serials: Array.from(mirrorProcs.keys()) });
+}
+
+async function startMirror(serial) {
+  if (!serial) return { ok: false, error: '缺少设备序列号' };
+  if (mirrorProcs.has(serial)) return { ok: true, already: true, serial };
+  const scrcpy = scrcpyStatus();
+  if (!scrcpy.available) return { ok: false, error: '未找到 scrcpy', hint: scrcpy.hint };
+  let adb = '';
+  try {
+    const status = await collectStatus();
+    adb = (status && status.env && status.env.adb) || '';
+  } catch { /* 没有工程时镜像仍可用,交给 PATH 里的 adb */ }
+  const args = mirror.buildArgs({ serial, title: serial, extraArgs: ['--stay-awake'] });
+  let child;
+  try {
+    child = mirror.launch({ scrcpy: scrcpy.path, adb, args });
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+  const spawnError = await new Promise((resolve) => {
+    child.once('spawn', () => resolve(null));
+    child.once('error', (error) => resolve(error));
+  });
+  if (spawnError) return { ok: false, error: spawnError.message };
+  mirrorProcs.set(serial, child);
+  child.on('close', () => {
+    if (mirrorProcs.get(serial) === child) mirrorProcs.delete(serial);
+  });
+  child.on('error', () => {
+    if (mirrorProcs.get(serial) === child) mirrorProcs.delete(serial);
+  });
+  log(`mirror started for ${serial} (pid=${child.pid})`);
+  return { ok: true, serial, pid: child.pid };
+}
+
+function stopMirror(serial) {
+  const targets = serial ? [serial] : Array.from(mirrorProcs.keys());
+  let stopped = 0;
+  for (const key of targets) {
+    const child = mirrorProcs.get(key);
+    if (!child) continue;
+    try { child.kill('SIGTERM'); stopped += 1; } catch { /* ignore */ }
+    mirrorProcs.delete(key);
+  }
+  return { ok: true, stopped, serials: Array.from(mirrorProcs.keys()) };
+}
+
+/* ------------------------------------------------------------------ */
 /* 工具定义                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -598,7 +671,7 @@ const TOOLS = [
       properties: {
         action: {
           type: 'string',
-          enum: ['build', 'install', 'run', 'launch', 'stop', 'restart', 'doctor', 'uninstall', 'clear-data']
+          enum: ['build', 'clean', 'rebuild', 'install', 'run', 'launch', 'stop', 'restart', 'doctor', 'uninstall', 'clear-data']
         },
         serial: { type: 'string', description: 'Target device serial; defaults to the remembered device.' },
         confirm: {
@@ -658,6 +731,21 @@ const TOOLS = [
       type: 'object',
       properties: { serial: { type: 'string' } },
       required: ['serial'],
+      additionalProperties: false
+    },
+    annotations: { readOnlyHint: false },
+    _meta: APP_VISIBILITY
+  },
+  {
+    name: 'panel_mirror',
+    description: 'Open or close a scrcpy mirror window for the selected Android device. Requires scrcpy on the host; returns an install hint when missing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['start', 'stop'] },
+        serial: { type: 'string', description: 'Device serial; defaults to the remembered device.' }
+      },
+      required: ['action'],
       additionalProperties: false
     },
     annotations: { readOnlyHint: false },
@@ -765,6 +853,10 @@ async function callTool(name, args = {}) {
       const project = await resolveProject();
       const job = startJobForAvd(args.name, project);
       return jsonResult({ jobId: job.id, action: 'start-avd' });
+    }
+    case 'panel_mirror': {
+      if (args.action === 'stop') return jsonResult(stopMirror(args.serial));
+      return jsonResult(await startMirror(args.serial));
     }
     case 'panel_use_flavor': {
       const project = await resolveProject();
@@ -979,6 +1071,7 @@ async function handle(message) {
 /** 退出前收尾:结束 logcat 与仍在跑的作业,避免留下孤儿 adb/gradle 进程。 */
 function stopAllChildren() {
   stopLogcat();
+  stopMirror();
   for (const job of jobs.values()) {
     if (job.done || !job.child) continue;
     killProcess(job.child);

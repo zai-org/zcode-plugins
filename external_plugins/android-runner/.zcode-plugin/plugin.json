@@ -1,10 +1,10 @@
 {
   "name": "android-runner",
-  "version": "0.4.8",
-  "description": "Android device runner for ZCode: a side panel with devices, build, install, launch and logcat, plus zero-config detection of the Gradle project, adb, SDK and JDK.",
+  "version": "0.6.0",
+  "description": "Android device runner for ZCode: a side panel with devices, build, install, launch, logcat and scrcpy mirroring, plus zero-config detection of the Gradle project, adb, SDK, JDK and product flavors.",
   "description_i18n": {
-    "zh-CN": "Android 设备运行器:ZCode 侧栏面板里看设备、编译、安装、启动、看日志;工程、SDK、JDK、adb 全自动探测。",
-    "en": "Android device runner with a side panel: devices, build, install, launch and logcat, with zero-config detection of the Gradle project, adb, SDK and JDK."
+    "zh-CN": "Android 设备运行器:ZCode 侧栏面板里看设备、编译、安装、启动、投屏、看日志;工程、SDK、JDK、adb、多渠道 flavor 全自动探测。",
+    "en": "Android device runner for ZCode: a side panel with devices, build, install, launch, logcat and scrcpy mirroring, plus zero-config detection of the Gradle project, adb, SDK, JDK and product flavors."
   },
   "author": {
     "name": "menggod",

@@ -24,9 +24,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const cp = require('child_process');
-const { discoverModules, discoverFlavors, hasFlavorConfig, moduleDirectory, findApk, apkInfo } = require('./project-info.js');
+const { discoverModules, discoverFlavors, moduleDirectory, findApk, apkInfo } = require('./project-info.js');
+const mirror = require('./mirror.js');
 
-const VERSION = '0.4.8';
+const VERSION = '0.6.0';
 const EXIT = { OK: 0, FAIL: 1, ENV: 2, CONFIRM: 3, CANCELLED: 130 };
 
 class CliError extends Error {
@@ -51,6 +52,8 @@ function printHelp() {
   use [serial]           记住目标设备(--emulator <名字> 启动模拟器并选中;--clear 清除)
   info                   输出当前工程探测结果(--json)
   build                  编译(:<module>:assemble<Variant>)
+  clean                  清理构建缓存(--scope stale|intermediates|gradle,默认 stale)
+  rebuild                清理缓存后重新编译(清理重建)
   install                安装 APK(Android 11+ 先试增量安装,失败回退全量)
   run                    编译 → 安装 → 启动 一条龙
   launch                 仅启动 App
@@ -61,6 +64,7 @@ function printHelp() {
   logcat                 查看设备日志(优先只看本应用进程,前台持续输出)
   java [路径|版本]       查看/记住本工程使用的 JDK(--clear 恢复按 Gradle 自动选择)
   flavor [名字]          查看/记住本工程的 productFlavor(--clear 恢复自动,默认 official)
+  mirror [--serial]      投屏到电脑(scrcpy 外部窗口;需先安装 scrcpy,--stop 关闭)
   dashboard              生成图形化状态面板(HTML,--open 自动在浏览器打开)
 
 通用参数:
@@ -93,6 +97,7 @@ const opts = {
   module: '', variant: '', flavor: '', task: '', apk: '', applicationId: '',
   adb: process.env.AR_ADB || '', javaHome: process.env.AR_JAVA_HOME || '',
   serial: '', emulator: '', javaPath: '', clear: false, json: false, yes: false, reinstall: false,
+  scrcpy: process.env.AR_SCRCPY || '', scrcpyArgs: [], mirrorStop: false, cleanScope: '',
   noReinstall: false,
   localProperties: false, open: false
 };
@@ -105,7 +110,8 @@ try {
   const flagMap = {
     '--module': 'module', '--variant': 'variant', '--flavor': 'flavor', '--task': 'task', '--apk': 'apk',
     '--application-id': 'applicationId', '--package': 'applicationId',
-    '--adb': 'adb', '--java-home': 'javaHome', '--serial': 'serial', '--emulator': 'emulator'
+    '--adb': 'adb', '--java-home': 'javaHome', '--serial': 'serial', '--emulator': 'emulator',
+    '--scrcpy': 'scrcpy', '--scope': 'cleanScope'
   };
   const rest = process.argv.slice(2);
   let afterDoubleDash = false;
@@ -120,6 +126,8 @@ try {
     if (a === '--local-properties') { opts.localProperties = true; continue; }
     if (a === '--no-local-properties') { opts.localProperties = false; continue; }
     if (a === '--clear') { opts.clear = true; continue; }
+    if (a === '--stop') { opts.mirrorStop = true; continue; }
+    if (a === '--scrcpy-arg') { const value = rest[++i]; if (value === undefined) throw new CliError(EXIT.ENV, '参数 --scrcpy-arg 缺少取值'); opts.scrcpyArgs.push(value); continue; }
     if (a === '--open') { opts.open = true; continue; }
     if (a === '--help' || a === '-h') { printHelp(); process.exit(EXIT.OK); }
     if (a === '--version' || a === '-V') { console.log(VERSION); process.exit(EXIT.OK); }
@@ -159,7 +167,7 @@ try {
   throw e;
 }
 
-const COMMANDS = ['doctor', 'devices', 'use', 'java', 'flavor', 'info', 'build', 'install', 'run', 'launch', 'stop', 'restart', 'uninstall', 'clear-data', 'logcat', 'dashboard'];
+const COMMANDS = ['doctor', 'devices', 'use', 'java', 'flavor', 'mirror', 'info', 'build', 'clean', 'rebuild', 'install', 'run', 'launch', 'stop', 'restart', 'uninstall', 'clear-data', 'logcat', 'dashboard'];
 if (!COMMANDS.includes(command)) {
   console.error(`未知命令:${command || '(缺省)'}\n可用命令:${COMMANDS.join(' ')}\n运行 node ar.js --help 查看用法`);
   process.exit(EXIT.ENV);
@@ -263,8 +271,21 @@ function variant() {
   return (opts.variant || 'debug').trim();
 }
 
+let flavorCache = { key: '', value: null };
+
+/** productFlavors 探测结果(静态声明优先,其次已构建产物)。 */
+function flavorInfo() {
+  const root = projectRoot();
+  const mod = module();
+  const key = `${root}|${mod}`;
+  if (flavorCache.key === key && flavorCache.value) return flavorCache.value;
+  const value = discoverFlavors(root, mod);
+  flavorCache = { key, value };
+  return value;
+}
+
 function availableFlavors() {
-  return discoverFlavors(projectRoot(), module());
+  return flavorInfo().flavors;
 }
 
 /** 工程记住的 flavor(用户显式选择/输入过才存在)。 */
@@ -299,24 +320,31 @@ function clearFlavor() {
 }
 
 /**
- * 当前使用的 productFlavor。
- * 开发调试通常不需要渠道:显式指定 > 工程记住 > official > 唯一 flavor / dev。
+ * 当前 flavor 及来源。原则是「总能跑起来」:
+ * 显式 --flavor > 工程记住 > 多维度(普通 debug) > 唯一 > official > dev > 第一个 > 未识别(普通 debug)。
  */
-function flavor() {
+function flavorState() {
+  const info = flavorInfo();
+  const canonical = (name) => {
+    const matched = info.flavors.find((item) => item.toLowerCase() === String(name).toLowerCase());
+    return matched || name;
+  };
   const explicit = (opts.flavor || '').trim();
-  if (explicit) {
-    const flavors = availableFlavors();
-    const matched = flavors.find((item) => item.toLowerCase() === explicit.toLowerCase());
-    return matched || explicit;
-  }
+  if (explicit) return Object.assign({}, info, { name: canonical(explicit), flavorSource: 'configured' });
   const stored = flavorPreference();
-  if (stored) return stored;
-  const flavors = availableFlavors();
-  if (!flavors.length) return '';
-  if (flavors.length === 1) return flavors[0];
-  if (flavors.includes('official')) return 'official';
-  if (flavors.includes('dev')) return 'dev';
-  return '';
+  if (stored) return Object.assign({}, info, { name: canonical(stored), flavorSource: 'remembered' });
+  if (info.multiDimension) return Object.assign({}, info, { name: '', flavorSource: 'multi-dimension' });
+  if (info.flavors.length === 1) return Object.assign({}, info, { name: info.flavors[0], flavorSource: 'single' });
+  const official = info.flavors.find((item) => item.toLowerCase() === 'official');
+  if (official) return Object.assign({}, info, { name: official, flavorSource: 'official' });
+  const dev = info.flavors.find((item) => item.toLowerCase() === 'dev');
+  if (dev) return Object.assign({}, info, { name: dev, flavorSource: 'dev' });
+  if (info.flavors.length > 1) return Object.assign({}, info, { name: info.flavors[0], flavorSource: 'auto-first' });
+  return Object.assign({}, info, { name: '', flavorSource: info.hasConfig ? 'unknown' : 'plain' });
+}
+
+function flavor() {
+  return flavorState().name;
 }
 
 function fullVariant() {
@@ -326,31 +354,14 @@ function fullVariant() {
   return `${cap(f)}${cap(v)}`;
 }
 
-function requireFlavorIfAmbiguous() {
-  const selected = flavor();
-  if (selected) return selected;
-  const flavors = availableFlavors();
-  if (flavors.length > 1) {
-    throw new CliError(
-      EXIT.ENV,
-      `工程有 ${flavors.length} 个 productFlavor:${flavors.join('、')}\n` +
-        `为避免一次编译所有渠道,请用 --flavor <名字> 指定(开发调试通常选 official)`
-    );
-  }
-  // 解析不到任何 flavor 时不拦:按普通 debug 构建(用户可再手动指定)
-  return '';
-}
-
-/** 明确识别到多个 flavor 且没有选择:必须让用户选,不能猜。 */
-function flavorUnresolved() {
-  if (flavor()) return false;
-  return availableFlavors().length > 1;
-}
-
 /** 有 flavor 配置但一个名字都没解析出来:默认按普通 debug 构建。 */
 function flavorUnknown() {
-  if (flavor()) return false;
-  return availableFlavors().length === 0 && hasFlavorConfig(projectRoot(), module());
+  return flavorState().flavorSource === 'unknown';
+}
+
+/** 多渠道、但组合名静态推不出来:按普通 debug 构建,APK 定位放宽。 */
+function flavorMultiDimension() {
+  return flavorState().flavorSource === 'multi-dimension';
 }
 
 /* ------------------------------------------------------------------ */
@@ -1063,11 +1074,12 @@ function gradleTaskFor() {
 }
 
 function findApkForConfiguration() {
-  // 明确多个 flavor 又没选:任何 APK 都可能不是用户要的,宁可不显示
-  if (flavorUnresolved()) return null;
-  // 解析不到 flavor 时只认普通 debug 产物,不要误拿某个渠道的 APK
-  return findApk(projectRoot(), module(), variant(), (opts.apk || '').trim(), flavor(), {
-    plainOnly: flavorUnknown()
+  const state = flavorState();
+  return findApk(projectRoot(), module(), variant(), (opts.apk || '').trim(), state.name, {
+    // 多维度:组合名推不出来,放宽到任一以 debug 结尾的产物
+    relaxed: state.flavorSource === 'multi-dimension',
+    // 识别不到 flavor:只认普通 outputs/apk/debug,不要误拿渠道包
+    plainOnly: state.flavorSource === 'unknown'
   });
 }
 
@@ -1113,6 +1125,105 @@ function resolvePackage() {
 /* 编译                                                                */
 /* ------------------------------------------------------------------ */
 
+/** 增量缓存残留导致的经典失败(D8 重复类等)。 */
+const STALE_ERROR_PATTERNS = [
+  /defined multiple times/i,
+  /Duplicate class/i,
+  /DexArchiveMergerException/,
+  /multiple dex files define/i
+];
+
+/** 只清理这些目录即可修掉重复类问题,比全量 clean 快得多。 */
+const STALE_ARTIFACT_DIRS = [
+  'transforms',
+  'mixed_scope_dex_archive',
+  'project_dex_archive',
+  'sub_project_dex_archive',
+  'external_libs_dex_archive',
+  'external_libs_dex_archive_with_artifact_transforms',
+  'dex',
+  'dex_archive_input_jar_hashes',
+  'dex_number_of_buckets_file'
+];
+
+function looksLikeStaleArtifactError(text) {
+  return !!text && STALE_ERROR_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function moduleBuildDir() {
+  const root = projectRoot();
+  if (!root) return null;
+  return path.join(root, ...module().split(':'), 'build');
+}
+
+/** 递归统计目录体积,用于清理后的反馈。 */
+function directorySize(dir) {
+  let total = 0;
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return 0; }
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) total += directorySize(full);
+    else if (entry.isFile()) {
+      try { total += fs.statSync(full).size; } catch (e) { /* 已被删除 */ }
+    }
+  }
+  return total;
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '0B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let index = 0;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(index === 0 ? 0 : 1)}${units[index]}`;
+}
+
+/**
+ * 清理构建产物。
+ * scope: stale(默认,transform/dex 缓存) | intermediates | gradle(:module:clean)
+ */
+async function cleanBuildOutputs(scope) {
+  const mode = (scope || opts.cleanScope || 'stale').trim();
+  if (!['stale', 'intermediates', 'gradle'].includes(mode)) {
+    throw new CliError(EXIT.ENV, `未知的清理范围:${mode}\n可用:stale / intermediates / gradle`);
+  }
+  const buildDir = moduleBuildDir();
+  if (!buildDir) throw new CliError(EXIT.ENV, '未找到 Gradle 工程根目录,无法清理');
+  if (mode === 'gradle') {
+    const task = `:${module()}:clean`;
+    const r = await runGradle([task], null);
+    if (!r.ok) throw new CliError(EXIT.FAIL, `gradlew ${task} 执行失败,详情见上方输出`);
+    return { mode, task, removed: [], bytes: 0 };
+  }
+  const targets =
+    mode === 'intermediates'
+      ? [path.join(buildDir, 'intermediates')]
+      : STALE_ARTIFACT_DIRS.map((dir) => path.join(buildDir, 'intermediates', dir));
+  const removed = [];
+  let bytes = 0;
+  for (const target of targets) {
+    if (!fs.existsSync(target)) continue;
+    bytes += directorySize(target);
+    try {
+      fs.rmSync(target, { recursive: true, force: true });
+      removed.push(path.basename(target));
+    } catch (e) {
+      console.error(`⚠ 删除失败:${target}(${e.message})`);
+    }
+  }
+  return { mode, removed, bytes };
+}
+
+function describeCleanResult(result) {
+  if (result.task) return `${result.task}`;
+  return result.removed.length ? result.removed.join('、') : '无残留';
+}
+
 function runGradle(args, device) {
   return new Promise((resolve) => {
     const root = projectRoot();
@@ -1144,14 +1255,23 @@ function runGradle(args, device) {
       {
         cwd: root,
         env,
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true
       }
     );
+    // 一边转发一边保留末尾输出,失败时用于识别增量缓存残留
+    let log = '';
+    const collect = (buf, target) => {
+      const text = buf.toString();
+      target.write(text);
+      log = (log + text).slice(-204800);
+    };
+    proc.stdout.on('data', (buf) => collect(buf, process.stdout));
+    proc.stderr.on('data', (buf) => collect(buf, process.stderr));
     // Ctrl-C 会同时到达本进程与同一进程组的 Gradle,这里只负责收尾
     const onSignal = () => {
       try { proc.kill('SIGKILL'); } catch (e) { /* 可能已结束 */ }
-      resolve({ ok: false, reason: 'cancelled' });
+      resolve({ ok: false, reason: 'cancelled', log });
       process.exit(EXIT.CANCELLED);
     };
     process.on('SIGINT', onSignal);
@@ -1161,22 +1281,26 @@ function runGradle(args, device) {
       process.removeListener('SIGINT', onSignal);
       process.removeListener('SIGTERM', onSignal);
       console.error(`启动 Gradle 失败:${e.message}`);
-      resolve({ ok: false, reason: 'spawn-error' });
+      resolve({ ok: false, reason: 'spawn-error', log });
     });
 
     proc.on('close', (code, signal) => {
       process.removeListener('SIGINT', onSignal);
       process.removeListener('SIGTERM', onSignal);
       console.log(`◀ Gradle 退出:code=${code} signal=${signal || '-'}`);
-      resolve({ ok: code === 0, cancelled: signal === 'SIGINT' || signal === 'SIGTERM' });
+      resolve({ ok: code === 0, cancelled: signal === 'SIGINT' || signal === 'SIGTERM', log });
     });
   });
 }
 
 async function build(device) {
-  requireFlavorIfAmbiguous();
-  if (flavorUnknown()) {
+  const flavorDetail = flavorState();
+  if (flavorDetail.flavorSource === 'unknown') {
     console.log('⚠ 未识别到 flavor,按普通 debug 构建;需要指定渠道请用 --flavor <名字> 或面板 Flavor 输入');
+  } else if (flavorDetail.flavorSource === 'multi-dimension') {
+    console.log('ℹ 多维度和 flavor 组合无法静态确定,按普通 debug 构建;APK 会放宽匹配');
+  } else if (flavorDetail.flavorSource === 'auto-first') {
+    console.log(`ℹ 未指定 flavor,自动选用 ${flavorDetail.name};可在面板或 --flavor 切换`);
   }
   const task = gradleTaskFor();
   // 显式把选中的 JDK 传给 Gradle,覆盖 gradle.properties 里可能写死的 org.gradle.java.home
@@ -1195,6 +1319,12 @@ async function build(device) {
     throw new CliError(EXIT.CANCELLED, '已取消编译');
   }
   if (!r.ok) {
+    if (looksLikeStaleArtifactError(r.log)) {
+      console.log('');
+      console.log('💡 检测到重复类/重复定义,通常是增量构建缓存残留(AGP 的 transform/dex 目录只追加不清理)。');
+      console.log('   执行 node ar.js rebuild(或面板「清理重建」)清理缓存后重试。');
+      throw new CliError(EXIT.FAIL, '编译失败:检测到构建缓存残留(重复类/重复定义),请清理重建');
+    }
     throw new CliError(EXIT.FAIL, `编译失败:${task}\n查看上方 Gradle 输出定位错误`);
   }
   console.log(`✅ 编译成功:${task}`);
@@ -1248,9 +1378,15 @@ async function resolveInstalledPackage(device, pkg) {
 }
 
 async function installApk(device, { quiet = false } = {}) {
-  requireFlavorIfAmbiguous();
   const adb = detectAdb();
-  const apk = resolveApk();
+  const candidate = findApkForConfiguration();
+  if (candidate && candidate.flavorMissing) {
+    throw new CliError(
+      EXIT.ENV,
+      `没有找到 flavor ${flavor()} 的 APK\n先编译该渠道:node ar.js build --flavor ${flavor()},或用 --apk 指定路径`
+    );
+  }
+  const apk = candidate && candidate.path;
   if (!apk || !fs.existsSync(apk)) {
     throw new CliError(EXIT.ENV, `找不到 APK:${apk || '(未定位到输出目录)'}\n先执行编译,或用 --apk 指定路径`);
   }
@@ -1495,7 +1631,8 @@ async function cmdDoctor() {
     ['Gradle 任务', gradleTaskFor()],
     ['Android SDK', sdk || '❌ 未探测到(检查 local.properties / ANDROID_HOME)'],
     ['adb', `${adbUsable ? adb : '❌ 未找到(检查 --adb 参数)'}${adbVer ? '  ' + adbVer : ''}`],
-    ['JAVA_HOME', `${javaDetail.home || '❌ 未探测到'}(来源:${javaDetail.source}${javaVer ? ',' + javaVer : ''}${javaDetail.note ? ',' + javaDetail.note : ''})`]
+    ['JAVA_HOME', `${javaDetail.home || '❌ 未探测到'}(来源:${javaDetail.source}${javaVer ? ',' + javaVer : ''}${javaDetail.note ? ',' + javaDetail.note : ''})`],
+    ['投屏(scrcpy)', mirror.findScrcpy(opts.scrcpy) || `未安装(${mirror.installHint()})`]
   ];
   for (const [k, v] of rows) {
     console.log(`  ${padLabel(k, 14)}: ${v}`);
@@ -1729,32 +1866,141 @@ async function cmdJava() {
  * 查看 / 记住本工程的 productFlavor。
  * 不指定参数时列出可用 flavor;指定名字则记住,`--clear` 恢复自动(默认 official)。
  */
+/* ------------------------------------------------------------------ */
+/* 投屏（scrcpy 外部窗口）                                              */
+/* ------------------------------------------------------------------ */
+
+const mirrorStateFile = () => path.join(os.homedir(), '.android-runner', 'mirror.json');
+
+function readMirrorState() {
+  try {
+    return JSON.parse(fs.readFileSync(mirrorStateFile(), 'utf8')) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function writeMirrorState(data) {
+  try {
+    const file = mirrorStateFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    console.error(`⚠ 记录投屏进程失败:${e.message}`);
+  }
+}
+
+function pidAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e && e.code === 'EPERM';
+  }
+}
+
+function stopMirror(serial) {
+  const state = readMirrorState();
+  const targets = serial ? [serial] : Object.keys(state);
+  let stopped = 0;
+  for (const key of targets) {
+    const entry = state[key];
+    if (!entry) continue;
+    if (pidAlive(entry.pid)) {
+      try { process.kill(entry.pid, 'SIGTERM'); stopped += 1; } catch (e) { /* 已退出 */ }
+    }
+    delete state[key];
+  }
+  writeMirrorState(state);
+  console.log(stopped ? `已停止 ${stopped} 个投屏窗口` : '没有正在运行的投屏窗口');
+}
+
+/** 用 scrcpy 在电脑上打开设备画面（外部窗口），关闭窗口即结束。 */
+async function cmdMirror() {
+  if (opts.mirrorStop) {
+    stopMirror(opts.serial || '');
+    return;
+  }
+  const device = await pickDevice();
+  const state = readMirrorState();
+  if (state[device.serial] && pidAlive(state[device.serial].pid)) {
+    console.log(`投屏窗口已经打开:${device.serial}(关闭窗口后再试,或 node ar.js mirror --stop)`);
+    return;
+  }
+  const scrcpy = mirror.findScrcpy(opts.scrcpy);
+  if (!scrcpy) {
+    throw new CliError(
+      EXIT.ENV,
+      `未找到 scrcpy,投屏需要先安装:\n  ${mirror.installHint()}\n安装后确保在 PATH 中,或用 --scrcpy <路径> 指定`
+    );
+  }
+  const args = mirror.buildArgs({
+    serial: device.serial,
+    title: `${device.model || device.serial} (${device.serial})`,
+    extraArgs: ['--stay-awake'].concat(opts.scrcpyArgs)
+  });
+  console.log(`▶ ${scrcpy} ${args.join(' ')}`);
+  const proc = mirror.launch({ scrcpy, adb: detectAdb(), args });
+  const spawnError = await new Promise((resolve) => {
+    proc.once('spawn', () => resolve(null));
+    proc.once('error', (error) => resolve(error));
+  });
+  if (spawnError) {
+    throw new CliError(EXIT.FAIL, `启动 scrcpy 失败:${spawnError.message}`);
+  }
+  proc.unref();
+  state[device.serial] = { pid: proc.pid, scrcpy, at: Date.now() };
+  writeMirrorState(state);
+  console.log(`✅ 已启动投屏窗口:${device.serial}(关闭窗口即结束,或 node ar.js mirror --stop)`);
+}
+
 async function cmdFlavor() {
   requireProjectRoot();
   const root = projectRoot();
-  const flavors = availableFlavors();
+  const info = flavorInfo();
+  const labels = {
+    configured: '参数 --flavor',
+    remembered: '本工程记住',
+    single: '唯一 flavor',
+    official: '自动(official)',
+    dev: '自动(dev)',
+    'auto-first': '自动(取第一个)',
+    'multi-dimension': '多维度 → 普通 debug',
+    unknown: '未识别 → 普通 debug',
+    plain: '无 flavor'
+  };
   if (opts.clear) {
     clearFlavor();
-    console.log(`已恢复自动选择 flavor(当前:${flavor() || '(无)'})`);
+    const state = flavorState();
+    console.log(`已恢复自动选择 flavor(当前:${state.name || '(无)'} · ${labels[state.flavorSource] || state.flavorSource})`);
     return;
   }
   const requested = (opts.flavor || '').trim();
   if (requested) {
     // 动态生成的 flavor 可能解析不到:允许直接输入,以 Gradle 的 task 为准
-    const canonical = flavors.find((item) => item.toLowerCase() === requested.toLowerCase()) || requested;
-    if (flavors.length && !flavors.includes(canonical)) {
+    const canonical = info.flavors.find((item) => item.toLowerCase() === requested.toLowerCase()) || requested;
+    if (info.flavors.length && !info.flavors.includes(canonical)) {
       console.log(`⚠ 静态解析没找到 ${requested},仍按这个名字构建;若 Gradle 报 task 不存在,请检查拼写`);
     }
     rememberFlavor(canonical);
     console.log(`已记住本工程的 flavor:${canonical}(构建任务 ${gradleTaskFor()})`);
+    if (info.multiDimension) console.log('ℹ 工程是多维度 flavor;显式指定会覆盖“普通 debug”的自动策略');
     return;
   }
+  const state = flavorState();
   console.log(`工程        : ${root}`);
   console.log(`Gradle      : ${gradleVersionFromWrapper() || '(未知)'} · variant=${variant()}(运行固定 debug)`);
-  console.log(`当前 flavor : ${flavor() || '(无)'}${flavorPreference() ? '(本工程记住)' : '(自动)'}`);
-  console.log(`可用 flavor : ${flavors.join('、') || '(未配置)'}`);
-  if (flavors.length > 1 && !flavor()) {
-    console.log('⚠ 多个 flavor 且没有 official:请用 node ar.js flavor <名字> 指定,避免一次编译所有渠道');
+  console.log(`当前 flavor : ${state.name || '(无)'} · ${labels[state.flavorSource] || state.flavorSource}`);
+  console.log(`可用 flavor : ${info.flavors.join('、') || '(未配置)'}${info.source === 'artifacts' ? '(从构建产物反推)' : ''}`);
+  if (info.dimensionCount) console.log(`维度数      : ${info.dimensionCount}${info.multiDimension ? '(多维度,自动按普通 debug)' : ''}`);
+  if (state.flavorSource === 'auto-first') {
+    console.log(`ℹ 多个 flavor 且没有 official/dev,已自动选用 ${state.name};可在这里或面板切换`);
+  }
+  if (state.flavorSource === 'unknown') {
+    console.log('ℹ 有 flavor 配置但没解析出名字:默认按普通 debug 构建;可手输一次');
   }
   console.log('');
   console.log('选择:node ar.js flavor <名字>    恢复自动:node ar.js flavor --clear');
@@ -1785,6 +2031,7 @@ async function cmdInfo() {
       };
     })
     .sort((a, b) => a.major - b.major || a.home.localeCompare(b.home));
+  const flavorDetail = flavorState();
   const info = {
     root,
     isProject: true,
@@ -1792,12 +2039,16 @@ async function cmdInfo() {
     gradleVersion: gradleVersionFromWrapper() || '',
     module: module(),
     variant: variant(),
-    flavor: flavor(),
+    flavor: flavorDetail.name,
     flavorPreference: flavorPreference() || '',
-    flavors: availableFlavors(),
+    flavors: flavorDetail.flavors,
+    flavorsSource: flavorDetail.source,
+    flavorSource: flavorDetail.flavorSource,
+    dimensionCount: flavorDetail.dimensionCount,
+    multiDimension: flavorDetail.multiDimension,
     variantFull: fullVariant(),
-    flavorAmbiguous: flavorUnresolved(),
-    flavorUnknown: flavorUnknown(),
+    flavorAuto: flavorDetail.flavorSource === 'auto-first',
+    flavorUnknown: flavorDetail.flavorSource === 'unknown',
     task: gradleTaskFor(),
     modules: discoverModules(root, module()),
     sdk: detectSdkDir() || '',
@@ -1810,6 +2061,7 @@ async function cmdInfo() {
     javaNote: javaDetail.note || '',
     javaHomePreference: javaHomePreference() || '',
     javaHomes,
+    scrcpy: mirror.findScrcpy(opts.scrcpy) || '',
     packageName: resolvePackage() || '',
     apk: apkInfo(findApkForConfiguration()),
     preference: devicePreference()
@@ -1824,9 +2076,8 @@ async function cmdInfo() {
   }
 }
 
-async function cmdBuild() {
-  requireProjectRoot();
-  // 仅编译不需要设备:多设备未选择、无设备、设备未授权都不应挡住编译
+/** 仅编译不需要设备:多设备未选择、无设备、设备未授权都不应挡住编译。 */
+async function buildWithOptionalDevice() {
   let device = null;
   try {
     device = await pickDevice();
@@ -1838,6 +2089,24 @@ async function cmdBuild() {
     }
   }
   await build(device);
+}
+
+async function cmdBuild() {
+  requireProjectRoot();
+  await buildWithOptionalDevice();
+}
+
+async function cmdClean() {
+  requireProjectRoot();
+  const result = await cleanBuildOutputs(opts.cleanScope);
+  console.log(`🧹 已清理构建缓存(${result.mode}):${describeCleanResult(result)}(释放 ${formatBytes(result.bytes)})`);
+}
+
+async function cmdRebuild() {
+  requireProjectRoot();
+  const result = await cleanBuildOutputs(opts.cleanScope);
+  console.log(`🧹 已清理构建缓存(${result.mode}):${describeCleanResult(result)}(释放 ${formatBytes(result.bytes)})`);
+  await buildWithOptionalDevice();
 }
 
 async function cmdInstall() {
@@ -1860,14 +2129,12 @@ async function cmdRun() {
 
 async function cmdLaunch() {
   requireProjectRoot();
-  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   await launchApp(device);
 }
 
 async function cmdStop() {
   requireProjectRoot();
-  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   const pkg = resolvePackage();
   if (!pkg) throw new CliError(EXIT.ENV, '未识别 applicationId,无法停止应用(可用 --package 指定)');
@@ -1878,7 +2145,6 @@ async function cmdStop() {
 
 async function cmdRestart() {
   requireProjectRoot();
-  requireFlavorIfAmbiguous();
   const device = await pickDevice();
   const pkg = resolvePackage();
   if (!pkg) throw new CliError(EXIT.ENV, '未识别 applicationId,无法重启应用(可用 --package 指定)');
@@ -1890,7 +2156,6 @@ async function cmdRestart() {
 
 async function cmdUninstall() {
   requireProjectRoot();
-  requireFlavorIfAmbiguous();
   requireConfirmation('卸载', `将从设备移除应用并清空其数据`);
   const device = await pickDevice();
   const pkg = resolvePackage();
@@ -1906,7 +2171,6 @@ async function cmdUninstall() {
 
 async function cmdClearData() {
   requireProjectRoot();
-  requireFlavorIfAmbiguous();
   requireConfirmation('清除数据', '登录态等本地数据会丢失');
   const device = await pickDevice();
   const pkg = resolvePackage();
@@ -2157,8 +2421,11 @@ const IMPL = {
   use: cmdUse,
   java: cmdJava,
   flavor: cmdFlavor,
+  mirror: cmdMirror,
   info: cmdInfo,
   build: cmdBuild,
+  clean: cmdClean,
+  rebuild: cmdRebuild,
   install: cmdInstall,
   run: cmdRun,
   launch: cmdLaunch,
