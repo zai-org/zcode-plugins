@@ -1,0 +1,59 @@
+{
+  "name": "grade-book",
+  "version": "0.1.0",
+  "description": "Turn a score sheet into totals, averages, rankings and report cards. Drop in a spreadsheet with one row per student and one column per subject: full marks are guessed per subject (100, 150…) or set by you, subjects can be weighted, and every student gets a total, weighted average, band (优秀 / 良好 / 及格 …) and overall and class rank. Per-subject statistics for each class — mean, highest, lowest, pass and excellent rates — and score distribution charts come with it. Fix scores or write a comment for each student, then export an Excel grade book, one A5 report card per student and a summary PDF. Runs locally; no school system login or API keys.",
+  "description_i18n": {
+    "en": "Turn a score sheet into totals, averages, rankings and report cards. Drop in a spreadsheet with one row per student and one column per subject: full marks are guessed per subject (100, 150…) or set by you, subjects can be weighted, and every student gets a total, weighted average, band (优秀 / 良好 / 及格 …) and overall and class rank. Per-subject statistics for each class — mean, highest, lowest, pass and excellent rates — and score distribution charts come with it. Fix scores or write a comment for each student, then export an Excel grade book, one A5 report card per student and a summary PDF. Runs locally; no school system login or API keys.",
+    "zh-CN": "把成绩表变成总分、平均分、排名和成绩单。放入一张每行一名学生、每列一个科目的表：每科满分自动判断（100、150 等）也可手动设置，可以设科目权重；每个学生算出总分、加权平均、等级（优秀／良好／及格……）、年级和班级排名。同时给出各班各科的平均分、最高分、最低分、及格率、优秀率和分数段分布图。可以改分、给每个学生写评语，然后导出 Excel 成绩册、每人一页 A5 成绩单和统计报告 PDF。在本地运行，不用登录教务系统，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "grade book",
+    "gradebook",
+    "report card",
+    "exam results",
+    "class ranking",
+    "score analysis",
+    "成绩",
+    "成绩单",
+    "成绩分析",
+    "排名",
+    "及格率",
+    "分数段",
+    "班级"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "grade-book": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "成绩统计分析",
+          "en-US": "Grade Book"
+        },
+        "icon": "graduation-cap",
+        "server": "grade-book",
+        "resourceUri": "ui://grade-book/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
