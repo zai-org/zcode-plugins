@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "variant-sku-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/variant-sku-builder",
+      "displayName": "Variant & SKU Builder",
+      "displayName_i18n": {
+        "en": "Variant & SKU Builder",
+        "zh-CN": "规格 SKU 生成"
+      },
+      "description": "List a product's options — colour, size, material — and get every variant with a clean SKU code, price and stock in seconds. Give each option value a short code and an optional price change (+10 or +5%) or stock figure, choose a SKU pattern such as TEE01-BK-XL, and switch off combinations you don't sell. Change any single variant's SKU, price or stock by hand; your edits stay when you later change the options or pattern. Duplicate SKUs, codes with Chinese characters or spaces and bad barcodes are flagged. Export the variant list as Excel and CSV. Runs locally; no store login or API keys.",
+      "description_i18n": {
+        "en": "List a product's options — colour, size, material — and get every variant with a clean SKU code, price and stock in seconds. Give each option value a short code and an optional price change (+10 or +5%) or stock figure, choose a SKU pattern such as TEE01-BK-XL, and switch off combinations you don't sell. Change any single variant's SKU, price or stock by hand; your edits stay when you later change the options or pattern. Duplicate SKUs, codes with Chinese characters or spaces and bad barcodes are flagged. Export the variant list as Excel and CSV. Runs locally; no store login or API keys.",
+        "zh-CN": "列出商品的规格（颜色、尺码、材质），几秒钟生成全部变体，以及规范的 SKU 编码、价格和库存。给每个规格值一个简短编码，还可以加价（+10 或 +5%）或设库存；选一个 SKU 模式（如 TEE01-BK-XL），不卖的组合可以关掉。任何一个变体的 SKU、价格、库存都能手动改，之后再改规格或模式，手动改的内容会保留。会提示 SKU 重复、SKU 含中文或空格、条码位数不对。导出变体表 Excel 和 CSV。在本地运行，不用登录店铺，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "variants",
+        "SKU generator",
+        "product options",
+        "colour size matrix",
+        "SKU code",
+        "规格",
+        "SKU 生成",
+        "颜色尺码",
+        "商品编码",
+        "变体",
+        "款号"
+      ],
+      "examplePrompts": [
+        "Build the variants from options.xlsx",
+        "Use the pattern {base}-{1}-{2} and skip White + XXL",
+        "XL and XXL cost 10 and 20 more"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 options.xlsx 生成全部规格",
+          "SKU 用 {base}-{1}-{2}，白色不要 XXL",
+          "XL 加 10 元，XXL 加 20 元"
+        ]
+      }
     }
   ]
 }
