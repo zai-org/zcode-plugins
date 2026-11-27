@@ -1,0 +1,1 @@
+{"prefix": "pinyin", "folder": "课文", "pick": ["lesson.txt"], "startSettings": {}, "uiEdit": {"row": 0, "key": "reading", "value": "zhao1"}, "expectText": "polyphonic", "expectFiles": ["pinyin\\.html$", "pinyin\\.pdf$", "pinyin\\.txt$"]}
