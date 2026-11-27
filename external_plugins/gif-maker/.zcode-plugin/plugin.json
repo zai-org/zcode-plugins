@@ -1,0 +1,58 @@
+{
+  "name": "gif-maker",
+  "version": "0.1.0",
+  "description": "Turn a screen recording or video clip into a small animated GIF or WebP for docs, chats and bug reports. Trim it, set the frame rate, width and speed, play it backwards, choose the colour count and dithering, and set a size limit — if the file comes out too big it is re-encoded smaller automatically. See frames from the start, middle and end before you export. Uses the free ffmpeg already installed on your computer; nothing is uploaded and no API keys are needed.",
+  "description_i18n": {
+    "en": "Turn a screen recording or video clip into a small animated GIF or WebP for docs, chats and bug reports. Trim it, set the frame rate, width and speed, play it backwards, choose the colour count and dithering, and set a size limit — if the file comes out too big it is re-encoded smaller automatically. See frames from the start, middle and end before you export. Uses the free ffmpeg already installed on your computer; nothing is uploaded and no API keys are needed.",
+    "zh-CN": "把录屏或视频片段转成体积小的 GIF 或 WebP 动图，放进文档、聊天和问题反馈里。可以裁剪时间、设置帧率、宽度和倍速、倒放，选择颜色数和抖动方式，还能设体积上限：超过了会自动降低参数重新生成。导出前能看到开头、中间和结尾的画面。使用电脑上已安装的免费 ffmpeg，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "GIF",
+    "animated WebP",
+    "video to GIF",
+    "screen recording",
+    "GIF maker",
+    "ffmpeg",
+    "动图",
+    "视频转GIF",
+    "录屏转动图",
+    "GIF 压缩",
+    "WebP 动图",
+    "表情包"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "gif-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "视频转动图",
+          "en-US": "GIF Maker"
+        },
+        "icon": "film",
+        "server": "gif-maker",
+        "resourceUri": "ui://gif-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
