@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "video-compressor",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/video-compressor",
+      "displayName": "Video Compressor",
+      "displayName_i18n": {
+        "en": "Video Compressor",
+        "zh-CN": "视频批量压缩"
+      },
+      "description": "Shrink a folder of videos for sharing, uploading or archiving. Pick a quality preset or a target size per file, cap the resolution, choose what to do with the sound, and see a rough size estimate before anything runs. Every video becomes an H.264 MP4 that plays everywhere and starts streaming right away; if a file wouldn't get any smaller the original is kept. A report lists the before and after sizes. Uses the free ffmpeg already installed on your computer; nothing is uploaded and no API keys are needed.",
+      "description_i18n": {
+        "en": "Shrink a folder of videos for sharing, uploading or archiving. Pick a quality preset or a target size per file, cap the resolution, choose what to do with the sound, and see a rough size estimate before anything runs. Every video becomes an H.264 MP4 that plays everywhere and starts streaming right away; if a file wouldn't get any smaller the original is kept. A report lists the before and after sizes. Uses the free ffmpeg already installed on your computer; nothing is uploaded and no API keys are needed.",
+        "zh-CN": "把一整个文件夹的视频压小，方便分享、上传或存档。每个文件可以选画质方案或指定大小，限制最大分辨率，决定声音怎么处理，开始前就能看到预计大小。每个视频都会转成到处都能播放、可以边下边播的 H.264 MP4；如果压不小就保留原文件。报告里列出压缩前后的大小。使用电脑上已安装的免费 ffmpeg，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "video compressor",
+        "compress video",
+        "reduce video size",
+        "H.264",
+        "MP4",
+        "batch video",
+        "ffmpeg",
+        "视频压缩",
+        "批量压缩视频",
+        "视频变小",
+        "MP4 转换",
+        "降低分辨率"
+      ],
+      "examplePrompts": [
+        "Compress everything in videos/ to 720p",
+        "Make demo.mov under 25 MB for email",
+        "Shrink these recordings but keep the original sound"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 videos 文件夹里的视频都压到 720p",
+          "把 demo.mov 压到 25MB 以内好发邮件",
+          "压缩这些录屏，声音保持原样"
+        ]
+      }
     }
   ]
 }

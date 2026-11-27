@@ -1,0 +1,1 @@
+{"prefix": "vcompress", "folder": "视频", "pick": ["videos"], "startSettings": {"speed": "veryfast", "maxHeight": "360"}, "uiEdit": {"row": 1, "key": "preset", "value": "small"}, "expectText": "video(s)", "expectFiles": ["compressed/", "compress-report\\.csv$"]}
