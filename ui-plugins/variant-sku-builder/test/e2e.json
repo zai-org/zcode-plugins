@@ -1,0 +1,1 @@
+{"prefix": "variants", "folder": "款式", "pick": ["options.xlsx"], "startSettings": {"product": "有机棉 T 恤"}, "uiEdit": {"row": 0, "key": "price", "value": "89"}, "expectText": "variant(s) on", "expectFiles": ["variants\\.xlsx$", "variants\\.csv$"]}
