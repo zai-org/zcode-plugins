@@ -39,10 +39,10 @@ describe("tools", () => {
     await cp(join(HERE, "samples"), join(root, "商品"), { recursive: true });
     const c = await connect(createServer({ workspaceRoot: root, assetRoot: root }));
     const o = await c.call("feed_open", { inputs: ["商品/products.xlsx"], project: "shop", settings: { baseUrl: "https://example.com", feedTitle: "Penova Tea" } });
-    expect(o.data.stats).toEqual({ rows: 10, products: 7, variants: 5, errors: 2, warnings: 4 });
+    expect(o.data.stats).toEqual({ rows: 10, products: 7, variants: 5, errors: 2, warnings: 3 });
     const iss = o.data.issues.map((i: { level: string; row?: number; key?: string }) => `${i.level}@${i.row}:${i.key}`);
-    expect(iss).toEqual(expect.arrayContaining(["warn@2:salePrice", "error@3:description", "error@3:images", "warn@3:brand", "warn@8:images", "warn@9:gtin"]));
-    await c.call("feed_edit", { project: "shop", set: [{ row: 8, values: { 图片链接: "https://example.com/img/apron-dark.jpg" } }] });
+    expect(iss).toEqual(expect.arrayContaining(["warn@2:salePrice", "error@3:description", "error@3:images", "warn@3:brand", "warn@9:gtin"]));
+    expect(iss).not.toContain("warn@8:images"); // 相对图片路径按店铺网址补全，不再提醒
     await c.call("feed_export", { project: "shop" });
     const out = join(root, "product-feed-converter", "shop");
     const shop = parseCsv(String(await readFile(join(out, "products-shopify.csv"))));
@@ -63,6 +63,7 @@ describe("tools", () => {
     expect(xml).toContain("<g:item_group_id>APRON</g:item_group_id>");
     expect(xml).toContain("<g:link>https://example.com/products/west-lake-longjing-green-tea-100g-pouch</g:link>");
     expect(xml).not.toContain("TEA-PE-357");
+    expect(xml).toContain("<g:image_link>https://example.com/apron-dark.jpg</g:image_link>");
     const issues = String(await readFile(join(out, "issues.csv")));
     expect(issues).toContain("TEA-PE-357");
     // 读回自己导出的 Shopify CSV
