@@ -1,0 +1,1 @@
+{"prefix": "feed", "folder": "商品", "pick": ["products.xlsx"], "startSettings": {"baseUrl": "https://example.com"}, "uiEdit": {"row": 3, "key": "description", "value": "Pressed Pu-erh cake, 2016 harvest."}, "expectText": "error(s)", "expectFiles": ["products-shopify\\.csv$", "product-feed\\.xml$"]}
