@@ -1,0 +1,1 @@
+{"prefix": "bates", "folder": "案件材料", "pick": ["exhibits"], "startSettings": {"label": "COPY", "fileLabel": "Exhibit {A}"}, "uiEdit": {"row": 2, "key": "order", "value": 5}, "expectText": "page(s)", "expectFiles": ["stamped/.+\\.pdf$", "index\\.csv$"]}
