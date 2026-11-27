@@ -1,0 +1,1 @@
+{"prefix": "wordfreq", "folder": "资料", "pick": ["reports"], "startSettings": {}, "uiEdit": {"row": 1, "key": "include", "value": false}, "expectText": "distinct", "expectFiles": ["word-frequency\\.xlsx$", "word-frequency\\.csv$", "wordcloud\\.svg$", "wordcloud\\.png$"]}
