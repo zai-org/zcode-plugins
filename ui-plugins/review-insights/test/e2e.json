@@ -1,0 +1,1 @@
+{"prefix": "reviews", "folder": "店铺", "pick": ["reviews.csv"], "startSettings": {}, "uiEdit": {"row": 14, "key": "rating", "value": "5"}, "expectText": "negative", "expectFiles": ["review-report\\.html$", "review-insights\\.xlsx$"]}
