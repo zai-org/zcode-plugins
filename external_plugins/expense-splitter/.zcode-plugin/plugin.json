@@ -1,0 +1,57 @@
+{
+  "name": "expense-splitter",
+  "version": "0.1.0",
+  "description": "Split the costs of a group trip, dinner or shared flat and settle up with the fewest transfers. List who paid what — one payer or several — and who shares each expense: everyone, everyone except someone, weighted shares like “A*2”, an exact amount, or an extra on top of an equal share. See what each person paid, owes and gets back, and the shortest list of “who pays whom”. Export a settlement workbook and a clean image to send to the group chat. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Split the costs of a group trip, dinner or shared flat and settle up with the fewest transfers. List who paid what — one payer or several — and who shares each expense: everyone, everyone except someone, weighted shares like “A*2”, an exact amount, or an extra on top of an equal share. See what each person paid, owes and gets back, and the shortest list of “who pays whom”. Export a settlement workbook and a clean image to send to the group chat. Runs locally; no account or API keys.",
+    "zh-CN": "多人旅行、聚餐、合租的花费一起算：谁付了多少（可以多人一起付），每笔由谁分摊——全部人、除某人以外、按份数（如“A*2”）、某人正好承担多少、或在平分之外多承担一些。立即看到每人已付、应摊和差额，以及最少几笔转账就能结清。导出结算 Excel 和一张可以直接发到群里的结算图片。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "expense splitter",
+    "split bills",
+    "settle up",
+    "group expenses",
+    "trip costs",
+    "AA 分账",
+    "AA 制",
+    "分摊",
+    "旅行记账",
+    "聚餐分账",
+    "最少转账"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "expense-splitter": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "AA 分账",
+          "en-US": "Expense Splitter"
+        },
+        "icon": "coins",
+        "server": "expense-splitter",
+        "resourceUri": "ui://expense-splitter/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
