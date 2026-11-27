@@ -1,0 +1,1 @@
+{"prefix": "bilingual", "folder": "字幕", "pick": ["subs/en.srt", "subs/zh.srt"], "startSettings": {"name": "tea-garden"}, "uiEdit": {"row": 5, "key": "keep", "value": false}, "expectText": "line(s), ", "expectFiles": ["tea-garden\\.srt$", "tea-garden\\.vtt$", "tea-garden\\.ass$", "pairs\\.csv$"]}

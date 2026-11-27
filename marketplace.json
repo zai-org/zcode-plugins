@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "bilingual-subtitles",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/bilingual-subtitles",
+      "displayName": "Bilingual Subtitles",
+      "displayName_i18n": {
+        "en": "Bilingual Subtitles",
+        "zh-CN": "双语字幕合并"
+      },
+      "description": "Merge two subtitle tracks — say Chinese and English — into one bilingual track, paired by timing. Lines that were split differently in each language are joined automatically, unmatched lines are shown so you can move or drop them, and you can fix any text or time before exporting bilingual SRT, WebVTT or a styled ASS with separate font size and colour for each language. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Merge two subtitle tracks — say Chinese and English — into one bilingual track, paired by timing. Lines that were split differently in each language are joined automatically, unmatched lines are shown so you can move or drop them, and you can fix any text or time before exporting bilingual SRT, WebVTT or a styled ASS with separate font size and colour for each language. Runs locally; no upload or API keys.",
+        "zh-CN": "把两种语言的字幕（比如中文和英文）按时间合并成一条双语字幕。两种语言断句不同的地方会自动拼在一起，没配上的字幕会单独列出，方便挪动或删掉；导出前可以改任何文字和时间，然后导出双语 SRT、WebVTT，或者上下两种字号颜色的 ASS。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "bilingual subtitles",
+        "dual subtitles",
+        "merge subtitles",
+        "SRT",
+        "ASS",
+        "WebVTT",
+        "双语字幕",
+        "中英字幕",
+        "字幕合并",
+        "中英双语",
+        "ASS 样式",
+        "字幕对齐"
+      ],
+      "examplePrompts": [
+        "Merge en.srt and zh.srt into bilingual subtitles",
+        "Make an ASS file with Chinese on top in white and English below in yellow",
+        "Show me the lines that didn't match"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 en.srt 和 zh.srt 合成双语字幕",
+          "做一个 ASS：中文在上白色，英文在下黄色",
+          "列出没对上的字幕"
+        ]
+      }
     }
   ]
 }
