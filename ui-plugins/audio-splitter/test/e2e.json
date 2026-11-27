@@ -1,0 +1,1 @@
+{"prefix": "split", "folder": "录音", "pick": ["茶艺讲座.mp3", "章节.txt"], "startSettings": {}, "uiEdit": {"row": 3, "key": "title", "value": "问答"}, "expectText": "silence", "expectFiles": ["tracks/01 .*\\.mp3$", "tracks\\.csv$", "chapters\\.txt$", "album\\.cue$"]}
