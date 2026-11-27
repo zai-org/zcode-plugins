@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "lyrics-lrc-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/lyrics-lrc-maker",
+      "displayName": "Lyrics Timer",
+      "displayName_i18n": {
+        "en": "Lyrics Timer",
+        "zh-CN": "歌词时间轴"
+      },
+      "description": "Give song lyrics a timeline and export LRC and SRT. Pick the lyrics (plain text, one line per lyric line, or an existing LRC to re-time) and the song; the sung phrases are detected from the audio and each lyric line is matched to them in proportion to its length, so long lines that span two breaths and short lines sharing one phrase still land in the right place. Nudge any line by editing its time, shift the whole song with an offset, add title and artist tags, then export a standard LRC, an enhanced word-by-word LRC for karaoke players and an SRT for video editors. Without audio, lines are spaced evenly for you to adjust. Runs locally with ffmpeg; no account or API keys.",
+      "description_i18n": {
+        "en": "Give song lyrics a timeline and export LRC and SRT. Pick the lyrics (plain text, one line per lyric line, or an existing LRC to re-time) and the song; the sung phrases are detected from the audio and each lyric line is matched to them in proportion to its length, so long lines that span two breaths and short lines sharing one phrase still land in the right place. Nudge any line by editing its time, shift the whole song with an offset, add title and artist tags, then export a standard LRC, an enhanced word-by-word LRC for karaoke players and an SRT for video editors. Without audio, lines are spaced evenly for you to adjust. Runs locally with ffmpeg; no account or API keys.",
+        "zh-CN": "给歌词打时间轴，导出 LRC 和 SRT。选择歌词（纯文本每行一句，或者已有的 LRC 重新打轴）和歌曲，自动从音频里找出唱的段落，再按每句的长度对上去，一句跨两口气、几句短词挤在一段里也能对准。每一句的时间都能直接改，也可以整体偏移，加上歌名、歌手标签，导出标准 LRC、卡拉 OK 播放器用的逐字 LRC 和剪辑软件用的 SRT 字幕。没有音频时按固定间隔排好，再手动微调。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "lyrics",
+        "lrc",
+        "karaoke",
+        "srt",
+        "subtitles",
+        "music",
+        "歌词",
+        "时间轴",
+        "打轴",
+        "LRC",
+        "卡拉OK",
+        "字幕",
+        "逐字歌词"
+      ],
+      "examplePrompts": [
+        "Time 晚风茶馆.txt to 晚风茶馆.mp3",
+        "Move 一盏灯光 to 00:23.40 and shift everything 200 ms later",
+        "Export LRC and SRT"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 晚风茶馆.mp3 给 晚风茶馆.txt 打时间轴",
+          "“一盏灯光”改到 00:23.40，整体延后 200 毫秒",
+          "导出 LRC 和 SRT"
+        ]
+      }
     }
   ]
 }
