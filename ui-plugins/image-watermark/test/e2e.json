@@ -1,0 +1,1 @@
+{"prefix": "watermark", "folder": "照片", "pick": ["photos"], "startSettings": {"mode": "both"}, "uiEdit": {"row": 1, "key": "use", "value": false}, "expectText": "image(s) get", "expectFiles": ["watermarked/", "watermark-report\\.csv$"]}
