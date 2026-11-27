@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "grade-book",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/grade-book",
+      "displayName": "Grade Book",
+      "displayName_i18n": {
+        "en": "Grade Book",
+        "zh-CN": "成绩统计分析"
+      },
+      "description": "Turn a score sheet into totals, averages, rankings and report cards. Drop in a spreadsheet with one row per student and one column per subject: full marks are guessed per subject (100, 150…) or set by you, subjects can be weighted, and every student gets a total, weighted average, band (优秀 / 良好 / 及格 …) and overall and class rank. Per-subject statistics for each class — mean, highest, lowest, pass and excellent rates — and score distribution charts come with it. Fix scores or write a comment for each student, then export an Excel grade book, one A5 report card per student and a summary PDF. Runs locally; no school system login or API keys.",
+      "description_i18n": {
+        "en": "Turn a score sheet into totals, averages, rankings and report cards. Drop in a spreadsheet with one row per student and one column per subject: full marks are guessed per subject (100, 150…) or set by you, subjects can be weighted, and every student gets a total, weighted average, band (优秀 / 良好 / 及格 …) and overall and class rank. Per-subject statistics for each class — mean, highest, lowest, pass and excellent rates — and score distribution charts come with it. Fix scores or write a comment for each student, then export an Excel grade book, one A5 report card per student and a summary PDF. Runs locally; no school system login or API keys.",
+        "zh-CN": "把成绩表变成总分、平均分、排名和成绩单。放入一张每行一名学生、每列一个科目的表：每科满分自动判断（100、150 等）也可手动设置，可以设科目权重；每个学生算出总分、加权平均、等级（优秀／良好／及格……）、年级和班级排名。同时给出各班各科的平均分、最高分、最低分、及格率、优秀率和分数段分布图。可以改分、给每个学生写评语，然后导出 Excel 成绩册、每人一页 A5 成绩单和统计报告 PDF。在本地运行，不用登录教务系统，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "grade book",
+        "gradebook",
+        "report card",
+        "exam results",
+        "class ranking",
+        "score analysis",
+        "成绩",
+        "成绩单",
+        "成绩分析",
+        "排名",
+        "及格率",
+        "分数段",
+        "班级"
+      ],
+      "examplePrompts": [
+        "Analyse scores.xlsx and rank the students",
+        "Weight maths 1.5 and rank by average",
+        "Make report cards for every student"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "分析 scores.xlsx 并排名",
+          "数学权重 1.5，按平均分排名",
+          "给每个学生生成成绩单"
+        ]
+      }
     }
   ]
 }
