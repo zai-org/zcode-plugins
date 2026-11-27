@@ -1,0 +1,13 @@
+/* 全站样式 */
+body {
+  font-family: "PingFang SC", sans-serif;
+  margin: 0;
+}
+
+/*
+ * 按钮
+ */
+button {
+  background: #2563eb;
+  color: #fff;
+}
