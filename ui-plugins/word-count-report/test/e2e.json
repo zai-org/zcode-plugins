@@ -1,0 +1,1 @@
+{"prefix": "wordcount", "folder": "稿件", "pick": ["manuscripts"], "startSettings": {"rate": 120}, "uiEdit": {"row": 0, "key": "include", "value": false}, "expectText": "words", "expectFiles": ["word-count\\.xlsx$", "word-count\\.csv$"]}

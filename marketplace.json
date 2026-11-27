@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "word-count-report",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/word-count-report",
+      "displayName": "Word Count Report",
+      "displayName_i18n": {
+        "en": "Word Count Report",
+        "zh-CN": "字数统计"
+      },
+      "description": "Count the words in a whole folder of manuscripts — Word documents, Markdown, plain text and PDFs — the way Chinese editors and translators count them: Chinese characters, Chinese punctuation and English words separately, with a 字数 total that matches Word. Every file is split into chapters by its headings or “第一章 / Chapter 1” lines, with reading time and an optional fee per thousand words. Leave out code blocks, tables, references and anything matching your own rules, or switch off single chapters. Export the report as Excel or CSV. Runs locally; no upload, account or API keys.",
+      "description_i18n": {
+        "en": "Count the words in a whole folder of manuscripts — Word documents, Markdown, plain text and PDFs — the way Chinese editors and translators count them: Chinese characters, Chinese punctuation and English words separately, with a 字数 total that matches Word. Every file is split into chapters by its headings or “第一章 / Chapter 1” lines, with reading time and an optional fee per thousand words. Leave out code blocks, tables, references and anything matching your own rules, or switch off single chapters. Export the report as Excel or CSV. Runs locally; no upload, account or API keys.",
+        "zh-CN": "批量统计一整个文件夹的稿件字数（Word、Markdown、纯文本、PDF），按中文编辑和译者的口径：中文字符、中文标点、英文单词分开统计，“字数”合计与 Word 一致。每个文件按标题或“第一章 / Chapter 1”分章，给出阅读时长，还可以按千字单价算稿费。可以排除代码块、表格、参考文献和自定义规则匹配的段落，也可以关掉某个章节。导出 Excel 或 CSV 报告。在本地运行，不上传文件，无需账号或 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "word count",
+        "character count",
+        "字数",
+        "字数统计",
+        "稿费",
+        "千字",
+        "manuscript",
+        "reading time",
+        "chapter",
+        "translation billing",
+        "docx",
+        "PDF"
+      ],
+      "examplePrompts": [
+        "Count the words in the manuscripts folder by chapter",
+        "Leave out references and code blocks",
+        "Work out the fee at ¥120 per 1,000 words"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "统计 manuscripts 文件夹每章字数",
+          "不算参考文献和代码",
+          "按千字 120 元算稿费"
+        ]
+      }
     }
   ]
 }
