@@ -58,7 +58,7 @@ const def: AppDef = {
       if (EXTS.some((e) => f.toLowerCase().endsWith(e))) list.push(f);
       else for (const x of await ws.list({ dir: f, exts: EXTS, limit: 2000 })) list.push(x.path);
     }
-    const uniq = [...new Set(list)].filter((f) => !f.split("/").includes("video-compressor")).sort((a, b) => a.localeCompare(b, "en"));
+    const uniq = [...new Set(list)].filter((f) => f.replace(/^\.?\/+/, "").split("/")[0] !== NAME) // 只跳过工作区根目录下自己的输出文件夹；源文件夹叫 video-compressor 也能打开.sort((a, b) => a.localeCompare(b, "en"));
     if (!uniq.length) throw new KitError("no_files", `No video files found (${EXTS.join(" ")}).`);
     const prev = new Map((previous ?? []).map((r) => [s(r.file), r]));
     const rows: Row[] = [];
