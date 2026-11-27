@@ -1,0 +1,58 @@
+{
+  "name": "code-snippet-image",
+  "version": "0.1.0",
+  "description": "Turn code into clean images for slides, docs and posts: syntax highlighting for TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, SQL, shell, CSS, HTML, JSON and YAML, six themes, line numbers, highlighted lines, a macOS-style window and a gradient background. Cut any line range out of a file (several snippets per file), common indentation is removed and long lines wrap. Before you share, it warns about API keys, tokens, private keys, hard-coded passwords and URLs with credentials in the snippet, and can mask them in the image. Exports a PNG (at 2× by default) and an SVG per snippet. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Turn code into clean images for slides, docs and posts: syntax highlighting for TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, SQL, shell, CSS, HTML, JSON and YAML, six themes, line numbers, highlighted lines, a macOS-style window and a gradient background. Cut any line range out of a file (several snippets per file), common indentation is removed and long lines wrap. Before you share, it warns about API keys, tokens, private keys, hard-coded passwords and URLs with credentials in the snippet, and can mask them in the image. Exports a PNG (at 2× by default) and an SVG per snippet. Runs locally; no account or API keys.",
+    "zh-CN": "把代码做成适合放进幻灯片、文档和帖子的图片：支持 TypeScript/JavaScript、Python、Go、Rust、Java、C/C++、SQL、Shell、CSS、HTML、JSON、YAML 语法高亮，六种主题，带行号、高亮行、macOS 风格窗口和渐变背景。可以从文件里截任意行范围（一个文件可以出多张），自动去掉公共缩进，长行自动折行。分享前会提示代码里的 API 密钥、令牌、私钥、写死的密码和带账号密码的 URL，并可以在图片里打码。每段导出 PNG（默认 2 倍清晰度）和 SVG。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "code",
+    "snippet",
+    "screenshot",
+    "syntax highlight",
+    "carbon",
+    "share",
+    "代码截图",
+    "代码图片",
+    "语法高亮",
+    "分享",
+    "打码",
+    "密钥"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "code-snippet-image": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "代码截图美化",
+          "en-US": "Code Snippet Image"
+        },
+        "icon": "code",
+        "server": "code-snippet-image",
+        "resourceUri": "ui://code-snippet-image/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
