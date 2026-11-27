@@ -1,0 +1,58 @@
+{
+  "name": "subtitle-editor",
+  "version": "0.1.0",
+  "description": "Fix subtitles that drift or read too fast. Open an SRT, WebVTT or ASS file, shift everything by a few seconds, convert between frame rates, or line it up with two sync points. Edit any cue's text or times, split long cues and merge short ones, and see every overlap, too-fast reading speed, overlong line and blink-and-miss cue flagged with the new timing. Export clean SRT, VTT and ASS files plus a check report. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Fix subtitles that drift or read too fast. Open an SRT, WebVTT or ASS file, shift everything by a few seconds, convert between frame rates, or line it up with two sync points. Edit any cue's text or times, split long cues and merge short ones, and see every overlap, too-fast reading speed, overlong line and blink-and-miss cue flagged with the new timing. Export clean SRT, VTT and ASS files plus a check report. Runs locally; no upload or API keys.",
+    "zh-CN": "修正跑偏或读不过来的字幕：打开 SRT、WebVTT 或 ASS 文件，整体平移几秒、换算帧率，或者用两个同步点对齐。可以直接改每条字幕的文字和时间，拆开过长的、合并过短的；重叠、读速过快、单行过长和一闪而过的字幕都会按新时间标出来。导出 SRT、VTT、ASS 和检查报告。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "subtitles",
+    "SRT",
+    "WebVTT",
+    "ASS",
+    "subtitle sync",
+    "subtitle shift",
+    "frame rate",
+    "reading speed",
+    "字幕",
+    "字幕平移",
+    "字幕格式转换",
+    "时间轴"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "subtitle-editor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "字幕校对转换",
+          "en-US": "Subtitle Editor"
+        },
+        "icon": "captions",
+        "server": "subtitle-editor",
+        "resourceUri": "ui://subtitle-editor/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
