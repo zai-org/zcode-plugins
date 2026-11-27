@@ -14,8 +14,13 @@ import {
 } from "./workflows.ts";
 
 export const NAME = "whitebackground";
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 export const PANEL_URI = "ui://whitebackground/panel.html";
+export const STATE_URI = "ui://whitebackground/state.json";
+export const PREVIEW_URI = "ui://whitebackground/preview.png";
+const JSON_MIME = "application/json";
+const PNG_MIME = "image/png";
+
 
 const widthField = z.number().int().describe("Canvas width in pixels, 1–8192. Width × height must be at most 32 million pixels.");
 const heightField = z.number().int().describe("Canvas height in pixels, 1–8192. Width × height must be at most 32 million pixels.");
@@ -52,6 +57,32 @@ export function createServer(options: ServerOptions) {
     surface: "editor",
     panelHtml: () => readPanel(join(options.assetRoot, "ui/panel.html")),
     log: options.log,
+  });
+
+  type CanvasState = {
+    path: string;
+    width: number;
+    height: number;
+    bytes: number;
+    officialUrl: string;
+    downloadUrl: string;
+    previewUri: string;
+  };
+  type EditorState = { workflow: string; url: string; titleEn?: string; titleZh?: string };
+  let lastCanvas: CanvasState | null = null;
+  let lastPreview: Buffer | null = null;
+  let lastEditor: EditorState | null = null;
+
+  const panelState = () => ({ canvas: lastCanvas, editor: lastEditor });
+
+  server.registerResource("state", STATE_URI, { mimeType: JSON_MIME }, async () => ({
+    contents: [{ uri: STATE_URI, mimeType: JSON_MIME, text: JSON.stringify(panelState()) }],
+  }));
+  server.registerResource("preview", PREVIEW_URI, { mimeType: PNG_MIME }, async () => {
+    if (!lastPreview) {
+      return { contents: [{ uri: PREVIEW_URI, mimeType: PNG_MIME, text: "" }] };
+    }
+    return { contents: [{ uri: PREVIEW_URI, mimeType: PNG_MIME, blob: lastPreview.toString("base64") }] };
   });
 
   tool(
@@ -96,6 +127,16 @@ export function createServer(options: ServerOptions) {
       const { png, officialUrl, downloadUrl } = await fetchWhiteCanvas(width, height, fetcher);
       const path = await uniquePngPath(ws, requested);
       await ws.write(path, png);
+      lastCanvas = {
+        path,
+        width,
+        height,
+        bytes: png.length,
+        officialUrl,
+        downloadUrl,
+        previewUri: PREVIEW_URI,
+      };
+      lastPreview = png;
       const previewDataUrl = `data:image/png;base64,${png.toString("base64")}`;
       const text =
         `Saved a ${width}×${height} pure white PNG to ${path}. ` +
@@ -104,12 +145,7 @@ export function createServer(options: ServerOptions) {
       return {
         text,
         structured: {
-          path,
-          width,
-          height,
-          bytes: png.length,
-          officialUrl,
-          downloadUrl,
+          ...lastCanvas,
           previewDataUrl,
         },
         images: [{ data: png.toString("base64"), mimeType: "image/png" }],
@@ -139,6 +175,7 @@ export function createServer(options: ServerOptions) {
         `Inspect Original and Result before downloading. An embedded preview may be scaled; save the full-resolution file from the editor (or open the site in a browser first). ` +
         `Do not claim the photo is done until the user has downloaded it. Free background-editor exports are capped at 2200 px and do not enlarge the subject. ` +
         `No WhiteBackground account or credits are used. Paid plans: ${PRICING_URL}`;
+      lastEditor = { workflow: flow.id, url: flow.url, titleEn: flow.titleEn, titleZh: flow.titleZh };
       return {
         text,
         structured: {
