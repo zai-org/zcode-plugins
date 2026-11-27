@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "glossary-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/glossary-builder",
+      "displayName": "Glossary Builder",
+      "displayName_i18n": {
+        "en": "Glossary Builder",
+        "zh-CN": "术语表整理"
+      },
+      "description": "Turn a pile of documents into a bilingual glossary. Open text or Markdown files, or a folder, in Chinese and/or English; recurring terms and compound phrases are found automatically, with an example sentence for each, and nested fragments are folded into the full term. Translations are picked up from the documents themselves wherever they write a term with its translation in brackets, such as 会员积分（Loyalty Points）, and from your existing glossary if you include it; where the old glossary and the documents disagree, you are told. Drop noise, fill in or fix translations, add terms by hand, then export Excel, CSV, Markdown and TBX for translation tools like Trados and memoQ. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Turn a pile of documents into a bilingual glossary. Open text or Markdown files, or a folder, in Chinese and/or English; recurring terms and compound phrases are found automatically, with an example sentence for each, and nested fragments are folded into the full term. Translations are picked up from the documents themselves wherever they write a term with its translation in brackets, such as 会员积分（Loyalty Points）, and from your existing glossary if you include it; where the old glossary and the documents disagree, you are told. Drop noise, fill in or fix translations, add terms by hand, then export Excel, CSV, Markdown and TBX for translation tools like Trados and memoQ. Runs locally; no account or API keys.",
+        "zh-CN": "把一堆资料整理成双语术语表。打开文本、Markdown 文件或文件夹（中文、英文都行），自动找出反复出现的术语和复合词，每个附一句例句，并把被长词包含的碎片合并掉。资料里“会员积分（Loyalty Points）”这种带括号译名的写法会直接拿来当译文；如果一起选了旧术语表，也会合并进来，旧表和资料译法不一致时会提醒。去掉无关词、补全或修改译文、手动添加术语，然后导出 Excel、CSV、Markdown，以及 Trados、memoQ 等翻译软件用的 TBX。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "glossary",
+        "terminology",
+        "termbase",
+        "tbx",
+        "translation",
+        "localization",
+        "术语表",
+        "术语库",
+        "翻译",
+        "本地化",
+        "译名统一",
+        "双语"
+      ],
+      "examplePrompts": [
+        "Build a glossary from the docs folder",
+        "储值卡 should be Stored Value Card; add 满减 = Spend-and-save",
+        "Export TBX for Trados"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 docs 文件夹整理一份术语表",
+          "储值卡统一译成 Stored Value Card，再加一条 满减 = Spend-and-save",
+          "导出 TBX 给翻译软件用"
+        ]
+      }
     }
   ]
 }
