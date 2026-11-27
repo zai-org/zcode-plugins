@@ -1,0 +1,1 @@
+{"prefix": "seats", "folder": "考场", "pick": ["students.csv"], "startSettings": {"title": "期中考试 第3考场"}, "uiEdit": {"row": 1, "key": "seat", "value": "R6C8"}, "expectText": "seated", "expectFiles": ["seating-chart\\.pdf$", "seating\\.xlsx$"]}
