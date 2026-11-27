@@ -1,0 +1,1 @@
+{"prefix": "audiogram", "folder": "播客", "pick": ["茶馆夜话-第12期.mp3", "cover.jpg", "字幕.srt"], "startSettings": {"title": "茶馆夜话 第12期", "clipStart": "00:04", "clipEnd": "00:22"}, "uiEdit": {"row": 3, "key": "end", "value": "00:14.80"}, "expectText": "caption", "expectFiles": ["\\.mp4$", "poster\\.png$", "\\.srt$"]}
