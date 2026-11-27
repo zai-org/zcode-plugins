@@ -1,0 +1,58 @@
+{
+  "name": "resume-screener",
+  "version": "0.1.0",
+  "description": "Screen a folder of resumes against a job description on your own computer. It reads the must-haves, nice-to-haves, minimum years and degree from the JD (Markdown or text), then scores every resume — Word, PDF with text, Markdown or text, Chinese or English — showing which requirements were found and which must-haves are missing, years of experience from merged work dates, degree, email and phone. Chinese and English terms match each other (A/B 测试 = A/B test, 餐饮 = restaurant…). Age, gender and marital-status requirements in the JD are flagged and never scored. Also catches duplicate candidates (same email or phone), unreadable or scanned resumes and missing contact details. Track status and notes per candidate, and export a ranked Excel shortlist and a Markdown summary. Keyword matching to speed up a first pass — a person makes the decision. No account or API keys; resumes never leave the machine.",
+  "description_i18n": {
+    "en": "Screen a folder of resumes against a job description on your own computer. It reads the must-haves, nice-to-haves, minimum years and degree from the JD (Markdown or text), then scores every resume — Word, PDF with text, Markdown or text, Chinese or English — showing which requirements were found and which must-haves are missing, years of experience from merged work dates, degree, email and phone. Chinese and English terms match each other (A/B 测试 = A/B test, 餐饮 = restaurant…). Age, gender and marital-status requirements in the JD are flagged and never scored. Also catches duplicate candidates (same email or phone), unreadable or scanned resumes and missing contact details. Track status and notes per candidate, and export a ranked Excel shortlist and a Markdown summary. Keyword matching to speed up a first pass — a person makes the decision. No account or API keys; resumes never leave the machine.",
+    "zh-CN": "在自己电脑上，用岗位说明对一文件夹简历做初筛。从岗位说明（Markdown 或文本）读出必须项、加分项、最低年限和学历，再给每份简历打分——支持 Word、有文字层的 PDF、Markdown、文本，中英文均可——列出命中了哪些要求、缺了哪些必须项、按工作经历时间合并算出的年限、学历、邮箱和电话。中英文关键词互认（A/B 测试 = A/B test，餐饮 = restaurant 等）。岗位说明里的年龄、性别、婚育等要求会被提示，且不参与打分。还会发现重复投递（邮箱或电话相同）、读不出文字或扫描版的简历和缺少联系方式。可以给每位候选人记状态和备注，导出按分数排序的 Excel 筛选表和 Markdown 汇总。关键词匹配只用于加快初筛，最终由人来判断。不用登录，无需 API 密钥，简历不离开本机。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "screening",
+    "recruiting",
+    "hiring",
+    "ATS",
+    "shortlist",
+    "简历筛选",
+    "招聘",
+    "初筛",
+    "候选人",
+    "岗位",
+    "HR"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "resume-screener": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "简历初筛",
+          "en-US": "Resume Screener"
+        },
+        "icon": "users",
+        "server": "resume-screener",
+        "resourceUri": "ui://resume-screener/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
