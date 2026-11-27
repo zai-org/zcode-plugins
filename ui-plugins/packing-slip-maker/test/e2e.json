@@ -1,0 +1,1 @@
+{"prefix": "slips", "folder": "发货", "pick": ["orders.csv"], "startSettings": {"shop": "Penova 茶铺"}, "uiEdit": {"row": 8, "key": "address", "value": "成都市武侯区人民南路四段 1 号"}, "expectText": "order(s)", "expectFiles": ["packing-slips\\.pdf$", "picking-list\\.xlsx$"]}
