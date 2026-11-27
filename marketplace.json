@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "pdf-form-collector",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/pdf-form-collector",
+      "displayName": "PDF Form Collector",
+      "displayName_i18n": {
+        "en": "PDF Form Collector",
+        "zh-CN": "PDF 表单汇总"
+      },
+      "description": "Gather the answers from a stack of filled-in PDF forms into one spreadsheet. Text boxes, checkboxes, radio buttons, dropdowns and signature fields all become columns, labelled the way the form labels them. It highlights required fields left empty, unticked consent boxes, bad emails or phone numbers, repeat submissions and PDFs that aren't fillable at all. Fix values in the table, then export Excel with the problem cells coloured and noted, or CSV. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Gather the answers from a stack of filled-in PDF forms into one spreadsheet. Text boxes, checkboxes, radio buttons, dropdowns and signature fields all become columns, labelled the way the form labels them. It highlights required fields left empty, unticked consent boxes, bad emails or phone numbers, repeat submissions and PDFs that aren't fillable at all. Fix values in the table, then export Excel with the problem cells coloured and noted, or CSV. Runs locally; no upload or API keys.",
+        "zh-CN": "把一批填好的 PDF 表单汇总成一张表：文本框、复选框、单选、下拉框和签名字段都变成列，列名用表单上的提示文字。必填项没填、同意框没勾、邮箱或手机号格式不对、重复提交、不能填写的 PDF（扫描件或已压平）都会标出来。在表格里修正后，导出带颜色和批注的 Excel 或 CSV。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "pdf form",
+        "acroform",
+        "form data",
+        "pdf to excel",
+        "registration forms",
+        "survey",
+        "PDF 表单",
+        "表单汇总",
+        "报名表",
+        "PDF 转 Excel",
+        "数据收集",
+        "表单提取"
+      ],
+      "examplePrompts": [
+        "Collect the returned forms into Excel",
+        "Which forms are missing required fields?",
+        "Did anyone submit twice?"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把收回来的表单汇总到 Excel",
+          "哪些表单必填项没填？",
+          "有没有人重复提交？"
+        ]
+      }
     }
   ]
 }
