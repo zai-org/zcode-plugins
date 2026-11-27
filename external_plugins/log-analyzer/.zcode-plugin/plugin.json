@@ -1,0 +1,59 @@
+{
+  "name": "log-analyzer",
+  "version": "0.1.0",
+  "description": "Make sense of your web server's access logs without setting up an analytics stack. Open Nginx or Apache logs (common or combined format, plain or .gz, several rotated files or a whole folder) and see requests, unique visitors, traffic by hour and day, top pages, 404s, server errors, status codes, referrers and bandwidth. Bots and crawlers are recognised and left out by default; filter by date, path or static files, and drop single URLs. Export an HTML report and CSV tables. Runs locally; logs never leave your computer.",
+  "description_i18n": {
+    "en": "Make sense of your web server's access logs without setting up an analytics stack. Open Nginx or Apache logs (common or combined format, plain or .gz, several rotated files or a whole folder) and see requests, unique visitors, traffic by hour and day, top pages, 404s, server errors, status codes, referrers and bandwidth. Bots and crawlers are recognised and left out by default; filter by date, path or static files, and drop single URLs. Export an HTML report and CSV tables. Runs locally; logs never leave your computer.",
+    "zh-CN": "不用搭建统计系统，也能看懂网站服务器的访问日志。打开 Nginx 或 Apache 日志（common 或 combined 格式，普通或 .gz 压缩，可以多个滚动日志或整个文件夹），查看请求数、独立访客、按小时和按天的流量、热门页面、404、服务器错误、状态码、来源和流量。自动识别爬虫和机器人并默认排除；可以按日期、路径或静态文件筛选，也可以去掉单个网址。导出 HTML 报告和 CSV 表格。在本地运行，日志不离开你的电脑。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "access log",
+    "nginx log",
+    "apache log",
+    "log analyzer",
+    "web analytics",
+    "404",
+    "traffic report",
+    "访问日志",
+    "日志分析",
+    "nginx 日志",
+    "流量统计",
+    "网站统计",
+    "爬虫"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "log-analyzer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "访问日志分析",
+          "en-US": "Access Log Analyzer"
+        },
+        "icon": "bar-chart",
+        "server": "log-analyzer",
+        "resourceUri": "ui://log-analyzer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
