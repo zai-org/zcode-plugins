@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "outline-mindmap",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/outline-mindmap",
+      "displayName": "Outline Mind Map",
+      "displayName_i18n": {
+        "en": "Outline Mind Map",
+        "zh-CN": "大纲转思维导图"
+      },
+      "description": "Turn the notes you already have into a mind map. Open a Markdown outline (headings and nested bullet lists), an indented text file or an OPML export; the central topic, main branches and sub-topics are laid out automatically on both sides or to the right, each branch in its own colour. Rename or re-level nodes, hide some, add new ones, recolour a branch, then export a crisp SVG and PNG, plus OPML and FreeMind (.mm) files you can keep editing in other mind-map apps, and a cleaned-up Markdown outline. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Turn the notes you already have into a mind map. Open a Markdown outline (headings and nested bullet lists), an indented text file or an OPML export; the central topic, main branches and sub-topics are laid out automatically on both sides or to the right, each branch in its own colour. Rename or re-level nodes, hide some, add new ones, recolour a branch, then export a crisp SVG and PNG, plus OPML and FreeMind (.mm) files you can keep editing in other mind-map apps, and a cleaned-up Markdown outline. Runs locally; no account or API keys.",
+        "zh-CN": "把现成的笔记一键变成思维导图。打开 Markdown 大纲（标题加多级列表）、缩进文本或 OPML 文件，自动排出中心主题、主分支和子主题，可以左右展开或只向右展开，每个分支一种颜色。可以改节点文字或层级、隐藏节点、新增节点、给分支换颜色，然后导出清晰的 SVG 和 PNG，以及能在其他思维导图软件里继续编辑的 OPML 和 FreeMind（.mm）文件，还有整理后的 Markdown 大纲。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "mind map",
+        "mindmap",
+        "outline",
+        "markdown outline",
+        "opml",
+        "freemind",
+        "思维导图",
+        "脑图",
+        "大纲",
+        "导图",
+        "笔记整理",
+        "知识梳理"
+      ],
+      "examplePrompts": [
+        "Turn 开店计划.md into a mind map",
+        "Rename 竞争对手 to 竞品调研 and add a 风险 branch",
+        "Export PNG and an OPML file"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 开店计划.md 做成思维导图",
+          "把“竞争对手”改成“竞品调研”，再加一个“风险”分支",
+          "导出 PNG 和 OPML 文件"
+        ]
+      }
     }
   ]
 }

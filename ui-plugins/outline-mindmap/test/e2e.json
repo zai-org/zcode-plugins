@@ -1,0 +1,1 @@
+{"prefix": "mindmap", "folder": "笔记", "pick": ["开店计划.md"], "startSettings": {}, "uiEdit": {"row": 6, "key": "text", "value": "竞品调研"}, "expectText": "main branch", "expectFiles": ["mindmap\\.svg$", "mindmap\\.png$", "mindmap\\.opml$", "mindmap\\.mm$", "outline\\.md$"]}
