@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "rss-feed-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/rss-feed-builder",
+      "displayName": "Feed Builder",
+      "displayName_i18n": {
+        "en": "Feed Builder",
+        "zh-CN": "RSS 订阅源生成"
+      },
+      "description": "Let readers subscribe to your blog: turn a folder of Markdown posts into RSS, Atom and JSON Feed files in one go. Titles, dates, tags and summaries come from front matter (or the heading and file name), drafts stay out, and links follow your site's URL pattern. Choose excerpts or full posts — images and links are made absolute so they work in feed readers. Runs locally; no feed service or API keys.",
+      "description_i18n": {
+        "en": "Let readers subscribe to your blog: turn a folder of Markdown posts into RSS, Atom and JSON Feed files in one go. Titles, dates, tags and summaries come from front matter (or the heading and file name), drafts stay out, and links follow your site's URL pattern. Choose excerpts or full posts — images and links are made absolute so they work in feed readers. Runs locally; no feed service or API keys.",
+        "zh-CN": "让读者能订阅你的博客：把一个 Markdown 文章文件夹一次生成 RSS、Atom 和 JSON Feed 三种订阅文件。标题、日期、标签和摘要取自 front matter（没有时用标题和文件名），草稿自动排除，链接按你网站的网址格式生成。可选摘要或全文，图片和链接会转成绝对地址，在阅读器里也能正常显示。在本地运行，不用订阅服务，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "developer-tools",
+      "keywords": [
+        "rss",
+        "atom",
+        "json feed",
+        "blog feed",
+        "markdown blog",
+        "static site",
+        "订阅源",
+        "RSS 订阅",
+        "博客",
+        "Feed"
+      ],
+      "examplePrompts": [
+        "Make an RSS feed for the posts folder, site https://tea.example",
+        "Use full posts and only the latest 10",
+        "Change the link pattern to {site}/{yyyy}/{slug}.html"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "给 posts 文件夹生成 RSS，网站是 https://tea.example",
+          "用全文，只要最新 10 篇",
+          "链接格式改成 {site}/{yyyy}/{slug}.html"
+        ]
+      }
     }
   ]
 }

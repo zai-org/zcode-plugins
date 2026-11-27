@@ -1,0 +1,1 @@
+{ "prefix": "feed", "folder": "博客", "pick": ["posts"], "startSettings": { "siteUrl": "https://tea.example", "title": "青禾茶话" }, "uiEdit": { "row": 1, "key": "title", "value": "茶具清洗指南" }, "expectText": "茶具清洗指南", "expectFiles": ["feed\\.xml$", "atom\\.xml$", "feed\\.json$"] }
