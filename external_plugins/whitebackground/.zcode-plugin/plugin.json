@@ -1,6 +1,6 @@
 {
   "name": "whitebackground",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Create a pure #FFFFFF PNG canvas, or open WhiteBackground’s free local photo editor for white backgrounds, transparent cutouts, PNG-to-white, square padding, Shopify sizing or local enlargement. Photos are chosen in the official editor; this plugin does not upload them or spend credits. No WhiteBackground account or API key.",
   "description_i18n": {
     "en": "Create a pure #FFFFFF PNG canvas, or open WhiteBackground’s free local photo editor for white backgrounds, transparent cutouts, PNG-to-white, square padding, Shopify sizing or local enlargement. Photos are chosen in the official editor; this plugin does not upload them or spend credits. No WhiteBackground account or API key.",
