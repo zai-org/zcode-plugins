@@ -34,8 +34,8 @@ export function applyRule(id: RuleId, t: string): string {
   switch (id) {
     case "fullwidthAlnum": return t.replace(/[０-９Ａ-Ｚａ-ｚ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(/\u3000(?=\S)/g, (m, i) => (i === 0 ? m : " "));
     case "punct": {
-      // 前面是汉字（或汉字后的右括号/引号）的半角标点 → 全角；句号只在汉字后且后面不是字母数字时改
-      let s = t.replace(re(`(${H}[”’）》]?)\\s*([,!?;:])(?![\\w/])\\s*`), (_, a: string, p: string) => a + PMAP[p]);
+      // 前面是汉字（或汉字后的右括号/引号）的半角标点 → 全角（后面跟数字也改，如“地点:3楼”；跟字母、/ 不改）；句号只在汉字后且后面不是字母数字时改
+      let s = t.replace(re(`(${H}[”’）》]?)\\s*([,!?;:])(?![A-Za-z_/])\\s*`), (_, a: string, p: string) => a + PMAP[p]);
       s = s.replace(re(`(${H}[”’）》]?)\\.(?![\\w.])\\s*`), "$1。");
       // 英文词后面紧跟中文时，中间的半角标点也属于中文句子
       s = s.replace(re(`([A-Za-z0-9%)])\\s*([,!?;:])\\s*(?=${H})`), (_, a: string, p: string) => a + PMAP[p]);
