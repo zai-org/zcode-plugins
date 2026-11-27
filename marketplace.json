@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "inventory-reorder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/inventory-reorder",
+      "displayName": "Reorder Planner",
+      "displayName_i18n": {
+        "en": "Reorder Planner",
+        "zh-CN": "库存补货计划"
+      },
+      "description": "Know what to reorder before it runs out. Combine a stock sheet with your sales history to get each item's daily sales, days of stock left and reorder point from its lead time and safety stock. Items that need restocking get a suggested quantity that covers the next few weeks, rounded up to whole cases and at least the supplier's minimum order; change any quantity by hand. See which items will run out before a new order can arrive. Export a purchase order PDF for each supplier and a reorder workbook. Runs locally; no ERP login or API keys.",
+      "description_i18n": {
+        "en": "Know what to reorder before it runs out. Combine a stock sheet with your sales history to get each item's daily sales, days of stock left and reorder point from its lead time and safety stock. Items that need restocking get a suggested quantity that covers the next few weeks, rounded up to whole cases and at least the supplier's minimum order; change any quantity by hand. See which items will run out before a new order can arrive. Export a purchase order PDF for each supplier and a reorder workbook. Runs locally; no ERP login or API keys.",
+        "zh-CN": "在断货之前就知道该补什么货。把库存表和销售明细放在一起，算出每个商品的日均销量、还能卖几天，以及按交货期和安全库存得出的再订货点。需要补货的商品给出建议数量——够卖接下来几周，并按整箱和供应商起订量取整；数量可以手动改。还会提醒哪些商品在新货到之前就会断货。按供应商导出采购单 PDF 和补货计划 Excel。在本地运行，不用登录 ERP，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "reorder",
+        "inventory planning",
+        "purchase order",
+        "safety stock",
+        "reorder point",
+        "MOQ",
+        "补货",
+        "库存",
+        "采购单",
+        "安全库存",
+        "再订货点",
+        "起订量",
+        "断货"
+      ],
+      "examplePrompts": [
+        "Plan reorders from stock.xlsx and sales.xlsx",
+        "Keep 10 days of safety stock and order for 45 days",
+        "Make the purchase orders for each supplier"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 stock.xlsx 和 sales.xlsx 做补货计划",
+          "安全库存留 10 天，每次补够 45 天",
+          "按供应商生成采购单"
+        ]
+      }
     }
   ]
 }
