@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "text-cleanup",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/text-cleanup",
+      "displayName": "Text Cleanup",
+      "displayName_i18n": {
+        "en": "Text Cleanup",
+        "zh-CN": "中文文本排版清洗"
+      },
+      "description": "Tidy up Chinese and mixed Chinese–English writing in Markdown and text files. It fixes half-width punctuation inside Chinese sentences, full-width letters and digits, …… and ——, straight quotes, the space between Chinese and English words or numbers, stray spaces around punctuation, repeated spaces and extra blank lines. Code blocks, inline code, link addresses and front matter are never touched. Review every changed line side by side, skip or hand-edit any of them, then export cleaned copies of the files, a diff and a change list. Your originals stay as they are. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Tidy up Chinese and mixed Chinese–English writing in Markdown and text files. It fixes half-width punctuation inside Chinese sentences, full-width letters and digits, …… and ——, straight quotes, the space between Chinese and English words or numbers, stray spaces around punctuation, repeated spaces and extra blank lines. Code blocks, inline code, link addresses and front matter are never touched. Review every changed line side by side, skip or hand-edit any of them, then export cleaned copies of the files, a diff and a change list. Your originals stay as they are. Runs locally; no upload or API keys.",
+        "zh-CN": "清理 Markdown 和纯文本中的中文、中英混排：中文句子里的半角标点、全角字母数字、省略号和破折号、直引号、中英文和数字之间的空格、标点前后多余的空格、连续空格和多余空行。代码块、行内代码、链接地址和 front matter 不会改动。每一处修改都能对照查看，可以跳过或手动改，然后导出清洗后的文件副本、diff 和修改清单，原文件保持不变。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "Chinese typography",
+        "text cleanup",
+        "punctuation",
+        "pangu spacing",
+        "full-width",
+        "markdown lint",
+        "中文排版",
+        "全角半角",
+        "中英文空格",
+        "标点符号",
+        "文案规范",
+        "排版清洗"
+      ],
+      "examplePrompts": [
+        "Clean up the punctuation in draft.md",
+        "Add spaces between Chinese and English in the docs folder",
+        "Show me what would change before writing anything"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "整理 draft.md 的标点",
+          "给 docs 文件夹加中英文空格",
+          "先给我看会改哪些地方"
+        ]
+      }
     }
   ]
 }
