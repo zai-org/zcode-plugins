@@ -1,0 +1,59 @@
+{
+  "name": "audio-splitter",
+  "version": "0.1.0",
+  "description": "Cut a long recording into tracks: a lecture into chapters, a podcast into segments, a live set into songs. Open an audio file (or a video's soundtrack) and it is split at the pauses, at a fixed length, or at the times in your chapter list; add a plain list of titles and the tracks are named in order. Very short pieces are merged into their neighbours and over-long ones are cut again at their longest pause. Move any cut point, rename or skip tracks, then export numbered audio files (copied without re-encoding, or as MP3, M4A or WAV, with title, track and album tags), a track list CSV, YouTube-style chapter timestamps and a CUE sheet. Runs locally with ffmpeg; no account or API keys.",
+  "description_i18n": {
+    "en": "Cut a long recording into tracks: a lecture into chapters, a podcast into segments, a live set into songs. Open an audio file (or a video's soundtrack) and it is split at the pauses, at a fixed length, or at the times in your chapter list; add a plain list of titles and the tracks are named in order. Very short pieces are merged into their neighbours and over-long ones are cut again at their longest pause. Move any cut point, rename or skip tracks, then export numbered audio files (copied without re-encoding, or as MP3, M4A or WAV, with title, track and album tags), a track list CSV, YouTube-style chapter timestamps and a CUE sheet. Runs locally with ffmpeg; no account or API keys.",
+    "zh-CN": "把长录音切成多段：讲座按章节、播客按段落、现场录音按歌曲。打开音频（或视频的声音），可以按停顿自动切、按固定时长切，或者按章节表里的时间切；再给一份只有标题的清单，就按顺序给每段命名。太短的片段会并到相邻段，太长的会在最长的停顿处再切一刀。每个切点都能改，可以改名或跳过某段，最后导出带序号的音频文件（不重新编码直接复制，或转成 MP3、M4A、WAV，并写入标题、音轨号、专辑标签）、分段清单 CSV、YouTube 章节时间戳和 CUE 文件。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "audio split",
+    "silence detection",
+    "chapters",
+    "podcast",
+    "lecture",
+    "cue",
+    "切分音频",
+    "分割录音",
+    "静音检测",
+    "章节",
+    "讲座录音",
+    "播客",
+    "分轨"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "audio-splitter": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "长音频切分",
+          "en-US": "Audio Splitter"
+        },
+        "icon": "scissors",
+        "server": "audio-splitter",
+        "resourceUri": "ui://audio-splitter/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
