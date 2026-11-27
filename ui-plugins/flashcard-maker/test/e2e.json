@@ -1,0 +1,1 @@
+{"prefix": "flashcards", "folder": "词表", "pick": ["words.xlsx"], "startSettings": {"deck": "英语 Unit 3"}, "uiEdit": {"row": 0, "key": "tags", "value": "Unit3 重点"}, "expectText": "cards on", "expectFiles": ["flashcards\\.pdf$", "anki\\.tsv$", "cards\\.csv$"]}

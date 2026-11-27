@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "flashcard-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/flashcard-maker",
+      "displayName": "Flashcard Maker",
+      "displayName_i18n": {
+        "en": "Flashcard Maker",
+        "zh-CN": "单词卡制作"
+      },
+      "description": "Turn a word list into printable double-sided flashcards and an import file for spaced-repetition apps. Use a spreadsheet with word, reading (phonetic or pinyin), meaning, example and tags, or a plain text list. Cards are laid out 8, 9, 10, 12, 18 or 24 to a page, with backs mirrored so they line up when you print double-sided (long or short edge). Text shrinks to fit, cut lines and card numbers help when cutting, and you can reverse the cards to practise meaning → word. Edit or skip cards, then export the PDF, an Anki import file with tags, and a CSV for Quizlet and others. Runs locally; no app account or API keys.",
+      "description_i18n": {
+        "en": "Turn a word list into printable double-sided flashcards and an import file for spaced-repetition apps. Use a spreadsheet with word, reading (phonetic or pinyin), meaning, example and tags, or a plain text list. Cards are laid out 8, 9, 10, 12, 18 or 24 to a page, with backs mirrored so they line up when you print double-sided (long or short edge). Text shrinks to fit, cut lines and card numbers help when cutting, and you can reverse the cards to practise meaning → word. Edit or skip cards, then export the PDF, an Anki import file with tags, and a CSV for Quizlet and others. Runs locally; no app account or API keys.",
+        "zh-CN": "把词表变成可以双面打印的单词卡，以及可以导入背诵软件的文件。可以用表格（单词、音标/拼音、释义、例句、标签），也可以用纯文本词表。每页 8、9、10、12、18 或 24 张，背面自动镜像排版，双面打印（长边或短边翻转）后正反面对齐。文字自动缩放，带裁切虚线和卡片编号；也可以反向制作（看释义想单词）。可以修改或跳过个别卡片，然后导出打印 PDF、带标签的 Anki 导入文件和通用 CSV（Quizlet 等）。在本地运行，不用登录任何 App，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "flashcards",
+        "vocabulary",
+        "Anki",
+        "spaced repetition",
+        "word cards",
+        "Quizlet",
+        "单词卡",
+        "闪卡",
+        "背单词",
+        "生词卡",
+        "词汇",
+        "记忆卡"
+      ],
+      "examplePrompts": [
+        "Make flashcards from words.xlsx, 9 per page",
+        "Put the pinyin on the back",
+        "Export an Anki file for this list"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 words.xlsx 做单词卡，每页 9 张",
+          "音标放在背面",
+          "导出 Anki 导入文件"
+        ]
+      }
     }
   ]
 }
