@@ -43,8 +43,17 @@ try {
   step("agent saves another canvas; path escape is rejected");
   await harness.agent(outer, "canvas_create", { width: 32, height: 16 });
   await frame.locator("#saved-path", { hasText: "whitebackground/white-32x16.png" }).waitFor();
+  await frame.locator("#preview img").waitFor();
   assert.ok((await stat(join(workspace, "whitebackground/white-32x16.png"))).size > 0);
   await harness.agent(outer, "canvas_create", { width: 16, height: 16, output: "../escape.png" }, { expectError: true });
+
+  step("a newly opened panel reloads the last canvas without waiting for a tool-result notification");
+  const late = await harness.open("?locale=zh-CN", { width: 900, height: 1400 });
+  await late.frame.locator("#saved-path", { hasText: "whitebackground/white-32x16.png" }).waitFor({ timeout: 60_000 });
+  await late.frame.locator("#preview img").waitFor();
+  const previewSrc = await late.frame.locator("#preview img").getAttribute("src");
+  assert.ok(previewSrc?.startsWith("data:image/png"), previewSrc);
+  await late.outer.screenshot({ path: join(shots, "04-late-preview.png") });
 
   step("English dark panel");
   const en = await harness.open("?locale=en-US&theme=dark", { width: 900, height: 1400 });
