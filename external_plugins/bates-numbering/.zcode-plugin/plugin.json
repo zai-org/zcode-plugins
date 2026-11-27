@@ -1,0 +1,58 @@
+{
+  "name": "bates-numbering",
+  "version": "0.1.0",
+  "description": "Stamp running numbers on every page of a set of PDFs, the way exhibits and document productions are numbered (DOC-000001, DOC-000002…), continuing from one file to the next. Add a label such as COPY, 副本 or CONFIDENTIAL to every page and an exhibit label (Exhibit A, 证据 1) to each file's first page. Put the files in order, choose the prefix, digits and position, then export the stamped PDFs, an optional combined PDF and an index of which numbers went where. Your originals stay as they are. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Stamp running numbers on every page of a set of PDFs, the way exhibits and document productions are numbered (DOC-000001, DOC-000002…), continuing from one file to the next. Add a label such as COPY, 副本 or CONFIDENTIAL to every page and an exhibit label (Exhibit A, 证据 1) to each file's first page. Put the files in order, choose the prefix, digits and position, then export the stamped PDFs, an optional combined PDF and an index of which numbers went where. Your originals stay as they are. Runs locally; no upload or API keys.",
+    "zh-CN": "给一批 PDF 的每一页连续盖上编号（DOC-000001、DOC-000002……），像证据材料、送达文件那样跨文件接续编号。可以在每页加“副本”“COPY”“CONFIDENTIAL”等标签，在每个文件首页加“证据 1”“Exhibit A”等标签。排好文件顺序，选好前缀、位数和位置，导出盖章后的 PDF、可选的合并 PDF 和编号索引。原文件保持不变。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bates numbering",
+    "bates stamp",
+    "exhibit labels",
+    "pdf page numbers",
+    "legal documents",
+    "document production",
+    "文件编号",
+    "页码盖章",
+    "证据编号",
+    "PDF 编号",
+    "副本",
+    "卷宗"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "bates-numbering": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "文件编号盖章",
+          "en-US": "Bates Numbering"
+        },
+        "icon": "hash",
+        "server": "bates-numbering",
+        "resourceUri": "ui://bates-numbering/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
