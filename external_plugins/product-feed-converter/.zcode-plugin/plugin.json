@@ -1,0 +1,58 @@
+{
+  "name": "product-feed-converter",
+  "version": "0.1.0",
+  "description": "Turn one product sheet into the import files online stores and shopping ads expect. From a single list of products and variants — SKU, title, description, prices, brand, category, images, stock, barcodes and colour/size options — write a Shopify-style product import CSV, a WooCommerce-style product import CSV and a shopping-ads product feed in RSS/XML. It also reads those store exports back in, so you can move a catalogue from one format to another. Before exporting, it checks every row against each format's required fields and lists what to fix. Runs locally; no store login or API keys.",
+  "description_i18n": {
+    "en": "Turn one product sheet into the import files online stores and shopping ads expect. From a single list of products and variants — SKU, title, description, prices, brand, category, images, stock, barcodes and colour/size options — write a Shopify-style product import CSV, a WooCommerce-style product import CSV and a shopping-ads product feed in RSS/XML. It also reads those store exports back in, so you can move a catalogue from one format to another. Before exporting, it checks every row against each format's required fields and lists what to fix. Runs locally; no store login or API keys.",
+    "zh-CN": "把一张商品表变成网店和购物广告需要的导入文件。从一份商品和规格清单（货号、标题、描述、价格、品牌、分类、图片、库存、条码、颜色尺码）生成 Shopify 式商品导入 CSV、WooCommerce 式商品导入 CSV，以及购物广告用的 RSS/XML 商品 feed。也能读回这些店铺导出的文件，方便在格式之间搬迁商品。导出前按每种格式的必填要求逐行检查，列出需要修改的地方。在本地运行，不用登录店铺，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "product feed",
+    "product import",
+    "csv import",
+    "shopping feed",
+    "catalog",
+    "variants",
+    "GTIN",
+    "商品导入",
+    "商品数据",
+    "格式转换",
+    "商品 feed",
+    "批量上架"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "product-feed-converter": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "商品数据格式转换",
+          "en-US": "Product Feed Converter"
+        },
+        "icon": "arrow-left-right",
+        "server": "product-feed-converter",
+        "resourceUri": "ui://product-feed-converter/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
