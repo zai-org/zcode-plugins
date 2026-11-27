@@ -1,0 +1,59 @@
+{
+  "name": "audiogram-maker",
+  "version": "0.1.0",
+  "description": "Turn a podcast or audio clip into a short video for social posts: an animated waveform, the cover image, title and subtitle, a progress bar and burned-in captions. Pick the audio, optionally a cover image and captions (SRT, LRC, or a plain text file with one caption per line, spread over the clip by length). Cut a segment out of a long episode with clip start and end, choose square, vertical or landscape, set the colours and waveform style, and fix caption times in the table; reversed or overlapping times and captions too long to fit are flagged before you render. Exports an MP4 (H.264 + AAC), a poster PNG for the thumbnail and an SRT re-timed to the clip. Runs locally with ffmpeg; no account or API keys.",
+  "description_i18n": {
+    "en": "Turn a podcast or audio clip into a short video for social posts: an animated waveform, the cover image, title and subtitle, a progress bar and burned-in captions. Pick the audio, optionally a cover image and captions (SRT, LRC, or a plain text file with one caption per line, spread over the clip by length). Cut a segment out of a long episode with clip start and end, choose square, vertical or landscape, set the colours and waveform style, and fix caption times in the table; reversed or overlapping times and captions too long to fit are flagged before you render. Exports an MP4 (H.264 + AAC), a poster PNG for the thumbnail and an SRT re-timed to the clip. Runs locally with ffmpeg; no account or API keys.",
+    "zh-CN": "把播客或音频片段做成发社交平台的短视频：动态波形、封面图、标题和副标题、进度条，以及烧录进画面的字幕。选择音频，可加封面图和字幕（SRT、LRC，或每行一句的纯文本，按长度自动分配到片段里）。用片段开始/结束从一整期节目里截一段，选方形、竖屏或横屏，设置颜色和波形样式，在表格里改字幕时间；时间倒置、字幕重叠、字幕太长放不下都会在渲染前提示。导出 MP4（H.264 + AAC）、做缩略图用的封面 PNG，以及按片段重新计时的 SRT。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "audiogram",
+    "podcast",
+    "waveform",
+    "video",
+    "captions",
+    "social",
+    "音频",
+    "播客",
+    "波形",
+    "短视频",
+    "字幕",
+    "音频视频",
+    "封面"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "audiogram-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "音频波形视频",
+          "en-US": "Audiogram Maker"
+        },
+        "icon": "audio-waveform",
+        "server": "audiogram-maker",
+        "resourceUri": "ui://audiogram-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
