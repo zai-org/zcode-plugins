@@ -1690,7 +1690,7 @@
         "en": "Create a pure #FFFFFF PNG canvas, or open WhiteBackground’s free local photo editor for white backgrounds, transparent cutouts, PNG-to-white, square padding, Shopify sizing or local enlargement. Photos are chosen in the official editor; this plugin does not upload them or spend credits. No WhiteBackground account or API key.",
         "zh-CN": "生成纯白 #FFFFFF 的 PNG 画布，或打开 WhiteBackground 免费本机编辑器：白底图、透明抠图、透明 PNG 铺白底、不裁切的正方形、Shopify 尺寸、本地放大。照片由你在官方编辑器里选择，本插件不会上传，也不会消耗积分。无需 WhiteBackground 账号或 API 密钥。"
       },
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "Penova",
         "url": "https://github.com/ppppp2005-p"
