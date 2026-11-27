@@ -35,6 +35,12 @@ export function availabilityOf(p: Pick<Product, "availability" | "stock">) {
 }
 
 const isUrl = (u: string) => /^https?:\/\/[^\s/]+\.[^\s]+$/i.test(u);
+/** 相对图片路径（images/a.jpg、/img/a.jpg）在设了店铺网址时补成完整网址；购物广告和导入都要完整网址。 */
+export function absImage(u: string, o: Pick<Options, "baseUrl">) {
+  if (!u || isUrl(u) || /^[a-z][a-z0-9+.-]*:/i.test(u) || !isUrl(o.baseUrl)) return u;
+  try { return new URL(u.replace(/\\/g, "/").replace(/^\.\//, ""), `${o.baseUrl.replace(/\/+$/, "")}/`).href; } catch { return u; }
+}
+const withAbsImages = (ps: Product[], o: Options) => ps.map((p) => (p.images.every(isUrl) ? p : { ...p, images: p.images.map((u) => absImage(u, o)) }));
 
 export function validate(products: Product[], o: Options, targets: Target[]): FeedIssue[] {
   const out: FeedIssue[] = [];
@@ -47,7 +53,7 @@ export function validate(products: Product[], o: Options, targets: Target[]): Fe
     if (!p.title) e("error", "title", "no title / 缺少标题");
     if (!Number.isFinite(p.price) || p.price <= 0) e("error", "price", `price “${Number.isFinite(p.price) ? p.price : ""}” must be a number above 0 / 价格无效`);
     if (Number.isFinite(p.salePrice) && Number.isFinite(p.price) && p.salePrice >= p.price) e("warn", "salePrice", `sale price ${p.salePrice} is not below the regular price ${p.price} — it will be ignored / 促销价不低于原价`);
-    for (const u of p.images) if (!isUrl(u)) e("warn", "images", `image “${u.slice(0, 60)}” is not a full http(s) URL / 图片不是完整网址`);
+    for (const u of p.images) if (!isUrl(absImage(u, o))) e("warn", "images", `image “${u.slice(0, 60)}” is not a full http(s) URL / 图片不是完整网址`);
     if (p.gtin && !gtinValid(p.gtin)) e("warn", "gtin", `GTIN ${p.gtin} has a wrong length or check digit / 条码校验位不对`);
     if (targets.includes("merchant")) {
       if (!p.description) e("error", "description", "description is required for a shopping feed / 购物广告需要描述", "merchant");
@@ -83,6 +89,7 @@ const hasSale = (p: Product) => Number.isFinite(p.salePrice) && p.salePrice > 0 
 
 /** Shopify 商品导入 CSV：同一句柄多行 = 变体；多余图片单独成行。 */
 export function shopifyCsv(ps: Product[], o: Options) {
+  ps = withAbsImages(ps, o);
   const H = ["Handle", "Title", "Body (HTML)", "Vendor", "Product Category", "Type", "Tags", "Published", "Option1 Name", "Option1 Value", "Option2 Name", "Option2 Value", "Option3 Name", "Option3 Value", "Variant SKU", "Variant Grams", "Variant Inventory Tracker", "Variant Inventory Qty", "Variant Inventory Policy", "Variant Fulfillment Service", "Variant Price", "Variant Compare At Price", "Variant Requires Shipping", "Variant Taxable", "Variant Barcode", "Image Src", "Image Position", "Image Alt Text", "Gift Card", "Variant Image", "Variant Weight Unit", "Status"];
   const rows: unknown[][] = [];
   for (const g of groups(ps)) {
@@ -103,6 +110,7 @@ export function shopifyCsv(ps: Product[], o: Options) {
 
 /** WooCommerce 商品导入 CSV：单品 simple；有分组的先写 variable 父商品，再写 variation。 */
 export function wooCsv(ps: Product[], o: Options) {
+  ps = withAbsImages(ps, o);
   const H = ["Type", "SKU", "Name", "Published", "Is featured?", "Visibility in catalog", "Short description", "Description", "In stock?", "Stock", "Backorders allowed?", "Sale price", "Regular price", "Categories", "Tags", "Images", "Parent", "Brands", "Weight (kg)", "Attribute 1 name", "Attribute 1 value(s)", "Attribute 1 visible", "Attribute 1 global", "Attribute 2 name", "Attribute 2 value(s)", "Attribute 2 visible", "Attribute 2 global", "Attribute 3 name", "Attribute 3 value(s)", "Attribute 3 visible", "Attribute 3 global"];
   const rows: unknown[][] = [];
   const base = (p: Product) => ({ Published: p.status === "draft" ? 0 : 1, "Is featured?": 0, "Visibility in catalog": "visible", "In stock?": availabilityOf(p) === "out_of_stock" ? 0 : 1, Stock: Number.isFinite(p.stock) ? p.stock : "", "Backorders allowed?": availabilityOf(p) === "backorder" ? 1 : 0, "Sale price": hasSale(p) ? price2(p.salePrice) : "", "Regular price": price2(p.price), "Weight (kg)": Number.isFinite(p.weight) ? +toKg(p.weight, o.weightUnit).toFixed(3) : "" });
@@ -129,6 +137,7 @@ const htmlBody = (d: string) => (/<[a-z][^>]*>/i.test(d) ? d : d.split(/\n{2,}/)
 
 /** 购物广告商品 feed（RSS 2.0 + g: 命名空间）。 */
 export function merchantXml(ps: Product[], o: Options, title: string) {
+  ps = withAbsImages(ps, o);
   const items = ps.map((p) => {
     const cur = p.currency || o.currency;
     const f: [string, string][] = [["g:id", p.id], ["g:title", p.title.slice(0, 150)], ["g:description", p.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000)], ["g:link", linkOf(p, o)], ["g:image_link", p.images[0] ?? ""],

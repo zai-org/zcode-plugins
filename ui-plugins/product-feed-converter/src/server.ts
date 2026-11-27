@@ -105,7 +105,7 @@ const def: AppDef = {
   inputs: { exts: [".xlsx", ".csv", ".tsv"], min: 1, max: 1, label: ["选择商品表", "Pick the product sheet"] },
   settings: [
     { key: "check", label: ["检查哪个格式的必填项", "Check required fields for"], type: "select", default: "all", options: [{ value: "all", label: ["全部", "All formats"] }, { value: "shopify", label: ["Shopify 导入 CSV", "Shopify import CSV"] }, { value: "woocommerce", label: ["WooCommerce 导入 CSV", "WooCommerce import CSV"] }, { value: "merchant", label: ["购物广告 feed XML", "Shopping feed XML"] }] },
-    { key: "baseUrl", label: ["店铺网址", "Store URL"], type: "text", default: "", help: ["没有商品链接时用 网址/products/句柄", "Used for links as URL/products/handle when a row has none"] },
+    { key: "baseUrl", label: ["店铺网址", "Store URL"], type: "text", default: "", help: ["没有商品链接时用 网址/products/句柄；相对图片路径也补成 网址/路径", "Used for links as URL/products/handle when a row has none, and to turn relative image paths into full URLs"] },
     { key: "currency", label: ["币种代码", "Currency code"], type: "text", default: "CNY" },
     { key: "brand", label: ["默认品牌", "Default brand"], type: "text", default: "" },
     { key: "condition", label: ["默认成色", "Default condition"], type: "select", default: "new", options: [{ value: "new", label: ["全新", "New"] }, { value: "used", label: ["二手", "Used"] }, { value: "refurbished", label: ["翻新", "Refurbished"] }] },
