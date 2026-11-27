@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { connect } from "../src/kit/testing.ts";
-import { createServer } from "../src/server.ts";
+import { createServer, PREVIEW_URI, STATE_URI } from "../src/server.ts";
 
 function pngWithSize(width: number, height: number): Buffer {
   const ihdr = Buffer.alloc(13);
@@ -58,6 +58,27 @@ describe("whitebackground MCP tools", () => {
       code: "bad_path",
     });
     await expect(call("canvas_create", { width: 8192, height: 8192 })).rejects.toMatchObject({ code: "too_many_pixels" });
+  });
+
+  it("exposes the last canvas on the panel state and preview resources", async () => {
+    const { png, call, client } = await harness();
+    const textOf = (resource: { contents: Array<Record<string, unknown>> }) => String(resource.contents[0]?.text ?? "");
+    const empty = await client.readResource({ uri: STATE_URI });
+    expect(JSON.parse(textOf(empty))).toEqual({ canvas: null, editor: null });
+    await call("canvas_create", { width: 32, height: 24 });
+    await call("editor_open", { workflow: "square" });
+    const state = JSON.parse(textOf(await client.readResource({ uri: STATE_URI })));
+    expect(state.canvas).toMatchObject({
+      path: "whitebackground/white-32x24.png",
+      width: 32,
+      height: 24,
+      previewUri: PREVIEW_URI,
+    });
+    expect(state.editor).toMatchObject({ workflow: "square", url: "https://whitebackground.app/make-image-square" });
+    const preview = await client.readResource({ uri: PREVIEW_URI });
+    const blob = (preview.contents[0] as { blob?: string }).blob;
+    expect(blob).toBeTruthy();
+    expect(Buffer.from(String(blob), "base64").equals(png)).toBe(true);
   });
 
   it("returns official editor URLs and does not invent cloud tools", async () => {
