@@ -1,0 +1,58 @@
+{
+  "name": "org-chart-maker",
+  "version": "0.1.0",
+  "description": "Turn a staff list into a clean organisation chart. Each person just needs a name, a title, a department and who they report to; the chart is laid out automatically, coloured by department or level, with large teams stacked neatly. Collapse a branch to show “+N”, limit how many levels appear, and fix reporting lines by editing the manager column — missing managers, loops and duplicate names are flagged. Export SVG, a high-resolution PNG and a one-page PDF. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Turn a staff list into a clean organisation chart. Each person just needs a name, a title, a department and who they report to; the chart is laid out automatically, coloured by department or level, with large teams stacked neatly. Collapse a branch to show “+N”, limit how many levels appear, and fix reporting lines by editing the manager column — missing managers, loops and duplicate names are flagged. Export SVG, a high-resolution PNG and a one-page PDF. Runs locally; no account or API keys.",
+    "zh-CN": "把一份员工名单变成清晰的组织架构图。每人只需要姓名、职位、部门和直属上级，自动排版，按部门或层级配色，人数多的小组会整齐竖排。可以折叠某个分支显示“+N”、限制显示的层数，在“上级”列里改汇报关系——找不到的上级、循环汇报和重名都会标出来。导出 SVG、高清 PNG 和一页 PDF。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "org chart",
+    "organization chart",
+    "organisational chart",
+    "hierarchy",
+    "reporting lines",
+    "team structure",
+    "组织架构图",
+    "组织结构图",
+    "架构图",
+    "汇报关系",
+    "部门架构",
+    "人员架构"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "org-chart-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "组织架构图",
+          "en-US": "Org Chart Maker"
+        },
+        "icon": "network",
+        "server": "org-chart-maker",
+        "resourceUri": "ui://org-chart-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
