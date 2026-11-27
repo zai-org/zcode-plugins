@@ -1,0 +1,35 @@
+.hero { margin-bottom: 10px; }
+.hero p { margin: 0 0 8px; color: var(--muted); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.presets button { padding: 3px 8px; font-size: 12px; }
+.size-row input { width: 88px; }
+.preview {
+  margin: 10px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: repeating-conic-gradient(var(--panel) 0 25%, var(--bg) 0 50%) 50% / 16px 16px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.preview img { max-width: 100%; max-height: 240px; min-width: 80px; min-height: 80px; object-fit: contain; image-rendering: pixelated; display: block; background: #fff; box-shadow: 0 0 0 1px var(--line); }
+.preview .empty { border: 0; }
+.workflows { display: grid; gap: 8px; }
+.wf {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--panel);
+  display: grid;
+  gap: 6px;
+}
+.wf h3 { margin: 0; font-size: 13px; }
+.wf p { margin: 0; color: var(--muted); font-size: 12px; }
+.wf .url { font-size: 12px; word-break: break-all; }
+.foot { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.foot a, button.link {
+  background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font: inherit; text-decoration: underline;
+}
+.path { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
