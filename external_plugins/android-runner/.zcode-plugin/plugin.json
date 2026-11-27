@@ -1,0 +1,53 @@
+{
+  "name": "android-runner",
+  "version": "0.6.0",
+  "description": "Android device runner for ZCode: a side panel with devices, build, install, launch, logcat and scrcpy mirroring, plus zero-config detection of the Gradle project, adb, SDK, JDK and product flavors.",
+  "description_i18n": {
+    "zh-CN": "Android 设备运行器:ZCode 侧栏面板里看设备、编译、安装、启动、投屏、看日志;工程、SDK、JDK、adb、多渠道 flavor 全自动探测。",
+    "en": "Android device runner for ZCode: a side panel with devices, build, install, launch, logcat and scrcpy mirroring, plus zero-config detection of the Gradle project, adb, SDK, JDK and product flavors."
+  },
+  "author": {
+    "name": "menggod",
+    "url": "https://github.com/menggod"
+  },
+  "keywords": [
+    "android",
+    "adb",
+    "gradle",
+    "apk",
+    "logcat",
+    "device",
+    "emulator"
+  ],
+  "skills": "./skills",
+  "commands": "./commands",
+  "mcpServers": {
+    "android-runner": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/scripts/mcp-server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      },
+      "isolation": "workspace"
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "android-runner",
+        "title": {
+          "zh-CN": "Android 设备",
+          "en-US": "Android Runner"
+        },
+        "icon": "smartphone",
+        "server": "android-runner",
+        "resourceUri": "ui://android-runner/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
