@@ -1,0 +1,1 @@
+{"prefix": "gif", "folder": "录屏", "pick": ["clips"], "startSettings": {"width": 320, "fps": 10}, "uiEdit": {"row": 0, "key": "end", "value": "3"}, "expectText": "clip(s)", "expectFiles": ["demo\\.gif$", "gif-report\\.csv$"]}
