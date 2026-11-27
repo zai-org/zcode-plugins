@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -810,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -833,7 +838,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -860,7 +867,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -887,7 +896,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -914,7 +925,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -941,7 +954,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -968,7 +983,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -995,7 +1012,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1022,7 +1041,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1049,7 +1070,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1132,7 +1155,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1672,6 +1697,35 @@
           "用这两张正面和左侧视角图生成一个白模",
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
+      }
+    },
+    {
+      "name": "baton",
+      "source": "./external_plugins/baton",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/baton/icon.png",
+      "description": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",
+      "description_i18n": {
+        "en": "Deterministic ticket/DAG/subagent control plane over OpenSpec changes: a local Python CLI computes the task frontier and returns session actions; the main session dispatches each task packet to a subagent in an isolated git worktree, and only a sealed receipt with green verification counts as done. Bundles the baton skill and the CLI.",
+        "zh-CN": "OpenSpec 变更的确定性 ticket/DAG/子代理控制面：本地 Python CLI 计算任务前沿并返回会话动作；主会话把任务包派发到隔离 git worktree 中的子代理，只有验证全绿的密封回执才算完成。内置 baton 技能与控制面 CLI。"
+      },
+      "version": "0.5.0",
+      "author": {
+        "name": "Lumos-789",
+        "url": "https://github.com/Lumos-789"
+      },
+      "category": "developer-tools",
+      "keywords": [
+        "openspec",
+        "subagents",
+        "ticket-dag",
+        "workflow",
+        "deterministic-scheduling"
+      ],
+      "examplePrompts": [],
+      "examplePrompts_i18n": {},
+      "displayName": "Baton",
+      "displayName_i18n": {
+        "zh-CN": "Baton"
       }
     }
   ]
