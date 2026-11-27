@@ -1,0 +1,1 @@
+{"prefix": "codestats", "folder": "projects", "pick": ["tea-shop"], "startSettings": {"title": "茶铺小店 代码统计"}, "uiEdit": {"row": 0, "key": "include", "value": false}, "expectText": "code lines", "expectFiles": ["code-stats\\.html$", "code-stats\\.xlsx$", "languages\\.csv$"]}
