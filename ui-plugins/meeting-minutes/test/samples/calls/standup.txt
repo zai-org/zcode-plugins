@@ -1,0 +1,10 @@
+Weekly sync, Dec 2 2026
+[00:00:05] Alice: Morning everyone. Agenda: release 2.4, hiring.
+[00:01:10] Bob: The release build is green, no blockers left.
+[00:02:30] Alice: Decision: we ship 2.4 on Thursday.
+[00:03:00] Carol: I'll update the changelog by tomorrow.
+[00:03:40] Alice: Bob, can you send the release notes to support by Friday?
+[00:04:10] Bob: Sure.
+[00:05:00] Carol: Do we need a feature flag for the export?
+[00:06:20] Alice: For hiring, we agreed to open one backend role.
+[00:07:00] Alice: Dana will draft the job post by next Monday.
