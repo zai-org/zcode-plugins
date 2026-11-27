@@ -1,0 +1,1 @@
+{"prefix": "zhconv", "folder": "资料", "pick": ["docs"], "startSettings": {"exclude": "云帆", "custom": "门店=門市"}, "uiEdit": {"row": 0, "key": "accept", "value": false}, "expectText": "line(s) change", "expectFiles": ["converted/", "terms\\.csv$", "changes\\.csv$"]}

@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "zh-convert",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/zh-convert",
+      "displayName": "Chinese Script Converter",
+      "displayName_i18n": {
+        "en": "Chinese Script Converter",
+        "zh-CN": "繁简转换"
+      },
+      "description": "Convert Chinese documents between Simplified and Traditional characters in bulk — Taiwan or Hong Kong character forms, and optionally regional wording too (软件 → 軟體, 鼠标 → 滑鼠, and back). Works on TXT, Markdown, SRT/VTT subtitles and Word .docx files. Add your own dictionary entries, list names that must stay exactly as written, review every changed line, fix the rare wrong pick by hand, then export converted copies plus a term list. Uses the open-source OpenCC dictionaries locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Convert Chinese documents between Simplified and Traditional characters in bulk — Taiwan or Hong Kong character forms, and optionally regional wording too (软件 → 軟體, 鼠标 → 滑鼠, and back). Works on TXT, Markdown, SRT/VTT subtitles and Word .docx files. Add your own dictionary entries, list names that must stay exactly as written, review every changed line, fix the rare wrong pick by hand, then export converted copies plus a term list. Uses the open-source OpenCC dictionaries locally; no upload or API keys.",
+        "zh-CN": "批量把文档在简体和繁体之间转换：台湾或香港字形，也可以同时换成当地用词（软件 → 軟體、鼠标 → 滑鼠，反向也行）。支持 TXT、Markdown、SRT/VTT 字幕和 Word .docx。可以加自定义词条，列出必须保持原样的人名、品牌名，逐行审阅修改，手动改正个别选错的字，再导出转换后的副本和词条清单。使用开源 OpenCC 词典，在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "Simplified to Traditional",
+        "Traditional to Simplified",
+        "OpenCC",
+        "Taiwan Chinese",
+        "Hong Kong Chinese",
+        "Chinese converter",
+        "繁简转换",
+        "简转繁",
+        "繁转简",
+        "台湾用词",
+        "香港繁体",
+        "字幕繁简"
+      ],
+      "examplePrompts": [
+        "Convert the docs folder to Traditional Chinese with Taiwan wording",
+        "Turn this Traditional subtitle file into Simplified",
+        "Convert to Traditional but keep our brand name 云帆 as is"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 docs 文件夹转成台湾繁体用词",
+          "把这份繁体字幕转成简体",
+          "转成繁体，但品牌名“云帆”保持不变"
+        ]
+      }
     }
   ]
 }
