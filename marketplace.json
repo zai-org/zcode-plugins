@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "bilingual-aligner",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/bilingual-aligner",
+      "displayName": "Bilingual Aligner",
+      "displayName_i18n": {
+        "en": "Bilingual Aligner",
+        "zh-CN": "双语句对齐"
+      },
+      "description": "Line up a document and its translation sentence by sentence and turn them into a translation memory. Pick the source and the translation (text, Markdown or Word); both are split into sentences and aligned with a proven length-based method plus number anchors, so one sentence translated as two, or two merged into one, still line up. Rows that need a look are flagged: sentences with no counterpart, odd length ratios, and numbers that differ between the two sides, which often reveals real translation errors. Fix text, merge rows or drop them, then export Excel, TMX for translation tools such as Trados, memoQ and OmegaT, a tab-separated file and a side-by-side HTML. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Line up a document and its translation sentence by sentence and turn them into a translation memory. Pick the source and the translation (text, Markdown or Word); both are split into sentences and aligned with a proven length-based method plus number anchors, so one sentence translated as two, or two merged into one, still line up. Rows that need a look are flagged: sentences with no counterpart, odd length ratios, and numbers that differ between the two sides, which often reveals real translation errors. Fix text, merge rows or drop them, then export Excel, TMX for translation tools such as Trados, memoQ and OmegaT, a tab-separated file and a side-by-side HTML. Runs locally; no account or API keys.",
+        "zh-CN": "把原文和译文逐句对齐，做成翻译记忆。选择原文和译文（文本、Markdown 或 Word），两边自动分句，再用成熟的按长度对齐算法加上数字锚点对齐，一句译成两句、两句并成一句也能对上。需要人工看一眼的行会标出来：找不到对应的句子、长度比例异常，以及两边数字不一致（常常就是真正的翻译错误）。可以改文字、合并或删除行，最后导出 Excel、Trados/memoQ/OmegaT 用的 TMX、制表符文本和左右对照 HTML。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "alignment",
+        "translation memory",
+        "tmx",
+        "bilingual",
+        "parallel text",
+        "CAT",
+        "双语对齐",
+        "句对齐",
+        "翻译记忆",
+        "语料",
+        "对照",
+        "译文校对"
+      ],
+      "examplePrompts": [
+        "Align 隐私政策.txt with privacy-policy-en.docx",
+        "Fix the number mismatch and merge the title with the first sentence",
+        "Export TMX"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 隐私政策.txt 和 privacy-policy-en.docx 逐句对齐",
+          "修正数字不一致的那句，把标题和第一句合并",
+          "导出 TMX"
+        ]
+      }
     }
   ]
 }
