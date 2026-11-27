@@ -1,0 +1,58 @@
+{
+  "name": "math-worksheet",
+  "version": "0.1.0",
+  "description": "Print arithmetic drills with an answer key in seconds. Pick a grade preset — adding and subtracting within 20, within 100 with or without carrying, times tables, division with remainders, 3-digit sums, 2-digit multiplication — or set your own operations and number ranges. Choose how many problems, horizontal or vertical (column) layout and fill-in-the-blank problems like □ + 5 = 12; change the set number for a fresh sheet, or keep the same number to print the same one again. Edit any problem and it stays when you regenerate. Export the worksheet with a name, time and score line, a matching answer key in red, and a CSV. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Print arithmetic drills with an answer key in seconds. Pick a grade preset — adding and subtracting within 20, within 100 with or without carrying, times tables, division with remainders, 3-digit sums, 2-digit multiplication — or set your own operations and number ranges. Choose how many problems, horizontal or vertical (column) layout and fill-in-the-blank problems like □ + 5 = 12; change the set number for a fresh sheet, or keep the same number to print the same one again. Edit any problem and it stays when you regenerate. Export the worksheet with a name, time and score line, a matching answer key in red, and a CSV. Runs locally; no account or API keys.",
+    "zh-CN": "几秒钟打印口算练习和答案。选年级题型（20 以内加减、100 以内进位/不进位加减、表内乘除、有余数的除法、三位数加减、两位数乘法等），或者自己设运算和数字范围。设题数、横式或竖式、挖空题（□ + 5 = 12）；换一个题组编号就是一套新题，编号不变就能重印同一套。可以改任何一道题，重新生成时保留。导出带姓名、用时、得分栏的练习卷，红色答案卷和 CSV。在本地运行，无需账号或 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "math worksheet",
+    "arithmetic",
+    "times tables",
+    "mental math",
+    "answer key",
+    "口算",
+    "口算题",
+    "练习卷",
+    "加减法",
+    "乘法口诀",
+    "竖式",
+    "小学数学"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "math-worksheet": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "口算练习生成",
+          "en-US": "Math Worksheet"
+        },
+        "icon": "calculator",
+        "server": "math-worksheet",
+        "resourceUri": "ui://math-worksheet/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
