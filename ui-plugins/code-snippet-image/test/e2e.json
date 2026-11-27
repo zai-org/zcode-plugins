@@ -1,0 +1,1 @@
+{"prefix": "codeimg", "folder": "代码", "pick": ["pay.ts"], "startSettings": {}, "uiEdit": {"row": 0, "key": "highlight", "value": "13-17"}, "expectText": "snippet", "expectFiles": ["\\.png$", "\\.svg$"]}
