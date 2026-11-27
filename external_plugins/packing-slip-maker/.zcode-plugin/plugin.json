@@ -1,0 +1,58 @@
+{
+  "name": "packing-slip-maker",
+  "version": "0.1.0",
+  "description": "Turn the orders you export from your shop into printed packing slips and one picking list. Lines with the same order number become one slip with the recipient, masked phone number, address, shipping method, tick boxes for every item, a gift-message box and a scannable order barcode. The picking list totals every SKU across all orders and sorts it by bin, so one walk through the shelves picks everything. Flags missing addresses, bad quantities and conflicting order details. Export the slips PDF and the picking list workbook. Runs locally; no shop login or API keys.",
+  "description_i18n": {
+    "en": "Turn the orders you export from your shop into printed packing slips and one picking list. Lines with the same order number become one slip with the recipient, masked phone number, address, shipping method, tick boxes for every item, a gift-message box and a scannable order barcode. The picking list totals every SKU across all orders and sorts it by bin, so one walk through the shelves picks everything. Flags missing addresses, bad quantities and conflicting order details. Export the slips PDF and the picking list workbook. Runs locally; no shop login or API keys.",
+    "zh-CN": "把从店铺后台导出的订单表变成可以打印的发货单和一张拣货单。订单号相同的行合成一张发货单：收件人、打码后的电话、地址、配送方式、每件商品的勾选框、礼品留言框，以及可以扫描的订单号条码。拣货单把所有订单的同一商品汇总，并按库位排序，走一趟货架就能拣完。还会提示缺少地址、数量不对、同一订单信息不一致。导出发货单 PDF 和拣货单 Excel。在本地运行，不用登录店铺后台，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "packing slip",
+    "picking list",
+    "order fulfillment",
+    "shipping",
+    "ecommerce",
+    "gift message",
+    "发货单",
+    "拣货单",
+    "打包",
+    "订单",
+    "电商发货",
+    "礼品留言"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "packing-slip-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "发货单拣货单",
+          "en-US": "Packing Slips"
+        },
+        "icon": "package-check",
+        "server": "packing-slip-maker",
+        "resourceUri": "ui://packing-slip-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
