@@ -1,0 +1,1 @@
+{"prefix": "orgchart", "folder": "公司", "pick": ["staff.csv"], "startSettings": {"title": "茶铺科技 组织架构"}, "uiEdit": {"row": 17, "key": "manager", "value": "陈总"}, "expectText": "level(s)", "expectFiles": ["org-chart\\.svg$", "org-chart\\.png$", "org-chart\\.pdf$"]}
