@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "meeting-minutes",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/meeting-minutes",
+      "displayName": "Meeting Minutes",
+      "displayName_i18n": {
+        "en": "Meeting Minutes",
+        "zh-CN": "会议纪要整理"
+      },
+      "description": "Turn rough meeting notes or a transcript into proper minutes. It picks out the date, attendees, agenda, decisions, open questions and action items, works out who owns each action and when it's due (\"周五前\", \"下周一\", \"by Friday\", \"next Monday\" are resolved against the meeting date), and flags actions with no owner or deadline. Fix anything in the table, then export a Word document, Markdown and a calendar file with one reminder per deadline. Runs locally; no upload or API keys.",
+      "description_i18n": {
+        "en": "Turn rough meeting notes or a transcript into proper minutes. It picks out the date, attendees, agenda, decisions, open questions and action items, works out who owns each action and when it's due (\"周五前\", \"下周一\", \"by Friday\", \"next Monday\" are resolved against the meeting date), and flags actions with no owner or deadline. Fix anything in the table, then export a Word document, Markdown and a calendar file with one reminder per deadline. Runs locally; no upload or API keys.",
+        "zh-CN": "把零散的会议笔记或逐字稿整理成规范的会议纪要：识别日期、参会人、议程、决定、待定问题和行动项，找出每个行动项的负责人和截止日期（“周五前”“下周一”“by Friday”等按会议日期换算），没有负责人或截止日期的会提示出来。在表格里修改后，导出 Word 纪要、Markdown 和日历文件（每个截止日期一条提醒）。在本地运行，不上传，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "meeting minutes",
+        "action items",
+        "meeting notes",
+        "transcript",
+        "ics",
+        "decisions",
+        "会议纪要",
+        "行动项",
+        "会议记录",
+        "逐字稿",
+        "待办",
+        "周会"
+      ],
+      "examplePrompts": [
+        "Turn today's meeting notes into minutes",
+        "List the action items with owners and deadlines",
+        "Make a calendar file for the deadlines"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把今天的会议记录整理成纪要",
+          "列出行动项、负责人和截止日期",
+          "把截止日期做成日历提醒"
+        ]
+      }
     }
   ]
 }
