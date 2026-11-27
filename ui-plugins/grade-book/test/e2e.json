@@ -1,0 +1,1 @@
+{"prefix": "grades", "folder": "成绩", "pick": ["scores.xlsx"], "startSettings": {"school": "Penova 实验中学"}, "uiEdit": {"row": 0, "key": "comment", "value": "继续保持"}, "expectText": "students", "expectFiles": ["grades\\.xlsx$", "report-cards\\.pdf$", "summary\\.pdf$"]}
