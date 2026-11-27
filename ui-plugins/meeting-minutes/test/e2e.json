@@ -1,0 +1,1 @@
+{"prefix": "minutes", "folder": "会议", "pick": ["meetings"], "uiEdit": {"row": 14, "key": "owner", "value": "李娜"}, "expectText": "action(s)", "expectFiles": ["minutes\\.docx$", "minutes\\.md$", "actions\\.ics$", "actions\\.csv$"]}
