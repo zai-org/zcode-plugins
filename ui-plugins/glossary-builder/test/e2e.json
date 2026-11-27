@@ -1,0 +1,1 @@
+{"prefix": "glossary", "folder": "资料", "pick": ["docs"], "startSettings": {}, "uiEdit": {"row": 0, "key": "note", "value": "核心概念"}, "expectText": "candidate term", "expectFiles": ["glossary\\.xlsx$", "glossary\\.csv$", "glossary\\.tbx$", "glossary\\.md$"]}
