@@ -1,0 +1,1 @@
+{"prefix": "sizechart", "folder": "店铺", "pick": ["sizes.csv"], "startSettings": {"title": "纯棉T恤尺码表"}, "uiEdit": {"row": 2, "key": "m1", "value": "70"}, "expectText": "measurement", "expectFiles": ["size-chart\\.png$", "size-chart\\.svg$", "size-chart\\.html$", "size-chart\\.xlsx$"]}
