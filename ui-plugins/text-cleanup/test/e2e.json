@@ -1,0 +1,1 @@
+{"prefix": "cleanup", "folder": "稿件", "pick": ["docs"], "startSettings": {"repeatPunct": true}, "uiEdit": {"row": 0, "key": "accept", "value": false}, "expectText": "line(s) to change", "expectFiles": ["cleaned/", "changes\\.diff$", "changes\\.csv$"]}

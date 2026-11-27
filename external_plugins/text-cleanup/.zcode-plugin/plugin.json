@@ -1,0 +1,58 @@
+{
+  "name": "text-cleanup",
+  "version": "0.1.0",
+  "description": "Tidy up Chinese and mixed Chinese–English writing in Markdown and text files. It fixes half-width punctuation inside Chinese sentences, full-width letters and digits, …… and ——, straight quotes, the space between Chinese and English words or numbers, stray spaces around punctuation, repeated spaces and extra blank lines. Code blocks, inline code, link addresses and front matter are never touched. Review every changed line side by side, skip or hand-edit any of them, then export cleaned copies of the files, a diff and a change list. Your originals stay as they are. Runs locally; no upload or API keys.",
+  "description_i18n": {
+    "en": "Tidy up Chinese and mixed Chinese–English writing in Markdown and text files. It fixes half-width punctuation inside Chinese sentences, full-width letters and digits, …… and ——, straight quotes, the space between Chinese and English words or numbers, stray spaces around punctuation, repeated spaces and extra blank lines. Code blocks, inline code, link addresses and front matter are never touched. Review every changed line side by side, skip or hand-edit any of them, then export cleaned copies of the files, a diff and a change list. Your originals stay as they are. Runs locally; no upload or API keys.",
+    "zh-CN": "清理 Markdown 和纯文本中的中文、中英混排：中文句子里的半角标点、全角字母数字、省略号和破折号、直引号、中英文和数字之间的空格、标点前后多余的空格、连续空格和多余空行。代码块、行内代码、链接地址和 front matter 不会改动。每一处修改都能对照查看，可以跳过或手动改，然后导出清洗后的文件副本、diff 和修改清单，原文件保持不变。在本地运行，不上传，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "Chinese typography",
+    "text cleanup",
+    "punctuation",
+    "pangu spacing",
+    "full-width",
+    "markdown lint",
+    "中文排版",
+    "全角半角",
+    "中英文空格",
+    "标点符号",
+    "文案规范",
+    "排版清洗"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "text-cleanup": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "中文文本排版清洗",
+          "en-US": "Text Cleanup"
+        },
+        "icon": "wand",
+        "server": "text-cleanup",
+        "resourceUri": "ui://text-cleanup/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
