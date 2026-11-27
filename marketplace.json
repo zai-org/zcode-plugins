@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "audio-splitter",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/audio-splitter",
+      "displayName": "Audio Splitter",
+      "displayName_i18n": {
+        "en": "Audio Splitter",
+        "zh-CN": "长音频切分"
+      },
+      "description": "Cut a long recording into tracks: a lecture into chapters, a podcast into segments, a live set into songs. Open an audio file (or a video's soundtrack) and it is split at the pauses, at a fixed length, or at the times in your chapter list; add a plain list of titles and the tracks are named in order. Very short pieces are merged into their neighbours and over-long ones are cut again at their longest pause. Move any cut point, rename or skip tracks, then export numbered audio files (copied without re-encoding, or as MP3, M4A or WAV, with title, track and album tags), a track list CSV, YouTube-style chapter timestamps and a CUE sheet. Runs locally with ffmpeg; no account or API keys.",
+      "description_i18n": {
+        "en": "Cut a long recording into tracks: a lecture into chapters, a podcast into segments, a live set into songs. Open an audio file (or a video's soundtrack) and it is split at the pauses, at a fixed length, or at the times in your chapter list; add a plain list of titles and the tracks are named in order. Very short pieces are merged into their neighbours and over-long ones are cut again at their longest pause. Move any cut point, rename or skip tracks, then export numbered audio files (copied without re-encoding, or as MP3, M4A or WAV, with title, track and album tags), a track list CSV, YouTube-style chapter timestamps and a CUE sheet. Runs locally with ffmpeg; no account or API keys.",
+        "zh-CN": "把长录音切成多段：讲座按章节、播客按段落、现场录音按歌曲。打开音频（或视频的声音），可以按停顿自动切、按固定时长切，或者按章节表里的时间切；再给一份只有标题的清单，就按顺序给每段命名。太短的片段会并到相邻段，太长的会在最长的停顿处再切一刀。每个切点都能改，可以改名或跳过某段，最后导出带序号的音频文件（不重新编码直接复制，或转成 MP3、M4A、WAV，并写入标题、音轨号、专辑标签）、分段清单 CSV、YouTube 章节时间戳和 CUE 文件。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "audio split",
+        "silence detection",
+        "chapters",
+        "podcast",
+        "lecture",
+        "cue",
+        "切分音频",
+        "分割录音",
+        "静音检测",
+        "章节",
+        "讲座录音",
+        "播客",
+        "分轨"
+      ],
+      "examplePrompts": [
+        "Split 茶艺讲座.mp3 at the pauses and name the parts from 章节.txt",
+        "Move track 3 to start at 00:30 and rename the last one 问答",
+        "Export the tracks and chapter list"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 茶艺讲座.mp3 按停顿切开，用 章节.txt 命名",
+          "第 3 段从 00:30 开始，最后一段改名“问答”",
+          "导出音频和章节清单"
+        ]
+      }
     }
   ]
 }
