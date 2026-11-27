@@ -1,0 +1,58 @@
+{
+  "name": "seating-planner",
+  "version": "0.1.0",
+  "description": "Seat an exam room, a classroom or a banquet in seconds. Open a name list and choose rows × seats or round tables; the planner keeps classmates from sitting next to each other in exams, keeps named people apart, seats friends together, puts people who need the front in the first rows, or fills banquet tables by family or department. Type a seat to lock it, change the seed to reshuffle the rest, and see every rule that couldn't be met. Export a printable seating chart PDF with a seat-lookup list, and a workbook. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Seat an exam room, a classroom or a banquet in seconds. Open a name list and choose rows × seats or round tables; the planner keeps classmates from sitting next to each other in exams, keeps named people apart, seats friends together, puts people who need the front in the first rows, or fills banquet tables by family or department. Type a seat to lock it, change the seed to reshuffle the rest, and see every rule that couldn't be met. Export a printable seating chart PDF with a seat-lookup list, and a workbook. Runs locally; no account or API keys.",
+    "zh-CN": "几秒钟排好考场、教室或宴会的座位。打开名单，选择“几排 × 每排几座”或圆桌；考试时同班同学不相邻，指定的人分开坐，好朋友坐一起，需要靠前的人排在前排，宴会可以按亲友或部门尽量同桌。输入座位即可固定，改随机种子重新排其余的人，排不下或冲突的规则都会列出来。导出可打印的座位表 PDF（附按姓名查座位的清单）和 Excel。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "seating chart",
+    "seating plan",
+    "exam seating",
+    "classroom seating",
+    "banquet seating",
+    "wedding tables",
+    "座位表",
+    "排座位",
+    "考场座位",
+    "教室座位",
+    "宴会座位",
+    "婚宴排桌"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "seating-planner": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "座位编排",
+          "en-US": "Seating Planner"
+        },
+        "icon": "layout-grid",
+        "server": "seating-planner",
+        "resourceUri": "ui://seating-planner/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "seating-planner",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/seating-planner",
+      "displayName": "Seating Planner",
+      "displayName_i18n": {
+        "en": "Seating Planner",
+        "zh-CN": "座位编排"
+      },
+      "description": "Seat an exam room, a classroom or a banquet in seconds. Open a name list and choose rows × seats or round tables; the planner keeps classmates from sitting next to each other in exams, keeps named people apart, seats friends together, puts people who need the front in the first rows, or fills banquet tables by family or department. Type a seat to lock it, change the seed to reshuffle the rest, and see every rule that couldn't be met. Export a printable seating chart PDF with a seat-lookup list, and a workbook. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Seat an exam room, a classroom or a banquet in seconds. Open a name list and choose rows × seats or round tables; the planner keeps classmates from sitting next to each other in exams, keeps named people apart, seats friends together, puts people who need the front in the first rows, or fills banquet tables by family or department. Type a seat to lock it, change the seed to reshuffle the rest, and see every rule that couldn't be met. Export a printable seating chart PDF with a seat-lookup list, and a workbook. Runs locally; no account or API keys.",
+        "zh-CN": "几秒钟排好考场、教室或宴会的座位。打开名单，选择“几排 × 每排几座”或圆桌；考试时同班同学不相邻，指定的人分开坐，好朋友坐一起，需要靠前的人排在前排，宴会可以按亲友或部门尽量同桌。输入座位即可固定，改随机种子重新排其余的人，排不下或冲突的规则都会列出来。导出可打印的座位表 PDF（附按姓名查座位的清单）和 Excel。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "seating chart",
+        "seating plan",
+        "exam seating",
+        "classroom seating",
+        "banquet seating",
+        "wedding tables",
+        "座位表",
+        "排座位",
+        "考场座位",
+        "教室座位",
+        "宴会座位",
+        "婚宴排桌"
+      ],
+      "examplePrompts": [
+        "Seat students.csv in a 6 × 8 exam room, keep classmates apart",
+        "Lock 王子涵 at R6C8 and reshuffle",
+        "Make it 4 round tables of 10, families together"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 students.csv 排一个 6 排 × 8 座的考场，同班不相邻",
+          "把王子涵固定在 R6C8，其他人重新排",
+          "改成 4 桌、每桌 10 人，同一家人尽量同桌"
+        ]
+      }
     }
   ]
 }
