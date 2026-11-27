@@ -1,0 +1,1 @@
+{"prefix": "commission", "folder": "销售", "pick": ["sales.xlsx"], "startSettings": {"company": "Penova 示例科技", "period": "2026-10", "special": "配件:8%; 服务:12%"}, "uiEdit": {"row": 1, "key": "amount", "value": "35000"}, "expectText": "commission payable", "expectFiles": ["commission\\.xlsx$", "all-statements\\.pdf$"]}
