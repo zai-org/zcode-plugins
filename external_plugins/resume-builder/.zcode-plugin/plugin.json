@@ -1,0 +1,56 @@
+{
+  "name": "resume-builder",
+  "version": "0.1.0",
+  "description": "Write your resume in plain Markdown and get a clean PDF, Word and web version — with checks a recruiter would make. Sections, entries and bullets become an editable table (reorder, hide, rewrite), laid out in three templates (accent header, classic, compact) on A4 or Letter. It flags missing email or phone, end dates before start dates, gaps of more than six months between jobs, mixed date formats, bullets that start with 负责 / 参与 / “Responsible for”, work bullets without any numbers, overly long bullets, ID numbers and age or marital status, and a PDF that runs over your page limit. Exports PDF, DOCX, HTML and a cleaned-up Markdown. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Write your resume in plain Markdown and get a clean PDF, Word and web version — with checks a recruiter would make. Sections, entries and bullets become an editable table (reorder, hide, rewrite), laid out in three templates (accent header, classic, compact) on A4 or Letter. It flags missing email or phone, end dates before start dates, gaps of more than six months between jobs, mixed date formats, bullets that start with 负责 / 参与 / “Responsible for”, work bullets without any numbers, overly long bullets, ID numbers and age or marital status, and a PDF that runs over your page limit. Exports PDF, DOCX, HTML and a cleaned-up Markdown. Runs locally; no account or API keys.",
+    "zh-CN": "用普通 Markdown 写简历，得到排版整洁的 PDF、Word 和网页版，并做一遍招聘方会做的检查。板块、经历和要点变成可编辑的表格（调整顺序、隐藏、改写），三种模板（彩色抬头、经典黑白、紧凑），A4 或 Letter。会提示缺少邮箱或电话、结束日期早于开始日期、两段工作之间超过半年的空档、日期格式不统一、以“负责 / 参与 / Responsible for”开头的要点、工作要点里完全没有数字、要点过长、身份证号和年龄婚姻等信息，以及 PDF 超出页数上限。导出 PDF、DOCX、HTML 和整理后的 Markdown。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "CV",
+    "简历",
+    "求职",
+    "PDF",
+    "Word",
+    "简历模板",
+    "简历检查",
+    "job",
+    "template"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "resume-builder": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "简历排版",
+          "en-US": "Resume Builder"
+        },
+        "icon": "user",
+        "server": "resume-builder",
+        "resourceUri": "ui://resume-builder/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
