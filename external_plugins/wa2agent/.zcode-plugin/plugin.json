@@ -1,0 +1,33 @@
+{
+  "name": "wa2agent",
+  "description": "A hosted, read-only WhatsApp MCP server for the chats you choose. It cannot send messages.",
+  "description_i18n": {
+    "en": "A hosted, read-only WhatsApp MCP server for the chats you choose. It cannot send messages.",
+    "zh-CN": "托管的只读 WhatsApp MCP 服务，用于读取你选择的聊天，无法发送消息。"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "Roy Rosenfeld",
+    "email": "info@wa2agent.link",
+    "url": "https://wa2agent.link"
+  },
+  "homepage": "https://wa2agent.link",
+  "repository": "https://github.com/rosroyros/wa2agent-skills",
+  "license": "MIT",
+  "keywords": ["wa2agent", "whatsapp", "mcp"],
+  "userConfig": {
+    "WA_VAULT_URL": {
+      "title": "Vault MCP URL",
+      "description": "Your vault URL from Connect your agent at https://wa2agent.link: https://vault-<id>.wa2agent.link/mcp.",
+      "type": "string",
+      "required": true
+    },
+    "WA_VAULT_TOKEN": {
+      "title": "Access key (WA_VAULT_TOKEN)",
+      "description": "The access key from your vault, without the Bearer prefix. This is separate from the encryption key note.",
+      "type": "string",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
