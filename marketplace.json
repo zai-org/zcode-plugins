@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "review-insights",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/review-insights",
+      "displayName": "Review Insights",
+      "displayName_i18n": {
+        "en": "Review Insights",
+        "zh-CN": "商品评价分析"
+      },
+      "description": "Find out what customers actually praise and complain about. Open reviews exported from your shop (CSV or Excel with the review text and, if you have it, the star rating); every review is split into phrases and grouped into topics such as quality, size, delivery, packaging, price, looks, smell, experience and service, in Chinese and English. You see the top complaints and praise for each topic with real quotes, the negative rate per topic, star distribution, likely duplicate reviews and reviews that fit no topic. Edit the keyword list, fix the tone or topics of any review, then export an HTML report and an Excel workbook. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Find out what customers actually praise and complain about. Open reviews exported from your shop (CSV or Excel with the review text and, if you have it, the star rating); every review is split into phrases and grouped into topics such as quality, size, delivery, packaging, price, looks, smell, experience and service, in Chinese and English. You see the top complaints and praise for each topic with real quotes, the negative rate per topic, star distribution, likely duplicate reviews and reviews that fit no topic. Edit the keyword list, fix the tone or topics of any review, then export an HTML report and an Excel workbook. Runs locally; no account or API keys.",
+        "zh-CN": "看清顾客到底在夸什么、在抱怨什么。打开店铺导出的评价（CSV 或 Excel，有评价内容，最好也有星级），每条评价按短句拆开，归到质量、尺码、物流、包装、价格、外观、气味、使用体验、客服等主题（中英文都支持）。报告列出每个主题的主要差评和好评原因并附原话、差评占比、星级分布，还会标出疑似重复刷评和没有归类的评价。主题词库可以自己改，单条评价的倾向和主题也能手动修正，最后导出 HTML 报告和 Excel。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "reviews",
+        "customer feedback",
+        "sentiment",
+        "ecommerce",
+        "complaints",
+        "评价分析",
+        "差评",
+        "好评",
+        "买家评论",
+        "电商",
+        "舆情",
+        "用户反馈"
+      ],
+      "examplePrompts": [
+        "Analyse reviews.csv and tell me the top complaints",
+        "Add a 面料 topic with 面料, 布料",
+        "Export the report"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "分析 reviews.csv，告诉我主要差评原因",
+          "加一个“面料”主题，关键词 面料、布料",
+          "导出分析报告"
+        ]
+      }
     }
   ]
 }
