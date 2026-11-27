@@ -1,0 +1,1 @@
+{"prefix": "resume", "folder": "求职", "pick": ["林小满-简历.md"], "startSettings": {}, "uiEdit": {"row": 3, "key": "dates", "value": "2018.07 – 2020.06"}, "expectText": "entries", "expectFiles": ["resume\\.pdf$", "resume\\.docx$", "resume\\.html$"]}
