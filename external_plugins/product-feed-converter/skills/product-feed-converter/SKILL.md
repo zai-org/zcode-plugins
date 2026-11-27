@@ -7,7 +7,7 @@ description: 把一张商品表变成网店和购物广告需要的导入文件�
 
 1. `feed_open(inputs, settings?, project?)`：读取商品表并检查。inputs 是工作区相对路径。
    - 结果里有汇总、问题列表（错误 / 提醒）和前几行数据，每行有编号 `#n`。
-   - inputs 传商品表，也可以是店铺导出的商品 CSV。settings.baseUrl 填店铺网址可自动生成商品链接。
+   - inputs 传商品表，也可以是店铺导出的商品 CSV。settings.baseUrl 填店铺网址可自动生成商品链接，并把相对图片路径补成完整网址。
 2. 向用户简要说明结果，先说错误和需要确认的地方，不要逐行念。
 3. 用户要改时调用 `feed_edit(project, settings?, set?: [{row, values}], add?, remove?)`。
    - 改某行：`set: [{row, values: {images: "https://…", salePrice: 99}}]`；变体用 group（同组同值）和 color/size/material。settings.check 选 all/shopify/woocommerce/merchant 决定检查哪种必填项。
