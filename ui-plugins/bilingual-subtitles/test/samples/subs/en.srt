@@ -1,0 +1,19 @@
+1
+00:00:01,100 --> 00:00:03,050
+Hello, and welcome to our tea garden.
+
+2
+00:00:03,450 --> 00:00:05,000
+These tea trees were planted over a century ago,
+
+3
+00:00:05,000 --> 00:00:06,500
+and we pick them every spring.
+
+4
+00:00:08,550 --> 00:00:10,900
+Let's go and see where the tea is roasted.
+
+5
+00:00:14,000 --> 00:00:15,500
+See you next time!
