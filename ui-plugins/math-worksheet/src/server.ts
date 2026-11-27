@@ -46,10 +46,12 @@ function drawSheet(k: PdfKit, p: Pick<Project, "rows" | "settings">, answers: bo
       const d = display(pr, answers);
       if (!vertical || pr.blank !== "answer" || pr.op === "÷") {
         // 横式；答案用红色写在等号后
-        const left = d.text.replace(/=.*$/, "= ");
+        // 只填得数时去掉等号后面；挖空运算数（□ + 15 = 40）时得数要留着，不然没法算
+        const q = display(pr, false).text;
+        const left = pr.blank === "answer" ? q.replace(/=.*$/, "= ") : q;
         const lx = x + size * 1.3;
         if (answers) {
-          const parts = display(pr, false).text.replace(/=.*$/, "= ");
+          const parts = left;
           k.text(page, parts, lx, yy - size, { size });
           const blankText = pr.blank === "answer" ? d.answer : "";
           if (blankText) k.text(page, blankText, lx + k.width(parts, size), yy - size, { size, color: "#dc2626", bold: true });
