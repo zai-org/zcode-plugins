@@ -1673,6 +1673,53 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "whitebackground",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/whitebackground",
+      "displayName": "WhiteBackground",
+      "displayName_i18n": {
+        "en": "WhiteBackground",
+        "zh-CN": "白底图"
+      },
+      "description": "Create a pure #FFFFFF PNG canvas, or open WhiteBackground’s free local photo editor for white backgrounds, transparent cutouts, PNG-to-white, square padding, Shopify sizing or local enlargement. Photos are chosen in the official editor; this plugin does not upload them or spend credits. No WhiteBackground account or API key.",
+      "description_i18n": {
+        "en": "Create a pure #FFFFFF PNG canvas, or open WhiteBackground’s free local photo editor for white backgrounds, transparent cutouts, PNG-to-white, square padding, Shopify sizing or local enlargement. Photos are chosen in the official editor; this plugin does not upload them or spend credits. No WhiteBackground account or API key.",
+        "zh-CN": "生成纯白 #FFFFFF 的 PNG 画布，或打开 WhiteBackground 免费本机编辑器：白底图、透明抠图、透明 PNG 铺白底、不裁切的正方形、Shopify 尺寸、本地放大。照片由你在官方编辑器里选择，本插件不会上传，也不会消耗积分。无需 WhiteBackground 账号或 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "white background",
+        "product photo",
+        "background removal",
+        "transparent png",
+        "shopify",
+        "canvas",
+        "白底图",
+        "抠图",
+        "商品图"
+      ],
+      "examplePrompts": [
+        "Create a 2048 × 2048 pure white PNG",
+        "Open the WhiteBackground editor so I can put a product photo on a white background",
+        "Open the square editor; I want to keep the whole photo without cropping"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "生成一张 2048 × 2048 的纯白 PNG",
+          "打开 WhiteBackground 编辑器，我要把商品照做成白底图",
+          "打开正方形编辑器，我要保留整张照片、不要裁切"
+        ]
+      }
     }
   ]
 }
