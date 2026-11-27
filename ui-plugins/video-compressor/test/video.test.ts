@@ -55,4 +55,14 @@ describe("tools", () => {
     expect(csv).toMatch(/videos\/产品演示\.mp4,demo-small\.mp4,target,0\.25,960x540,640x360,aac64,0\.68,0\.\d\d,\d+%/);
     expect(csv).toContain("kept original (already small)");
   }, 120_000);
+
+  it("opens a source folder that is itself named video-compressor, but skips its own output folder", async () => {
+    const root = await mkdtemp(join(tmpdir(), "vc-"));
+    await cp(join(HERE, "samples", "videos"), join(root, "p", "video-compressor", "videos"), { recursive: true });
+    await cp(join(HERE, "samples", "videos"), join(root, "video-compressor", "old", "compressed"), { recursive: true });
+    const c = await connect(createServer({ workspaceRoot: root, assetRoot: root }));
+    const r0 = await c.call("vcompress_open", { inputs: ["p/video-compressor/videos"], project: "v" });
+    expect((r0.data.rows as Record<string, unknown>[]).map((r) => String(r.file))).toEqual(["p/video-compressor/videos/screen.mov", "p/video-compressor/videos/产品演示.mp4"]);
+    await expect(c.call("vcompress_open", { inputs: ["video-compressor"], project: "w" })).rejects.toThrow(/No video files/);
+  });
 });
