@@ -1,0 +1,1 @@
+{"prefix": "survey", "folder": "问卷", "pick": ["survey.xlsx"], "startSettings": {"crossBy": "Q1"}, "uiEdit": {"row": 2, "key": "label", "value": "年龄段"}, "expectText": "responses", "expectFiles": ["report\\.html$", "report\\.pdf$", "results\\.xlsx$"]}
