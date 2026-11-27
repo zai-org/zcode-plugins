@@ -1,0 +1,52 @@
+{
+  "voice": "zh-CN-YunxiNeural",
+  "rate": "+5%",
+  "title": "订单负责人转派 — 交付演示",
+  "evidence": {
+    "git_sha": "<commit of the build shown>",
+    "environment": "staging",
+    "tickets": ["T-1001"]
+  },
+  "segments": [
+    {
+      "id": "00-open",
+      "kind": "card",
+      "label": "交付演示",
+      "title": "订单负责人转派 2.0",
+      "text": "这次演示覆盖负责人转派和空选校验，面向运营同学。"
+    },
+    {
+      "id": "01-entry",
+      "case": "F-01",
+      "label": "入口",
+      "shot": "F-01-entry.mp4",
+      "start": 0.5,
+      "end": 11.5,
+      "text": "从订单详情进入任务运营名单，当前负责人和保存入口都在页面上。"
+    },
+    {
+      "id": "02-save",
+      "case": "F-01",
+      "label": "保存",
+      "shot": "F-01-result.mp4",
+      "start": 0.3,
+      "end": 9.8,
+      "text": "修改负责人后点保存，页面提示已更新，没有报错。"
+    },
+    {
+      "id": "03-readback",
+      "case": "F-01",
+      "label": "回读",
+      "shot": "F-01-readback.mp4",
+      "start": 0.4,
+      "end": 8.2,
+      "text": "刷新页面重新打开名单，刚才的修改仍然生效。"
+    },
+    {
+      "id": "99-close",
+      "kind": "card",
+      "title": "负责人转派用例全部通过，等待验收",
+      "duration": 2
+    }
+  ]
+}

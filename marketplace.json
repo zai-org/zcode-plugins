@@ -10,7 +10,10 @@
     "url": "https://z.ai"
   },
   "unlistedPlugins": [
-    { "name": "openpencil", "source": "./external_plugins/openpencil" }
+    {
+      "name": "openpencil",
+      "source": "./external_plugins/openpencil"
+    }
   ],
   "plugins": [
     {
@@ -810,7 +813,9 @@
     },
     {
       "name": "excalidraw",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "Excalidraw",
       "displayName_i18n": {
         "en": "Excalidraw",
@@ -833,7 +838,9 @@
       "name": "photocraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/photocraft/icon.png",
       "source": "./external_plugins/photocraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PhotoCraft",
       "displayName_i18n": {
         "en": "PhotoCraft",
@@ -860,7 +867,9 @@
       "name": "vectorcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/vectorcraft/icon.png",
       "source": "./external_plugins/vectorcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "VectorCraft",
       "displayName_i18n": {
         "en": "VectorCraft",
@@ -887,7 +896,9 @@
       "name": "pdfcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/pdfcraft/icon.png",
       "source": "./external_plugins/pdfcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "PdfCraft",
       "displayName_i18n": {
         "en": "PdfCraft",
@@ -914,7 +925,9 @@
       "name": "designcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/designcraft/icon.png",
       "source": "./external_plugins/designcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DesignCraft",
       "displayName_i18n": {
         "en": "DesignCraft",
@@ -941,7 +954,9 @@
       "name": "wordcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/wordcraft/icon.png",
       "source": "./external_plugins/wordcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "WordCraft",
       "displayName_i18n": {
         "en": "WordCraft",
@@ -968,7 +983,9 @@
       "name": "gridcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/gridcraft/icon.png",
       "source": "./external_plugins/gridcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "GridCraft",
       "displayName_i18n": {
         "en": "GridCraft",
@@ -995,7 +1012,9 @@
       "name": "deckcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/deckcraft/icon.png",
       "source": "./external_plugins/deckcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "DeckCraft",
       "displayName_i18n": {
         "en": "DeckCraft",
@@ -1022,7 +1041,9 @@
       "name": "cadcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/cadcraft/icon.png",
       "source": "./external_plugins/cadcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "CADCraft",
       "displayName_i18n": {
         "en": "CADCraft",
@@ -1049,7 +1070,9 @@
       "name": "soundcraft",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/soundcraft/icon.png",
       "source": "./external_plugins/soundcraft",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "SoundCraft",
       "displayName_i18n": {
         "en": "SoundCraft",
@@ -1132,7 +1155,9 @@
       },
       "category": "developer-tools",
       "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/kicad/icon.png",
-      "componentTypes": ["ui"],
+      "componentTypes": [
+        "ui"
+      ],
       "displayName": "KiCad",
       "displayName_i18n": {
         "en": "KiCad",
@@ -1672,6 +1697,48 @@
           "用这两张正面和左侧视角图生成一个白模",
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
+      }
+    },
+    {
+      "name": "delivery-video",
+      "source": "./external_plugins/delivery-video",
+      "icon": "https://cdn-zcode.z.ai/zcode/official-plugin/assets/delivery-video/icon.png",
+      "description": "Record, render and gate trustworthy delivery demo videos — or defect/feedback report videos — of real, working software: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+      "description_i18n": {
+        "en": "Record, render and gate trustworthy delivery demo videos — or defect/feedback report videos — of real, working software: real screen recordings, edge-tts narration, word-synced subtitles and a deterministic quality gate.",
+        "zh-CN": "把真实运行的功能录成可交付的演示视频，或把缺陷录成可追溯的问题反馈视频：真实录屏、edge-tts 旁白、逐字对齐字幕与确定性质量闸，产出 1920x1080 成片与完整证据链。"
+      },
+      "version": "1.3.1",
+      "author": {
+        "name": "Lumos-789",
+        "url": "https://github.com/Lumos-789"
+      },
+      "category": "productivity",
+      "keywords": [
+        "delivery",
+        "demo-video",
+        "bug-report",
+        "screen-recording",
+        "acceptance",
+        "quality-gate",
+        "edge-tts",
+        "ffmpeg"
+      ],
+      "examplePrompts": [
+        "Record a 90-second delivery demo video of the feature we just finished",
+        "Record this defect and turn it into a feedback video with repro steps",
+        "Gate this build directory and tell me what still fails"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把刚做完的这个功能录成 90 秒交付演示视频",
+          "把这个 bug 录成带复现步骤的问题反馈视频",
+          "把这个 build 目录过一遍质量闸，还差什么"
+        ]
+      },
+      "displayName": "Delivery Video",
+      "displayName_i18n": {
+        "zh-CN": "交付视频"
       }
     }
   ]
