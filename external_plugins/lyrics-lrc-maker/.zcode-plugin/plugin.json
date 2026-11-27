@@ -1,0 +1,59 @@
+{
+  "name": "lyrics-lrc-maker",
+  "version": "0.1.0",
+  "description": "Give song lyrics a timeline and export LRC and SRT. Pick the lyrics (plain text, one line per lyric line, or an existing LRC to re-time) and the song; the sung phrases are detected from the audio and each lyric line is matched to them in proportion to its length, so long lines that span two breaths and short lines sharing one phrase still land in the right place. Nudge any line by editing its time, shift the whole song with an offset, add title and artist tags, then export a standard LRC, an enhanced word-by-word LRC for karaoke players and an SRT for video editors. Without audio, lines are spaced evenly for you to adjust. Runs locally with ffmpeg; no account or API keys.",
+  "description_i18n": {
+    "en": "Give song lyrics a timeline and export LRC and SRT. Pick the lyrics (plain text, one line per lyric line, or an existing LRC to re-time) and the song; the sung phrases are detected from the audio and each lyric line is matched to them in proportion to its length, so long lines that span two breaths and short lines sharing one phrase still land in the right place. Nudge any line by editing its time, shift the whole song with an offset, add title and artist tags, then export a standard LRC, an enhanced word-by-word LRC for karaoke players and an SRT for video editors. Without audio, lines are spaced evenly for you to adjust. Runs locally with ffmpeg; no account or API keys.",
+    "zh-CN": "给歌词打时间轴，导出 LRC 和 SRT。选择歌词（纯文本每行一句，或者已有的 LRC 重新打轴）和歌曲，自动从音频里找出唱的段落，再按每句的长度对上去，一句跨两口气、几句短词挤在一段里也能对准。每一句的时间都能直接改，也可以整体偏移，加上歌名、歌手标签，导出标准 LRC、卡拉 OK 播放器用的逐字 LRC 和剪辑软件用的 SRT 字幕。没有音频时按固定间隔排好，再手动微调。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "lyrics",
+    "lrc",
+    "karaoke",
+    "srt",
+    "subtitles",
+    "music",
+    "歌词",
+    "时间轴",
+    "打轴",
+    "LRC",
+    "卡拉OK",
+    "字幕",
+    "逐字歌词"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "lyrics-lrc-maker": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "歌词时间轴",
+          "en-US": "Lyrics Timer"
+        },
+        "icon": "music",
+        "server": "lyrics-lrc-maker",
+        "resourceUri": "ui://lyrics-lrc-maker/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}

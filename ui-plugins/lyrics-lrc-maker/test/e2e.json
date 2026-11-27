@@ -1,0 +1,1 @@
+{"prefix": "lrc", "folder": "音乐", "pick": ["晚风茶馆.txt", "晚风茶馆.mp3"], "startSettings": {"title": "晚风茶馆"}, "uiEdit": {"row": 5, "key": "start", "value": "00:23.40"}, "expectText": "sung phrase", "expectFiles": ["\\.lrc$", "\\.enhanced\\.lrc$", "\\.srt$"]}
