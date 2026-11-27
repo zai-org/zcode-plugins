@@ -1,0 +1,1 @@
+{"prefix": "prices", "folder": "价目", "pick": ["prices.xlsx"], "startSettings": {"minMargin": 25}, "uiEdit": {"row": 0, "key": "new", "value": "12.5"}, "expectText": "price(s) change", "expectFiles": ["updated-prices\\.xlsx$", "price-changes\\.csv$"]}
