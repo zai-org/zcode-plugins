@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "sales-commission",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/sales-commission",
+      "displayName": "Sales Commission",
+      "displayName_i18n": {
+        "en": "Sales Commission",
+        "zh-CN": "销售提成计算"
+      },
+      "description": "Work out each salesperson's commission from a sales sheet and hand out clear statements. Set tiered rates — progressive like tax brackets, or whole-tier where reaching a level pays that rate on everything — give products such as accessories or services their own rates, and let refunds and cancellations claw back what was paid. Filter to a month, see every line's rate and commission, and catch duplicate orders, refunds booked under the wrong person and names spelled two ways. Export a summary workbook and a one-page PDF statement per person. Runs locally; no CRM login or API keys.",
+      "description_i18n": {
+        "en": "Work out each salesperson's commission from a sales sheet and hand out clear statements. Set tiered rates — progressive like tax brackets, or whole-tier where reaching a level pays that rate on everything — give products such as accessories or services their own rates, and let refunds and cancellations claw back what was paid. Filter to a month, see every line's rate and commission, and catch duplicate orders, refunds booked under the wrong person and names spelled two ways. Export a summary workbook and a one-page PDF statement per person. Runs locally; no CRM login or API keys.",
+        "zh-CN": "从销售明细表算出每位销售的提成，并生成清楚的个人提成单。设置阶梯比例——超额累进（像个税一样每档只算该档部分）或全额阶梯（达到哪档全部按哪档）；配件、服务等品类可以单独设比例；退货、取消的订单自动扣回提成。可以只算某个月，每一行的比例和提成都看得到，还会提示重复订单、退货记错人、同一个人名字写法不一致。导出提成汇总 Excel 和每人一页的 PDF 提成单。在本地运行，不用登录 CRM，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "sales commission",
+        "commission calculator",
+        "tiered commission",
+        "clawback",
+        "commission statement",
+        "销售提成",
+        "提成计算",
+        "阶梯提成",
+        "超额累进",
+        "提成单",
+        "退货扣回"
+      ],
+      "examplePrompts": [
+        "Work out October commissions from sales.xlsx",
+        "Accessories pay 8% and services 12%, outside the tiers",
+        "Switch to whole-tier rates and compare"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 sales.xlsx 算 10 月的提成",
+          "配件按 8%、服务按 12%，不计入阶梯",
+          "改成全额阶梯看看差多少"
+        ]
+      }
     }
   ]
 }
