@@ -1,0 +1,58 @@
+{
+  "name": "gantt-planner",
+  "version": "0.1.0",
+  "description": "Turn a simple task list into a Gantt chart with real working-day dates. List tasks with durations in workdays, who owns them and what they depend on; the planner schedules each task the workday after its predecessors finish, skips weekends and the holidays you list, marks milestones and highlights the critical path — the chain of tasks that sets the finish date. Fix a start date, change a duration or a dependency and every date moves. Export the chart as SVG and PNG, the schedule as Excel, and an HTML page. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Turn a simple task list into a Gantt chart with real working-day dates. List tasks with durations in workdays, who owns them and what they depend on; the planner schedules each task the workday after its predecessors finish, skips weekends and the holidays you list, marks milestones and highlights the critical path — the chain of tasks that sets the finish date. Fix a start date, change a duration or a dependency and every date moves. Export the chart as SVG and PNG, the schedule as Excel, and an HTML page. Runs locally; no account or API keys.",
+    "zh-CN": "把一张简单的任务清单变成带真实工作日日期的甘特图。写上任务、工期（工作日）、负责人和前置任务，插件会让每个任务在前置任务完成后的下一个工作日开始，跳过周末和你列出的节假日，标出里程碑，并高亮关键路径——决定完工日期的那条任务链。指定开始日期、改工期或改依赖，所有日期自动跟着变。导出 SVG 和 PNG 甘特图、Excel 排期表和网页。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gantt chart",
+    "project plan",
+    "project schedule",
+    "critical path",
+    "timeline",
+    "milestones",
+    "甘特图",
+    "项目计划",
+    "排期",
+    "关键路径",
+    "进度计划",
+    "里程碑"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "gantt-planner": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "甘特图计划",
+          "en-US": "Gantt Planner"
+        },
+        "icon": "calendar",
+        "server": "gantt-planner",
+        "resourceUri": "ui://gantt-planner/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
