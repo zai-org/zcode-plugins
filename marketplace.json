@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "shift-scheduler",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/shift-scheduler",
+      "displayName": "Shift Scheduler",
+      "displayName_i18n": {
+        "en": "Shift Scheduler",
+        "zh-CN": "排班表"
+      },
+      "description": "Build a fair weekly shift rota from your team's availability. List who can work when — any shift, a day off, named shifts like 早班/晚班 or a time window like 10-18 — set each person's maximum weekly hours, and define the shifts and how many people each needs. Shifts are shared out evenly by hours while respecting maximum hours, one shift a day and a minimum rest between shifts (no closing then opening). Understaffed shifts are highlighted so you can fix them. Export a rota workbook, a printable HTML rota and a calendar file for each person. Runs locally; no account or API keys.",
+      "description_i18n": {
+        "en": "Build a fair weekly shift rota from your team's availability. List who can work when — any shift, a day off, named shifts like 早班/晚班 or a time window like 10-18 — set each person's maximum weekly hours, and define the shifts and how many people each needs. Shifts are shared out evenly by hours while respecting maximum hours, one shift a day and a minimum rest between shifts (no closing then opening). Understaffed shifts are highlighted so you can fix them. Export a rota workbook, a printable HTML rota and a calendar file for each person. Runs locally; no account or API keys.",
+        "zh-CN": "根据大家能上班的时间，排出一张公平的每周排班表。写上每个人哪天能上什么班——全天、休息、早班/晚班这样的班次名，或 10-18 这样的时间段——再设每人每周最多工时，定义班次和每班需要几个人。按工时平均分配班次，同时遵守工时上限、每天一个班、两班之间的最短休息（不会晚班接第二天早班）。缺人的班会标红，方便调整。导出排班 Excel、可打印的排班网页，以及每个人的日历文件。在本地运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "shift scheduler",
+        "rota",
+        "roster",
+        "staff schedule",
+        "work schedule",
+        "availability",
+        "排班",
+        "排班表",
+        "值班表",
+        "轮班",
+        "员工排班",
+        "门店排班"
+      ],
+      "examplePrompts": [
+        "Make next week's rota from staff.csv: 早班 08-16 ×2, 晚班 16-24 ×2",
+        "Tom can't work Sunday — redo it",
+        "Export the rota and send everyone their calendar file"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 staff.csv 排下周的班：早班 08-16 两人，晚班 16-24 两人",
+          "Tom 周日不能上班，重新排",
+          "导出排班表，再给每个人一个日历文件"
+        ]
+      }
     }
   ]
 }
