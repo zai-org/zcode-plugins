@@ -1,0 +1,1 @@
+{"prefix": "cards", "folder": "卡牌", "pick": ["卡牌"], "startSettings": {}, "uiEdit": {"row": 1, "key": "count", "value": "4"}, "expectText": "card", "expectFiles": ["print-sheets\\.pdf$", "backs\\.pdf$", "card-list\\.csv$"]}
