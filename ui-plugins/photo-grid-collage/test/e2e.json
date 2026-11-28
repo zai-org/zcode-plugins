@@ -1,0 +1,1 @@
+{"prefix": "collage", "folder": "图片", "pick": ["新品茶具"], "startSettings": {"title": "新品茶具"}, "uiEdit": {"row": 7, "key": "include", "value": false}, "expectText": "collage", "expectFiles": ["\\.png$", "\\.jpg$"]}
