@@ -1673,6 +1673,58 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "rent-ledger",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/rent-ledger",
+      "displayName": "Rent Ledger",
+      "displayName_i18n": {
+        "en": "Rent Ledger",
+        "zh-CN": "房租台账"
+      },
+      "description": "Keep the rent book for a few rental rooms or flats: tenants, leases and payments in two sheets, and the plugin works out what each tenant owes, what's overdue and by how many days, and prints receipts. Rent is charged per lease cycle (monthly, quarterly, half-yearly, yearly) on each tenant's rent day, the last part-month is charged by day, and payments go to the oldest unpaid rent first, so part payments and advance payments just work. Catches payments for a room that doesn't exist (suggesting the right one for typos like 3O2), duplicate payments, unreadable dates and amounts, payments after a lease ended, rent paid late and leases about to end. Exports a ledger workbook (tenants with balances, rent schedule, payments and what each one paid for, arrears), receipts with amounts in figures and Chinese capitals (大写), and polite overdue reminders ready to paste into a chat. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Keep the rent book for a few rental rooms or flats: tenants, leases and payments in two sheets, and the plugin works out what each tenant owes, what's overdue and by how many days, and prints receipts. Rent is charged per lease cycle (monthly, quarterly, half-yearly, yearly) on each tenant's rent day, the last part-month is charged by day, and payments go to the oldest unpaid rent first, so part payments and advance payments just work. Catches payments for a room that doesn't exist (suggesting the right one for typos like 3O2), duplicate payments, unreadable dates and amounts, payments after a lease ended, rent paid late and leases about to end. Exports a ledger workbook (tenants with balances, rent schedule, payments and what each one paid for, arrears), receipts with amounts in figures and Chinese capitals (大写), and polite overdue reminders ready to paste into a chat. No account or API keys; runs on your computer.",
+        "zh-CN": "给几间出租房记房租账：租客、租约、收款各一张表，自动算出每位租客应收多少、哪笔逾期了几天，并打印收据。按租约的付款方式（月付、季付、半年付、年付）在各自交租日计租，最后不足一月按天计，收款先冲最早未付的房租，部分付款和预付都能处理。会发现收款记到了不存在的房号（如 3O2 会提示应为 302）、重复收款、读不懂的日期金额、租约到期后还有收款、迟交的房租和快到期的租约。导出台账 Excel（租客余额、应收计划、每笔收款冲抵了什么、欠款清单）、带金额大写的收据 PDF，以及可直接发给租客的礼貌催租提醒。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "rent",
+        "landlord",
+        "tenant",
+        "ledger",
+        "receipt",
+        "overdue",
+        "lease",
+        "房租",
+        "租金",
+        "租客",
+        "台账",
+        "收据",
+        "催租",
+        "房东"
+      ],
+      "examplePrompts": [
+        "Check who still owes rent in 房租",
+        "Record today's payment from 201",
+        "Print receipts and overdue reminders"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "看看 房租 里谁还欠房租",
+          "登记 201 今天交的房租",
+          "打印收据和催租提醒"
+        ]
+      }
     }
   ]
 }
