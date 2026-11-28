@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "recipe-scaler",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/recipe-scaler",
+      "displayName": "Recipe Scaler",
+      "displayName_i18n": {
+        "en": "Recipe Scaler",
+        "zh-CN": "菜谱换算"
+      },
+      "description": "Scale a folder of recipes to the number of people, convert units and get one merged shopping list and printable recipe cards. Reads plain Markdown recipes in Chinese or English (五花肉 500 g, 生抽 2 汤匙, 鸡蛋 3 个, 盐 适量, 1 1/2 cups flour), scales each to its own target servings or one number for all, and converts to metric (g, ml) or US (oz, cup) with sensible rounding — whole eggs and tomatoes, spoons in quarters, grams to 5. The shopping list adds up the same item across recipes (鸡蛋 / eggs, 番茄 / 西红柿), groups it by aisle and leaves out what you already have at home. Catches recipes without servings, unreadable amounts like 两三, unknown units, an ingredient listed twice, ingredients never used in the steps, recipes without steps and scaling so big that seasoning should be tasted. Exports A5 recipe cards with scaled amounts, steps and total time, a shopping list PDF with checkboxes, a CSV and the scaled recipes as Markdown. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Scale a folder of recipes to the number of people, convert units and get one merged shopping list and printable recipe cards. Reads plain Markdown recipes in Chinese or English (五花肉 500 g, 生抽 2 汤匙, 鸡蛋 3 个, 盐 适量, 1 1/2 cups flour), scales each to its own target servings or one number for all, and converts to metric (g, ml) or US (oz, cup) with sensible rounding — whole eggs and tomatoes, spoons in quarters, grams to 5. The shopping list adds up the same item across recipes (鸡蛋 / eggs, 番茄 / 西红柿), groups it by aisle and leaves out what you already have at home. Catches recipes without servings, unreadable amounts like 两三, unknown units, an ingredient listed twice, ingredients never used in the steps, recipes without steps and scaling so big that seasoning should be tasted. Exports A5 recipe cards with scaled amounts, steps and total time, a shopping list PDF with checkboxes, a CSV and the scaled recipes as Markdown. No account or API keys; runs on your computer.",
+        "zh-CN": "把一文件夹的菜谱按人数缩放、换算单位，得到合并好的购物清单和可打印的菜谱卡片。读取中英文 Markdown 菜谱（五花肉 500 g、生抽 2 汤匙、鸡蛋 3 个、盐 适量、1 1/2 cups flour），每道菜可各自设人数或统一人数，可换成公制（克、毫升）或美制（oz、cup），取整合理：鸡蛋番茄取整个、勺按 1/4、克取整到 5。购物清单把几道菜里的同一样食材加在一起（鸡蛋 / eggs、番茄 / 西红柿），按货架分组，家里已有的不列入。会发现没写份量的菜谱、读不懂的数量（如 两三）、不认识的单位、重复的食材、步骤里没用到的食材、没有步骤的菜谱，以及放大太多需要尝味的调味。导出 A5 菜谱卡片（换算后用量、步骤、总时长）、带勾选框的购物清单 PDF、CSV 和换算后的 Markdown 菜谱。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "recipe",
+        "scale",
+        "servings",
+        "unit conversion",
+        "shopping list",
+        "grocery",
+        "cooking",
+        "菜谱",
+        "换算",
+        "人数",
+        "购物清单",
+        "单位",
+        "做饭"
+      ],
+      "examplePrompts": [
+        "Scale the recipes in recipes to 6 people",
+        "Make one shopping list from these recipes",
+        "Export recipe cards and the shopping list"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 recipes 里的菜谱都换算成 6 人份",
+          "把这几道菜合成一张购物清单",
+          "导出菜谱卡片和购物清单"
+        ]
+      }
     }
   ]
 }
