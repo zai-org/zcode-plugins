@@ -1673,6 +1673,57 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "bom-costing",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/bom-costing",
+      "displayName": "BOM Costing",
+      "displayName_i18n": {
+        "en": "BOM Costing",
+        "zh-CN": "物料清单核算"
+      },
+      "description": "Roll up a multi-level bill of materials into unit costs and turn a production plan into a purchase list. Reads an item sheet (code, make or buy, price or added labour, stock, MOQ, pack multiple, lead time, supplier) and a BOM sheet (parent, component, quantity, scrap %) from Excel or CSV. Costs every product and sub-assembly bottom-up including scrap, explodes the build plan level by level using sub-assemblies and parts already in stock, and rounds purchases up to minimum order quantities and pack sizes. Catches components missing from the item list (and suggests the right code for typos like P-OO5), BOM loops, missing prices, bad quantities and scrap rates, duplicate BOM lines, made items with no BOM, unused items and long lead times. Exports a costed workbook (indented BOM per product with extended quantities and costs, cost summary, requirements, purchase list by supplier), a purchase list CSV and printable cost sheets. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Roll up a multi-level bill of materials into unit costs and turn a production plan into a purchase list. Reads an item sheet (code, make or buy, price or added labour, stock, MOQ, pack multiple, lead time, supplier) and a BOM sheet (parent, component, quantity, scrap %) from Excel or CSV. Costs every product and sub-assembly bottom-up including scrap, explodes the build plan level by level using sub-assemblies and parts already in stock, and rounds purchases up to minimum order quantities and pack sizes. Catches components missing from the item list (and suggests the right code for typos like P-OO5), BOM loops, missing prices, bad quantities and scrap rates, duplicate BOM lines, made items with no BOM, unused items and long lead times. Exports a costed workbook (indented BOM per product with extended quantities and costs, cost summary, requirements, purchase list by supplier), a purchase list CSV and printable cost sheets. No account or API keys; runs on your computer.",
+        "zh-CN": "把多层物料清单自动汇总成单位成本，并把生产计划变成采购清单。读取 Excel 或 CSV 里的物料表（编码、自制/外购、单价或加工费、库存、起订量、包装倍数、交期、供应商）和 BOM 表（父件、子件、用量、损耗率）。自下而上算出每个成品和半成品的成本（含损耗），按层级展开生产计划、先用现有的半成品和零件库存，采购数量按最小起订量和包装倍数向上取整。会发现物料表里没有的子件（如 P-OO5 会提示应为 P-005）、BOM 循环、缺单价、用量和损耗率错误、重复的 BOM 行、标为自制却没有 BOM 的物料、没用到的物料和交期长的物料。导出成本核算 Excel（每个产品的缩进 BOM、累计用量和成本、成本汇总、需求计算、按供应商的采购清单）、采购清单 CSV 和可打印的成本单。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "bom",
+        "bill of materials",
+        "costing",
+        "mrp",
+        "purchase",
+        "manufacturing",
+        "scrap",
+        "物料清单",
+        "成本核算",
+        "采购",
+        "生产计划",
+        "损耗",
+        "BOM"
+      ],
+      "examplePrompts": [
+        "Cost the BOM in 台灯BOM",
+        "Plan purchases for 300 LAMP-01 and 150 LAMP-02",
+        "Export the costed BOM and purchase list"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "核算 台灯BOM 里的物料成本",
+          "按生产 300 台 LAMP-01、150 台 LAMP-02 算采购量",
+          "导出成本核算表和采购清单"
+        ]
+      }
     }
   ]
 }
