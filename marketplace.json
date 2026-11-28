@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "timetable-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/timetable-builder",
+      "displayName": "Timetable Builder",
+      "displayName_i18n": {
+        "en": "Timetable Builder",
+        "zh-CN": "排课表"
+      },
+      "description": "Turn a list of what each class needs — subject, teacher, periods per week, a shared room, fixed slots, double periods — into clash-free class and teacher timetables. Teacher limits (周三下午 for a research meeting, no first two periods on Monday…) and room capacity (the sports field takes two classes at once, the computer lab one) come from extra sheets or settings. The scheduler never double-books a class, teacher or room, keeps fixed slots like 班会 周五7, places double periods together, spreads each subject across the week, keeps core subjects in the morning and avoids piling up one teacher's day; when something can't be placed it says why. Change a teacher, hours or a fixed slot and the timetable is rebuilt. Exports a workbook with a master sheet and one grid per class and per teacher, and a colour-coded landscape PDF to print or post. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Turn a list of what each class needs — subject, teacher, periods per week, a shared room, fixed slots, double periods — into clash-free class and teacher timetables. Teacher limits (周三下午 for a research meeting, no first two periods on Monday…) and room capacity (the sports field takes two classes at once, the computer lab one) come from extra sheets or settings. The scheduler never double-books a class, teacher or room, keeps fixed slots like 班会 周五7, places double periods together, spreads each subject across the week, keeps core subjects in the morning and avoids piling up one teacher's day; when something can't be placed it says why. Change a teacher, hours or a fixed slot and the timetable is rebuilt. Exports a workbook with a master sheet and one grid per class and per teacher, and a colour-coded landscape PDF to print or post. No account or API keys; runs on your computer.",
+        "zh-CN": "把每个班需要的课——科目、任课教师、每周课时、共用场地、固定时段、连堂——排成不冲突的班级课表和教师课表。教师限制（周三下午教研、周一前两节不排……）和场地容量（操场可同时上两个班、机房一个班）可以写在附加工作表或设置里。排课时班级、教师、场地都不会重复占用，固定课（如 班会 周五7）不动，连堂排在一起，同一科目尽量分散到一周各天，主科尽量排上午，避免某位老师一天课太满；排不下时会说明原因。改教师、课时或固定时段后课表自动重排。导出含总表、每班和每位教师课表的 Excel，以及按科目着色、横版可打印张贴的 PDF。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "timetable",
+        "schedule",
+        "school",
+        "class schedule",
+        "teacher",
+        "排课",
+        "课程表",
+        "课表",
+        "教师课表",
+        "学校",
+        "教务"
+      ],
+      "examplePrompts": [
+        "Build the timetables from 排课/课程需求.xlsx",
+        "Fix the clashing fixed slot",
+        "Export class and teacher timetables"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 排课/课程需求.xlsx 排课",
+          "把冲突的固定课改掉",
+          "导出班级和教师课表"
+        ]
+      }
     }
   ]
 }
