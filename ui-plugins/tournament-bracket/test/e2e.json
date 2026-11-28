@@ -1,0 +1,1 @@
+{"prefix": "bracket", "folder": "活动", "pick": ["羽毛球赛"], "startSettings": {}, "uiEdit": {"row": 3, "key": "score", "value": "21:17"}, "expectText": "teams", "expectFiles": ["standings\\.xlsx$", "bracket\\.svg$", "bracket\\.png$", "schedule\\.pdf$"]}

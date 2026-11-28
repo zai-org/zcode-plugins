@@ -1,0 +1,58 @@
+{
+  "name": "tournament-bracket",
+  "version": "0.1.0",
+  "description": "Run a company or school tournament from a team list: generate a round-robin (single or home-and-away) or a seeded knockout with byes for the top seeds and an optional 3rd-place match, date every round, enter scores as you go and get live standings or a filled-in bracket. Results already played can come from a sheet. Standings rank by points (win/draw/loss points configurable), then head-to-head, difference and points scored; knockout winners move on automatically, draws need a decider such as 2(4):2(3). Catches typos in scores and team names, duplicate teams and seeds, scores entered before a match's teams are known, a team booked twice on one day and ties that need a lot or play-off. Exports a standings workbook with fixtures and a cross table, the bracket or standings as SVG and PNG to post in the group chat, and a printable fixture sheet with score boxes. No account or API keys; runs on your computer.",
+  "description_i18n": {
+    "en": "Run a company or school tournament from a team list: generate a round-robin (single or home-and-away) or a seeded knockout with byes for the top seeds and an optional 3rd-place match, date every round, enter scores as you go and get live standings or a filled-in bracket. Results already played can come from a sheet. Standings rank by points (win/draw/loss points configurable), then head-to-head, difference and points scored; knockout winners move on automatically, draws need a decider such as 2(4):2(3). Catches typos in scores and team names, duplicate teams and seeds, scores entered before a match's teams are known, a team booked twice on one day and ties that need a lot or play-off. Exports a standings workbook with fixtures and a cross table, the bracket or standings as SVG and PNG to post in the group chat, and a printable fixture sheet with score boxes. No account or API keys; runs on your computer.",
+    "zh-CN": "用一份参赛名单办公司或学校比赛：生成单循环（或主客双循环），或按种子排位、高种子轮空的淘汰赛（可加三四名决赛），给每轮排日期，边比赛边录比分，实时得到积分榜或填好的对阵图。已经打完的比分可以从表格导入。积分榜按积分（胜/平/负积分可设）排名，再看相互战绩、净胜分、总得分；淘汰赛胜者自动晋级，平局需要写决胜分如 2(4):2(3)。会发现比分和队名的笔误、重复的队伍和种子、对阵还没确定就录了比分、同一队同一天被排两场，以及需要抽签或加赛的同分。导出含赛程和交叉表的积分榜 Excel、可发群里的对阵图/积分榜 SVG 和 PNG，以及带比分格的可打印赛程表。不用登录，无需 API 密钥，本机运行。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "tournament",
+    "bracket",
+    "round robin",
+    "knockout",
+    "standings",
+    "fixtures",
+    "赛程",
+    "对阵表",
+    "循环赛",
+    "淘汰赛",
+    "积分榜",
+    "比赛"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "tournament-bracket": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "赛程对阵",
+          "en-US": "Tournament Bracket"
+        },
+        "icon": "trophy",
+        "server": "tournament-bracket",
+        "resourceUri": "ui://tournament-bracket/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
