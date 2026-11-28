@@ -1,0 +1,1 @@
+{"prefix": "recipe", "folder": "菜谱", "pick": ["recipes"], "startSettings": {}, "uiEdit": {"row": 0, "key": "servings", "value": "6"}, "expectText": "recipe", "expectFiles": ["recipe-cards\\.pdf$", "shopping-list\\.pdf$", "shopping-list\\.csv$", "recipes-scaled\\.md$"]}
