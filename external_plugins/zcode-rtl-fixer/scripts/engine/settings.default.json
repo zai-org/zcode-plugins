@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "fontEnabled": true,
+  "fontFamily": "Vazirmatn, Vazir, IRANSansX, IRANSans, Shabnam, Sahel, 'Noto Naskh Arabic', Tahoma, sans-serif",
+  "fontSizeScale": 1.05,
+  "fixTables": true,
+  "fixLists": true,
+  "mainLauncher": false,
+  "probe": false
+}
