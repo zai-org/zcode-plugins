@@ -1,0 +1,1 @@
+{"prefix": "rent", "folder": "房租", "pick": ["房租"], "startSettings": {"asOf": "2026-11-27"}, "uiEdit": {"row": 18, "key": "unit", "value": "302"}, "expectText": "tenant", "expectFiles": ["ledger\\.xlsx$", "receipts\\.pdf$", "reminders\\.md$"]}
