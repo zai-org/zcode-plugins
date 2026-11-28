@@ -1,0 +1,60 @@
+{
+  "name": "cut-list-optimizer",
+  "version": "0.1.0",
+  "description": "Lay furniture and cabinet parts onto stock boards and get printable cutting diagrams, the number of boards to buy and edge-banding totals. Reads a parts list (name, length, width, quantity, material, grain, edge banding) and your board sizes and prices, then packs the parts guillotine-style — every cut goes straight across, as on a panel saw — biggest first, allowing for saw kerf and edge trim, and turning parts only when they have no grain. Catches parts larger than the board or that fit only across the grain, materials with no board (suggesting the near match), unreadable sizes, quantities and edge banding, and a last board that's almost empty. Exports a PDF with one labelled diagram per board, an SVG of all boards and a cut list workbook with every part's board and position, and boards, yield, cost and edge-banding metres per material. No account or API keys; runs on your computer.",
+  "description_i18n": {
+    "en": "Lay furniture and cabinet parts onto stock boards and get printable cutting diagrams, the number of boards to buy and edge-banding totals. Reads a parts list (name, length, width, quantity, material, grain, edge banding) and your board sizes and prices, then packs the parts guillotine-style — every cut goes straight across, as on a panel saw — biggest first, allowing for saw kerf and edge trim, and turning parts only when they have no grain. Catches parts larger than the board or that fit only across the grain, materials with no board (suggesting the near match), unreadable sizes, quantities and edge banding, and a last board that's almost empty. Exports a PDF with one labelled diagram per board, an SVG of all boards and a cut list workbook with every part's board and position, and boards, yield, cost and edge-banding metres per material. No account or API keys; runs on your computer.",
+    "zh-CN": "把家具、柜体的零件排到板材上，得到可打印的开料图、要买几张板和封边总长。读取零件清单（名称、长、宽、数量、材料、纹理、封边）和板材尺寸单价，按断头锯方式排版（每一刀都是通切，适合推台锯），大件优先，计入锯缝和修边，有纹理的零件不旋转。会发现比板材还大或只能横纹放下的零件、没有对应板材的材料（提示相近的名称）、读不懂的尺寸、数量和封边写法，以及几乎空着的最后一张板。导出每张板一页、零件带标注的开料图 PDF，全部板材的 SVG，以及开料单 Excel（每个零件在哪张板、位置坐标，各材料的张数、利用率、金额和封边米数）。不用登录，无需 API 密钥，本机运行。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "cut list",
+    "cutting",
+    "panel",
+    "sheet goods",
+    "plywood",
+    "woodworking",
+    "nesting",
+    "开料",
+    "板材",
+    "开料图",
+    "排版",
+    "木工",
+    "封边",
+    "柜体"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "cut-list-optimizer": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "板材开料优化",
+          "en-US": "Cut List Optimizer"
+        },
+        "icon": "scissors",
+        "server": "cut-list-optimizer",
+        "resourceUri": "ui://cut-list-optimizer/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
