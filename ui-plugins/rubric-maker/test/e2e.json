@@ -1,0 +1,1 @@
+{"prefix": "rubric", "folder": "教学", "pick": ["作文评分"], "startSettings": {}, "uiEdit": {"row": 4, "key": "c2", "value": "良好"}, "expectText": "criteria", "expectFiles": ["rubric\\.pdf$", "scores\\.xlsx$", "feedback\\.pdf$"]}
