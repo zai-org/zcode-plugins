@@ -1,0 +1,1 @@
+{"prefix": "trip", "folder": "旅行", "pick": ["东京大阪"], "startSettings": {}, "uiEdit": {"row": 10, "key": "start", "value": "19:30"}, "expectText": "item", "expectFiles": ["itinerary\\.pdf$", "itinerary\\.ics$", "itinerary\\.xlsx$"]}

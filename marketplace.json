@@ -1673,6 +1673,58 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "travel-itinerary",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/travel-itinerary",
+      "displayName": "Travel Itinerary",
+      "displayName_i18n": {
+        "en": "Travel Itinerary",
+        "zh-CN": "行程单制作"
+      },
+      "description": "Turn a trip plan sheet into a printable day-by-day itinerary, a calendar file for your phone and a bookings list. Every time is read in its own time zone (Asia/Tokyo, UTC+9 or just 东京), so flight durations, home time and calendar entries come out right across borders. Catches the mistakes that ruin a trip: a flight with no arrival time zone that shifts the rest of the trip, arrivals before departures, overlapping plans, too little time before a flight or between places, nights with nowhere to stay or two hotels on one night, stays without a check-out date, unreadable times like 19:3O and missing booking refs. Exports a PDF itinerary with times, addresses and booking refs per day plus a bookings page, an .ics calendar (stays as all-day spans, reminders before flights and trains) and an Excel itinerary. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Turn a trip plan sheet into a printable day-by-day itinerary, a calendar file for your phone and a bookings list. Every time is read in its own time zone (Asia/Tokyo, UTC+9 or just 东京), so flight durations, home time and calendar entries come out right across borders. Catches the mistakes that ruin a trip: a flight with no arrival time zone that shifts the rest of the trip, arrivals before departures, overlapping plans, too little time before a flight or between places, nights with nowhere to stay or two hotels on one night, stays without a check-out date, unreadable times like 19:3O and missing booking refs. Exports a PDF itinerary with times, addresses and booking refs per day plus a bookings page, an .ics calendar (stays as all-day spans, reminders before flights and trains) and an Excel itinerary. No account or API keys; runs on your computer.",
+        "zh-CN": "把行程表变成按天排好的可打印行程单、可导入手机的日历文件和预订汇总。每个时间都按各自时区读取（Asia/Tokyo、UTC+9 或直接写“东京”），跨国航班的时长、家里时间和日历时间都对得上。会发现最容易坏事的错误：航班没写到达时区导致后面行程全错一小时、到达早于出发、安排时间重叠、航班前或换地点时间不够、某晚没有住处或订了两家酒店、住宿缺退房日期、19:3O 这类读不懂的时间、缺预订号。导出按天列出时间、地址、预订号的 PDF 行程单（附预订汇总页）、.ics 日历（住宿为全天跨天事件，航班火车前提醒）和 Excel 行程表。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "travel",
+        "itinerary",
+        "trip",
+        "time zone",
+        "ics",
+        "calendar",
+        "booking",
+        "行程单",
+        "旅行",
+        "行程",
+        "时区",
+        "日历",
+        "酒店",
+        "航班"
+      ],
+      "examplePrompts": [
+        "Make a printable itinerary from 东京大阪",
+        "Check my trip plan for time zone and hotel gaps",
+        "Export the itinerary and calendar file"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 东京大阪 的行程表做一份行程单",
+          "检查行程里的时区和住宿空档",
+          "导出行程单和日历文件"
+        ]
+      }
     }
   ]
 }
