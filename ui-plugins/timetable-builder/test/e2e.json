@@ -1,0 +1,1 @@
+{"prefix": "timetable", "folder": "教学", "pick": ["课程需求.xlsx"], "startSettings": {}, "uiEdit": {"row": 14, "key": "fixed", "value": "周一2"}, "expectText": "class", "expectFiles": ["timetables\\.xlsx$", "timetables\\.pdf$"]}
