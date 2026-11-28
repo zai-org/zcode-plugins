@@ -1673,6 +1673,56 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "slideshow-video",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/slideshow-video",
+      "displayName": "Slideshow Video",
+      "displayName_i18n": {
+        "en": "Slideshow Video",
+        "zh-CN": "图片幻灯片视频"
+      },
+      "description": "Make a slideshow video from a folder of photos and a song (put the music file in the folder, or pick it alongside). Photos are put in the order they were taken (from EXIF), each one gets a gentle Ken Burns zoom or pan, and they cross-fade into each other; phone photos are turned the right way up. Set how long each photo stays, pick the transition and how photos fit the frame (fill and crop, or the whole photo over a blurred copy), add captions, and stretch the timing so the video ends with the music. Low-resolution photos, duplicates, unreadable files and photos too short for their transition are flagged before you render. Exports a 1080p MP4 (landscape, square or vertical) and a storyboard PNG of every slide with its time. Runs locally with ffmpeg; no account or API keys.",
+      "description_i18n": {
+        "en": "Make a slideshow video from a folder of photos and a song (put the music file in the folder, or pick it alongside). Photos are put in the order they were taken (from EXIF), each one gets a gentle Ken Burns zoom or pan, and they cross-fade into each other; phone photos are turned the right way up. Set how long each photo stays, pick the transition and how photos fit the frame (fill and crop, or the whole photo over a blurred copy), add captions, and stretch the timing so the video ends with the music. Low-resolution photos, duplicates, unreadable files and photos too short for their transition are flagged before you render. Exports a 1080p MP4 (landscape, square or vertical) and a storyboard PNG of every slide with its time. Runs locally with ffmpeg; no account or API keys.",
+        "zh-CN": "用一个文件夹的照片和一首歌做幻灯片视频（音乐放在同一个文件夹里，或一起选择）。照片按拍摄时间（EXIF）排好，每张加上缓慢推拉或平移的镜头效果（Ken Burns），之间用转场衔接；手机照片会自动转正。可以设置每张停留几秒、转场样式、照片怎么放进画面（铺满裁切，或者完整显示叠在模糊背景上），加字幕，还能按音乐长度自动调整时长让视频和音乐一起结束。渲染前会提示分辨率太低、重复的照片、读不出来的文件，以及时长比转场还短的照片。导出 1080p MP4（横屏、方形或竖屏）和一张标出每张照片时间的故事板 PNG。在本地用 ffmpeg 运行，不用登录，无需 API 密钥。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "utilities",
+      "keywords": [
+        "slideshow",
+        "photo video",
+        "ken burns",
+        "music",
+        "transition",
+        "相册视频",
+        "幻灯片",
+        "照片视频",
+        "电子相册",
+        "配乐",
+        "转场",
+        "故事板"
+      ],
+      "examplePrompts": [
+        "Make a slideshow from the 茶园一日 folder (photos and 茶园小调.mp3)",
+        "Drop the duplicate photo, caption the first one 清晨的茶园 and fit it to the music",
+        "Export the MP4"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 茶园一日 文件夹里的照片和 茶园小调.mp3 做幻灯片视频",
+          "去掉重复的照片，第一张加字幕“清晨的茶园”，按音乐长度对齐",
+          "导出 MP4"
+        ]
+      }
     }
   ]
 }
