@@ -1,0 +1,1 @@
+{"prefix": "lesson", "folder": "教学", "pick": ["教案"], "startSettings": {}, "uiEdit": {"row": 0, "key": "content", "value": "能用几分之一表示平均分的一份。"}, "expectText": "lesson plan", "expectFiles": ["lesson-plans\\.docx$", "lesson-plans\\.pdf$", "lesson-plans\\.md$"]}
