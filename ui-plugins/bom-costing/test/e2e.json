@@ -1,0 +1,1 @@
+{"prefix": "bom", "folder": "物料", "pick": ["台灯BOM"], "startSettings": {"build": "LAMP-01=300, LAMP-02=150"}, "uiEdit": {"row": 11, "key": "price", "value": "21.5"}, "expectText": "item", "expectFiles": ["costed-bom\\.xlsx$", "purchase-list\\.csv$", "cost-sheets\\.pdf$"]}
