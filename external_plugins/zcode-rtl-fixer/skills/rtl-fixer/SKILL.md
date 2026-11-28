@@ -12,7 +12,8 @@ description: Use when the user wants to fix mixed Persian/English (bidi) text re
 - اپ دسکتاپ زکد، UI را از `out/renderer/index.html` داخل `resources/app.asar` سرو می‌کند (پروتکل `zcode://`، بدون CSP).
 - پلاگین یک **نسخهٔ استخراج‌شدهٔ AppImage** را در `~/.local/share/zcode-rtl-fixer/app` نگه می‌دارد، `app.asar` آن را پچ می‌کند (append بوت‌استرپ + تگ اسکریپت در index.html) و **نسخهٔ اصلی را دست‌نخورده نگه می‌دارد** (`app.asar.orig`). AppImage اصلی کاربر هرگز تغییر نمی‌کند.
 - راه‌اندازی از طریق `~/.local/bin/zcode-rtl` یا آیکون «ZCode RTL» در منوی اپلیکیشن‌ها.
-- تنظیمات کاربر: `~/.zcode/rtl-fixer/settings.json` (با کلیدهای `enabled`, `fontEnabled`, `fontFamily`, `fontSizeScale`, `fixTables`, `fixLists`, `probe`) و هنگام پچ داخل بوت‌استرپ bake می‌شود → **هر تغییر تنظیمات نیاز به re-patch دارد** که سریع است (چند ثانیه).
+- تنظیمات کاربر: `~/.zcode/rtl-fixer/settings.json` (با کلیدهای `enabled`, `fontEnabled`, `fontFamily`, `fontSizeScale`, `fixTables`, `fixLists`, `mainLauncher`, `probe`) و هنگام پچ داخل بوت‌استرپ bake می‌شود → **هر تغییر تنظیمات نیاز به re-patch دارد** که سریع است (چند ثانیه).
+- `mainLauncher: true` یعنی لانچر اصلی «ZCode» (`~/.local/share/applications/zcode.desktop`) هم به نسخهٔ پچ‌شده pointer می‌شود — Exec عوض می‌شود، بقیهٔ خطوط (نوع، آیکون، MimeType) دست‌نخورده می‌ماند و نسخهٔ اصلی در `zcode.desktop.bak-rtl` نگه داشته می‌شود. `--uninstall` آن را برمی‌گرداند. AppImage اصلی هرگز تغییر نمی‌کند.
 
 ## اسکریپت‌ها (همه با Node، بدون وابستگی)
 

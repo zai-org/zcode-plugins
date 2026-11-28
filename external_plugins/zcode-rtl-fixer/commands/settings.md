@@ -15,6 +15,7 @@ Args: $ARGUMENTS — JSON patch. کلیدهای معتبر:
 | `fontSizeScale` | عدد (۱ = بدون تغییر) | `1.05` |
 | `fixTables` | جداول فارسی راست‌چین شوند | `true` |
 | `fixLists` | بولت/شمارهٔ آیتم‌های لیست فارسی به راست برود | `true` |
+| `mainLauncher` | لانچر اصلی «ZCode» هم به نسخهٔ پچ‌شده pointer شود | `false` |
 | `probe` | فقط برای تست تزریق (عنوان پنجره `RTLPROBE-…` می‌شود) | `false` |
 
 ```bash

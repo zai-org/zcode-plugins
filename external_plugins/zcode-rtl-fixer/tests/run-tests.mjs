@@ -337,11 +337,34 @@ test('patcher: findAppImage rejects missing paths and directories, resolves rela
   assert.equal(path.isAbsolute(p), true, 'relative AppImage path must be resolved to absolute');
 });
 
+test('patcher: syncMainLauncher redirects Exec, preserves args, keeps backup, idempotent', () => {
+  const dir = fs.mkdtempSync('/tmp/rtl-desktop-');
+  const desktop = path.join(dir, 'zcode.desktop');
+  fs.writeFileSync(
+    desktop,
+    ['[Desktop Entry]', 'Name=ZCode', 'Exec="/opt/apps/ZCode.AppImage" "--no-sandbox" %U', 'Type=Application', 'MimeType=x-scheme-handler/zcode;', ''].join('\n')
+  );
+  patcher.syncMainLauncher({ settings: { mainLauncher: false }, desktopPath: desktop, binPath: '/x/zcode-rtl' });
+  assert.ok(fs.readFileSync(desktop, 'utf8').includes('/opt/apps/ZCode.AppImage'), 'must not touch when disabled');
+
+  patcher.syncMainLauncher({ settings: { mainLauncher: true }, desktopPath: desktop, binPath: '/x/zcode-rtl' });
+  const out = fs.readFileSync(desktop, 'utf8');
+  assert.ok(out.includes('Exec=/x/zcode-rtl "--no-sandbox" %U'), 'Exec redirected with original args preserved');
+  assert.ok(out.includes('MimeType=x-scheme-handler/zcode;'), 'other lines untouched');
+  assert.ok(fs.existsSync(desktop + '.bak-rtl'), 'pristine backup kept');
+  assert.ok(fs.readFileSync(desktop + '.bak-rtl', 'utf8').includes('/opt/apps/ZCode.AppImage'), 'backup holds the original Exec');
+
+  patcher.syncMainLauncher({ settings: { mainLauncher: true }, desktopPath: desktop, binPath: '/x/zcode-rtl' });
+  assert.equal(fs.readFileSync(desktop, 'utf8'), out, 're-run must be a no-op');
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test('engine: settings CLI get/set round-trip (against a temp user path)', () => {
   // run `get` — must not crash and must return the default shape
   const res = execFileSync('node', [path.join(SCRIPTS, 'settings.mjs'), 'get'], { encoding: 'utf8' });
   const parsed = JSON.parse(res);
-  for (const key of ['enabled', 'fontEnabled', 'fontFamily', 'fontSizeScale', 'fixTables', 'fixLists', 'probe']) {
+  for (const key of ['enabled', 'fontEnabled', 'fontFamily', 'fontSizeScale', 'fixTables', 'fixLists', 'mainLauncher', 'probe']) {
     assert.ok(key in parsed, 'missing settings key: ' + key);
   }
 });

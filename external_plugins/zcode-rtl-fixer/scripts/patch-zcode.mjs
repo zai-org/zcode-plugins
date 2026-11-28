@@ -35,6 +35,8 @@ const APP_DIR = path.join(INSTALL_DIR, 'app');
 const STATE_PATH = path.join(INSTALL_DIR, 'installed.json');
 const BIN_PATH = path.join(os.homedir(), '.local', 'bin', 'zcode-rtl');
 const DESKTOP_PATH = path.join(os.homedir(), '.local', 'share', 'applications', 'zcode-rtl.desktop');
+// The user's main "ZCode" desktop entry (redirectable via the mainLauncher setting).
+const MAIN_DESKTOP_PATH = path.join(os.homedir(), '.local', 'share', 'applications', 'zcode.desktop');
 // NOTE: the zcode:// protocol handler only serves "/" (index.html) and "/assets/*",
 // so the engine must live inside out/renderer/assets/.
 const ENGINE_ENTRY = 'out/renderer/assets/zcode-rtl-bootstrap.js';
@@ -196,6 +198,36 @@ function writeLauncher() {
   log('desktop entry -> ' + DESKTOP_PATH);
 }
 
+/* ---------- main launcher takeover (settings.mainLauncher) ---------- */
+
+// Redirect the user's existing "ZCode" desktop entry to the patched launcher.
+// The AppImage itself is never touched (squashfs is read-only); only the Exec
+// line changes, keeping the original arguments (e.g. "--no-sandbox" %U).
+function syncMainLauncher({ settings, binPath = BIN_PATH, desktopPath = MAIN_DESKTOP_PATH } = {}) {
+  if (!settings || !settings.mainLauncher) return;
+  if (!fs.existsSync(desktopPath)) {
+    log('main launcher: no existing desktop entry to redirect, skipping');
+    return;
+  }
+  const lines = fs.readFileSync(desktopPath, 'utf8').split('\n');
+  const execIdx = lines.findIndex((l) => l.startsWith('Exec='));
+  if (execIdx === -1) {
+    log('main launcher: desktop entry has no Exec line, skipping');
+    return;
+  }
+  if (lines[execIdx].includes(binPath)) {
+    log('main launcher: already points at the RTL launcher');
+    return;
+  }
+  const m = lines[execIdx].match(/^Exec=\s*("[^"]*"|\S+)\s*(.*)$/);
+  const args = m && m[2] ? ' ' + m[2] : '';
+  const backupPath = desktopPath + '.bak-rtl';
+  if (!fs.existsSync(backupPath)) fs.copyFileSync(desktopPath, backupPath);
+  lines[execIdx] = `Exec=${binPath}${args}`;
+  fs.writeFileSync(desktopPath, lines.join('\n'));
+  log(`main launcher redirected -> ${binPath} (original kept at ${backupPath})`);
+}
+
 /* ---------- uninstall / purge / status ---------- */
 
 function uninstall({ purge = false } = {}) {
@@ -206,6 +238,12 @@ function uninstall({ purge = false } = {}) {
     log('original app.asar restored');
   } else {
     log('no backup found; nothing to restore');
+  }
+  const mainBackup = MAIN_DESKTOP_PATH + '.bak-rtl';
+  if (fs.existsSync(mainBackup)) {
+    fs.copyFileSync(mainBackup, MAIN_DESKTOP_PATH);
+    fs.rmSync(mainBackup);
+    log('main launcher restored from backup');
   }
   for (const p of [BIN_PATH, DESKTOP_PATH]) {
     if (fs.existsSync(p)) {
@@ -269,6 +307,7 @@ function main() {
   const { settings } = loadSettings();
   patchAsar(settings);
   writeLauncher();
+  syncMainLauncher({ settings });
 
   fs.writeFileSync(
     STATE_PATH,
@@ -304,6 +343,7 @@ export {
   patchIndexHtml,
   patchAsar,
   writeLauncher,
+  syncMainLauncher,
   uninstall,
   status,
   PLUGIN_VERSION,

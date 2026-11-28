@@ -16,7 +16,7 @@
 
   if (!SETTINGS || SETTINGS.enabled === false) return;
   if (window.__ZCODE_RTL_FIXER__) return;
-  window.__ZCODE_RTL_FIXER__ = { version: '0.2.0', settings: SETTINGS };
+  window.__ZCODE_RTL_FIXER__ = { version: '0.2.1', settings: SETTINGS };
 
   /* ------------------------------------------------------------------ *
    *  CSS

@@ -1,12 +1,12 @@
 {
   "name": "zcode-rtl-fixer",
-  "version": "0.2.0",
-  "description": "Persian/English mixed-text (bidi) fixer for the ZCode Desktop chat box: automatic RTL paragraphs, Persian font, RTL tables and list markers; code blocks untouched. Includes installer/patcher, font installer and settings commands.",
+  "version": "0.2.1",
+  "description": "Persian/English mixed-text (bidi) fixer for the ZCode Desktop chat box: automatic RTL paragraphs, Persian font, RTL tables, RTL list markers; code blocks untouched. Includes installer/patcher, font installer and settings commands.",
   "description_i18n": {
     "en": "Persian/English mixed-text (bidi) fixer for the ZCode Desktop chat box: automatic RTL paragraphs, Persian font, RTL tables and list markers; code blocks untouched.",
     "zh-CN": "修复 ZCode Desktop 聊天框中波斯语/英语混排（双向文本）的显示问题：段落自动右到左、波斯语友好字体、表格与列表标记右到左；代码块保持不变。"
   },
-  "author": { "name": "Sajjad Yousefnia", "url": "https://github.com/sajjadyousefnia" },
+  "author": { "name": "Sajjad Yousefnia" },
   "skills": "./skills",
   "commands": "./commands"
 }
