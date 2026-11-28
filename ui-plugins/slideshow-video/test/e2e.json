@@ -1,0 +1,1 @@
+{"prefix": "slideshow", "folder": "相册", "pick": ["茶园一日"], "startSettings": {"title": "茶园一日"}, "uiEdit": {"row": 5, "key": "include", "value": false}, "expectText": "photo", "expectFiles": ["\\.mp4$", "storyboard\\.png$"]}
