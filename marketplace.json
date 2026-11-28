@@ -1673,6 +1673,55 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "rubric-maker",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/rubric-maker",
+      "displayName": "Rubric Maker",
+      "displayName_i18n": {
+        "en": "Rubric Maker",
+        "zh-CN": "评分量规"
+      },
+      "description": "Write a grading rubric once — criteria, levels, points and a descriptor for every cell — then score the whole class by picking a level per criterion. The rubric is a short Markdown file (weights like “论点 ×2” or “论据（8 分）”, levels like 优秀 4 | 良好 3 | 合格 2 | 待改进 1, a total such as 满分 20); the class list is a CSV or Excel roster that can already hold levels typed as names, first characters, A–D or points. Every student gets a score scaled to the total and automatic feedback: strengths from their top-level descriptors and two next steps quoting the descriptor one level up. Catches levels that don't exist (a 5 on a 4-point scale), half-scored or unscored students, duplicates, rubric cells without a descriptor, weights that don't add up to the total, and criteria where everyone got the same level. Exports the rubric as a printable table to hand out, a scores workbook with rank and level distribution, and feedback slips (three per page) to cut and return. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Write a grading rubric once — criteria, levels, points and a descriptor for every cell — then score the whole class by picking a level per criterion. The rubric is a short Markdown file (weights like “论点 ×2” or “论据（8 分）”, levels like 优秀 4 | 良好 3 | 合格 2 | 待改进 1, a total such as 满分 20); the class list is a CSV or Excel roster that can already hold levels typed as names, first characters, A–D or points. Every student gets a score scaled to the total and automatic feedback: strengths from their top-level descriptors and two next steps quoting the descriptor one level up. Catches levels that don't exist (a 5 on a 4-point scale), half-scored or unscored students, duplicates, rubric cells without a descriptor, weights that don't add up to the total, and criteria where everyone got the same level. Exports the rubric as a printable table to hand out, a scores workbook with rank and level distribution, and feedback slips (three per page) to cut and return. No account or API keys; runs on your computer.",
+        "zh-CN": "写一次评分量规——维度、等级、分值和每一格的描述——然后给全班每人每个维度选一个等级即可打分。量规是一个简短的 Markdown（权重写成“论点 ×2”或“论据（8 分）”，等级写成 优秀 4 | 良好 3 | 合格 2 | 待改进 1，满分 20 之类）；学生名单是 CSV 或 Excel，可以已经填好等级（写等级名、首字、A–D 或分数都行）。每位学生得到按满分换算的分数和自动反馈：优点取自达到最高等级的描述，“下一步”给出两条，引用高一级的描述。会发现不存在的等级（4 级量规里写了 5）、只评了一半或没评的学生、重复的学生、缺少描述的格子、权重加起来不等于满分，以及所有人都同一等级的维度。导出可打印发给学生的量规表、带名次和等级分布的成绩表，以及每页三张、可裁开发回的反馈单。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "rubric",
+        "grading",
+        "assessment",
+        "feedback",
+        "teacher",
+        "评分量规",
+        "评分标准",
+        "打分",
+        "作文评分",
+        "反馈",
+        "教师"
+      ],
+      "examplePrompts": [
+        "Score the class in 作文评分 with the essay rubric",
+        "Fix the invalid level and remove the duplicate student",
+        "Export the rubric, scores and feedback slips"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "用 作文评分 里的量规给全班打分",
+          "把不存在的等级改掉，去掉重复的学生",
+          "导出量规表、成绩表和反馈单"
+        ]
+      }
     }
   ]
 }
