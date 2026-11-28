@@ -1,0 +1,1 @@
+{"prefix": "cut", "folder": "木工", "pick": ["衣柜"], "startSettings": {}, "uiEdit": {"row": 1, "key": "length", "value": "1200"}, "expectText": "board", "expectFiles": ["cutting-diagrams\\.pdf$", "cutting-diagrams\\.svg$", "cut-list\\.xlsx$"]}
