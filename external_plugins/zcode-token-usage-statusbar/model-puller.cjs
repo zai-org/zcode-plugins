@@ -20,6 +20,7 @@
  * 宽限 1s 内搭车（cc-switch 拉列表不等目录），失败另有 10 分钟短缓存，均不拖慢弹窗。 */
 "use strict";
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { createHash, randomUUID } = require("crypto");
 
@@ -41,10 +42,21 @@ const PROBE_SNIPPET_MAX = 200;    // 错误摘录回渲染端的长度上限（�
  * （oauth:bigmodel:access_token），运行端点默认 Anthropic（宿主
  * legacyZCodeConfigProviderReader 的 BIGMODEL_CODING_PLAN_ANTHROPIC_BASE_URL）。
  * cc-switch#3471 实证：OpenAI 普通端点（/api/paas/v4）与 Coding Plan（/api/coding/paas/v4）
- * 分离，套餐误用普通端点会 429——列模型三端点对套餐 token 均放行（实测），此处固定用与
- * 运行协议同源的 Anthropic models 端点。写入目标=套餐 personal 规则的
+ * 分离，套餐误用普通端点跑请求会 429。列模型按候选端点链取（listUrls，凭据同为 Bearer
+ * OAuth access_token）：2026-11-24 实测 Anthropic 形态 /api/anthropic/v1/models 已收紧为只认
+ * 项目域凭据，对 OAuth 回 HTTP 200 + 错误信封 {"code":401,"msg":"登录状态已过期"}；同令牌打
+ * OpenAI 形态 Coding Plan 列表正常出列表——故后者在先、前者降为次候选（完整契约与证据见
+ * specs/plan-model-list.md）。写入目标=套餐 personal 规则的
  * personalModelIds/modelOrder（宿主自身也写这两键，实测）；全新环境宿主尚未创建该规则时
  * （首次官方保存才隐式创建）按同构骨架自建（issue #226），id 按宿主官方规范大小写归一。 */
+const BIGMODEL_PLAN_LIST_URLS = [
+  "https://open.bigmodel.cn/api/coding/paas/v4/models",   // OpenAI 形态 Coding Plan 列表：{object:"list",data:[{id,…}]}
+  "https://open.bigmodel.cn/api/anthropic/v1/models",     // Anthropic 形态（v134 原端点）：{data:[{id,display_name,…}],hasMore}
+];
+const ZAI_PLAN_LIST_URLS = [
+  "https://api.z.ai/api/coding/paas/v4/models",
+  "https://api.z.ai/api/anthropic/v1/models",
+];
 var PLAN_SOURCES = {
   /* fam 对齐 quota-client 的 HOST_ALT_CRED_KEYS（issue #393）：宿主 3.18+ 新式登录态下
    * credKey 旧平铺键整键缺席时按家族回退新式键（bigmodel→oauth:linked_bigmodel、
@@ -52,14 +64,18 @@ var PLAN_SOURCES = {
    * 共用同一 credKey（planListable 家族去重按 credKey，两划分当前恒重合）。 */
   "account:bigmodel-individual-coding-plan": {
     name: "BigModel Coding Plan",
-    endpoint: "https://open.bigmodel.cn/api/anthropic/v1/models",
+    listUrls: BIGMODEL_PLAN_LIST_URLS,
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     fam: "bigmodel",
     credKey: "oauth:bigmodel:access_token",
-    /* 增强链鉴权（v344）：宿主对话走 v2/config.json 的 builtin provider options.apiKey
-     * （明文 key + anthropic 协议 + /api/anthropic，实测正常）；credentials.json 的
-     * OAuth access_token 直连 messages 端点被网关以 500「网络错误 code 1234」拒绝
-     * （stream 真/假、有无 UA 均复现）——enhance 鉴权优先宿主同款 key，OAuth 仅兜底。 */
+    /* 增强链鉴权（v344，只说 bigmodel 家族的 messages 直连）：宿主对话走 v2/config.json 的
+     * builtin provider options.apiKey（明文 key + anthropic 协议 + /api/anthropic，实测正常）；
+     * credentials.json 的 OAuth access_token 直连 messages 端点被网关以 500「网络错误 code 1234」
+     * 拒绝（stream 真/假、有无 UA 均复现）——bigmodel 增强鉴权用宿主同款 key，不再以 OAuth
+     * access_token 作直连兜底（GLr 时代经 location 换发短时 token）。范围之外照旧走 OAuth：
+     * zai 家族增强（planKeyOf：v2 key 优先、OAuth 兜底）与套餐模型列表（planTokenOf）仍用
+     * OAuth access_token 直连；确认流探测的 bigmodel 家族已与增强链同序取运行时凭据
+     * （planProbeKeyOf，specs/plan-model-list.md）。 */
     v2ConfigKey: "builtin:bigmodel-coding-plan",
   },
   /* issue #336（v345）：接入宿主其余 5 个套餐 id——增强链此前只认 bigmodel individual，
@@ -69,7 +85,7 @@ var PLAN_SOURCES = {
    * start-plan 两条走 zcode.z.ai 网关（baseURL 取自宿主 config.json 实测值）。 */
   "account:zai-individual-coding-plan": {
     name: "Z.ai Coding Plan",
-    endpoint: "https://api.z.ai/api/anthropic/v1/models",
+    listUrls: ZAI_PLAN_LIST_URLS,
     baseUrl: "https://api.z.ai/api/anthropic",
     fam: "zai",
     credKey: "oauth:zai:access_token",
@@ -77,7 +93,7 @@ var PLAN_SOURCES = {
   },
   "account:zai-team-coding-plan": {
     name: "Z.ai Coding Plan (team)",
-    endpoint: "https://api.z.ai/api/anthropic/v1/models",
+    listUrls: ZAI_PLAN_LIST_URLS,
     baseUrl: "https://api.z.ai/api/anthropic",
     fam: "zai",
     credKey: "oauth:zai:access_token",
@@ -85,7 +101,7 @@ var PLAN_SOURCES = {
   },
   "account:zai-start-plan": {
     name: "Z.ai Start Plan",
-    endpoint: "https://api.z.ai/api/anthropic/v1/models",
+    listUrls: ZAI_PLAN_LIST_URLS,
     baseUrl: "https://api.z.ai/api/anthropic",
     fam: "zai",
     credKey: "oauth:zai:access_token",
@@ -95,26 +111,32 @@ var PLAN_SOURCES = {
   },
   "account:bigmodel-team-coding-plan": {
     name: "BigModel Coding Plan (team)",
-    endpoint: "https://open.bigmodel.cn/api/anthropic/v1/models",
+    listUrls: BIGMODEL_PLAN_LIST_URLS,
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     fam: "bigmodel",
     credKey: "oauth:bigmodel:access_token",
+    /* issue #442：团队套餐是独立计费池——v2 条目 key 与 GLr location 都属个人项目
+     * （location 键名 team===null），对团队源绝不可用。增强凭据=团队项目 PAT
+     * （planTeamPatOf，额度链同款三步换发）；zai 团队未实测维持 planKeyOf 诚实尝试。 */
+    teamPat: true,
     v2ConfigKey: "builtin:bigmodel-coding-plan",
   },
   "account:bigmodel-start-plan": {
     name: "BigModel Start Plan",
-    endpoint: "https://open.bigmodel.cn/api/anthropic/v1/models",
+    listUrls: BIGMODEL_PLAN_LIST_URLS,
     baseUrl: "https://open.bigmodel.cn/api/anthropic",
     fam: "bigmodel",
     credKey: "oauth:bigmodel:access_token",
     /* issue #336 终案（2026-11-14 实测 200 ×3 头形）：start-plan 推理与 coding plan 同走
      * open.bigmodel.cn/api/anthropic，凭据=宿主在 bigmodel 账号下发放的**项目 API key**
-     * （名字 zcode-api-key，usageScene=CODING_PLAN，id.secret 形态）——宿主已写入
+     * （名字 zcode-api-key，usageScene=CODING_PLAN，id.secret 形态）——3.18 宿主曾写入
      * v2 config 的 builtin:bigmodel-coding-plan 条目（本机三头形实测 200）。此前按旧
-     * config 注释打 zcode.z.ai + 会话 JWT 是双重错误（网关错+凭据错 → 401/3012 WAF）；
-     * zcode.z.ai 仅承载计费（billing/balance，zcodejwttoken+X-Device-Mid）。
-     * 注意：纯 start-plan（无 coding plan config 条目）账号回落 OAuth 直连会被 500
-     * 拒（v344 实测），此场景需走 GLr 项目密钥发放流程，未实现前诚实报 auth。 */
+     * config 注释打 zcode.z.ai + 会话 JWT 是双重错误（网关错+凭据错 → 401/3012 WAF）。
+     * 3.19.x 起（specs/plan-glr-credential.md）：宿主 builtin 套餐改 zhipu-account 运行时
+     * 内存换发（GLr），v2 config.json 不再存在；表值 baseUrl 仅供 runtime 配置缺读时兜底，
+     * 3.19.1 runtime 权威路由把 start-plan 指向 zcode.z.ai/api/v1/zcode-plan/anthropic。
+     * issue #429：disabled 条目的 key 无资源包会恒 429 1113，照取必败；GLr 换发实现后
+     * bigmodel 家族凭据序=条目 key → GLr token → plan_auth（OAuth 直连兜底已移除）。 */
     v2ConfigKey: "builtin:bigmodel-coding-plan",
   },
 };
@@ -132,8 +154,12 @@ var PLAN_ID_ALIASES = {
 function planAliasId(v) { return PLAN_ID_ALIASES[String(v || "")] || String(v || ""); }
 
 /* 宿主官方 GLM 模型规范 id（packages/shared/src/official-glm-model-id.ts）：套餐 models
- * 端点返回小写，personal 规则用规范大小写——写入前归一，防止同模型两套写法 */
+ * 端点返回小写，personal 规则用规范大小写——写入前归一，防止同模型两套写法。宿主只对官方
+ * 名单与单向迁移入口做归一、不比较 Registry，表外 id 写进 personalModelIds 就是另一套写法，
+ * 所以端点出现宿主表没有的模型时在此补齐（拼写取厂商 display_name）：GLM-5.3-FlashX、
+ * GLM-5.4（宿主 runtime builtinModelIds 同拼写）、GLM-5.3-FlashX-Legal。 */
 var OFFICIAL_GLM_MODEL_IDS = [
+  "GLM-5.4", "GLM-5.3-FlashX-Legal",
   "GLM-5.3", "GLM-5.3-Flash", "GLM-5.3-FlashX", "GLM-5V-Turbo", "GLM-5.2", "GLM-5.1", "GLM-5.1-Highspeed",
   "GLM-5", "GLM-5-Turbo", "GLM-4.7", "GLM-4.7-FlashX", "GLM-4.7-Flash", "GLM-4.6",
   "GLM-4.5-Air", "GLM-4.5", "GLM-4.6V", "GLM-4.6V-Flash", "GLM-4.6V-FlashX",
@@ -743,6 +769,94 @@ function agreedCapabilities(entries, id) {
       return maskSecrets(Buffer.concat(chunks).toString("utf8"), secret);
     } catch (e) { return ""; }
   }
+  /* BigModel 余额/资源包类错误识别（issue #429）：1113「余额不足或无可用资源包」按 HTTP 429
+   * 返回，与真实并发限流同状态码——按响应体区分归 kind "balance"，渲染端给独立文案，不再
+   * 诱导用户当限流重试。输入是已过 maskSecrets 的脱敏摘录（BigModel 错误信封无凭据形状，
+   * 脱敏不改 JSON）；JSON 解析失败回退文案关键词。 */
+  function balanceEnhanceError(detail) {
+    const text = String(detail || "");
+    if (!text) return false;
+    if (/余额不足|无可用资源包/.test(text)) return true;
+    try {
+      const obj = JSON.parse(text);
+      const err = obj && typeof obj === "object" && obj.error && typeof obj.error === "object" ? obj.error : null;
+      return !!(err && String(err.code) === "1113");
+    } catch (e) { return false; }
+  }
+  /* ---------- GLr 凭据换发（specs/plan-glr-credential.md，宿主 3.19.x ProjectAccessTokenClient
+   * 同款协议）：credentials.json 的 location 键承载 org/project/apiKey 三元组，键名形如
+   * project-key-location:v1:<encodeURIComponent(JSON 数组)>，数组=[origin, family, accountId,
+   * team, usageScene, planType]。origin 校验限定 bigmodel.cn 本域——OAuth token 绝不发第三方。 */
+  /* 官方域后缀匹配（https + 域名后缀，大小写归一）：GLr location origin 与 runtime 路由
+   * baseUrl 共用——OAuth/换发 token 绝不发第三方（review D-1/A-15 例 hostile 探针口径）。 */
+  function officialPlanHostMatch(host, suffixes) {
+    host = String(host || "").toLowerCase().replace(/^\[|\]$/g, "");
+    if (!host || host.charCodeAt(0) === 46) return false;   // 空标签（".z.ai"/".bigmodel.cn"）一律拒绝（review R2-A1）
+    for (let i = 0; i < suffixes.length; i++) {
+      if (host === suffixes[i] || host.endsWith("." + suffixes[i])) return true;
+    }
+    return false;
+  }
+  /* runtime 配置 baseUrl 收编白名单：宿主托管的 runtime builtin 配置可被同权限进程改写，
+   * 换发 token 与用户草稿会发往该路由——非家族官方域（bigmodel.cn/zcode.z.ai/z.ai 及
+   * 子域）一律拒绝，调用方回退表值（review D-1 纵深防御）。返回归一 origin+path。 */
+  function officialPlanBaseUrl(value) {
+    let u = null;
+    try { u = new URL(String(value || "").trim()); } catch (e) { return null; }
+    if (u.protocol !== "https:") return null;
+    if (!officialPlanHostMatch(u.hostname, ["bigmodel.cn", "zcode.z.ai", "z.ai"])) return null;
+    return u.origin + u.pathname.replace(/\/+$/, "");
+  }
+  function parseProjectLocationKeyName(keyName) {
+    const name = String(keyName || "");
+    if (name.indexOf("project-key-location:v1:") !== 0) return null;
+    let arr = null, origin = null;
+    try {
+      arr = JSON.parse(decodeURIComponent(name.slice("project-key-location:v1:".length)));
+      if (!Array.isArray(arr) || arr.length < 6) return null;
+      origin = new URL(String(arr[0] || ""));
+    } catch (e) { return null; }
+    if (origin.protocol !== "https:" || !officialPlanHostMatch(origin.hostname, ["bigmodel.cn"])) return null;
+    const family = typeof arr[1] === "string" ? arr[1] : "";
+    if (!family) return null;
+    /* team 仅 null/undefined 视为非团队：契约外形状（字符串等）一律不匹配个人 location
+     * （review A-5/D-3：防御纵深，防契约漂移时拿个人凭据对团队定位换发） */
+    const team = arr[3] === null || arr[3] === undefined ? null : (arr[3] && typeof arr[3] === "object" ? arr[3] : "invalid");
+    return { origin: origin.origin, family: family, accountId: String(arr[2] || ""), team: team, usageScene: arr[4], planType: arr[5] };
+  }
+  function glrExchangeUrl(origin, loc) {
+    return origin + "/api/biz/v1/organization/" + encodeURIComponent(loc.organizationId)
+      + "/projects/" + encodeURIComponent(loc.projectId)
+      + "/api_keys/" + encodeURIComponent(loc.apiKeyId) + "/access_tokens";
+  }
+  /* 换发响应信封：{code:200|0|"200"|"0", msg, data:{enabled, accessToken}}——wire 字段是
+   * accessToken（2026-11-21 真实端点实测："操作成功"信封；#431 误把宿主缓存内层的 token
+   * 字段名当 wire 形状，真机上恒 parse 失败回 plan_auth）；兼容 token 别名。
+   * enabled===false（含团队端点的 enable 别名，额度链同款形状）或凭据非非空字符串一律按
+   * 失败。expiresAt/expiresIn 供团队 PAT 记忆过期（个人 GLr 记忆走固定 10 分钟 TTL，不用）。 */
+  function parseGlrExchangePayload(text) {
+    let obj = null;
+    try { obj = JSON.parse(String(text || "")); } catch (e) { return null; }
+    if (!obj || typeof obj !== "object") return null;
+    const code = obj.code;
+    if (!(code === 200 || code === 0 || code === "200" || code === "0")) return null;
+    const data = obj.data && typeof obj.data === "object" ? obj.data : null;
+    if (!data || data.enabled === false || data.enable === false) return null;
+    const token = typeof data.accessToken === "string" && data.accessToken.trim() ? data.accessToken.trim()
+      : typeof data.token === "string" ? data.token.trim() : "";
+    if (!token) return null;
+    /* issue #481（线上样本来自报告者抓包，维护者未用真实团队账号复核）：expiresAt 是 10 位秒级
+     * 时间戳（与 expiresIn 同单位）——统一换成毫秒再交给 memo 与 Date.now() 比较；< 1e12 视为秒
+     * （额度链 reset 秒/毫秒自适应同款判定）。离谱值按缺失处理，否则 PAT 会被永久缓存：非有限值，
+     * 换算后距今超过 7 天的 expiresAt，以及折算超过 7 天的 expiresIn；已过期的 expiresAt 原样
+     * 保留（让 memo 落空去重换），不回落到 expiresIn。 */
+    const now = Date.now(), maxTtlMs = 7 * 24 * 3600 * 1000;
+    const at = typeof data.expiresAt === "number" ? data.expiresAt : 0;
+    const atMs = at > 0 ? (at < 1e12 ? at * 1000 : at) : 0;
+    const ttlSec = typeof data.expiresIn === "number" && data.expiresIn > 0 && data.expiresIn * 1000 <= maxTtlMs ? data.expiresIn : 0;
+    const expiresAt = atMs && atMs - now <= maxTtlMs ? atMs : ttlSec ? now + ttlSec * 1000 : 0;
+    return { token: token, expiresAt: expiresAt };
+  }
 
 function createModelPuller(opts) {
   const o = opts || {};
@@ -762,8 +876,21 @@ function createModelPuller(opts) {
   const catalogGraceMs = Number.isFinite(Number(o.catalogGraceMs)) && Number(o.catalogGraceMs) >= 0 ? Number(o.catalogGraceMs) : CATALOG_GRACE_MS;
   const cachePath = String(o.cachePath || "");   // 档位索引落盘路径（运行目录，inject-main 传入）；空=仅内存（测试）
   const credentialsPath = String(o.credentialsPath || "");   // 宿主 OAuth 凭据（套餐源）
+  /* 宿主 setting.json（团队套餐选择，issue #442）：恒在 HOME/.zcode/v2 不随 dataBaseDir
+   * 迁移（quota.md §4）；缺省同源推导，与额度链 teamSelectionOf 兜底同款（opts.settingPath
+   * 仅供测试注入；ZCODE_DESKTOP_HOME_DIR 场景两链同走 os.homedir()，不单独分叉）。 */
+  const settingPath = String(o.settingPath || path.join(os.homedir(), ".zcode", "v2", "setting.json"));
   const decryptValue = typeof o.decryptValue === "function" ? o.decryptValue : null;   // 注入解密（主进程内存解密）
   const credEnv = o.env && typeof o.env === "object" ? o.env : process.env;   // v1 信封派生钥环境（生产缺省 process.env，同注入闭包口径）
+  /* 宿主 appVersion：GLr 换发体 clientVersion（specs/plan-glr-credential.md）。本文件由
+   * inject-main 在 Electron 主进程 require，可直接取 app.getVersion()；测试/独立链无
+   * electron 模块 → catch 兜空，body 省略该字段。opts.hostVersion 仅供测试注入覆写。 */
+  const hostVersion = String(o.hostVersion || (function () {
+    try {
+      const { app } = require("electron");
+      return app && typeof app.getVersion === "function" ? String(app.getVersion()) : "";
+    } catch (e) { return ""; }
+  })());
   let disposed = false;
   let applyBusy = false;   // 读-改-写竞态闸：UI 正常路径不会并发，这里防异常路径双写互相覆盖
   let catalogCache = null;   // {at, entries}：目录全量约数百 KB，成功后进程内复用
@@ -904,6 +1031,50 @@ function createModelPuller(opts) {
       return d && d.provider && typeof d.provider === "object" ? d.provider[src.v2ConfigKey] || null : null;
     } catch (e) { return null; }
   }
+  /* v2/config.json 的自定义供应商条目（issue #440）：宿主设置页添加的 API-Key 供应商只落
+   * config.json 的 provider.<id>（UUID 键，schema 形状 kind/name/options{apiKey,baseURL}/enabled），
+   * 不进 provider_config.json 的 providerRules——增强链此前对这些 id 一律 provider not found。
+   * 按 host 引擎同款 kind→api.type 映射（j8c：anthropic→anthropic-messages、openai→openai-responses、
+   * openai-compatible/未知/缺省→openai-chat-completions）合成只读伪配置。fail-closed：条目缺失、
+   * 显式 enabled:false、key 空/enc: 密文、baseURL 空、builtin:/account: 命名空间（builtin 归
+   * PLAN_SOURCES 套餐专链；account: 与宿主 B8c 准入同门，非套餐 account id 不是宿主背书的
+   * 自定义供应商）一律不可用。宿主 B8c 另有 source!=="custom" 过滤，插件有意不镜像：宿主各
+   * 版本对 config 条目的消费口径不一（3.19.0 报告者机器条目形状未实测），source 门可能误杀
+   * 宿主实际在用的条目；key 只发条目自带 baseURL 本域，命名空间闸已足够防混用。 */
+  function readV2ProviderMap() {
+    const out = new Map();
+    if (!customCfgPath) return out;
+    try {
+      const cfgPath = customCfgPath.replace(/provider_config\.json$/, "config.json");
+      const d = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+      const prov = d && d.provider && typeof d.provider === "object" ? d.provider : null;
+      if (!prov) return out;
+      for (const id of Object.keys(prov)) {
+        const entry = prov[id];
+        if (!id || !entry || typeof entry !== "object" || id.indexOf("builtin:") === 0 || id.indexOf("account:") === 0) continue;
+        out.set(id, entry);
+      }
+    } catch (e) { }
+    return out;
+  }
+  function v2ProviderCfgOf(providerId, map) {
+    const id = String(providerId || "");
+    if (!id || PLAN_SOURCES[id]) return null;
+    const m = map || readV2ProviderMap();
+    const entry = m.get(id);
+    if (!entry || typeof entry !== "object" || entry.enabled === false) return null;
+    const opts = entry.options && typeof entry.options === "object" ? entry.options : null;
+    const key = opts && typeof opts.apiKey === "string" ? opts.apiKey.trim() : "";
+    const base = opts && typeof opts.baseURL === "string" ? opts.baseURL.trim() : "";
+    if (!key || key.indexOf("enc:") === 0 || !base) return null;
+    const kind = typeof entry.kind === "string" ? entry.kind : "";
+    const apiType = kind === "anthropic" ? "anthropic-messages" : kind === "openai" ? "openai-responses" : "openai-chat-completions";
+    return {
+      id: id,
+      name: typeof entry.name === "string" ? entry.name : "",
+      cfg: { access: { type: "api-key", apiKey: key }, api: { type: apiType, baseUrl: base } },
+    };
+  }
   /* 套餐增强鉴权（issue #336）：「宿主 v2/config.json 的 builtin provider options.apiKey
    * 优先（明文 key，宿主对话同款——同目录 config.json 与 provider_config.json 并置），
    * OAuth 兜底」——bigmodel coding plan 实测口径（OAuth 直连 messages 被网关 500 拒，
@@ -914,6 +1085,334 @@ function createModelPuller(opts) {
     const entry = readV2BuiltinEntry(src);
     const key = entry && entry.options && typeof entry.options.apiKey === "string" ? entry.options.apiKey.trim() : "";
     return (key && key.indexOf("enc:") !== 0 ? key : null) || planTokenOf(providerId);
+  }
+  /* v2 条目明文 key 门（issue #429）：条目存在、未显式禁用、key 非空且非 enc: 才算可用。
+   * planKeyOf 不查 enabled（individual/team 维持既有「条目 key 优先、OAuth 兜底」口径），
+   * 增强链用它作 3.18 宿主（v2 config.json 在）的首选凭据——3.19.x 宿主已不再落盘该文件
+   * （specs/plan-glr-credential.md），GLr 换发接管。 */
+  function planEntryKeyOf(providerId) {
+    const src = PLAN_SOURCES[String(providerId || "")];
+    if (!src || !src.v2ConfigKey || !customCfgPath) return null;
+    const entry = readV2BuiltinEntry(src);
+    if (!entry || entry.enabled === false) return null;
+    const key = entry.options && typeof entry.options.apiKey === "string" ? entry.options.apiKey.trim() : "";
+    return key && key.indexOf("enc:") !== 0 ? key : null;
+  }
+  /* ---------- GLr 凭据换发（specs/plan-glr-credential.md）：宿主 3.19.x 对 builtin 套餐
+   * （access.type=zhipu-account）运行时内存换发——OAuth token 换短期 access token，
+   * v2/config.json 不再存在，插件的 OAuth 直连兜底（v344 实测 500 code 1234）随之失效。
+   * 换发 token 只在内存（10 分钟 memo，凭据指纹变化即失效），绝不落盘/进日志/回渲染端。 */
+  const GLR_MEMO_TTL_MS = 10 * 60 * 1000;
+  const GLR_EXCHANGE_TIMEOUT_MS = 15000;
+  const GLR_PLATFORM_PREFIX = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : process.platform === "linux" ? "linux" : process.platform;
+  const glrMemo = { fp: "", token: "", at: 0 };
+  /* 换发在途共享：memo 只在换发成功后写入，确认流对多模型并发探测（渲染端并发 4）会让首个
+   * 请求各签一次 token；同凭据文件内容下的并发调用共享同一次换发。键含凭据文件原文——凭据
+   * 变化即不共享。只有不带外部 signal 的调用（探测）参与共享——带 signal 的调用（增强链）
+   * 各自换发：共享会让跟随者继承首调用方的取消，未取消的一方误报凭据不可用。 */
+  const glrInflight = new Map(), teamInflight = new Map();
+  async function sharedInflight(map, key, run) {
+    try { key += "|" + fs.readFileSync(credentialsPath, "utf8"); } catch (e) { }
+    const hit = map.get(key);
+    if (hit) return hit;
+    const p = Promise.resolve().then(run).finally(() => { if (map.get(key) === p) map.delete(key); });
+    map.set(key, p);
+    return p;
+  }
+  function glrMemoToken() {
+    return glrMemo.token && Date.now() - glrMemo.at < GLR_MEMO_TTL_MS ? glrMemo.token : null;
+  }
+  /* runtime builtin 配置（<v2>/runtime/provider/<平台>/<宿主版本>/endpoint-<hash>/zcode-builtin.json）：
+   * 宿主 3.19.x 的权威套餐路由（start-plan → zcode.z.ai，individual/team → open.bigmodel.cn）。
+   * 全量 stat stamp 缓存；多版本目录取最高 semver，先扫高版本先到先得；单文件损坏跳过。
+   * 读不到（旧宿主/结构变化）返回 null，调用方回退 PLAN_SOURCES.baseUrl。 */
+  let runtimeRouteCache = null;
+  function runtimePlanRoute(providerId) {
+    if (!customCfgPath) return null;
+    const root = path.join(path.dirname(customCfgPath), "runtime", "provider");
+    const candidates = [];
+    let stamp = "";
+    try {
+      for (const plat of fs.readdirSync(root)) {
+        if (String(plat).indexOf(GLR_PLATFORM_PREFIX) !== 0) continue;
+        const platDir = path.join(root, plat);
+        let versions = null;
+        try { versions = fs.readdirSync(platDir); } catch (e) { continue; }
+        for (const ver of versions) {
+          const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(ver));
+          if (!m) continue;
+          const epDir = path.join(platDir, ver);
+          let eps = null;
+          try { eps = fs.readdirSync(epDir); } catch (e) { continue; }
+          for (const ep of eps) {
+            if (String(ep).indexOf("endpoint-") !== 0) continue;
+            const file = path.join(epDir, ep, "zcode-builtin.json");
+            let st = null;
+            try { st = fs.statSync(file); } catch (e2) { continue; }
+            if (!st.isFile()) continue;
+            /* stamp 含 ino/dev：与 readTemplateRules 同纪律，防 Windows 同毫秒同名重建的
+             * 文件隧道化钉死旧路由（review A-2/D-4d） */
+            stamp += file + ":" + st.mtimeMs + ":" + st.ctimeMs + ":" + st.birthtimeMs + ":" + st.size + ":" + st.ino + ":" + st.dev + "|";
+            candidates.push({ rank: (+m[1]) * 1e6 + (+m[2]) * 1e3 + (+m[3]), file: file });
+          }
+        }
+      }
+    } catch (e) { return null; }
+    if (!candidates.length) return null;
+    if (runtimeRouteCache && runtimeRouteCache.stamp === stamp) return runtimeRouteCache.byId[String(providerId || "")] || null;
+    candidates.sort((a, b) => b.rank - a.rank);
+    const byId = Object.create(null);
+    for (const cand of candidates) {
+      try {
+        const d = JSON.parse(fs.readFileSync(cand.file, "utf8"));
+        const rules = (((d || {}).config || {}).providerConfigRules || {}).providerRules;
+        if (!Array.isArray(rules)) continue;
+        for (const r of rules) {
+          const pid = r && typeof r === "object" ? String(r.providerId || "") : "";
+          const base = r && r.config && r.config.api && typeof r.config.api.baseUrl === "string" ? officialPlanBaseUrl(r.config.api.baseUrl) : null;
+          if (pid && base && !byId[pid]) byId[pid] = base;   // 非家族官方域一律不收（review D-1：换发 token 与草稿只发白名单域）
+        }
+      } catch (e) { }
+    }
+    runtimeRouteCache = { stamp: stamp, byId: byId };
+    return byId[String(providerId || "")] || null;
+  }
+  function planBaseUrl(providerId) {
+    const src = PLAN_SOURCES[String(providerId || "")];
+    if (!src) return "";
+    return runtimePlanRoute(providerId) || src.baseUrl;
+  }
+  /* zcode.z.ai 路由的会话凭据（specs/plan-glr-credential.md 补篇，2026-11-21 真机实测）：
+   * GLr accessToken 是 bigmodel.cn 项目域凭据，打 zcode.z.ai 恒 401——该网关认
+   * zcodejwttoken（会话 JWT，额度链 zcode-start 同款，OAuth/access_token 实测 401）
+   * + X-Device-Mid 必带头（缺头实测 400 code 3001）。凭据与设备号都只在内存。
+   * 返回 {token, deviceMid} 或 null（fail-closed）。 */
+  function readZcodeSessionCred() {
+    if (!credentialsPath || !decryptValue) return null;
+    let raw = null;
+    try { raw = JSON.parse(fs.readFileSync(credentialsPath, "utf8")); } catch (e) { return null; }
+    const enc = raw && typeof raw === "object" ? raw["zcodejwttoken"] : null;
+    if (typeof enc !== "string" || !enc) return null;
+    let token = decryptValue(enc);
+    if (typeof token !== "string" || !token.trim() || token.indexOf("enc:") === 0) return null;
+    let deviceMid = "";
+    const dir = path.dirname(credentialsPath);
+    for (const name of ["telemetry-state.json", "onboarding-record.json"]) {
+      let d = null;
+      try { d = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")); } catch (e) { }
+      const v = d && typeof d === "object" ? d.deviceMid : null;
+      if (typeof v === "string" && v.trim()) { deviceMid = v.trim(); break; }
+    }
+    if (!deviceMid) return null;   // 缺设备号必被服务端 3001 拒：fail-closed 不发请求（额度链同款）
+    return { token: token.trim(), deviceMid: deviceMid };
+  }
+  /* GLr 换发（异步，仅 bigmodel 家族增强路径使用）：location 键扫描 → 信封解密 →
+   * POST access_tokens 换 token。location 缺失/解密失败/形状不符/换发失败一律 null
+   * （enhanceText 回 plan_auth）；外部 signal 贯穿，超时 15s 自理。memo 键=OAuth 摘要
+   * + location 键名——凭据或定位变化即失效。OAuth token 只发 bigmodel.cn 本域
+   * （origin 已在 parseProjectLocationKeyName 校验）。 */
+  async function planGLrTokenOf(providerId, externalSignal) {
+    return externalSignal ? planGLrTokenOfSolo(providerId, externalSignal)
+      : sharedInflight(glrInflight, "glr|" + providerId, () => planGLrTokenOfSolo(providerId, null));
+  }
+  async function planGLrTokenOfSolo(providerId, externalSignal) {
+    const src = PLAN_SOURCES[String(providerId || "")];
+    /* teamPat 源在此恒 null（issue #442）：location 只承载个人项目三元组，团队源走
+     * planTeamPatOf 三步换发——这里收紧防止任何调用方（如双路由降级腿）对团队源
+     * 拿个人 location 换发，重引「团队会话打个人池」的凭据归属错位。 */
+    if (!src || src.fam !== "bigmodel" || src.teamPat || !credentialsPath || !decryptValue) return null;
+    const oauth = planTokenOf(providerId);
+    if (!oauth) return null;
+    let raw = null;
+    try { raw = JSON.parse(fs.readFileSync(credentialsPath, "utf8")); } catch (e) { return null; }
+    if (!raw || typeof raw !== "object") return null;
+    const locKey = Object.keys(raw).find((k) => {
+      const p = parseProjectLocationKeyName(k);
+      return !!p && p.family === "bigmodel" && p.team === null && p.usageScene === 1;
+    });
+    if (!locKey) return null;
+    /* 指纹含信封串：宿主同键名重发 location（换 apiKeyId）时旧 memo 立即失效
+     * （review A-1：仅键名不足以覆盖「同键换值」） */
+    const fp = createHash("sha256").update(oauth + "|" + locKey + "|" + String(raw[locKey] || "")).digest("hex");
+    if (glrMemo.fp === fp && Date.now() - glrMemo.at < GLR_MEMO_TTL_MS) return glrMemo.token || null;
+    let loc = null;
+    try {
+      const env = typeof raw[locKey] === "string" ? raw[locKey] : "";
+      if (!env) return null;
+      let val = decryptValue(env);
+      if (typeof val !== "string" || val.indexOf("enc:") === 0) return null;
+      loc = JSON.parse(val);
+    } catch (e) { return null; }
+    if (!loc || typeof loc !== "object") return null;
+    const organizationId = typeof loc.organizationId === "string" ? loc.organizationId.trim() : "";
+    const projectId = typeof loc.projectId === "string" ? loc.projectId.trim() : "";
+    const apiKeyId = typeof loc.apiKeyId === "string" ? loc.apiKeyId.trim() : "";
+    if (!organizationId || !projectId || !apiKeyId) return null;
+    const origin = parseProjectLocationKeyName(locKey).origin;
+    const body = { clientType: "zcode" };
+    if (hostVersion) body.clientVersion = hostVersion;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), GLR_EXCHANGE_TIMEOUT_MS);
+    if (timer && typeof timer.unref === "function") timer.unref();   // 超时兜底定时器契约
+    const onAbort = () => ctl.abort();
+    if (externalSignal && typeof externalSignal.addEventListener === "function") externalSignal.addEventListener("abort", onAbort, { once: true });
+    try {
+      const res = await fetchImpl(glrExchangeUrl(origin, { organizationId: organizationId, projectId: projectId, apiKeyId: apiKeyId }), {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + oauth, "Content-Type": "application/json", "User-Agent": "ZCode" },
+        body: JSON.stringify(body), signal: ctl.signal, redirect: "error",
+      });
+      if (!res || !res.ok) { dropBody(res); return null; }   // 404=location 失效、401/403=token 失效、5xx——一律 fail-closed；非 ok 体显式取消（undici 连接卫生，review A-3）
+      let text = "";
+      try { text = await readEnhanceBody(res); } catch (e) { return null; }
+      if (text.length > 65536) return null;
+      const parsed = parseGlrExchangePayload(text);
+      if (!parsed) return null;
+      glrMemo.fp = fp; glrMemo.token = parsed.token; glrMemo.at = Date.now();
+      return parsed.token;
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+      if (externalSignal && typeof externalSignal.removeEventListener === "function") externalSignal.removeEventListener("abort", onAbort);
+    }
+  }
+  /* ---------- 团队套餐 PAT 三步换发（issue #442）：GLr location 只承载个人项目三元组
+   * （键名 team===null），团队 providerId 照旧取个人凭据会把团队会话的增强请求打到个人池
+   * （个人池无资源包即 1113）。团队凭据走额度链同款三步换发（src/quota/03-adapters-plan.cjs
+   * ensureTeamPat，宿主 ProjectAccessTokenClient 只读子集）：setting.json 的
+   * providerFamilyConnectionSelections 读 {org,project}（未切团队 fail-closed 不发请求）→
+   * ① getCustomerInfo 校验 org/project 存在（裸业务 token）→ ② api_keys 列表（团队头）找
+   * name=zcode-team-api-key 且 keyType=2（缺条目不创建——创建属宿主 App 内切换行为）→
+   * ③ POST access_tokens 换项目级短期 PAT。PAT 打与 individual GLr token 同一 messages
+   * 端点（宿主团队对话同链路）。只在内存：距过期还有 2 分钟以上才复用 memo（lead 内与
+   * 过期后一律重换，review C 措辞对齐），PAT 绝不落盘/进日志。 */
+  const TEAM_PAT_REFRESH_LEAD_MS = 120 * 1000;
+  const TEAM_PAT_DEFAULT_TTL_MS = 3600 * 1000;
+  const TEAM_PAT_TIMEOUT_MS = 15000;
+  const BIGMODEL_BIZ_ORIGIN = "https://bigmodel.cn";
+  const teamMemo = { fp: "", pat: "", expiresAt: 0 };
+  /* issue #481：密钥 ID 在线上条目的 apiKey 字段（线上没有 apiKeyId；宿主 ProjectAccessTokenClient
+   * 同款读条目 apiKey 再拼 URL）。planTeamPatOfSolo 返回 { pat, fail, status }：失败时 pat 为空串、
+   * fail 是固定环节码（selection、token，customer 与 keys 与 pat 三步各自的 http、mismatch 或
+   * missing、shape，另有 network），HTTP 类另带 status——
+   * 只含环节与性质，不含令牌、密钥 ID、组织/项目 ID 与响应体，可随增强回执回渲染端并落一行
+   * 日志（此前所有失败分支静默回 null，线上换发断在哪一步无从定位）。 */
+  const teamPatResult = (pat, fail, status) => ({ pat: pat, fail: fail, status: status || 0 });
+  function teamPatFail(fail, status) {   // 失败环节落一行日志（只含环节码与 HTTP 状态）
+    log("team pat exchange failed: " + fail + (status ? " http " + status : ""));
+    return teamPatResult("", fail, status);
+  }
+  function bigmodelTeamSelection() {
+    let set = null;
+    try { set = JSON.parse(fs.readFileSync(settingPath, "utf8")); } catch (e) { return null; }
+    if (!set || typeof set !== "object") return null;
+    /* 与额度链 teamSelectionOf 同口径（含 legacy 键回退，review A/D：仅写旧键的宿主上
+     * 额度 chip 显示团队额度、增强若不认 legacy 会恒 plan_auth——两链读同一字段须同门）。 */
+    let org = "", project = "";
+    const sel = (set.providerFamilyConnectionSelections || {}).bigmodel;
+    if (sel && sel.kind === "team-coding-plan") {
+      org = String(sel.organizationId || "").trim();
+      project = String(sel.projectId || "").trim();
+    } else {
+      const legacy = String((set.modelProviderFamilySelectedKeys || {}).bigmodel || "").trim();
+      const prefix = "team-plan:builtin:bigmodel-coding-plan:";
+      if (legacy.indexOf(prefix) === 0) {
+        const parts = legacy.slice(prefix.length).split(":");
+        if (parts.length === 3) {
+          try { org = decodeURIComponent(parts[1]); project = decodeURIComponent(parts[2]); } catch (e) { return null; }
+        }
+      }
+    }
+    if (!org || !project) return null;
+    return { org: org, project: project };
+  }
+  async function planTeamPatOf(providerId, externalSignal) {
+    return externalSignal ? planTeamPatOfSolo(providerId, externalSignal)
+      : sharedInflight(teamInflight, "team|" + providerId, () => planTeamPatOfSolo(providerId, null));
+  }
+  async function planTeamPatOfSolo(providerId, externalSignal) {
+    if (externalSignal && externalSignal.aborted) return teamPatResult("", "cancelled", 0);   // 进门前已取消：不算失败、不落日志
+    const src = PLAN_SOURCES[String(providerId || "")];
+    if (!src || src.fam !== "bigmodel" || !src.teamPat || !credentialsPath || !decryptValue) return teamPatFail("token");
+    const oauth = planTokenOf(providerId);
+    if (!oauth) return teamPatFail("token");
+    const sel = bigmodelTeamSelection();
+    if (!sel) return teamPatFail("selection");
+    const fp = createHash("sha256").update(oauth + "|" + sel.org + "|" + sel.project).digest("hex");
+    if (teamMemo.fp === fp && teamMemo.pat && Date.now() + TEAM_PAT_REFRESH_LEAD_MS < teamMemo.expiresAt) return teamPatResult(teamMemo.pat, "", 0);
+    const teamHeaders = { "Bigmodel-Organization": sel.org, "Bigmodel-Project": sel.project, "set-language": "zh" };
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TEAM_PAT_TIMEOUT_MS);
+    if (timer && typeof timer.unref === "function") timer.unref();   // 超时兜底定时器契约
+    const onAbort = () => ctl.abort();
+    if (externalSignal && typeof externalSignal.addEventListener === "function") externalSignal.addEventListener("abort", onAbort, { once: true });
+    /* 三步共用同一 15s 预算与外部 signal；任一步失败按环节码回 fail（enhanceText 回 team_auth），
+     * 不重试（同 planGLrTokenOf：enhance 自身已有二次尝试）。读体/网络异常一律抛给末尾 catch。 */
+    try {
+      const infoRes = await fetchImpl(BIGMODEL_BIZ_ORIGIN + "/api/biz/customer/getCustomerInfo",
+        { headers: { "authorization": oauth, "User-Agent": "ZCode" }, signal: ctl.signal, redirect: "error" });
+      if (!infoRes || !infoRes.ok) { dropBody(infoRes); return teamPatFail("customer_http", infoRes ? infoRes.status : 0); }
+      const infoText = await readEnhanceBody(infoRes);
+      if (infoText.length > 262144) return teamPatFail("customer_shape");
+      let info = null;
+      try { info = JSON.parse(infoText); } catch (e) { return teamPatFail("customer_shape"); }
+      /* 信封里没有 organizations 列表（含 HTTP 200 的业务失败信封）算响应异常，不算「所选团队不存在」 */
+      const orgs = info && info.data && Array.isArray(info.data.organizations) ? info.data.organizations : null;
+      if (!orgs) return teamPatFail("customer_shape");
+      const orgHit = orgs.some((x) => x && x.organizationId === sel.org &&
+        Array.isArray(x.projects) && x.projects.some((pj) => pj && pj.projectId === sel.project));
+      if (!orgHit) return teamPatFail("customer_mismatch");
+      const keysUrl = BIGMODEL_BIZ_ORIGIN + "/api/biz/v1/organization/" + encodeURIComponent(sel.org) +
+        "/projects/" + encodeURIComponent(sel.project) + "/api_keys";
+      const keysRes = await fetchImpl(keysUrl, { headers: Object.assign({ "authorization": oauth, "User-Agent": "ZCode" }, teamHeaders), signal: ctl.signal, redirect: "error" });
+      if (!keysRes || !keysRes.ok) { dropBody(keysRes); return teamPatFail("keys_http", keysRes ? keysRes.status : 0); }
+      const keysText = await readEnhanceBody(keysRes);
+      if (keysText.length > 262144) return teamPatFail("keys_shape");
+      let keys = null;
+      try { keys = JSON.parse(keysText); } catch (e) { return teamPatFail("keys_shape"); }
+      const keyList = keys && keys.data && Array.isArray(keys.data) ? keys.data : null;
+      if (!keyList) return teamPatFail("keys_shape");
+      /* 密钥 ID 就是条目的 apiKey（线上无 apiKeyId 字段，issue #481）——URL 段经 encodeURIComponent */
+      const teamKeyId = keyList.filter((k) => k && k.name === "zcode-team-api-key" &&
+        k.keyType === 2 && typeof k.apiKey === "string" && k.apiKey.trim()).map((k) => k.apiKey.trim())[0] || "";
+      /* `.` 与 `..` 是路径段保留写法：URL 规范化会吃掉上一级路径段（同源内，仍不该发）——按没有团队密钥处理 */
+      if (!teamKeyId || teamKeyId === "." || teamKeyId === "..") return teamPatFail("keys_missing");
+      const patRes = await fetchImpl(keysUrl + "/" + encodeURIComponent(teamKeyId) + "/access_tokens", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + oauth, "Content-Type": "application/json", "User-Agent": "ZCode" },
+        body: JSON.stringify(hostVersion ? { clientType: "zcode", clientVersion: hostVersion } : { clientType: "zcode" }),
+        signal: ctl.signal, redirect: "error",
+      });
+      if (!patRes || !patRes.ok) { dropBody(patRes); return teamPatFail("pat_http", patRes ? patRes.status : 0); }
+      const patText = await readEnhanceBody(patRes);
+      if (patText.length > 65536) return teamPatFail("pat_shape");
+      const parsed = parseGlrExchangePayload(patText);
+      if (!parsed) return teamPatFail("pat_shape");
+      teamMemo.fp = fp; teamMemo.pat = parsed.token;
+      teamMemo.expiresAt = parsed.expiresAt > 0 ? parsed.expiresAt : Date.now() + TEAM_PAT_DEFAULT_TTL_MS;
+      return teamPatResult(teamMemo.pat, "", 0);
+    } catch (e) {
+      /* 用户取消不是失败（不落日志，enhanceText 按外部 signal 回 cancelled）；其余=超时/网络异常 */
+      if (externalSignal && externalSignal.aborted) return teamPatResult("", "cancelled", 0);
+      return teamPatFail("network");
+    } finally {
+      clearTimeout(timer);
+      if (externalSignal && typeof externalSignal.removeEventListener === "function") externalSignal.removeEventListener("abort", onAbort);
+    }
+  }
+  /* 套餐探测凭据（specs/plan-model-list.md）：确认流连通性探测打表值 baseUrl 的 Anthropic
+   * messages 端点，该网关自 2026-11-24 实测起对 OAuth 登录令牌回 401「登录状态已过期」，只认
+   * 项目域凭据——bigmodel 家族先取宿主运行时同款凭据，凭据序与 enhanceText 对齐：团队源走团队
+   * PAT（个人 location/条目 key 属个人池，团队源绝不用），其余 v2 条目明文 key（3.18 宿主）
+   * → GLr 换发 token；都拿不到才回 OAuth 诚实尝试（zai 家族端点未实测、无 location 的旧宿主
+   * 维持原行为）。团队源例外：PAT 拿不到即 null（probeModel 回 auth、零请求）——账号级 OAuth
+   * 令牌属个人池，与增强链「团队源绝不用个人凭据」同门。token 只在内存与请求头。 */
+  async function planProbeKeyOf(providerId) {
+    const src = PLAN_SOURCES[String(providerId || "")];
+    if (!src || src.fam !== "bigmodel") return planTokenOf(providerId);
+    if (src.teamPat) return (await planTeamPatOf(providerId, null)).pat || null;   // 团队源无 OAuth 兜底：与 issue #442 同门，否则探测会把个人池令牌打到团队源
+    return planEntryKeyOf(providerId) || (await planGLrTokenOf(providerId, null)) || planTokenOf(providerId);
   }
   /* 拉模型列表门控（issue #336 附加发现 2）：PLAN_SOURCES 从 1 条扩到 6 条后，共享凭据的
    * team/start 条目若照单全列会出现 3 行近似重复——规则：宿主 v2 config 显式 enabled:false
@@ -1125,37 +1624,56 @@ function createModelPuller(opts) {
       ]).finally(() => clearTimeout(graceTimer));
     };
     if (planSrc) {
-      /* 套餐源：单端点（Anthropic models，与运行协议同源），Bearer 套餐 token */
-      try {
-        const res = await fetchImpl(planSrc.endpoint, { headers: { "Accept": "application/json", "Authorization": "Bearer " + planToken, "User-Agent": "ZCode" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-        if (!res.ok) { dropBody(res); return { ok: false, error: "HTTP " + res.status }; }
-        const body = await readJsonBounded(res, RESPONSE_MAX_BYTES);
-        const list = Array.isArray(body) ? body : asObject(body).data || asObject(body).models || asObject(body).result || null;
-        const ids = sanitizeModelIds((Array.isArray(list) ? list : [])
-          .map((item) => (typeof item === "string" ? item : asObject(item).id || asObject(item).slug || "")).filter(Boolean))
-          .map(normalizePlanModelId)
-          .filter((id, i, a) => a.indexOf(id) === i);
-        if (!ids.length) return { ok: false, error: "no models in response" };
-        ids.sort();
-        const entries = await awaitCatalogWithinGrace();
-        const metaById = Object.create(null);   // null 原型：模型 id 来自远端，"__proto__" 等键必须可写
-        if (entries && entries.length) {
-          for (const mid of ids) {
-            const hit = matchCatalogEntry(entries, mid);
-            if (!hit) continue;
-            const meta = mergedMeta({ id: mid, contextWindow: 0, maxOutputTokens: 0, modalities: null, vision: undefined, efforts: [] }, hit.model, agreedCapabilities(entries, mid));
-            if (Object.keys(meta).length) metaById[mid] = meta;
-          }
+      /* 套餐源：候选端点按序尝试（PLAN_SOURCES.listUrls），Bearer 套餐 token。两候选是同域的
+       * 不同网关家族——同一凭据可能被其一拒而被另一认，所以任一候选的非 ok / HTTP 200 错误
+       * 信封 / 无列表 / 空列表都换下一个，全败报最后一错（与下方自定义供应商循环同形）。
+       * 2026-11-24 实测：Anthropic 形态端点对 OAuth 回 200 + {"code":401,"success":false}，
+       * 只看 res.ok 会把它当空列表（specs/plan-model-list.md）。 */
+      let lastError = "no models in response";   // 全部条目被 sanitize 滤空时沿用旧口径
+      let list = null, via = "";
+      for (const url of planSrc.listUrls) {
+        if (disposed) break;   // 热换/关窗后不再带凭据发下一候选
+        try {
+          const res = await fetchImpl(url, { headers: { "Accept": "application/json", "Authorization": "Bearer " + planToken, "User-Agent": "ZCode" }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), redirect: "error" });
+          if (!res.ok) { lastError = "HTTP " + res.status; dropBody(res); continue; }
+          const body = await readJsonBounded(res, RESPONSE_MAX_BYTES);
+          const envelopeError = planEnvelopeError(body);
+          if (envelopeError) { lastError = envelopeError; continue; }
+          list = parseModelsPayload(body);
+          if (!list.length) { lastError = "no models in response"; list = null; continue; }   // list 复位是防御：返回处只看 lastError
+          via = url;
+          break;
+        } catch (e) {
+          lastError = (e && e.name === "TimeoutError") ? "timeout" : "request failed";
         }
-        const fetching = fillEffortsFromApiCatalog(metaById, ids);   // #236：GLM 档位词表来自 api 目录（按需）
-        fetchCache.set(providerId, { metaById: metaById, source: source });
-        return { ok: true, models: ids, metaById: metaById, via: planSrc.endpoint, effortsFetching: fetching || undefined };
-      } catch (e) {
-        return { ok: false, error: (e && e.name === "TimeoutError") ? "timeout" : "request failed" };
       }
+      const ids = list
+        ? sanitizeModelIds(list.map((item) => (typeof item === "string" ? item : asObject(item).id || asObject(item).slug || "")).filter(Boolean))
+          .map(normalizePlanModelId)
+          .filter((id, i, a) => a.indexOf(id) === i)
+        : [];
+      if (!ids.length) return { ok: false, error: lastError };
+      ids.sort();
+      const entries = await awaitCatalogWithinGrace();
+      const metaById = Object.create(null);   // null 原型：模型 id 来自远端，"__proto__" 等键必须可写
+      if (entries && entries.length) {
+        for (const mid of ids) {
+          const hit = matchCatalogEntry(entries, mid);
+          if (!hit) continue;
+          const meta = mergedMeta({ id: mid, contextWindow: 0, maxOutputTokens: 0, modalities: null, vision: undefined, efforts: [] }, hit.model, agreedCapabilities(entries, mid));
+          if (Object.keys(meta).length) metaById[mid] = meta;
+        }
+      }
+      const fetching = fillEffortsFromApiCatalog(metaById, ids);   // #236：GLM 档位词表来自 api 目录（按需）
+      fetchCache.set(providerId, { metaById: metaById, source: source });
+      return { ok: true, models: ids, metaById: metaById, via: via, effortsFetching: fetching || undefined };
     }
     const cfg = effectiveRuleConfig(rule);   // issue #383：模板供应商按合并后配置构造请求
-    const apiKey = String((cfg.access || {}).apiKey || "").trim();
+    /* enc: 形态的 key 是宿主加密信封（或误贴的密文），不是可用凭据：按未配置处理、不随请求
+     * 外发——增强链的规则路径早已同闸（issue #440），拉模型这一口此前漏了，会把密文同时放进
+     * Authorization 与 x-api-key 发往供应商。 */
+    const rawApiKey = String((cfg.access || {}).apiKey || "").trim();
+    const apiKey = rawApiKey.indexOf("enc:") === 0 ? "" : rawApiKey;
     const urls = candidateUrls(cfg.api.baseUrl);
     const headers = { "Accept": "application/json", "User-Agent": "ZCode" };
     if (apiKey) { headers["Authorization"] = "Bearer " + apiKey; headers["x-api-key"] = apiKey; }
@@ -1163,7 +1681,7 @@ function createModelPuller(opts) {
     let items = null, via = "";
     for (const url of urls) {
       try {
-        const res = await fetchImpl(url, { headers: headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+        const res = await fetchImpl(url, { headers: headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), redirect: "error" });
         if (!res.ok) {
           lastError = "HTTP " + res.status;
           dropBody(res);
@@ -1722,8 +2240,8 @@ function createModelPuller(opts) {
     const api = cfg.api || {};
     const apiType = planSrc ? "anthropic-messages" : String(api.type || "");   // probe 链维持 anthropic models 端点实测语义
     const baseUrl = String((planSrc ? planSrc.baseUrl : api.baseUrl) || "").trim().replace(/\/+$/, "");
-    const apiKey = planSrc ? planTokenOf(providerId) : String(((cfg.access || {}).apiKey) || "").trim();
-    if (!apiKey) return { ok: false, model: mid, kind: "auth", error: "no api key" };
+    const apiKey = planSrc ? await planProbeKeyOf(providerId) : String(((cfg.access || {}).apiKey) || "").trim();
+    if (!apiKey || apiKey.indexOf("enc:") === 0) return { ok: false, model: mid, kind: "auth", error: "no api key" };   // enc: 密文按未配置（同 fetchModels）
     const ctx = { providerId: providerId, source: providerSource(data, providerId), deadline: Date.now() + 80000 };
     let attempt = await probeRequest(apiType, baseUrl, apiKey, mid, null, ctx);
     let effectiveBase = baseUrl;
@@ -1786,135 +2304,277 @@ function createModelPuller(opts) {
     const data = readProviderCfg();
     const rule = data ? findRule(data, providerId) : null;
     const direct = o.enhanceProvider && typeof o.enhanceProvider === "object" ? o.enhanceProvider : null;
+    /* 设置页「从宿主选择」直连：zcode.z.ai 路由的 host 公告携带 deviceMid（resolveEnhanceHost），
+     * 直连请求同样必须带 X-Device-Mid（review R3 复审 A 相邻 MAJOR）。 */
+    const directDeviceMid = direct && typeof direct.deviceMid === "string" ? direct.deviceMid.trim() : "";
     const planSrc = direct ? null : PLAN_SOURCES[String(providerId || "")];
-    if (!direct && !planSrc && !rule) return { ok: false, kind: "provider", error: "provider not found" };
-    const cfg = direct ? { access: { type: "api-key", apiKey: direct.apiKey }, api: { type: direct.protocol, baseUrl: direct.baseUrl } } : effectiveRuleConfig(rule);
+    /* issue #440 路径3：宿主设置页添加的供应商只落 v2/config.json 的 provider.<id>，
+     * 不进 provider_config 规则——规则查不到（或已禁用）时按同目录 config.json 条目兜底
+     * （kind 映射与 fail-closed 门见 v2ProviderCfgOf）；与 resolveEnhanceHost 同门：
+     * 禁用规则不再挡在 v2 条目前面（review A-3 对齐两口优先级）。 */
+    const v2Cfg = !direct && !planSrc && (!rule || !modelPullerRuleAllowed(rule)) ? v2ProviderCfgOf(providerId) : null;
+    if (!direct && !planSrc && !rule && !v2Cfg) return { ok: false, kind: "provider", error: "provider not found" };
+    const cfg = direct ? { access: { type: "api-key", apiKey: direct.apiKey }, api: { type: direct.protocol, baseUrl: direct.baseUrl } } : v2Cfg ? v2Cfg.cfg : effectiveRuleConfig(rule);
     const access = cfg.access || {}, api = cfg.api || {};
-    if (!planSrc && access.type !== "api-key") return { ok: false, kind: "provider", error: "provider is not api-key type" };
+    /* issue #440 路径2：zhipu-coding-plan-api-key 是宿主「Coding Plan API-Key」登录的原生
+     * access.type（schema 与 api-key 同型枚举、合并同分支处理），同型放行；zhipu-account 是
+     * OAuth 运行时换发型、本地无明文 key，继续拒绝。 */
+    if (!planSrc && access.type !== "api-key" && access.type !== "zhipu-coding-plan-api-key") return { ok: false, kind: "provider", error: "provider is not api-key type" };
     const apiType = planSrc ? "anthropic-messages" : String(api.type || "");
     if (!planSrc && apiType !== "openai-chat-completions" && apiType !== "openai-responses" && apiType !== "anthropic-messages") {
       return { ok: false, kind: "unsupported", error: "unsupported api type: " + (apiType || "(empty)") };
     }
-    const baseUrl = String((planSrc ? planSrc.baseUrl : api.baseUrl) || "").trim().replace(/\/+$/, "");
-    const apiKey = planSrc ? planKeyOf(providerId) : String(access.apiKey || "").trim();
+    const external = o.signal && typeof o.signal.addEventListener === "function" ? o.signal : null;
+    const isBigmodelPlan = !!planSrc && planSrc.fam === "bigmodel";
+    let baseUrl = String((planSrc ? planBaseUrl(providerId) : api.baseUrl) || "").trim().replace(/\/+$/, "");
+    /* zcode.z.ai 会话网关（specs/plan-glr-credential.md 补篇）：GLr accessToken 是
+     * bigmodel.cn 项目域凭据，打该网关恒 401（2026-11-21 真机实测）——该路由必须用
+     * zcodejwttoken（会话 JWT）+ X-Device-Mid（额度链 zcode-start 同款口径）。
+     * v2 条目 key 属 open.bigmodel.cn 端点：无设备头打 zcode.z.ai 恒 400 code 3001
+     * （review R3-A），不用于该路由——zcode 路由仅认会话 JWT，会话不可得即迁移表值路由。 */
+    const isZcodeSessionRoute = !!planSrc && /(^|\.)zcode\.z\.ai$/.test((() => { try { return new URL(baseUrl).hostname.toLowerCase(); } catch (e) { return ""; } })());
+    let apiKey = "", zcodeSession = null;
+    let teamFail = "", teamStatus = 0;   // 团队三步换发的失败环节码与该环节 HTTP 状态（issue #481）
+    if (planSrc) {
+      if (isBigmodelPlan) {
+        /* GLr 时代凭据序（specs/plan-glr-credential.md）：v2 条目明文 key（3.18 宿主/旧机器，
+         * 属 open.bigmodel.cn 端点）→ 按路由分流：zcode.z.ai 仅认会话 JWT+设备号（会话不可得
+         * 即以 entry key/GLr 迁移表值路由为主路由）；bigmodel.cn 用 GLr 换发 token（3.19.x
+         * 宿主运行时解析对等）→ 均不可用诚实报 plan_auth。
+         * OAuth 直连兜底已移除——v344 实测被网关 500 code 1234 拒，绝不该作为 fallback 重现。
+         * 团队套餐（issue #442）例外：条目 key 与 GLr location 都属个人项目，团队源绝不用
+         * ——凭据只走团队 PAT 三步换发（planTeamPatOf），未切团队/换发失败回 team_auth 并带环节码（issue #481）。 */
+        if (planSrc.teamPat) {
+          const team = await planTeamPatOf(providerId, external);
+          apiKey = team.pat; teamFail = team.fail; teamStatus = team.status;
+        } else if (isZcodeSessionRoute) {
+          zcodeSession = readZcodeSessionCred();
+          if (zcodeSession) {
+            apiKey = zcodeSession.token;
+          } else {
+            const entryKey = planEntryKeyOf(providerId);
+            apiKey = entryKey || (await planGLrTokenOf(providerId, external));
+            if (apiKey) {
+              baseUrl = String((PLAN_SOURCES[String(providerId)] || {}).baseUrl || baseUrl).trim().replace(/\/+$/, "");
+              log("enhance zcode session cred unavailable; riding table route with " + (entryKey ? "v2 entry key" : "GLr token"));
+            }
+          }
+        } else {
+          apiKey = planEntryKeyOf(providerId) || (await planGLrTokenOf(providerId, external));
+        }
+        if (!apiKey) {
+          if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+          /* 团队源：换发在本地失败——与「套餐不支持」分开报（issue #481）。reason 是固定环节码、
+           * status 是该环节 HTTP 状态，均不含凭据；error 短语供旧渲染端兜底显示。 */
+          if (teamFail) {
+            const failed = { ok: false, kind: "team_auth", reason: teamFail,
+              error: "team credential exchange failed (" + teamFail + (teamStatus ? ", HTTP " + teamStatus : "") + ")" };
+            if (teamStatus) failed.status = teamStatus;
+            return failed;
+          }
+          return { ok: false, kind: "plan_auth", error: "plan conversation key unavailable" };
+        }
+      } else {
+        /* zai 家族端点未实测，维持 planKeyOf（条目 key 优先、OAuth 兜底）诚实尝试。 */
+        apiKey = planKeyOf(providerId);
+      }
+    } else {
+      apiKey = String(access.apiKey || "").trim();
+      /* 「密文绝不外发」闸（review A-1/D-1，R2 收口）：本分支同时服务规则路径与设置页
+       * 直连（custom 模式）key——enc: 形态（宿主迁移信封代际、误贴密文）一律作废归零走
+       * 既有无 key 门回 auth，绝不把密文当凭据发出（planTokenOf/readV2BuiltinEntry 同
+       * 纪律；已知厂商无 enc: 前缀真实 key，误伤趋近零，防御方向正确）。 */
+      if (apiKey.indexOf("enc:") === 0) apiKey = "";
+    }
     if (!baseUrl) return { ok: false, kind: "provider", error: "no base url" };
     if (!apiKey) return { ok: false, kind: "auth", error: planSrc ? "plan token unavailable" : "no api key" };
-    let url = "", body = null;
-    const headers = { "Content-Type": "application/json", "User-Agent": "ZCode" };   // fetchModels 同款 UA：网关拒绝无 UA 请求（实测缺 UA 时 anthropic 端点 500 code 1234）
-    if (isOpenCodeGoBaseUrl(baseUrl)) headers["x-opencode-session"] = randomUUID();   // OpenCode Go 路由键，缺失 400 MissingSessionID
     const userContent = enhanceUserContent(text);
-    if (apiType === "openai-chat-completions") {
-      url = baseUrl + "/chat/completions";
-      headers["Authorization"] = "Bearer " + apiKey;
-      body = { model: mid, messages: [{ role: "system", content: ENHANCE_SYSTEM_PROMPT }, { role: "user", content: userContent }], max_tokens: ENHANCE_MAX_TOKENS, stream: false };
-    } else if (apiType === "openai-responses") {
-      url = baseUrl + "/responses";
-      headers["Authorization"] = "Bearer " + apiKey;
-      body = { model: mid, input: [{ role: "system", content: ENHANCE_SYSTEM_PROMPT }, { role: "user", content: userContent }], max_output_tokens: ENHANCE_MAX_TOKENS, stream: false };
-    } else {
-      url = anthropicBaseWithV1(baseUrl) + "/messages";
-      headers["x-api-key"] = apiKey;
-      headers["anthropic-version"] = "2023-06-01";
-      headers["Authorization"] = "Bearer " + apiKey;
-      body = { model: mid, max_tokens: ENHANCE_MAX_TOKENS, system: ENHANCE_SYSTEM_PROMPT, messages: [{ role: "user", content: userContent }], stream: true };
-    }
-    const external = o.signal && typeof o.signal.addEventListener === "function" ? o.signal : null;
-    let lastFail = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
-      if (attempt) {
-        const aborted = await new Promise((resolve) => {
-          const t = setTimeout(() => { clean(); resolve(false); }, 1200);
-          if (t && typeof t.unref === "function") t.unref();   // 超时兜底定时器契约：不挂起主进程事件循环
-          const onAbort = () => { clean(); resolve(true); };
-          const clean = () => { clearTimeout(t); if (external) external.removeEventListener("abort", onAbort); };
-          if (external) external.addEventListener("abort", onAbort, { once: true });
-          if (external && external.aborted) onAbort();
-        });
-        if (aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+    const buildRequest = (base, key, deviceMid) => {
+      const headers = { "Content-Type": "application/json", "User-Agent": "ZCode" };   // fetchModels 同款 UA：网关拒绝无 UA 请求（实测缺 UA 时 anthropic 端点 500 code 1234）
+      if (deviceMid) headers["X-Device-Mid"] = deviceMid;   // zcode.z.ai 必带头（缺头 400 code 3001，额度链同款）
+      if (isOpenCodeGoBaseUrl(base)) headers["x-opencode-session"] = randomUUID();   // OpenCode Go 路由键，缺失 400 MissingSessionID
+      const req = { headers: headers };
+      if (apiType === "openai-chat-completions") {
+        req.url = base + "/chat/completions";
+        headers["Authorization"] = "Bearer " + key;
+        req.body = { model: mid, messages: [{ role: "system", content: ENHANCE_SYSTEM_PROMPT }, { role: "user", content: userContent }], max_tokens: ENHANCE_MAX_TOKENS, stream: false };
+      } else if (apiType === "openai-responses") {
+        req.url = base + "/responses";
+        headers["Authorization"] = "Bearer " + key;
+        req.body = { model: mid, input: [{ role: "system", content: ENHANCE_SYSTEM_PROMPT }, { role: "user", content: userContent }], max_output_tokens: ENHANCE_MAX_TOKENS, stream: false };
+      } else {
+        req.url = anthropicBaseWithV1(base) + "/messages";
+        headers["x-api-key"] = key;
+        headers["anthropic-version"] = "2023-06-01";
+        headers["Authorization"] = "Bearer " + key;
+        req.body = { model: mid, max_tokens: ENHANCE_MAX_TOKENS, system: ENHANCE_SYSTEM_PROMPT, messages: [{ role: "user", content: userContent }], stream: true };
       }
-      const ctl = new AbortController();
-      let timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, ENHANCE_TIMEOUT_MS);
-      if (timer && typeof timer.unref === "function") timer.unref();
-      const onExternalAbort = () => ctl.abort();
-      if (external) external.addEventListener("abort", onExternalAbort, { once: true });
-      try {
+      return req;
+    };
+    /* legKey=本腿实际发送的凭据（review 后置 R3-A/D：maskSecrets 必须配对本腿 secret，
+     * 降级腿复用主腿闭包变量会把 GLr token 原样带进 detail 回渲染端）；maxAttempts：
+     * 降级腿限单次（双腿满配最坏 ≈107s 越过渲染端 75s 兜底）；legTag=日志腿标识。 */
+    const runAttempts = async (req, legKey, maxAttempts, legTag) => {
+      let lastFail = null;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
         if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
-        const res = await fetchImpl(url, { headers: headers, body: JSON.stringify(body), method: "POST", redirect: "error", signal: ctl.signal });
-        if (res && res.ok) {
-          let value, serverModel, usage;
-          if (apiType === "anthropic-messages") {
-            const stream = await readAnthropicStream(res);
-            value = stream.text; serverModel = stream.serverModel; usage = stream.usage;
-          } else {
-            const raw = await readEnhanceBody(res);
-            let payload;
-            try { payload = JSON.parse(raw); } catch (e) { return { ok: false, kind: "parse", error: "invalid json response" }; }
-            if (!payload || (apiType === "openai-responses" ? payload.status !== "completed" : !(payload.choices && payload.choices[0] && payload.choices[0].finish_reason === "stop")) || (Array.isArray(payload.output) && payload.output.some(item => item && item.status && item.status !== "completed"))) {
-              return { ok: false, kind: "parse", error: "incomplete completion" };
+        if (attempt) {
+          const aborted = await new Promise((resolve) => {
+            const t = setTimeout(() => { clean(); resolve(false); }, 1200);
+            if (t && typeof t.unref === "function") t.unref();   // 超时兜底定时器契约：不挂起主进程事件循环
+            const onAbort = () => { clean(); resolve(true); };
+            const clean = () => { clearTimeout(t); if (external) external.removeEventListener("abort", onAbort); };
+            if (external) external.addEventListener("abort", onAbort, { once: true });
+            if (external && external.aborted) onAbort();
+          });
+          if (aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+        }
+        const ctl = new AbortController();
+        let timedOut = false;
+        const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, ENHANCE_TIMEOUT_MS);
+        if (timer && typeof timer.unref === "function") timer.unref();
+        const onExternalAbort = () => ctl.abort();
+        if (external) external.addEventListener("abort", onExternalAbort, { once: true });
+        try {
+          if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+          const res = await fetchImpl(req.url, { headers: req.headers, body: JSON.stringify(req.body), method: "POST", redirect: "error", signal: ctl.signal });
+          if (res && res.ok) {
+            let value, serverModel, usage;
+            if (apiType === "anthropic-messages") {
+              const stream = await readAnthropicStream(res);
+              value = stream.text; serverModel = stream.serverModel; usage = stream.usage;
+            } else {
+              const raw = await readEnhanceBody(res);
+              let payload;
+              try { payload = JSON.parse(raw); } catch (e) { return { ok: false, kind: "parse", error: "invalid json response" }; }
+              if (!payload || (apiType === "openai-responses" ? payload.status !== "completed" : !(payload.choices && payload.choices[0] && payload.choices[0].finish_reason === "stop")) || (Array.isArray(payload.output) && payload.output.some(item => item && item.status && item.status !== "completed"))) {
+                return { ok: false, kind: "parse", error: "incomplete completion" };
+              }
+              value = enhanceUnwrapText(payload);
+              if (typeof payload.model === "string" && payload.model) serverModel = payload.model;
+              const u = payload.usage || {};
+              if (apiType === "openai-responses" && (Number.isFinite(u.input_tokens) || Number.isFinite(u.output_tokens))) usage = { inputTokens: u.input_tokens ?? null, outputTokens: u.output_tokens ?? null, totalTokens: Number.isFinite(u.total_tokens) ? u.total_tokens : (Number.isFinite(u.input_tokens) && Number.isFinite(u.output_tokens) ? u.input_tokens + u.output_tokens : null) };
+              else if (Number.isFinite(u.prompt_tokens) || Number.isFinite(u.completion_tokens)) usage = { inputTokens: Number.isFinite(u.prompt_tokens) ? u.prompt_tokens : null, outputTokens: Number.isFinite(u.completion_tokens) ? u.completion_tokens : null, totalTokens: Number.isFinite(u.total_tokens) ? u.total_tokens : (Number.isFinite(u.prompt_tokens) && Number.isFinite(u.completion_tokens) ? u.prompt_tokens + u.completion_tokens : null) };
             }
-            value = enhanceUnwrapText(payload);
-            if (typeof payload.model === "string" && payload.model) serverModel = payload.model;
-            const u = payload.usage || {};
-            if (apiType === "openai-responses" && (Number.isFinite(u.input_tokens) || Number.isFinite(u.output_tokens))) usage = { inputTokens: u.input_tokens ?? null, outputTokens: u.output_tokens ?? null, totalTokens: Number.isFinite(u.total_tokens) ? u.total_tokens : (Number.isFinite(u.input_tokens) && Number.isFinite(u.output_tokens) ? u.input_tokens + u.output_tokens : null) };
-            else if (Number.isFinite(u.prompt_tokens) || Number.isFinite(u.completion_tokens)) usage = { inputTokens: Number.isFinite(u.prompt_tokens) ? u.prompt_tokens : null, outputTokens: Number.isFinite(u.completion_tokens) ? u.completion_tokens : null, totalTokens: Number.isFinite(u.total_tokens) ? u.total_tokens : (Number.isFinite(u.prompt_tokens) && Number.isFinite(u.completion_tokens) ? u.prompt_tokens + u.completion_tokens : null) };
+            if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+            if (timedOut) throw Object.assign(new Error("timeout"), { name: "AbortError" });
+            const enhanced = stripEnhanceFences(value, text);
+            if (!enhanced) return { ok: false, kind: "empty", error: "empty completion" };
+            return { ok: true, text: enhanced, model: mid, serverModel: serverModel || mid, usage: usage || undefined };
           }
-          if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
-          if (timedOut) throw Object.assign(new Error("timeout"), { name: "AbortError" });
-          const enhanced = stripEnhanceFences(value, text);
-          if (!enhanced) return { ok: false, kind: "empty", error: "empty completion" };
-          return { ok: true, text: enhanced, model: mid, serverModel: serverModel || mid, usage: usage || undefined };
-        }
-        if (!res.ok) {
-          let errorDetail = "";
-          try { errorDetail = maskSecrets(String(await readEnhanceBody(res)), apiKey).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "").slice(0, 500); } catch (e) { }   // 必须在取消响应体之前读取；正文过 maskSecrets 防凭据回显
-          if (res && res.body && typeof res.body.cancel === "function") {
-            try { Promise.resolve(res.body.cancel()).catch(() => { }); } catch (e) { }
+          if (!res.ok) {
+            let errorDetail = "";
+            try { errorDetail = maskSecrets(String(await readEnhanceBody(res)), legKey).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "").slice(0, 500); } catch (e) { }   // 必须在取消响应体之前读取；正文过 maskSecrets（必传本腿凭据，R3-A/D——无兜底，漏传即暴露而非静默错脱敏）
+            if (res && res.body && typeof res.body.cancel === "function") {
+              try { Promise.resolve(res.body.cancel()).catch(() => { }); } catch (e) { }
+            }
+            if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
+            if (timedOut) throw Object.assign(new Error("timeout"), { name: "AbortError" });
+            lastFail = { ok: false, kind: classifyProbeStatus(res ? res.status : 0), status: res ? res.status : 0, error: "HTTP " + (res ? res.status : 0) };
+            if (balanceEnhanceError(errorDetail)) {
+              /* issue #429：BigModel 1113「余额不足或无可用资源包」按 HTTP 429 返回，与真实
+               * 并发限流同状态码——按错误体分类为 kind "balance"，error 置空让渲染端 kindMap
+               * 给「套餐额度或资源包不足」文案，不再诱导用户当限流重试。确定性失败不重试。 */
+              lastFail.kind = "balance";
+              delete lastFail.error;
+            }
+            if (errorDetail) lastFail.detail = errorDetail;
+            log("enhance http " + lastFail.status + " leg=" + (legTag || "primary") + " (" + attempt + ")");
+            if (lastFail.kind !== "server") return lastFail;
           }
+        } catch (e) {
           if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
-          if (timedOut) throw Object.assign(new Error("timeout"), { name: "AbortError" });
-          lastFail = { ok: false, kind: classifyProbeStatus(res ? res.status : 0), status: res ? res.status : 0, error: "HTTP " + (res ? res.status : 0) };
-          if (errorDetail) lastFail.detail = errorDetail;
-          log("enhance http " + lastFail.status + " (" + attempt + ")");
-          if (lastFail.kind !== "server") return lastFail;
+          if (e && e.enhanceParse) return { ok: false, kind: "parse", error: "invalid or incomplete stream" };
+          lastFail = { ok: false, kind: timedOut ? "timeout" : "network", error: timedOut ? "timeout" : "request failed" };
+        } finally {
+          clearTimeout(timer);
+          if (external) external.removeEventListener("abort", onExternalAbort);
         }
-      } catch (e) {
-        if (external && external.aborted) return { ok: false, kind: "cancelled", error: "cancelled" };
-        if (e && e.enhanceParse) return { ok: false, kind: "parse", error: "invalid or incomplete stream" };
-        lastFail = { ok: false, kind: timedOut ? "timeout" : "network", error: timedOut ? "timeout" : "request failed" };
-      } finally {
-        clearTimeout(timer);
-        if (external) external.removeEventListener("abort", onExternalAbort);
+      }
+      return lastFail;
+    };
+    let result = await runAttempts(buildRequest(baseUrl, apiKey, zcodeSession ? zcodeSession.deviceMid : directDeviceMid), apiKey, 2, "primary");
+    if (planSrc && isBigmodelPlan && result && !result.ok && (result.kind === "path" || result.status === 401)) {
+      const primaryHost = (() => { try { return new URL(baseUrl).hostname.toLowerCase(); } catch (e) { return ""; } })();
+      if (/(^|\.)zcode\.z\.ai$/.test(primaryHost)) {
+        /* 双路由降级（2026-11-21 真机实测）：zcode.z.ai 对话端点的 WAF 3012 间歇出现
+         * （同形请求曾 200 也曾 405，billing 同头形正常——网关侧状态非客户端可判定）。
+         * 主路由 path/401 时改走 open.bigmodel.cn + GLr token（该端点接受项目域凭据，
+         * individual 全链实测 200；纯 start-plan 账号会得到诚实的 1113 balance 文案）。 */
+        const altBase = String((PLAN_SOURCES[String(providerId)] || {}).baseUrl || "").trim().replace(/\/+$/, "");
+        if (altBase && altBase !== baseUrl && !(external && external.aborted)) {
+          const glr = await planGLrTokenOf(providerId, external);
+          if (glr) {
+            log("enhance dual-route fallback engaged (primary " + result.status + ")");
+            const r2 = await runAttempts(buildRequest(altBase, glr, null), glr, 1, "fallback");   // 降级腿：单次 + 本腿凭据脱敏
+            if (r2 && (r2.ok || r2.kind === "balance")) return r2;   // 降级成功或给出更可行动的 balance 文案
+            return result;   // 双败：主路由的 path/401 更具诊断性
+          }
+        }
       }
     }
-    return lastFail;
+    return result;
   }
 
   function resolveEnhanceHost(providerId) {
     const planSrc = PLAN_SOURCES[String(providerId || "")];
-    if (planSrc) {   // 套餐源（BigModel/Start Plan 等）：凭据 planKeyOf 主进程内解析，协议恒 anthropic。
-      // 不沿用 planListable 的同族去重——增强选套餐是计费池选择，Start Plan 与个人档需分列；仅跳过 team（与个人同凭据同端点的纯重复）。
+    if (planSrc) {   // 套餐源（BigModel/Start Plan 等）：凭据主进程内解析，协议恒 anthropic。
+      // 不沿用 planListable 的同族去重——增强选套餐是计费池选择，Start Plan 与个人档需分列。
+      // 团队源不公告（issue #442 起凭据已独立，但三步换发是异步链，同步公告门拿不到活凭据；
+      // 默认模式增强不经此列表，团队会话增强照常可用）。
       if (/team/.test(String(providerId))) return null;
       if (!planTokenOf(providerId)) return null;
+      const isBigmodel = planSrc.fam === "bigmodel";
+      const base = planBaseUrl(providerId);
+      const isZcode = isBigmodel && /(^|\.)zcode\.z\.ai$/.test((() => { try { return new URL(base).hostname.toLowerCase(); } catch (e) { return ""; } })());
+      /* zcode.z.ai 路由仅认会话 JWT（与 enhanceText 同语义，review R3 复审 A）：entry key
+       * 属 open.bigmodel.cn 端点、无设备头打 zcode 恒 400——会话不可得即公告表值路由。 */
+      let zcodeSession = null;
+      let apiKey = "";
+      if (isZcode) {
+        zcodeSession = readZcodeSessionCred();
+        if (zcodeSession) apiKey = zcodeSession.token;
+      } else {
+        apiKey = isBigmodel ? planEntryKeyOf(providerId) : planKeyOf(providerId);
+        if (isBigmodel && !apiKey) apiKey = glrMemoToken();
+      }
+      if (!apiKey) return null;   // zcode 路由无会话即不公告（默认模式仍经 enhanceText 迁移表值路由可用）
       const entry = readV2BuiltinEntry(planSrc);
-      if (entry && entry.enabled === false) return null;
-      const apiKey = planKeyOf(providerId);
-      return apiKey ? { providerId: String(providerId), baseUrl: planSrc.baseUrl, protocol: "anthropic-messages", apiKey: apiKey, plan: true } : null;
+      if (!isBigmodel && entry && entry.enabled === false) return null;   // bigmodel 已由 planEntryKeyOf 判定
+      /* deviceMid 随 host 公告：设置页「从宿主选择」直连（enhanceProvider）路径补
+       * X-Device-Mid（review R3 复审 A 相邻 MAJOR——74503d7 起直连缺头对 zcode 路由恒 400）。 */
+      return { providerId: String(providerId), baseUrl: base, protocol: "anthropic-messages", apiKey: apiKey, deviceMid: zcodeSession ? zcodeSession.deviceMid : undefined, plan: true };
     }
     const data = readProviderCfg(), rule = data ? findRule(data, providerId) : null;
-    if (!rule || !modelPullerRuleAllowed(rule)) return null;
-    const cfg = effectiveRuleConfig(rule), api = cfg.api || {}, access = cfg.access || {};
-    if (access.type !== "api-key" || !access.apiKey || !api.baseUrl || !["openai-chat-completions", "openai-responses", "anthropic-messages"].includes(api.type)) return null;
-    return { providerId, baseUrl: String(api.baseUrl).replace(/\/+$/, ""), protocol: api.type, apiKey: String(access.apiKey) };
+    if (rule && modelPullerRuleAllowed(rule)) {
+      const cfg = effectiveRuleConfig(rule), api = cfg.api || {}, access = cfg.access || {};
+      /* zhipu-coding-plan-api-key 与 api-key 同型放行（issue #440 路径2）；zhipu-account 仍拒。
+       * enc: 密文 key 不可用（review A-1/D-1，与 enhanceText 规则路径同闸）。 */
+      if ((access.type === "api-key" || access.type === "zhipu-coding-plan-api-key") && access.apiKey && String(access.apiKey).trim().indexOf("enc:") !== 0 && api.baseUrl && ["openai-chat-completions", "openai-responses", "anthropic-messages"].includes(api.type)) {
+        return { providerId, baseUrl: String(api.baseUrl).replace(/\/+$/, ""), protocol: api.type, apiKey: String(access.apiKey) };
+      }
+    }
+    /* issue #440 路径3：v2/config.json 自定义供应商条目不在规则里，同门兜底。 */
+    const v2 = v2ProviderCfgOf(providerId);
+    if (v2) return { providerId: v2.id, baseUrl: v2.cfg.api.baseUrl.replace(/\/+$/, ""), protocol: v2.cfg.api.type, apiKey: v2.cfg.access.apiKey };
+    return null;
   }
   function modelPullerRuleAllowed(rule) { return rule && rule.enabled !== false && (!rule.config || rule.config.enabled !== false); }
   function listEnhanceHosts() {
     const data = readProviderCfg();
     const hosts = [];
+    const seen = new Set();
     for (const rule of rulesOf(data)) {
       const d = resolveEnhanceHost(String(rule.providerId || ""));
-      if (d && !PLAN_SOURCES[String(rule.providerId || "")]) hosts.push({ id: d.providerId, name: String(rule.providerName || d.providerId).slice(0, 160), baseUrl: d.baseUrl, protocol: d.protocol });
+      if (d && !PLAN_SOURCES[String(rule.providerId || "")]) { seen.add(d.providerId); hosts.push({ id: d.providerId, name: String(rule.providerName || d.providerId).slice(0, 160), baseUrl: d.baseUrl, protocol: d.protocol }); }
+    }
+    /* v2/config.json 自定义供应商条目（issue #440 路径3）：宿主设置页供应商不在规则里，
+     * 补列；与规则同 id 时规则让位（seen）。 */
+    const v2Map = readV2ProviderMap();
+    for (const id of v2Map.keys()) {
+      if (seen.has(id)) continue;
+      const d = resolveEnhanceHost(id);
+      if (d) hosts.push({ id: d.providerId, name: String(v2Map.get(id).name || d.providerId).slice(0, 160), baseUrl: d.baseUrl, protocol: d.protocol });
     }
     for (const planId of Object.keys(PLAN_SOURCES)) {   // 套餐源（BigModel/Start Plan 等）凭据可用即列出，与 listProviders 同门控
       const d = resolveEnhanceHost(planId);
@@ -1925,11 +2585,20 @@ function createModelPuller(opts) {
   async function listEnhanceModels(config, signal) {
     const base = config.protocol === "anthropic-messages" ? anthropicBaseWithV1(config.baseUrl) : config.baseUrl.replace(/\/+$/, "");
     const url = new URL(base + "/models");
+    /* 设置页手填或规则里的 key 可能是 enc: 密文（宿主加密信封）：不是可用凭据，按未配置处理、
+     * 零外发——规则路径的闸不 trim，带前导空白的密文此前会被公告为 host 并随头发往供应商 */
+    const apiKey = String((config && config.apiKey) || "").trim();
+    if (!apiKey || apiKey.indexOf("enc:") === 0) return { ok: false, error: "provider unavailable" };
     const headers = { Accept: "application/json", "User-Agent": "ZCode" };
+    /* zcode.z.ai 路由必带 X-Device-Mid（缺头 400 code 3001，与直连增强同口径）：host 公告
+     * 携带的设备号随 provider 配置进来。此前只给直连增强补了这一口，设置页「拉取模型」
+     * 对 zcode 路由恒 400（复盘修复）。设备号只发给官方路由主机，第三方中转不得带上。 */
+    const deviceMid = typeof config.deviceMid === "string" ? config.deviceMid.trim() : "";
+    if (deviceMid && url.hostname === "zcode.z.ai") headers["X-Device-Mid"] = deviceMid;
     if (config.protocol === "anthropic-messages") {
-      headers["x-api-key"] = config.apiKey;
+      headers["x-api-key"] = apiKey;
       headers["anthropic-version"] = "2023-06-01";
-    } else headers.Authorization = "Bearer " + config.apiKey;
+    } else headers.Authorization = "Bearer " + apiKey;
     const controller = new AbortController();
     const abort = () => controller.abort();
     if (signal) signal.addEventListener("abort", abort, { once: true });
@@ -1941,7 +2610,7 @@ function createModelPuller(opts) {
       if (!res.ok) { dropBody(res); return { ok: false, error: "HTTP " + res.status }; }
       const data = await readJsonBounded(res, RESPONSE_MAX_BYTES);
       const ids = sanitizeModelIds(parseModelsPayload(data).map(item => typeof item === "string" ? item : rawModelId(asObject(item))));
-      return { ok: true, models: ids.filter(id => !config.apiKey || !id.includes(config.apiKey)) };
+      return { ok: true, models: ids.filter(id => !apiKey || !id.includes(apiKey)) };
     } catch (e) { return { ok: false, error: "model list unavailable" }; }
     finally { clearTimeout(timer); if (signal) signal.removeEventListener("abort", abort); }
   }
@@ -1957,8 +2626,22 @@ function parseModelsPayload(data) {
   return Array.isArray(list) ? list : [];
 }
 
+/* 套餐列表的 HTTP 200 错误信封（specs/plan-model-list.md）：智谱系 Anthropic 兼容网关对鉴权与
+ * 业务失败回 200 + {code,msg,success:false}，信封里没有列表——必须按候选失败换下一端点，不能
+ * 当空列表报 no models in response。只回分类串：code 是 100–599 的整数（或纯数字串）时回
+ * "HTTP <code>"（与真实 HTTP 状态同形，渲染端既有展示零改动；200–299 是成功码，不冒充
+ * HTTP 状态），否则 "upstream error <code>"；
+ * msg 与任意服务端文本不进错误串（失败文案不引用原始响应体）。非信封返回空串。 */
+function planEnvelopeError(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body) || body.success !== false) return "";
+  const raw = body.code;
+  const code = typeof raw === "number" || (typeof raw === "string" && /^\d{1,6}$/.test(raw)) ? Number(raw) : NaN;
+  if (!Number.isInteger(code)) return "upstream error";
+  return code >= 100 && code <= 599 && !(code >= 200 && code <= 299) ? "HTTP " + code : "upstream error " + code;
+}
+
 module.exports = {
-  createModelPuller, sanitizeModelIds, parseModelsPayload, candidateUrls,
+  createModelPuller, sanitizeModelIds, parseModelsPayload, candidateUrls, planEnvelopeError,
   extractModelMeta, catalogEntries, matchCatalogEntry, inputFormatFrom, canonicalBasename,
   endsWithVersionSegment, rawModelId, apiCatalogEntries, buildEffortsIndex,
   anthropicBaseWithV1, classifyProbeStatus, maskSecrets, probeRepairCandidates,

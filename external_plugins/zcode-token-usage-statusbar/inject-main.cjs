@@ -936,7 +936,7 @@ function watchDb() {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         maybeSpawn();
-        /* v348：手机远控与桌面同款触发模型——DB 写入（每次请求落库）即对账推送，
+        /* v348：远控页面用量与桌面用量采用相同的刷新触发条件——DB 写入（每次请求落库）即对账推送，
          * 不再由 mobile-relay 自己 1.5s 轮询；查询节流在其内部（MIN_PUSH_INTERVAL_MS）。 */
         try { if (mobileRelay) mobileRelay.pump(); } catch (e) { }
       }, 300);
@@ -1063,8 +1063,8 @@ function initEnginePatcher() {
   }
 }
 initEnginePatcher();
-/* v331：mobile-relay（手机远控中继，热换模块 #7）。stash 由 mobile_relay_patch.py
- * 注入主 bundle；本模块只消费——加载失败只少推送，不拖垮主链。
+/* v331：mobile-relay（移动端远程控制中继，热换模块 #7）。stash 由 patch_install.py
+ * 合并注入主 bundle；本模块只消费——加载失败只少推送，不拖垮主链。
  * 目标发现与发送前复验均读取宿主 mobileTaskView，并绑定唯一官方 live 桥；
  * config mobile_relay.enabled 仅显式 true 开启。 */
 let mobileRelay = null;
@@ -1122,7 +1122,7 @@ function mobileTargetTrusted(wc, target) {
   if (!sameMobileTarget(resolveMobileTarget(target), target)) return false;
   const tasks = windowTasks.get(wc.id);
   const scopes = tasks && tasks.get(target.taskId);
-  /* 手机可打开未出现在桌面 tabs 的动态项目；身份由官方 live 桥确认，任务明确矛盾仍拒绝。
+  /* 远控页面可打开未出现在桌面 tabs 的动态项目；身份由官方 live 桥确认，任务明确矛盾仍拒绝。
    * 普通桌面 pane 继续使用 maybeSpawn 中的 windowWorkspaces 白名单。 */
   return !scopes || scopes.has(target.workspaceIdentity);
 }
@@ -1143,7 +1143,6 @@ function initMobileRelay() {
   try {
     const { createMobileRelay } = require("./mobile-relay.cjs");
     mobileRelay = createMobileRelay({
-      log: (...a) => LOG("[mobile-relay]", ...a),
       getMinIntervalMs: () => readCfgCached().activity_min_ms | 0 || 1500,
       getRemotePollMs: remotePollMs,
       strictOptIn: true, // 旧 cold loader 缺此能力时，新 relay 必须关闭。
@@ -1257,6 +1256,7 @@ function createQuotaClientInstance() {
       quotaEnabled,
       resetEnabled: resetBadgeEnabled,
       resetList: true,   // v135：bigmodel 族并行查网页控制台列表端点（近 7 天过期卡 + 上次重置）
+      saveSecrets: (mutate) => writeQuotaSecrets(mutate),   // issue #399 千问登录完成持久化（内部自带 credentialsChanged+tick+补推）
 
       log: (...a) => LOG("[quota]", ...a),
       onUpdate: () => {   // 刷新开始/结算及解冻时同步源状态与最近成功快照
@@ -1710,7 +1710,10 @@ function readEnhanceProvider() {
 }
 function enhanceProviderView() {
   const d = readEnhanceProvider();
-  return { capability: 1, allowDowngrade: d.allowDowngrade !== false, saveHistory: d.saveHistory !== false, available: process.platform !== "win32" && !!modelPuller && modelPuller.enhanceProviderVersion === 1, platformLimited: process.platform === "win32", version: 1, revision: d.revision, mode: d.mode, unreadable: !!d.unreadable, source: d.source || "manual", providerId: d.providerId || "", target: d.target || "", baseUrl: d.baseUrl || "", protocol: d.protocol || "openai-chat-completions", model: d.model || "", keyConfigured: !!d.apiKey };
+  /* issue #442：Windows 平台门移除——runtime_lock.update_enhance_provider 已支持 nt
+   * （uid/0600 语义 POSIX 专属，Windows 随 profile 目录 ACL，quota-secrets.json 同款取舍）。
+   * platformLimited 字段保留供旧渲染端兼容（旧主进程才发 true），本主进程恒 false。 */
+  return { capability: 1, allowDowngrade: d.allowDowngrade !== false, saveHistory: d.saveHistory !== false, available: !!modelPuller && modelPuller.enhanceProviderVersion === 1, platformLimited: false, version: 1, revision: d.revision, mode: d.mode, unreadable: !!d.unreadable, source: d.source || "manual", providerId: d.providerId || "", target: d.target || "", baseUrl: d.baseUrl || "", protocol: d.protocol || "openai-chat-completions", model: d.model || "", keyConfigured: !!d.apiKey };
 }
 function validEnhanceUrl(value) {
   try {
@@ -1821,12 +1824,14 @@ async function handlePromptEnhanceRequest(req, wc) {
 const enhanceHistory = [];   // 内存常驻；saveHistory 开启时才落盘 enhance-history.json
 let enhanceHistoryLoaded = false;
 function loadEnhanceHistoryDisk() {
-  if (enhanceHistoryLoaded || process.platform === "win32") return;
+  if (enhanceHistoryLoaded) return;
   if (readEnhanceProvider().saveHistory === false) return;   // 显式关闭时不读盘：契约=关闭态重启即清空（缺省视为开启，v363）
   enhanceHistoryLoaded = true;
   try {
     const st = fs.lstatSync(path.join(HERE, "enhance-history.json"));
-    if (!st.isFile() || st.isSymbolicLink() || st.mode & 0o077) return;
+    /* 0600 语义 POSIX 专属：Windows 宿主 fs 恒 0o666，mode 门跳过（issue #442，
+     * readEnhanceProvider 同款平台守卫；落盘保护随 profile 目录 ACL） */
+    if (!st.isFile() || st.isSymbolicLink() || (process.platform !== "win32" && st.mode & 0o077)) return;
     const arr = JSON.parse(fs.readFileSync(path.join(HERE, "enhance-history.json"), "utf8"));
     if (Array.isArray(arr)) {
       // 读回同走 30 天/100 条裁剪（v363 review：缺省开启后该文件对全体用户生效，清理时机不再依赖下一次成功增强）
@@ -1838,7 +1843,7 @@ function loadEnhanceHistoryDisk() {
   } catch (e) { }
 }
 function persistEnhanceHistory() {
-  if (readEnhanceProvider().saveHistory === false || process.platform === "win32") return;
+  if (readEnhanceProvider().saveHistory === false) return;   // issue #442：Windows 落盘门移除（读盘链同批）
   try {
     const file = path.join(HERE, "enhance-history.json");
     const tmp = file + ".tmp";
@@ -1920,7 +1925,9 @@ async function handleEnhanceProviderAction(req, wc) {
   }
   if (req.action === "enhance-provider-models") {
     const settings = readEnhanceProvider();
-    if (!settings || settings.unreadable || process.platform === "win32") { reply({ ok: false, error: "provider unavailable" }); return; }
+    /* issue #442 review A/D：win32 恒拒门随 save 门一并移除——Windows custom 模式已激活，
+     * 保留会让「拉取模型」按钮恒报 provider unavailable（listEnhanceModels 无平台依赖）。 */
+    if (!settings || settings.unreadable) { reply({ ok: false, error: "provider unavailable" }); return; }
     const draft = req.form && typeof req.form === "object" ? req.form : null;
     let provider = draft ? resolveEnhanceDraftProvider(settings, draft, typeof req.formApiKey === "string" ? req.formApiKey : "") : resolveEnhanceProvider(settings);
     if (!provider) { reply({ ok: false, error: "provider unavailable" }); return; }
@@ -1940,7 +1947,8 @@ async function handleEnhanceProviderAction(req, wc) {
     return;
   }
   if (req.action !== "enhance-provider-save" || !req.changes || typeof req.changes !== "object") return;
-  if (process.platform === "win32") { reply({ ok: false, error: "unsupported platform" }); return; }   // 与 models 分支对称：Windows 无 POSIX 安全落盘（runtime_lock 平台门恒拒），早退省一次必败 python 子进程
+  /* issue #442：Windows 早退门移除——runtime_lock.update_enhance_provider 已支持 nt，
+   * 全平台统一委托 python 事务（失败回执 save failed; refresh settings 不变）。 */
   const changes = req.changes;
   if (changes.source === "host") {
     const host = modelPuller.resolveEnhanceHost(changes.providerId);
@@ -2109,6 +2117,10 @@ function handleQuotaSourceRequest(req, wc) {
       const value = req.value == null ? "" : String(req.value).slice(0, 4096);
       writeQuotaSecrets((sec) => {
         sec[id] = Object.assign({}, sec[id] || {});
+        /* 千问 token 手填/清空时，把设备码登录写入的 tokenExpiresAt 与 account 一并清掉：
+         * 残留的到期时间会让之后手填的有效 token 被判「登录态已过」→ 未配置（面板也写不到
+         * 这两个字段，用户无法自救）；「清空」即退出登录，邮箱不该留下。 */
+        if (id === "qianwen" && field === "token") { delete sec[id].tokenExpiresAt; delete sec[id].account; }
         const isCred = field === "apiKey" || field === "cookie" || field === "token" || field === "secretAccessKey";
         if (value === "" && (isCred || field === "modelPatterns")) { delete sec[id][field]; return; }
         if (field === "planCredits") { if (value === "") delete sec[id][field]; else sec[id][field] = Number(value) || 0; }
@@ -2125,6 +2137,30 @@ function handleQuotaSourceRequest(req, wc) {
     respond({ ok: false, error: "Unable to save quota settings" });
   }
 }
+/* issue #399 千问设备码登录（⚙ 面板「登录」按钮）：start 起流并回授权页 URL（渲染端走
+ * openExternal 打开），渲染端每 2s 轮询 state 直至 done/failed；cancel 清理在途流。
+ * 热换竞窗守卫：quotaClient 为 null（dispose 在途）时按不可用回执，不碰旧实例。 */
+function handleQianwenSigninRequest(req, wc) {
+  const respond = (result) => deliverPluginRequest(wc, req.requestId, result);
+  const client = quotaClient;
+  if (!client || typeof client.qianwenSignInStart !== "function") { respond({ ok: false, error: "restart required" }); return; }
+  /* 总开关关闭时只挡发起：state 是纯本地读，关开关那一刻设置页的轮询还要靠它收到 idle（显示
+   * 「登录已取消」）才能收尾；cancel 同为纯本地操作一并放行（当前渲染端没有取消入口，保留给 IPC 对称） */
+  if (req.action === "quota-qianwen-signin" && !quotaEnabled()) { respond({ ok: false, error: "quota disabled" }); return; }
+  try {
+    if (req.action === "quota-qianwen-signin") {
+      client.qianwenSignInStart().then((r) => respond(r), (e) => respond({ ok: false, error: String((e && e.message) || e).slice(0, 120) }));
+    } else if (req.action === "quota-qianwen-signin-state") {
+      respond(client.qianwenSignInState());
+    } else if (req.action === "quota-qianwen-signin-cancel") {
+      client.qianwenSignInCancel();
+      respond({ ok: true });
+    }
+  } catch (e) {
+    LOG("qianwen sign-in request failed:", e && e.message);
+    respond({ ok: false, error: "sign-in unavailable" });
+  }
+}
 /* 套餐额度开关（⚙ 面板）：原子写 config.json 的 quota_enabled（v111 起缺省开）。开启即刻 tick
  * 一次（结算后经 onUpdate 补推）；关闭后 handlePayload 不再 tick/附加，chip 随之隐藏。 */
 async function setQuotaEnabled(enabled, wc, requestId) {
@@ -2133,6 +2169,11 @@ async function setQuotaEnabled(enabled, wc, requestId) {
     await updateConfig(HERE, { quota_enabled: enabled }, readCfgCached().python_path || (process.platform === "win32" ? "python" : "python3"));
     cfgCache = null;
     broadcastPluginState();
+    /* 关额度即中止在途的千问设备码登录：否则轮询会继续打到 t.qianwenai.com 直到 deadline，
+     * 完成后仍把 token 写进 quota-secrets.json（用户刚关掉的功能不该再联网落凭据） */
+    if (!enabled && quotaClient && typeof quotaClient.qianwenSignInCancel === "function") {
+      try { quotaClient.qianwenSignInCancel(); } catch (e) { LOG("qianwen sign-in cancel failed:", e && e.message); }
+    }
     if (enabled && quotaClient) syncQuotaProviders();
     deliverPluginRequest(wc, requestId, { ok: true });
   } catch (e) {
@@ -2221,7 +2262,7 @@ function handleAutoCompactConfig(req, wc) {
  * v343（issue #321）：空交付带原因标签（第 4 参："spawn"=解释器拉不起、"timeout"=15s
  * 超时、"pyerr"=Python 非零退出、"empty"=exit 0 空输出即「库没追上」），渲染端据此把
  * 失败层细分进 diag（旧渲染端忽略第 4 参，双向兼容）。 */
-function queryTurnText(sid, wc, plainUnits, forceKmb, unitEpoch, noCost) {
+function queryTurnText(sid, wc, plainUnits, forceKmb, unitEpoch, noCost, turnRef) {
   const deliver = (text, reason) => {
     if (!wc || wc.isDestroyed() || !isLocalHostPage(wc)) return;
     wc.executeJavaScript("window.__zusageDeliverTurnText && window.__zusageDeliverTurnText(" +
@@ -2233,9 +2274,23 @@ function queryTurnText(sid, wc, plainUnits, forceKmb, unitEpoch, noCost) {
     /* --no-cn-units：渲染端万/亿开关（localStorage，主进程无真值）显式关闭时才传；
        缺省（含旧渲染端不带 cn 字段）与产品默认一致，Python 侧自行用万/亿。
        --no-cost：v376 预估费用开关（localStorage zusage3.cost）显式关闭时才传；
-       缺省（含旧渲染端不带 cost 字段）保持产品默认开启，统计行带费用段。 */
+       缺省（含旧渲染端不带 cost 字段）保持产品默认开启，统计行带费用段。
+       v458（specs/subagent-turn-stats-line.md）：子代理窗格按页面轮号精确定位。prompt-submit
+       hook 只给用户提问记提问时刻，子会话带 --current 必然空输出；而按会话取「最新一轮」
+       又会把别的轮的富文本挂到窗格里这一轮下面（该轮还在进行或库还没追上时，最新一轮
+       是上一轮），进行中的轮还会取到半截统计。所以子代理 sid 且渲染端传来 turnRef
+       （窗格里这一轮的 data-turn-id，即用量行上的 parent_user_message_id）时改走 --turn-ref：
+       token_rate 只认该会话内该轮号对应的唯一一轮，且该轮已结束（turn_usage 有行：完成、
+       取消或出错都算结束）才出数，否则空输出、渲染端按既有节奏重试。轮号缺席或不合法的子代理
+       sid（旧渲染端不发子代理请求，所以没有轮号）与 sess_dwf-* 等其余 sid 一律维持 --current。
+       轮号首字符不许 -：命令行按「--名字 值」解析，以 - 开头的值会被当成另一个开关（--json
+       还会同时被当成输出开关）。后缀上界 72 与渲染端 zuSubDetEnsure 是同一条形状规则；主桥另加外层 80 字符总长门，所以后缀实际
+       不超过 66——更长的 sid 渲染端照发请求，主桥整单拒绝、不回推，该轮不出行。 */
+    const subAgentTurn = /^sess_subagent_[A-Za-z0-9_-]{1,72}$/.test(sid);
+    const ref = subAgentTurn && typeof turnRef === "string" && /^[A-Za-z0-9_][A-Za-z0-9_-]{0,79}$/.test(turnRef) ? turnRef : "";
     py = spawn(readCfgCached().python_path,
-      [TOKEN_RATE, "--turn", "--current", "--session", sid].concat(plainUnits ? ["--no-cn-units"] : [], forceKmb ? ["--force-kmb"] : [], noCost ? ["--no-cost"] : []), { windowsHide: true });
+      [TOKEN_RATE, "--turn"].concat(ref ? ["--turn-ref", ref] : ["--current"], ["--session", sid],
+        plainUnits ? ["--no-cn-units"] : [], forceKmb ? ["--force-kmb"] : [], noCost ? ["--no-cost"] : []), { windowsHide: true });
   } catch (e) { LOG("turn text spawn failed:", e.message); deliver("", "spawn"); return; }
   let finished = false;
   const finish = (text, reason) => {
@@ -2263,23 +2318,27 @@ function queryTurnText(sid, wc, plainUnits, forceKmb, unitEpoch, noCost) {
 
 /* ---------- Git 状态旁路查询（v96）：工具行 Git chip 的数据源 ----------
  * 渲染端把各 pane 的本地工作区路径写进 window.__zusageGitPaths（远端 pane 不上报；开关关闭为空），
- * 这里每 10s 取各主窗口并集逐路径跑 git（一次性 execFile，与 Python 泵无关，不占 stdin 行协议），
- * 结果按路径推回每个声明过该路径的窗口（window.__zusageGitState）。渲染端 git-refresh 请求
- * （回合后节流 / chip 点击）立即重查。git 缺失 / 非仓库按 reason 回推，渲染端据此不挂载；
+ * 主进程对各窗声明路径并集建 fs.watch（v420 起对齐宿主原生 Git 胶囊刷新时机，弃 10s 轮询）：
+ * 任一监听事件重置 60s 尾随防抖，静默满 60s 取并集逐路径跑 git（一次性 execFile，与 Python 泵
+ * 无关，不占 stdin 行协议），结果按路径推回每个声明过该路径的窗口（window.__zusageGitState）。
+ * 渲染端 git-refresh 请求（路径集变化首查 / chip 点击回退）立即重查。git 缺失 / 非仓库按 reason
+ * 回推，渲染端据此不挂载；
  * 超时与其它错误也回推，渲染端保留最近成功态并标 stale。
- * 命令：status --porcelain --branch（分支/上游/ahead-behind/各类文件计数）+ diff HEAD --shortstat
- * （工作区相对 HEAD 的插入/删除行数，含已暂存；HEAD 无效的无提交仓库退回 diff + diff --cached
- * 求和，即 cc-pretty-statusline 的原始做法）。GIT_OPTIONAL_LOCKS=0 不写 index 锁（后台轮询不与
+ * 命令：status --porcelain --branch -z（分支/上游/ahead-behind/各类文件计数）+ diff HEAD --numstat -z
+ * （每文件插入/删除行数，总量求和与原 --shortstat 等价——v425 起同一命令兼供 tooltip 逐文件
+ * ±N 与状态标签→文件类型图标改造；HEAD 无效的无提交仓库退回 diff + diff --cached 的 numstat
+ * 合并求和）。GIT_OPTIONAL_LOCKS=0 不写 index 锁（后台查询不与
  * 用户的 git 操作抢 index.lock），LC_ALL=C 让 shortstat 文案可解析，GIT_TERMINAL_PROMPT=0 杜绝交互。
  * 多仓聚合：workspace 自身非仓库（status 报 notrepo）时枚举直接子目录中的 git 仓库——0 仓维持
  * notrepo（chip 隐藏）；恰 1 仓对该子仓走完整单仓管线（成功结果附 repoPath）；≥2 仓每仓只跑一条
  * status --porcelain --branch（Promise.all 并行，不跑 diff 行数），按字母序聚合为 kind:"multi"，
  * 上限 GIT_REPO_CAP=32，超出折叠进 more；子仓失败只在对应项记 err，不拖垮整体与其余仓。 */
-const GIT_TICK_MS = 10000, GIT_TIMEOUT_MS = 8000, GIT_MAX_BUFFER = 4 * 1024 * 1024;
+const GIT_TIMEOUT_MS = 8000, GIT_MAX_BUFFER = 4 * 1024 * 1024;
 const GIT_ENV = Object.assign({}, process.env, { GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0", LC_ALL: "C" });
 const GIT_CONFLICT = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 const GIT_REPO_CAP = 32;   // 多仓聚合上限：父目录非仓库时最多查询 32 个直接子仓库，超出折叠进 more
 let gitTickBusy = false, gitRefreshPending = false, gitNoBinaryLogged = false;
+const gitMissingNotified = new Set();   // 已补推 notrepo 的「窗口id\u0000路径」键（恢复后移除，再消失重新通知）
 function gitRefreshResult(requestedPath, results) {
   if (typeof requestedPath !== "string" || !requestedPath) return { ok: false, error: "no paths" };
   if (!results || !results.has(requestedPath)) return { ok: false, error: "no paths" };
@@ -2296,13 +2355,40 @@ function finishGitRefreshWaiters(results) {
   }
 }
 
-function parseGitPorcelain(text) {
+const GIT_FILES_CAP = 60;   // 逐文件明细帽：tooltip 列前 60 条，ft 承载真实总数
+function fileLabel(x, y) {   // 展示标签：冲突 > 未跟踪 > 删除 > 改名 > 改（title 提示与冲突红保留，v425 起列首标签让位文件类型图标）
+  if (GIT_CONFLICT.has(x + y)) return "conflict";
+  if (x === "?" ) return "untracked";
+  if (x === "D" || y === "D") return "deleted";
+  if (x === "R" || y === "R") return "renamed";
+  if (x === "A" || y === "A") return "added";
+  return "modified";
+}
+/* v426：porcelain 路径 → 文件条目；numstatMap 命中即附 add/del（rename 的映射键 numKey 由
+ * 调用方给 -z 的干净新名，显示串仍是 "old -> new" 组合形；未跟踪不在 numstat 里，天然无
+ * 计数，行尾省略）。 */
+function fileEntry(p, x, y, numKey, numstatMap) {
+  const e = { p: p, s: fileLabel(x, y) };
+  if (numstatMap) {
+    const hit = numstatMap[numKey];
+    if (hit) { e.add = hit.ins; e.del = hit.del; }
+  }
+  return e;
+}
+/* v433：porcelain 解析 -z 化（v425 的行式解析对含空格/引号路径失配——porcelain 非 -z 会给
+ * 路径加 C 转义引号，与 numstat 的裸路径对不上，空格文件名整类丢 ±N）。-z 格式（实测 git
+ * 2.x）：条目 "XY path\0"；rename/copy 为 "XY 新名\0旧名\0"——新名跟在 XY 后、旧名占下一
+ * 个 NUL 段；分支头 "## ..." 同样以 NUL 结尾。显示串保持 "old -> new" 组合形（渲染端转义
+ * 与图标按尾段取新名），映射键用 -z 干净新名。 */
+function parseGitPorcelain(text, collectFiles, numstatMap) {
   const out = { branch: "", upstream: "", ahead: 0, behind: 0, detached: false, noCommits: false, staged: 0, unstaged: 0, untracked: 0, conflicts: 0, changed: 0 };
-  for (const raw of String(text || "").split("\n")) {
-    const line = raw.replace(/\r$/, "");
-    if (!line) continue;
-    if (line.startsWith("## ")) {
-      const head = line.slice(3);
+  if (collectFiles) { out.files = []; out.ft = 0; }
+  const toks = String(text || "").split("\0");
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i];
+    if (!tok) continue;
+    if (tok.startsWith("## ")) {
+      const head = tok.slice(3);
       if (head === "HEAD (no branch)") { out.detached = true; continue; }
       const fresh = head.match(/^(?:No commits yet|Initial commit) on (.+)$/);
       if (fresh) { out.noCommits = true; out.branch = fresh[1]; continue; }
@@ -2315,21 +2401,61 @@ function parseGitPorcelain(text) {
       if (b) out.behind = parseInt(b[1], 10);
       continue;
     }
-    if (line.length < 2) continue;
-    const x = line[0], y = line[1];
-    if (x === "?" && y === "?") { out.untracked++; continue; }
-    if (x === "!" && y === "!") continue;   // 仅 --ignored 时出现
-    out.changed++;   // 非未跟踪/非忽略的条目行计 1：MM 部分暂存也只算一行，不与 staged/unstaged 相加重复计
+    if (tok.length < 4) continue;   // XY+空格+至少 1 字符路径
+    const x = tok[0], y = tok[1];
+    if (x === "!" && y === "!") continue;   // 仅 --ignored 时出现（-z 下不会出现，防御保留）
+    let p, numKey;
+    if ((x === "R" || x === "C") && i + 1 < toks.length) {
+      numKey = tok.slice(3);   // 新名（映射键）
+      p = toks[++i] + " -> " + numKey;   // 旧名占下一个 NUL 段，显示串拼回组合形
+    } else {
+      p = numKey = tok.slice(3);
+    }
+    if (x === "?" && y === "?") {
+      out.untracked++;
+      if (collectFiles && out.files.length < GIT_FILES_CAP) out.files.push(fileEntry(p, x, y, numKey, numstatMap));
+      continue;
+    }
+    out.changed++;   // 非未跟踪/非忽略的条目计 1：MM 部分暂存也只算一条，不与 staged/unstaged 相加重复计
+    if (collectFiles && out.files.length < GIT_FILES_CAP) out.files.push(fileEntry(p, x, y, numKey, numstatMap));
     if (GIT_CONFLICT.has(x + y)) { out.conflicts++; continue; }
     if (x !== " ") out.staged++;
     if (y !== " ") out.unstaged++;
   }
+  if (collectFiles) out.ft = out.changed + out.untracked;   // 真实总条目数（含未入帽的）
   return out;
 }
-function parseShortstat(text) {
-  const s = String(text || "");
-  const ins = s.match(/(\d+) insertions?\(\+\)/), del = s.match(/(\d+) deletions?\(-\)/);
-  return { ins: ins ? parseInt(ins[1], 10) : 0, del: del ? parseInt(del[1], 10) : 0 };
+/* v433：numstat 解析 -z 化（与 porcelain -z 同动机：非 -z 的 rename "old => new" 花括号形
+ * 与路径内箭头歧义、porcelain 引号串对不上键）。-z 格式（实测）：普通条目 "ins\tdel\tpath\0"，
+ * 二进制 "-\t-\tpath\0" 计 0 且不入映射；rename 为三段 NUL："ins\tdel\t\0" + "<旧名>\0" +
+ * "<新名>\0"——第三个 TAB 字段为空即信号，旧名在前、取后段新名为键。 */
+function parseNumstat(text) {
+  /* map 用无原型对象：路径可以是 "__proto__"/"constructor" 这类名字——普通对象上前者会
+   * 改掉原型、后者查表命中函数，文件行就拿到幻影计数或丢计数（复盘 MINOR）。 */
+  const out = { ins: 0, del: 0, map: Object.create(null) };
+  const toks = String(text || "").split("\0");
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i].split("\t");
+    if (t.length < 3) continue;
+    const ins = t[0] === "-" ? 0 : parseInt(t[0], 10) || 0;
+    const del = t[1] === "-" ? 0 : parseInt(t[1], 10) || 0;
+    out.ins += ins;
+    out.del += del;
+    if (t[0] === "-" || t[1] === "-") continue;   // 二进制不入映射（行尾省略）
+    let key = t.slice(2).join("\t");
+    if (key === "" && i + 2 < toks.length) { key = toks[i + 2]; i += 2; }   // rename：跳过旧名段，取新名
+    if (key) out.map[key] = { ins: ins, del: del };
+  }
+  return out;
+}
+function mergeNumstat(a, b) {
+  const map = Object.create(null);   // 同 parseNumstat：路径名可能是 __proto__
+  for (const k in a.map) map[k] = a.map[k];
+  for (const k in b.map) {
+    const v = map[k];
+    map[k] = v ? { ins: v.ins + b.map[k].ins, del: v.del + b.map[k].del } : b.map[k];
+  }
+  return { ins: a.ins + b.ins, del: a.del + b.del, map: map };
 }
 function gitPathOk(p) {
   if (typeof p !== "string" || !p || p.length > 4096 || /[\x00-\x1f\x7f]/.test(p) || !path.isAbsolute(p)) return false;
@@ -2350,29 +2476,34 @@ function gitFailure(r) {   // null = 成功；否则渲染端可识别的 reason
   if (/not a git repository/i.test(r.stderr)) return "notrepo";
   return "error";
 }
-/* 单仓管线（queryGitStatus 的原有主体）：status + diff HEAD --shortstat，无提交仓库退回
- * diff + diff --cached 求和。成功返回统一附 repoPath（渲染端 tooltip 目录行用）与 ts（成功
- * 时刻）与 op（进行中的 Git 操作），失败形状不变。 */
+/* 单仓管线（queryGitStatus 的原有主体）：status + diff HEAD --numstat（v425 替代 shortstat，
+ * 总量等价、每文件 ±N 同命令产出），无提交仓库退回 diff + diff --cached 的 numstat 逐路径
+ * 合并求和。成功返回统一附 repoPath（渲染端 tooltip 目录行用）与 ts（成功时刻）与 op（进行中
+ * 的 Git 操作），失败形状不变。两条命令都带 -z（v433）：非 -z 的 porcelain 给含空格/引号路径加转义引号、
+ * rename 是 "old -> new" 歧义串，numstat 的 rename 还有 "dir/{old => new}" 花括号形——-z 下全部为
+ * NUL 分段的干净字段（porcelain rename=新名段+旧名段；numstat rename=ins\tdel\t\0旧名\0新名\0），
+ * 与 quotepath 无关地逐条对上。 */
 async function gitSingleStatus(cwd) {
-  const st = await gitExec(cwd, ["status", "--porcelain", "--branch"]);
+  /* core.quotepath=false：v411 起本管线的文件路径直接进 tooltip 展示。v433 改 -z 之后路径
+   * 已不经 quotepath 转义（带与不带该参数输出逐字节相同，中文文件名两态都是原始 UTF-8），
+   * 这里保留是无害冗余——status 与 numstat 两条命令同带，argv 形状有多处测试锁定。渲染端
+   * gitEsc 只做 HTML 转义，不做 unquotepath。 */
+  const st = await gitExec(cwd, ["-c", "core.quotepath=false", "status", "--porcelain", "--branch", "-z"]);
   const bad = gitFailure(st);
   if (bad) {
     if (bad === "nogit" && !gitNoBinaryLogged) { gitNoBinaryLogged = true; LOG("git not found in PATH; git chip stays hidden"); }
     return { ok: false, reason: bad, ts: Date.now() };
   }
-  const d1 = await gitExec(cwd, ["diff", "HEAD", "--shortstat"]);
+  const d1 = await gitExec(cwd, ["-c", "core.quotepath=false", "diff", "HEAD", "--numstat", "-z"]);
   let counts = null;
-  if (!d1.error) counts = parseShortstat(d1.stdout);
-  else if (gitFailure(d1) === "error") {   // HEAD 无效（无提交仓库）等非超时失败：退回两段式求和
-    const a = await gitExec(cwd, ["diff", "--shortstat"]);
-    const b = a.error ? a : await gitExec(cwd, ["diff", "--cached", "--shortstat"]);
-    if (!a.error && !b.error) {
-      const pa = parseShortstat(a.stdout), pb = parseShortstat(b.stdout);
-      counts = { ins: pa.ins + pb.ins, del: pa.del + pb.del };
-    }
+  if (!d1.error) counts = parseNumstat(d1.stdout);
+  else if (gitFailure(d1) === "error") {   // HEAD 无效（无提交仓库）等非超时失败：退回两段式求和（同路径计数相加）
+    const a = await gitExec(cwd, ["-c", "core.quotepath=false", "diff", "--numstat", "-z"]);
+    const b = a.error ? a : await gitExec(cwd, ["-c", "core.quotepath=false", "diff", "--cached", "--numstat", "-z"]);
+    if (!a.error && !b.error) counts = mergeNumstat(parseNumstat(a.stdout), parseNumstat(b.stdout));
   }
   if (!counts) return { ok: false, reason: gitFailure(d1) || "error", ts: Date.now() };
-  return Object.assign({ ok: true, ts: Date.now(), ins: counts.ins, del: counts.del, repoPath: cwd, op: detectGitOp(cwd) }, parseGitPorcelain(st.stdout));
+  return Object.assign({ ok: true, ts: Date.now(), ins: counts.ins, del: counts.del, repoPath: cwd, op: detectGitOp(cwd) }, parseGitPorcelain(st.stdout, true, counts.map));   // v411 收逐文件明细；v425 附每文件 ±N（多仓聚合不收）
 }
 /* 进行中的 Git 操作探测：解析 .git 目录（目录或 worktree 链接文件都认），按官方触发器文件
  * 存在性判操作类型。纯 fs 探针零子进程；rebase-apply 目录被 rebase --apply 与 git am 共用，
@@ -2430,7 +2561,7 @@ async function queryGitStatus(cwd) {
   const repos = found.repos.slice();   // 已按名字码点序
   let cursor = 0;
   const runOne = async (r) => {
-    const s = await gitExec(r.path, ["status", "--porcelain", "--branch"]);   // 多仓只跑 status，不跑 diff 行数
+    const s = await gitExec(r.path, ["status", "--porcelain", "--branch", "-z"]);   // 多仓只跑 status，不跑 diff 行数
     const bad = gitFailure(s);
     if (bad) {
       const good = gitRepoLastGood.get(r.path);
@@ -2463,8 +2594,10 @@ async function readGitPaths(wc) {
       new Promise((resolve) => { timer = setTimeout(() => resolve("[]"), 1000); }),
     ]).finally(() => { if (typeof clearTimeout === "function") clearTimeout(timer); });
     const arr = JSON.parse(String(raw || "[]"));
-    return Array.isArray(arr) ? arr.filter(gitPathOk) : [];
-  } catch (e) { return []; }
+    const ok = [], missing = [];
+    if (Array.isArray(arr)) for (const p of arr) (gitPathOk(p) ? ok : missing).push(p);
+    return { ok, missing };
+  } catch (e) { return { ok: [], missing: [] }; }
 }
 function pushGitState(wc, p, st) {
   if (!wc || wc.isDestroyed()) return;
@@ -2480,9 +2613,9 @@ function pushGitRefreshResult(wc, requestId, result) {
 async function gitTick(fromRefresh, requestId, requestWc, requestPath) {
   if (fromRefresh && requestId) gitRefreshWaiters.push([requestWc, requestId, requestPath || ""]);
   if (gitTickBusy) {
-    if (fromRefresh) gitRefreshPending = true;
+    gitRefreshPending = true;   // v433：防抖 tick 撞在途也补跑——轮询已删，丢弃成本是「下次事件+60s」
     return;
-  }   // 在途时的手动刷新：结束后补跑一轮
+  }   // 在途时的手动刷新/防抖 tick：结束后补跑一轮
   if (shuttingDown || !hasWindows()) {
     if (fromRefresh) finishGitRefreshWaiters(new Map());
     return;
@@ -2493,15 +2626,25 @@ async function gitTick(fromRefresh, requestId, requestWc, requestPath) {
     for (const wc of webContents.getAllWebContents()) {
       if (!isMainWindowState(wc) || wc.isDestroyed() || !isLocalHostPage(wc)) continue;
       const paths = await readGitPaths(wc);
-      if (paths.length) wants.push([wc, paths]);
+      /* 声明了但目录已消失的路径（worktree 被删等）补推一次 notrepo：渲染端按「非仓库」
+       * 摘 chip，不残留删除前的最后成功态；去重按「窗口×路径」（多窗声明同路径各推各的），
+       * 路径在该窗口恢复即解除，再次消失重新通知。 */
+      for (const p of paths.missing) {
+        const key = wc.id + "\u0000" + p;
+        if (!gitMissingNotified.has(key)) {
+          gitMissingNotified.add(key);
+          pushGitState(wc, p, { ok: false, reason: "notrepo", ts: Date.now() });
+        }
+      }
+      for (const p of paths.ok) gitMissingNotified.delete(wc.id + "\u0000" + p);
+      if (paths.ok.length) wants.push([wc, paths.ok]);
     }
     const all = new Set();
     for (const [, ps] of wants) for (const p of ps) all.add(p);
+    gitWantPaths.clear();
+    for (const p of all) gitWantPaths.add(p);
+    syncGitWatchers(all);   // v420：监听面随路径并集增删（新路径建档、消失路径关闭）
     const results = new Map();
-    const refreshPaths = new Set();
-    if (requestPath && requestWc && wants.some(([wc]) => wc === requestWc)) refreshPaths.add(requestPath);
-    for (const [, , path] of gitRefreshWaiters) if (path) refreshPaths.add(path);
-    if (!fromRefresh) for (const p of all) refreshPaths.add(p);
     await Promise.all([...all].map(async (p) => {   // 同一仓库多窗口/多 pane 只查一次，结果分发
       const st = await queryGitStatus(p);
       results.set(p, st);
@@ -2522,7 +2665,80 @@ async function gitTick(fromRefresh, requestId, requestWc, requestPath) {
     }
   }
 }
-setInterval(() => { gitTick(false).catch(() => { }); }, GIT_TICK_MS);
+/* ---------- v420 fs watch 刷新链（对齐宿主原生 Git 胶囊 useGitAutoRefresh，specs/git-chip-host-sync.md）----------
+ * 监听面：工作区目录（非 Linux 递归；Linux 宿主明确禁递归防慢挂载阻塞）+ 仓库 .git 元数据目录
+ * （git rev-parse --absolute-git-dir / --git-common-dir 每路径一次性解析，恒递归——linked worktree
+ * 的元数据在主仓库 .git 下，切分支/提交也能被看见；相对 commonDir 按工作区 resolve，重复目录去重）。
+ * 任一事件重置 60s 尾随防抖（宿主 GIT_AUTO_REFRESH_DEBOUNCE_MS 同值同型），静默满 60s 跑一轮
+ * gitTick 全路径查询；watcher 随 gitTick 的路径并集增删。watcher 创建失败仅记一次日志、保留首查/
+ * 点击/路径变化链（宿主同策略，不回退轮询）；解析全失败的路径不登记，待后续 tick 触发重试。 */
+const GIT_WATCH_DEBOUNCE_MS = 60000;
+let gitWatchTimer = 0, gitWatchWarned = false;
+const gitWatchers = new Map();   // 工作区路径 → [FSWatcher]
+const gitWatchResolving = new Set();   // 元数据解析/建 watcher 在途的路径，防并发重复建
+const gitWantPaths = new Set();   // v433：最近一轮 tick 的路径并集（在途解析完成时校验仍被需要）
+function scheduleGitWatchTick() {
+  if (shuttingDown) return;
+  if (gitWatchTimer) clearTimeout(gitWatchTimer);
+  gitWatchTimer = setTimeout(() => {
+    gitWatchTimer = 0;
+    if (!shuttingDown) gitTick(false).catch(() => { });
+  }, GIT_WATCH_DEBOUNCE_MS);
+}
+function gitWatchOne(list, dir, recursive) {
+  try {
+    const w = fs.watch(dir, { recursive: recursive }, () => scheduleGitWatchTick());
+    /* v433：运行期错误（目录被删重建/Windows 缓冲溢出/EMFILE）除关闭外，把所属路径从
+     * 登记表摘除——否则 syncGitWatchers 见 has(p) 永远跳过，该路径自动刷新从此冻结。 */
+    w.on("error", () => {
+      try { w.close(); } catch (e) { }
+      for (const [k, l] of gitWatchers) if (l.includes(w)) {
+        for (const x of l) { try { x.close(); } catch (e) { } }   // v433：兄弟 watcher 一并关（防 EMFILE 抖动互喂泄漏）
+        gitWatchers.delete(k);
+        break;
+      }
+    });
+    list.push(w);
+  } catch (e) {
+    if (!gitWatchWarned) { gitWatchWarned = true; LOG("git chip fs.watch unavailable (" + ((e && e.message) || e) + "); refresh falls back to path-change/manual triggers only"); }
+  }
+}
+async function resolveGitMetaDirs(p) {
+  const rp = await gitExec(p, ["rev-parse", "--absolute-git-dir", "--git-common-dir"]);
+  if (rp.error) return [];
+  const lines = String(rp.stdout || "").split("\n").map(s => s.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  const gd = lines[0];
+  let cd = lines[1] || gd;
+  if (cd && !path.isAbsolute(cd)) cd = path.resolve(p, cd);
+  const out = [];
+  for (const d of [gd, cd]) if (d && path.isAbsolute(d) && out.indexOf(d) < 0) out.push(d);
+  return out;
+}
+function syncGitWatchers(all) {
+  if (shuttingDown) return;   // v433：退出清理后在途 tick 不得重建 watcher
+  for (const p of [...gitWatchers.keys()]) {   // 路径离开并集：关闭并移除 watcher
+    if (all.has(p)) continue;
+    const list = gitWatchers.get(p);
+    gitWatchers.delete(p);
+    for (const w of list || []) { try { w.close(); } catch (e) { } }
+  }
+  for (const p of all) {
+    if (gitWatchers.has(p) || gitWatchResolving.has(p)) continue;
+    gitWatchResolving.add(p);
+    (async () => {
+      try {
+        const meta = await resolveGitMetaDirs(p);
+        if (!gitWantPaths.has(p)) return;   // v433：解析期间路径已离开并集，丢弃孤儿 watcher
+        const list = [];
+        gitWatchOne(list, p, process.platform !== "linux");
+        for (const d of meta) if (d !== p) gitWatchOne(list, d, true);
+        if (list.length) gitWatchers.set(p, list);
+      } catch (e) { }
+      finally { gitWatchResolving.delete(p); }
+    })();
+  }
+}
 
 async function pollPluginRequests() {
   if (pluginRequestBusy) return;
@@ -2564,6 +2780,8 @@ async function pollPluginRequests() {
           handleAutoCompactConfig(req, wc);
         } else if (req && (req.action === "quota-src" || req.action === "quota-src-key" || req.action === "quota-src-refresh")) {
           handleQuotaSourceRequest(req, wc);
+        } else if (req && ["quota-qianwen-signin", "quota-qianwen-signin-state", "quota-qianwen-signin-cancel"].includes(req.action)) {   // issue #399：千问设备码登录
+          handleQianwenSigninRequest(req, wc);
         } else if (req && (req.action === "model-pull-list" || req.action === "model-pull-fetch" || req.action === "model-pull-apply" || req.action === "model-pull-probe")) {
           handleModelPullRequest(req, wc);
         } else if (req && (req.action === "prompt-enhance" || req.action === "prompt-enhance-v2")) {
@@ -2586,7 +2804,8 @@ async function pollPluginRequests() {
           const poked = quotaClient ? quotaClient.pokeReset() : 0;
           deliverPluginRequest(wc, req.requestId, { ok: true, poked });
         } else if (req && req.action === "turn-text" && typeof req.sid === "string") {
-          queryTurnText(req.sid, wc, req.cn === 0, req.forceKmb === true, req.unitEpoch, req.cost === 0);
+          queryTurnText(req.sid, wc, req.cn === 0, req.forceKmb === true, req.unitEpoch, req.cost === 0,
+            typeof req.turnRef === "string" ? req.turnRef : "");   // v458：子代理窗格按页面轮号定位（其它 sid 忽略）
         } else if (req && req.action === "git-refresh") {   // v96：Git chip 点击 / 快照后节流：立即重查全部已关注路径
           gitTick(true, req.requestId, wc, req.path).catch(() => { });
         } else if (req && req.action === "sysmon-sub") {   // v356：系统状态订阅（want+cfg+projectPath 合一）
@@ -2595,6 +2814,26 @@ async function pollPluginRequests() {
           const refreshed = !!(sysmonClient && sysmonWantAny());
           if (refreshed) sysmonClient.refreshNow();
           deliverPluginRequest(wc, req.requestId, refreshed ? { ok: true, pending: true } : { ok: false, error: "sysmon not subscribed" });
+        } else if (req && req.action === "open-ext-view") {   // Phase 1：弹层/设置快捷按钮唤起扩展视图
+          const viewId = req.viewId === "insights" ? "insights" : req.viewId === "context" ? "context" : "";
+          if (!viewId) {
+            deliverPluginRequest(wc, req.requestId, { ok: false, error: "invalid viewId" });
+          } else {
+            try {
+              const rawSid = typeof req.sessionId === "string" ? req.sessionId.trim() : "";
+              const sid = /^sess_[A-Za-z0-9_-]{1,120}$/.test(rawSid) ? rawSid : "";
+              const reqDir = HERE;
+              fs.mkdirSync(reqDir, { recursive: true });
+              const reqPath = path.join(reqDir, "ext-open-request.json");
+              const tmpPath = path.join(reqDir, ".ext-open-request.tmp." + process.pid + "." + Date.now());
+              const id = Date.now() + "-" + Math.random().toString(36).slice(2);
+              fs.writeFileSync(tmpPath, JSON.stringify({ id, viewId, sessionId: sid, ts: Date.now() }), "utf8");
+              fs.renameSync(tmpPath, reqPath);
+              deliverPluginRequest(wc, req.requestId, { ok: true });
+            } catch (e) {
+              deliverPluginRequest(wc, req.requestId, { ok: false, error: (e && e.message) || "write failed" });
+            }
+          }
         } else if (req && req.action === "relaunch") {   // v172：⚙ 更新页「重启 ZCode」按钮（浮层已二次确认）
           if (pluginUpdater && pluginUpdater.status().busy) {   // 更新进行中拒绝重启：quit 会打断下载/安装
             deliverPluginRequest(wc, req.requestId, { ok: false, error: "update in progress" });
@@ -2751,7 +2990,7 @@ if (typeof module === "object" && module && module.exports) {
   module.exports.__zusageTest = {
     handlePayload, maybeSpawn, isRemoteSid, remoteSids, pendingSids,
     targetByIdentity: () => targetByIdentity,
-    parseGitPorcelain, parseShortstat, queryGitStatus, gitTick, discoverChildRepos, detectGitOp,
+    parseGitPorcelain, parseNumstat, mergeNumstat, queryGitStatus, gitTick, discoverChildRepos, detectGitOp,
     ipcState: () => ({ activeSid, windowWorkspaces, windowTasks, scopeBindings, remoteEvidence }),
     hotReloadMainModules,   // v258：热替换循环测试入口
     disposeQuotaSubsystem,   // v258：退出清理测试入口（watcher 关闭断言）
@@ -2775,4 +3014,7 @@ app.on("before-quit", () => {
   if (dbWatcher) { try { dbWatcher.close(); } catch (e) { } dbWatcher = null; }
   if (pendingZipWatcher) { try { pendingZipWatcher.close(); } catch (e) { } pendingZipWatcher = null; }
   if (pendingZipTimer) { clearInterval(pendingZipTimer); pendingZipTimer = null; }
+  clearTimeout(gitWatchTimer);   // v433：git watch 链与其它监听器同款归属清理（进程将退，防御性对称）
+  for (const list of gitWatchers.values()) for (const w of list) { try { w.close(); } catch (e) { } }
+  gitWatchers.clear();
 });

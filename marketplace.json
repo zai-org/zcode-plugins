@@ -1546,7 +1546,7 @@
         "en": "ZCode token usage query via the token_usage MCP tool, /usage command, and skill (reads the local usage DB). Auto-installs the desktop floating usage status bar whenever the client is not injected (always on; legacy auto-install config keys are no longer read; /uninstall-overlay blocks re-injection; modifies app.asar - fully quit and reopen ZCode to take effect). Appends a per-answer rate line at the end of each reply (rendered deterministically via the renderer bridge; tok/s, TTFT, output tokens).",
         "zh-CN": "ZCode token 用量查询（token_usage MCP 工具 + /usage 命令 + 技能，读本地 usage 数据库）；桌面客户端未注入时始终尝试自动安装/修复悬浮用量状态条（修改 app.asar，成功后需完全退出并重开；旧自动安装开关不再生效，/uninstall-overlay 可阻止自动重注入）；每次回答末尾自动追加逐问速率行（由前端确定性渲染，依赖 renderer 桥；即时 tok/s 含思考、首字延迟、输出 token、生成耗时、段数/峰值与会话累计，--current 守卫防旧数据充数）。"
       },
-      "version": "1.5.21",
+      "version": "1.5.26",
       "author": {
         "name": "ByteRax",
         "url": "https://github.com/ByteRax"

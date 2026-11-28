@@ -63,6 +63,26 @@ def _adopt_migration_candidate(candidate, home):
     return _db_write_fresh(candidate) >= _db_write_fresh(home_db)
 
 
+def _data_base_dir(env=None, home=None):
+    """宿主数据根（dataBaseDir）迁移标记：setting.json 的绝对 dataBaseDir 优先，否则 env
+    ZCODE_DATA_BASE_DIR；读不出/非绝对路径返回空串。resolve_db_path 第 3 级与受管 worktree
+    根候选（_managed_worktree_roots）共用，改次序三处同步。"""
+    env = os.environ if env is None else env
+    home = Path.home() if home is None else Path(home)
+    try:
+        file = home / ".zcode" / "v2" / "setting.json"
+        if file.exists():
+            raw = json.loads(file.read_text(encoding="utf-8-sig"))
+            base = str((raw.get("dataBaseDir") if isinstance(raw, dict) else "") or "").strip()
+        else:
+            base = ""
+    except Exception:
+        base = ""   # 损坏按无迁移处理；env 迁移标记不受其连累（与 Node 侧同构）
+    if not base or not _DB_BASE_ABS_RE.match(base):
+        base = str(env.get("ZCODE_DATA_BASE_DIR") or "").strip()
+    return base if base and _DB_BASE_ABS_RE.match(base) else ""
+
+
 def resolve_db_path(env=None, home=None):
     """本地用量库路径（issue #279 及查漏补缺）：镜像宿主 agent 会话库解析
     （v3.17.1 onboarding/localUsageEvidence.resolveAgentSessionDbPath——写库方是
@@ -99,18 +119,8 @@ def resolve_db_path(env=None, home=None):
                 return candidate
     except Exception:
         pass   # 缺文件/损坏忽略（宿主读不出按默认），不拖垮查询链
-    try:
-        file = home / ".zcode" / "v2" / "setting.json"
-        if file.exists():
-            raw = json.loads(file.read_text(encoding="utf-8-sig"))
-            base = str((raw.get("dataBaseDir") if isinstance(raw, dict) else "") or "").strip()
-        else:
-            base = ""
-    except Exception:
-        base = ""   # 损坏按无迁移处理；env 迁移标记不受其连累（与 Node 侧同构）
-    if not base or not _DB_BASE_ABS_RE.match(base):
-        base = str(env.get("ZCODE_DATA_BASE_DIR") or "").strip()
-    if base and _DB_BASE_ABS_RE.match(base):
+    base = _data_base_dir(env, home)
+    if base:
         candidate = Path(base) / ".zcode" / "cli" / "db" / "db.sqlite"
         if candidate.exists() and _adopt_migration_candidate(candidate, home):
             return candidate
@@ -527,6 +537,7 @@ _SPEED_WM = {}                    # 轮表缓存的 model_usage 水位（TTL 过
 # v384（specs/speed-tooltip-v3.md §1.2）：全历史按本地自然日聚合，解决 6000 轮截断。
 _SPEED_DAYS_MAX_DAYS = 550        # 覆盖窗口：截至今天（含）往前 N 个本地日；truncated 时渲染端明示
 _SPEED_DAYS_MAX_MODELS = 8        # 日桶 msl 每模型条目上限（超出 capFlag=1，日级总量仍精确）
+_SPEED_DAYS_TK_DAYS = 90          # v457：日桶 tk 每模型 token 只带最近 N 个本地日（spec §8 帧体积预算）
 _DAYS_CACHE = {}                  # speed_days 缓存：与轮表 _SPEED_CACHE 同款独立缓存（不挤 _AGG_CACHE）
 _DAYS_WM = {}                     # speed_days 缓存的 model_usage 水位（同款续用语义）
 
@@ -658,6 +669,923 @@ _SESS_CACHE = {}
 _SESS_WM = {}
 
 
+# ---------- 进程内增量聚合引擎（specs/perf-lag-reduction.md §20） ----------
+# 针对 GB 级大库无 completed_at 索引导致水位变化后 7 项全表扫描冷帧 ~1s 的问题：
+# 常驻进程按 dbkey 维护增量累加器，仅拉取 model_usage WHERE rowid > last_rowid 的新行。
+# 发生 DELETE / 重建 / 跨日 / covers 变化 / 超期时自动全量重建；内存库或桩连接自动退回原全量路径。
+_INCR_STATES = {}
+_INCR_REBUILD_MS = 5 * 60 * 1000
+_INCR_MAX_STATES = 4
+_INCR_DELTA_COLS = (
+    "rowid, id, session_id, turn_id, model_id, provider_id, status, query_source, "
+    "input_tokens, output_tokens, reasoning_tokens, cache_read_input_tokens, "
+    "cache_creation_input_tokens, computed_total_tokens, tool_call_count, retry_count, "
+    "duration_ms, time_to_first_token_ms, started_at, first_token_at, completed_at"
+)
+
+
+class _IncrState:
+    __slots__ = (
+        "dbkey", "built_at", "last_rowid", "last_rowid_id", "row_count",
+        "today_start_ms", "today_end_ms", "today_date", "covers", "ready",
+        "scan_map", "provfbk",
+        "today_agg", "today_rate_out", "today_rate_ms", "today_per_model",
+        "today_models", "today_mnames",
+        "ap_sess_agg", "ap_sess_groups", "ap_sess_mnames",
+        "ap_rate_out", "ap_rate_ms", "ap_per_model",
+        "sh_turns", "sh_truncated",
+        "sd_days", "sd_truncated", "sd_start_ms", "sd_start_date", "sd_today_date",
+    )
+
+    def __init__(self, dbkey, now_ms, last_rowid, last_rowid_id, row_count,
+                 today_start_ms, today_end_ms, today_date, covers):
+        self.dbkey = dbkey
+        self.built_at = now_ms
+        self.last_rowid = last_rowid
+        self.last_rowid_id = last_rowid_id
+        self.row_count = row_count
+        self.today_start_ms = today_start_ms
+        self.today_end_ms = today_end_ms
+        self.today_date = today_date
+        self.covers = covers
+        self.ready = set()
+        self.scan_map = None
+        self.provfbk = (-1, -1, "")
+        self.today_agg = None
+        self.today_rate_out = 0
+        self.today_rate_ms = 0
+        self.today_per_model = None
+        self.today_models = None
+        self.today_mnames = None
+        self.ap_sess_agg = None
+        self.ap_sess_groups = None
+        self.ap_sess_mnames = None
+        self.ap_rate_out = 0
+        self.ap_rate_ms = 0
+        self.ap_per_model = None
+        self.sh_turns = None
+        self.sh_truncated = False
+        self.sd_days = None
+        self.sd_truncated = 0
+        self.sd_start_ms = 0
+        self.sd_start_date = None
+        self.sd_today_date = None
+
+    def _probe(self, con):
+        mr = con.execute("select max(rowid), count(*) from model_usage").fetchone()
+        max_rid = (mr[0] or 0) if mr else 0
+        cnt = (mr[1] or 0) if mr else 0
+        rid_id = None
+        if max_rid > 0:
+            r2 = con.execute("select id from model_usage where rowid=?", (max_rid,)).fetchone()
+            rid_id = r2[0] if r2 else None
+        return max_rid, cnt, rid_id
+
+    def sync(self, con):
+        now_ms = int(time.time() * 1000)
+        day = _day_start()
+        t_start = _epoch_ms(day)
+        t_end = _epoch_ms(day + timedelta(days=1))
+        t_date = day.date()
+        covers = _provider_first_token_covers(con)
+        if (now_ms - self.built_at >= _INCR_REBUILD_MS
+                or t_date != self.today_date
+                or t_start != self.today_start_ms
+                or covers != self.covers):
+            return False
+
+        max_rid, cnt, _ = self._probe(con)
+        if max_rid < self.last_rowid:
+            return False
+        if max_rid == self.last_rowid:
+            if cnt != self.row_count:
+                return False
+            if self.last_rowid > 0:
+                r_chk = con.execute("select id from model_usage where rowid=?", (self.last_rowid,)).fetchone()
+                if not r_chk or r_chk[0] != self.last_rowid_id:
+                    return False
+            return True
+
+        # max_rid > self.last_rowid: 校验旧水位锚点并拉取增量行
+        if self.last_rowid > 0:
+            r_chk = con.execute("select id from model_usage where rowid=?", (self.last_rowid,)).fetchone()
+            if not r_chk or r_chk[0] != self.last_rowid_id:
+                return False
+        delta = con.execute(
+            f"select {_INCR_DELTA_COLS} from model_usage where rowid > ? and rowid <= ? order by rowid asc",
+            (self.last_rowid, max_rid),
+        ).fetchall()
+        if self.row_count + len(delta) != cnt:
+            return False
+        if delta:
+            if "scan" in self.ready:
+                self._apply_scan(delta)
+            if "provfbk" in self.ready:
+                self._apply_provfbk(delta)
+            if "today" in self.ready:
+                self._apply_today(delta)
+            if "all_projects" in self.ready:
+                self._apply_all_projects(delta)
+            if "speed_history" in self.ready:
+                self._apply_speed_history(delta)
+            if "speed_days" in self.ready:
+                self._apply_speed_days(delta)
+            self.last_rowid_id = delta[-1][1]
+        self.last_rowid = max_rid
+        self.row_count = cnt
+        return True
+
+    # ---- 1. scan ----
+    def get_scan(self, con):
+        if "scan" not in self.ready:
+            m = {}
+            for r in con.execute(
+                "select session_id, max(coalesce(completed_at, 0)) from model_usage where rowid <= ? group by session_id",
+                (self.last_rowid,),
+            ):
+                m[r[0]] = r[1]
+            self.scan_map = m
+            self.ready.add("scan")
+        return list(self.scan_map.items())
+
+    def _apply_scan(self, delta):
+        m = self.scan_map
+        for r in delta:
+            sid, ct = r[2], r[20] or 0
+            prev = m.get(sid)
+            if prev is None or ct > prev:
+                m[sid] = ct
+
+    # ---- 2. provfbk ----
+    def get_provfbk(self, con):
+        if "provfbk" not in self.ready:
+            row = con.execute(
+                """select completed_at, rowid, provider_id from model_usage
+                   where rowid <= ? and status='completed'
+                     and (query_source is null or query_source='main_turn')
+                     and provider_id like 'account:%'
+                   order by completed_at desc, rowid desc limit 1""",
+                (self.last_rowid,),
+            ).fetchone()
+            self.provfbk = ((row[0] or -1), row[1], row[2] or "") if row else (-1, -1, "")
+            self.ready.add("provfbk")
+        return self.provfbk[2]
+
+    def _apply_provfbk(self, delta):
+        best_ct, best_rid, best_pid = self.provfbk
+        for r in delta:
+            if r[6] != "completed":
+                continue
+            qs = r[7]
+            if qs is not None and qs != "main_turn":
+                continue
+            pid = r[5] or ""
+            if not pid.startswith("account:"):
+                continue
+            ct = r[20] or -1
+            rid = r[0]
+            if (ct, rid) > (best_ct, best_rid):
+                best_ct, best_rid, best_pid = ct, rid, pid
+        self.provfbk = (best_ct, best_rid, best_pid)
+
+    # ---- 3. today_usage & today_detail ----
+    def _ensure_today(self, con):
+        if "today" in self.ready:
+            return
+        rows = con.execute(
+            f"""select {_INCR_DELTA_COLS} from model_usage
+                where rowid <= ? and status='completed' and completed_at between ? and ?""",
+            (self.last_rowid, self.today_start_ms, self.today_end_ms),
+        ).fetchall()
+        self.today_agg = [0, 0, 0, 0, 0, 0, 0, 0, 0, None, None, set(), 0, 0, 0, 0, set(), 0]
+        self.today_rate_out = 0
+        self.today_rate_ms = 0
+        self.today_per_model = {}
+        self.today_models = {}
+        self.today_mnames = {}
+        self._apply_today(rows)
+        self.ready.add("today")
+
+    def _apply_today(self, delta):
+        a = self.today_agg
+        turns_set = a[11]
+        sess_set = a[16]
+        s_ms, e_ms = self.today_start_ms, self.today_end_ms
+        covers = self.covers
+        pm = self.today_per_model
+        tm = self.today_models
+        tn = self.today_mnames
+        for r in delta:
+            if r[6] != "completed":
+                continue
+            ct = r[20]
+            if ct is None or ct < s_ms or ct > e_ms:
+                continue
+            inp = r[8] or 0
+            outp = r[9] or 0
+            reas = r[10] or 0
+            cr = r[11] or 0
+            cw = r[12] or 0
+            tot = r[13] or 0
+            tc = r[14] or 0
+            ret = r[15] or 0
+            dur = r[16] or 0
+            ttft = r[17] or 0
+            st = r[18]
+            a[0] += 1
+            a[1] += inp
+            a[2] += outp
+            a[3] += cr
+            a[4] += tot
+            a[5] += dur
+            a[6] += reas
+            a[7] += ret
+            a[8] += cw
+            if st is not None and (a[9] is None or st < a[9]):
+                a[9] = st
+            if a[10] is None or ct > a[10]:
+                a[10] = ct
+            if r[3] is not None:
+                turns_set.add(r[3])
+            sess_set.add(r[2])
+            a[17] += tc
+
+            qs = r[7]
+            is_main = (qs is None or qs == "main_turn")
+            if is_main:
+                if dur > 0:
+                    a[12] += dur
+                    a[13] += 1
+                if ttft > 0:
+                    a[14] += ttft
+                    a[15] += 1
+                gen_ms = _row_gen_ms({
+                    "first_token_at": r[19], "completed_at": ct, "started_at": st,
+                    "reasoning_tokens": reas, "model_id": r[4], "provider_id": r[5],
+                }, covers)
+                if outp > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
+                    self.today_rate_out += outp
+                    self.today_rate_ms += gen_ms
+                    mk = (r[4] or "").lower()
+                    pacc = pm.get(mk)
+                    if pacc is None:
+                        pacc = pm[mk] = [0, 0]
+                    pacc[0] += outp
+                    pacc[1] += gen_ms
+
+            raw_m = r[4] or ""
+            m_key = raw_m.lower()
+            tn[m_key] = _canon_model_name(tn.get(m_key), raw_m)
+            prov = r[5] or ""
+            gkey = (m_key, prov)
+            ga = tm.get(gkey)
+            if ga is None:
+                ga = tm[gkey] = [0, 0, 0, 0, 0, 0]
+            ga[0] += 1
+            ga[1] += tot
+            ga[2] += inp
+            ga[3] += outp
+            ga[4] += cr
+            ga[5] += cw
+
+    def get_today_usage(self, con):
+        self._ensure_today(con)
+        a = self.today_agg
+        avg_dur = (a[12] / a[13]) if a[13] else None
+        avg_ttft = (a[14] / a[15]) if a[15] else None
+        return (
+            a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8],
+            a[9], a[10], len(a[11]), avg_dur, avg_ttft, len(a[16]), a[17],
+        )
+
+    def get_today_detail(self, con):
+        self._ensure_today(con)
+        rate = round(self.today_rate_out / (self.today_rate_ms / 1000), 1) if self.today_rate_ms else 0
+        if _pricing is None:
+            return {"cost": None, "models": [], "tps": rate}
+        models_acc = {}
+        raw_groups = []
+        tn = self.today_mnames
+        for (m_key, prov), ga in self.today_models.items():
+            ma = models_acc.get(m_key)
+            if ma is None:
+                ma = models_acc[m_key] = [0, 0]
+            ma[0] += ga[0]
+            ma[1] += ga[1]
+            raw_groups.append((tn[m_key], prov, ga[2], ga[3], ga[4], ga[5]))
+        try:
+            total_cost, per_cost = _pricing.merge_model_costs(raw_groups)
+        except Exception:
+            return {"cost": None, "models": [], "tps": rate}
+        prov_of = {}
+        for model, prov, *_ in raw_groups:
+            prov_of.setdefault(model, prov)
+        models = [
+            {
+                "model": tn[k], "requests": v[0], "total": v[1],
+                "cost_usd": per_cost.get(tn[k], 0.0),
+                "rates": _model_rates(tn[k], prov_of.get(tn[k], "")).get("rates"),
+            }
+            for k, v in models_acc.items()
+        ]
+        _attach_model_tps(models, self.today_per_model)
+        models.sort(key=lambda m: -m["total"])
+        return {"cost": total_cost, "models": models, "tps": rate}
+
+    # ---- 4. all_projects ----
+    def _ensure_all_projects(self, con):
+        if "all_projects" in self.ready:
+            return
+        rows = con.execute(
+            f"select {_INCR_DELTA_COLS} from model_usage where rowid <= ? and status='completed'",
+            (self.last_rowid,),
+        ).fetchall()
+        self.ap_sess_agg = {}
+        self.ap_sess_groups = {}
+        self.ap_sess_mnames = {}
+        self.ap_rate_out = 0
+        self.ap_rate_ms = 0
+        self.ap_per_model = {}
+        self._apply_all_projects(rows)
+        self.ready.add("all_projects")
+
+    def _apply_all_projects(self, delta):
+        s_agg = self.ap_sess_agg
+        s_grp = self.ap_sess_groups
+        s_mn = self.ap_sess_mnames
+        pm = self.ap_per_model
+        covers = self.covers
+        for r in delta:
+            if r[6] != "completed":
+                continue
+            sid = r[2]
+            sa = s_agg.get(sid)
+            if sa is None:
+                sa = s_agg[sid] = [set(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, None, None]
+            sa[0].add(r[3] or "")
+            sa[1] += 1
+            inp = r[8] or 0
+            outp = r[9] or 0
+            reas = r[10] or 0
+            cr = r[11] or 0
+            cw = r[12] or 0
+            tot = r[13] or 0
+            dur = r[16] or 0
+            ttft = r[17] or 0
+            st = r[18]
+            ct = r[20]
+            sa[2] += inp
+            sa[3] += outp
+            sa[4] += reas
+            sa[5] += cr
+            sa[6] += cw
+            sa[7] += tot
+            sa[8] += r[14] or 0
+            sa[9] += r[15] or 0
+            sa[10] += dur
+            if dur > 0:
+                sa[11] += dur
+                sa[12] += 1
+            if ttft > 0:
+                sa[13] += ttft
+                sa[14] += 1
+            if st is not None and (sa[15] is None or st < sa[15]):
+                sa[15] = st
+            if ct is not None and (sa[16] is None or ct > sa[16]):
+                sa[16] = ct
+
+            raw_m = r[4] or ""
+            m_key = raw_m.lower()
+            prov = r[5] or ""
+            mn = s_mn.setdefault(sid, {})
+            mn[m_key] = _canon_model_name(mn.get(m_key), raw_m)
+            sg = s_grp.setdefault(sid, {})
+            ga = sg.get((m_key, prov))
+            if ga is None:
+                ga = sg[(m_key, prov)] = [0, 0, 0, 0, 0, 0]
+            ga[0] += inp
+            ga[1] += outp
+            ga[2] += cr
+            ga[3] += cw
+            ga[4] += 1
+            ga[5] += tot
+
+            qs = r[7]
+            if qs is None or qs == "main_turn":
+                gen_ms = _row_gen_ms({
+                    "first_token_at": r[19], "completed_at": ct, "started_at": st,
+                    "reasoning_tokens": reas, "model_id": raw_m, "provider_id": prov,
+                }, covers)
+                if outp > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
+                    self.ap_rate_out += outp
+                    self.ap_rate_ms += gen_ms
+                    pa = pm.get(m_key)
+                    if pa is None:
+                        pa = pm[m_key] = [0, 0]
+                    pa[0] += outp
+                    pa[1] += gen_ms
+
+    def get_all_projects(self, con):
+        self._ensure_all_projects(con)
+        sess = {}
+        for r in con.execute("select id, project_id, directory, parent_id from session"):
+            sess[r[0]] = (r[1] or "", r[2] or "", r[3])
+        proj_of = {}
+        meta = {}
+        for sid, (pid, pdir, _parent) in sess.items():
+            cur, seen = sid, set()
+            while True:
+                nxt = sess[cur][2]
+                if not nxt or nxt in seen or nxt not in sess:
+                    break
+                seen.add(cur)
+                cur = nxt
+            rpid, rdir = sess[cur][0], sess[cur][1]
+            if not rpid:
+                proj_of[sid] = (("", ""), "", "", True)
+                meta.setdefault(("", ""), ("", "", True))
+                continue
+            rdir_n = rdir.replace("\\", "/").rstrip("/")
+            name = rdir_n.rsplit("/", 1)[-1] if rdir_n else ""
+            proj_of[sid] = ((rpid, _norm_path_key(rdir_n)), name, rdir_n, False)
+            meta.setdefault((rpid, _norm_path_key(rdir_n)), (name, rdir_n, False))
+
+        def key_of(sid):
+            hit = proj_of.get(sid)
+            return hit if hit is not None else (("", ""), "", "", True)
+
+        agg = {}
+        groups = {}
+        mnames = {}
+        for sid, sa in self.ap_sess_agg.items():
+            key = key_of(sid)[0]
+            a = agg.setdefault(key, [0] * 16 + [None, None])
+            a[0] += 1
+            a[1] += len(sa[0])
+            for i in range(2, 16):
+                a[i] += sa[i - 1]
+            if sa[15] is not None and (a[16] is None or sa[15] < a[16]):
+                a[16] = sa[15]
+            if sa[16] is not None and (a[17] is None or sa[16] > a[17]):
+                a[17] = sa[16]
+
+        gnames = {}
+        ggroups = {}
+        greq = {}
+        gtot = {}
+        for sid, sg in self.ap_sess_groups.items():
+            key = key_of(sid)[0]
+            names = mnames.setdefault(key, {})
+            sn = self.ap_sess_mnames.get(sid, {})
+            for (m_key, prov), ga in sg.items():
+                raw_m = sn.get(m_key, "")
+                names[m_key] = _canon_model_name(names.get(m_key), raw_m)
+                gacc = groups.setdefault(key, {}).setdefault((m_key, prov), [0, 0, 0, 0])
+                for i in range(4):
+                    gacc[i] += ga[i]
+                gnames[m_key] = _canon_model_name(gnames.get(m_key), raw_m)
+                gacc_g = ggroups.setdefault((m_key, prov), [0, 0, 0, 0])
+                for i in range(4):
+                    gacc_g[i] += ga[i]
+                greq[m_key] = greq.get(m_key, 0) + ga[4]
+                gtot[m_key] = gtot.get(m_key, 0) + ga[5]
+
+        def canon_groups(gg, names):
+            return [(names[ml], prov, v[0], v[1], v[2], v[3]) for (ml, prov), v in gg.items()]
+
+        def cost_of(key):
+            if _pricing is None or not groups.get(key):
+                return None
+            try:
+                return _pricing.merge_model_costs(canon_groups(groups[key], mnames.get(key, {})))[0]
+            except Exception:
+                return None
+
+        gmodels = [{"model": gnames[ml], "requests": greq[ml], "total": gtot[ml]} for ml in gnames]
+        _attach_model_tps(gmodels, self.ap_per_model)
+        g_cost = None
+        if _pricing is not None and ggroups:
+            try:
+                g_cost, per_cost = _pricing.merge_model_costs(canon_groups(ggroups, gnames))
+                prov_of = {}
+                for model_name, prov, *_ in canon_groups(ggroups, gnames):
+                    prov_of.setdefault(model_name, prov)
+                for m1 in gmodels:
+                    m1["cost_usd"] = per_cost.get(m1["model"], 0.0)
+                    m1["rates"] = _model_rates(m1["model"], prov_of.get(m1["model"], "")).get("rates")
+            except Exception:
+                g_cost = None
+        gmodels.sort(key=lambda m1: -m1["total"])
+
+        projects = []
+        for key, a in agg.items():
+            name, directory, unattr = meta.get(key, ("", "", True))
+            projects.append({
+                "name": name, "directory": directory, "total": a[8], "requests": a[2],
+                "cost_usd": cost_of(key),
+                **({"unattributed": True} if unattr else {}),
+            })
+        projects.sort(key=lambda p: (-p["total"], p["name"], p["directory"]))
+        truncated = len(projects) > _ALLPROJ_MAX_PROJECTS
+
+        sessions = turns = requests = total = 0
+        input_t = output_t = reasoning = cache_read = cache_write = 0
+        tool_calls = retries = dur_sum = dur_pos = dur_n = ttft_pos = ttft_n = 0
+        started = last_at = None
+        for a in agg.values():
+            sessions += a[0]
+            turns += a[1]
+            requests += a[2]
+            input_t += a[3]
+            output_t += a[4]
+            reasoning += a[5]
+            cache_read += a[6]
+            cache_write += a[7]
+            total += a[8]
+            tool_calls += a[9]
+            retries += a[10]
+            dur_sum += a[11]
+            dur_pos += a[12]
+            dur_n += a[13]
+            ttft_pos += a[14]
+            ttft_n += a[15]
+            if a[16] is not None and (started is None or a[16] < started):
+                started = a[16]
+            if a[17] is not None and (last_at is None or a[17] > last_at):
+                last_at = a[17]
+        out = {
+            "sessions": sessions, "turns": turns, "requests": requests,
+            "input": input_t, "output": output_t, "reasoning": reasoning,
+            "cache_read": cache_read, "cache_write": cache_write, "total": total,
+            "tool_calls": tool_calls, "retries": retries,
+            "started": started or 0, "last_at": last_at or 0,
+            "avg_duration_ms": round(dur_pos / dur_n) if dur_n else 0,
+            "avg_ttft_ms": round(ttft_pos / ttft_n) if ttft_n else 0,
+            "duration_ms": dur_sum,
+            "avg_tps": round(self.ap_rate_out / (self.ap_rate_ms / 1000), 1) if self.ap_rate_ms else 0,
+            "models": gmodels,
+            "cost_usd": g_cost,
+            "projects": projects[:_ALLPROJ_MAX_PROJECTS],
+        }
+        if truncated:
+            out["projects_truncated"] = True
+            out["projects_total"] = len(projects)
+        return out
+
+    # ---- 5. speed_history ----
+    def _ensure_speed_history(self, con):
+        if "speed_history" in self.ready:
+            return
+        windows = [tuple(r) for r in con.execute(
+            """select session_id, turn_id, max(completed_at) as ct
+               from model_usage where rowid <= ? and status='completed'
+                 and (query_source is null or query_source='main_turn')
+                 and completed_at is not null
+               group by session_id, turn_id order by ct desc limit ?""",
+            (self.last_rowid, _SPEED_HISTORY_MAX_TURNS),
+        )]
+        window_n = con.execute(
+            """select count(*) from (select session_id, turn_id from model_usage
+               where rowid <= ? and status='completed'
+                 and (query_source is null or query_source='main_turn')
+               group by session_id, turn_id limit ?)""",
+            (self.last_rowid, _SPEED_HISTORY_MAX_TURNS + 1),
+        ).fetchone()[0]
+        self.sh_truncated = window_n > _SPEED_HISTORY_MAX_TURNS
+        self.sh_turns = {}
+        if windows:
+            groups, null_pairs = {}, []
+            for sid, tid, _ in windows:
+                if tid is None:
+                    null_pairs.append(sid)
+                groups.setdefault(sid, set()).add(tid)
+            rows_all = []
+            for sid, tids in groups.items():
+                real = [t for t in tids if t is not None]
+                for i in range(0, len(real), 400):
+                    part = real[i:i + 400]
+                    qm = ",".join("?" * len(part))
+                    rows_all.extend(con.execute(
+                        f"""select {_INCR_DELTA_COLS} from model_usage
+                            where rowid <= ? and session_id=? and status='completed'
+                              and (query_source is null or query_source='main_turn')
+                              and turn_id in ({qm})""",
+                        (self.last_rowid, sid, *part),
+                    ).fetchall())
+            for sid in dict.fromkeys(null_pairs):
+                rows_all.extend(con.execute(
+                    f"""select {_INCR_DELTA_COLS} from model_usage
+                        where rowid <= ? and session_id=? and status='completed'
+                          and (query_source is null or query_source='main_turn')
+                          and turn_id is null
+                        order by completed_at desc, rowid desc limit 500""",
+                    (self.last_rowid, sid),
+                ).fetchall())
+            self._apply_speed_history(rows_all, trim=False)
+        self.ready.add("speed_history")
+
+    def _apply_speed_history(self, delta, trim=True):
+        turns = self.sh_turns
+        covers = self.covers
+        for r in delta:
+            if r[6] != "completed":
+                continue
+            qs = r[7]
+            if qs is not None and qs != "main_turn":
+                continue
+            ct = r[20]
+            if ct is None:
+                continue
+            sid = r[2]
+            tid = r[3]
+            key = (sid, tid)
+            t = turns.get(key)
+            if t is None:
+                t = turns[key] = {
+                    "s": sid, "t": ct, "b": None,
+                    "valid_out": 0, "valid_ms": 0, "tin": 0, "tout": 0, "n": 0,
+                    "models": {}, "cost_groups": {}, "_c": None,
+                }
+            elif ct > t["t"]:
+                t["t"] = ct
+            t["_c"] = None
+            tokens = r[9] or 0
+            inp = r[8] or 0
+            t["tin"] += inp
+            t["tout"] += tokens
+            t["n"] += 1
+            st = r[18] or 0
+            if st and (t["b"] is None or st < t["b"]):
+                t["b"] = st
+            mk = (r[4] or "", r[5] or "")
+            cg = t["cost_groups"].get(mk)
+            if cg is None:
+                cg = t["cost_groups"][mk] = [0, 0, 0, 0]
+            cg[0] += inp
+            cg[1] += tokens
+            cg[2] += r[11] or 0
+            cg[3] += r[12] or 0
+            m = t["models"].get(mk)
+            if m is None:
+                m = t["models"][mk] = {"out": 0, "ms": 0, "n": 0, "tok": 0}
+            m["n"] += 1
+            m["tok"] += inp + tokens
+            gen_ms = _row_gen_ms({
+                "first_token_at": r[19], "completed_at": ct, "started_at": st,
+                "reasoning_tokens": r[10], "model_id": r[4], "provider_id": r[5],
+            }, covers)
+            if tokens > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
+                t["valid_out"] += tokens
+                t["valid_ms"] += gen_ms
+                m["out"] += tokens
+                m["ms"] += gen_ms
+        if trim and len(turns) > _SPEED_HISTORY_MAX_TURNS:
+            self.sh_truncated = True
+            # 留小量缓冲以防末尾轮次暂时无效窗口，随后仅裁剪最旧
+            if len(turns) > _SPEED_HISTORY_MAX_TURNS + 64:
+                ordered = sorted(turns.items(), key=lambda kv: -kv[1]["t"])
+                self.sh_turns = dict(ordered[:_SPEED_HISTORY_MAX_TURNS])
+
+    def get_speed_history(self, con):
+        self._ensure_speed_history(con)
+        srows = {}
+        try:
+            for r in con.execute("select id, title, project_id, directory from session"):
+                srows[r[0]] = r
+        except sqlite3.Error:
+            srows = {}
+        cand = [
+            t for t in self.sh_turns.values()
+            if t["valid_ms"] and t["t"] and t["s"] in srows
+        ]
+        if len(cand) > _SPEED_HISTORY_MAX_TURNS:
+            cand.sort(key=lambda x: -x["t"])
+            cand = cand[:_SPEED_HISTORY_MAX_TURNS]
+        cand.sort(key=lambda x: (x["t"], x["s"], x["b"] or x["t"]))
+
+        out = []
+        sid_idx, sids, snames, pids, mname_idx, mnames, mkeys = {}, [], [], [], {}, [], []
+        for src in cand:
+            sid = src["s"]
+            ml = sorted(src["models"].items(), key=lambda kv: -kv[1]["out"])
+            top = [(k, v) for k, v in ml if v["out"] > 0][:8]
+            other_tok = sum(v["tok"] for _, v in ml[len(top):])
+
+            if sid not in sid_idx:
+                sid_idx[sid] = len(sids)
+                sids.append(sid)
+                sr = srows.get(sid)
+                sn = (sr[1] if sr is not None else "") or sid
+                snames.append(sn[:120])
+                pid = (sr[2] if sr is not None else "") or ""
+                pdir = ((sr[3] if sr is not None else "") or "").replace("\\", "/").rstrip("/")
+                pn = pdir.rsplit("/", 1)[-1] if pdir else (pid or sid)
+                pids.append([pid, pn])
+
+            msl_idx = []
+            for k, v in top:
+                if k not in mname_idx:
+                    mname_idx[k] = len(mnames)
+                    mnames.append(k[0])
+                    mkeys.append((k[1] or "") + "\x1f" + (k[0] or ""))
+                msl_idx.append([mname_idx[k], v["out"], int(v["ms"]), v["n"]])
+
+            item = {
+                "s": sid_idx[sid],
+                "t": src["t"],
+                "b": src["b"] or src["t"],
+                "out": src["valid_out"],
+                "ms": src["valid_ms"],
+                "i": src["tin"],
+                "o": src["tout"],
+                "n": src["n"],
+                "msl": msl_idx,
+            }
+            if len(top) > 1 or other_tok > 0:
+                item["tk"] = [v["tok"] for _, v in top]
+            if _pricing is not None:
+                if src["_c"] is None and src["cost_groups"]:
+                    try:
+                        groups_in = [(k[0], k[1], g[0], g[1], g[2], g[3])
+                                     for k, g in src["cost_groups"].items()]
+                        src["_c"] = _pricing.merge_model_costs(groups_in)[0]
+                    except Exception:
+                        src["_c"] = False
+                if src["_c"] not in (None, False):
+                    item["c"] = src["_c"]
+            out.append(item)
+
+        prev = 0
+        for item in out:
+            cur = item["t"]
+            item["t"] = cur - prev
+            prev = cur
+        return {
+            "source": "local",
+            "sids": sids,
+            "snames": snames,
+            "pids": pids,
+            "mnames": mnames,
+            "mkeys": mkeys,
+            "turns": out,
+            "truncated": self.sh_truncated,
+        }
+
+    # ---- 6. speed_days ----
+    def _ensure_speed_days(self, con):
+        if "speed_days" in self.ready:
+            return
+        today0 = _day_start()
+        start0 = today0 - timedelta(days=_SPEED_DAYS_MAX_DAYS - 1)
+        self.sd_start_ms = _epoch_ms(start0)
+        self.sd_start_date = start0.date()
+        self.sd_today_date = today0.date()
+        probe = con.execute(
+            """select min(completed_at) from model_usage
+               where rowid <= ? and status='completed'
+                 and (query_source is null or query_source='main_turn')
+                 and completed_at is not null""",
+            (self.last_rowid,),
+        ).fetchone()
+        self.sd_truncated = 1 if probe and probe[0] is not None and probe[0] < self.sd_start_ms else 0
+        self.sd_days = {}
+        rows = con.execute(
+            f"""select {_INCR_DELTA_COLS} from model_usage
+                where rowid <= ? and status='completed'
+                  and (query_source is null or query_source='main_turn')
+                  and completed_at is not null""",
+            (self.last_rowid,),
+        ).fetchall()
+        self._apply_speed_days(rows)
+        self.ready.add("speed_days")
+
+    def _apply_speed_days(self, delta):
+        days = self.sd_days
+        start_ms = self.sd_start_ms
+        start_date = self.sd_start_date
+        today_date = self.sd_today_date
+        covers = self.covers
+        for r in delta:
+            if r[6] != "completed":
+                continue
+            qs = r[7]
+            if qs is not None and qs != "main_turn":
+                continue
+            ct = r[20]
+            if ct is None:
+                continue
+            if ct < start_ms:
+                self.sd_truncated = 1
+                continue
+            day = datetime.fromtimestamp(ct / 1000).date()
+            if day > today_date or day < start_date:
+                continue
+            b = days.get(day)
+            if b is None:
+                b = days[day] = [0, 0, 0, set(), {}, 0, 0]
+            tk = (r[2], r[3]) if r[3] is not None else (None, r[0])
+            b[3].add(tk)
+            mk = (r[4] or "", r[5] or "")
+            macc = b[4].get(mk)
+            if macc is None:
+                macc = b[4][mk] = [0, 0, 0, set(), 0]
+            tokens = r[9] or 0
+            inp = r[8] or 0
+            b[2] += 1
+            macc[2] += 1
+            macc[3].add(tk)
+            b[5] += inp
+            b[6] += tokens
+            macc[4] += inp + tokens
+            gen_ms = _row_gen_ms({
+                "first_token_at": r[19], "completed_at": ct, "started_at": r[18],
+                "reasoning_tokens": r[10], "model_id": r[4], "provider_id": r[5],
+            }, covers)
+            if tokens > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
+                b[0] += tokens
+                b[1] += gen_ms
+                macc[0] += tokens
+                macc[1] += gen_ms
+
+    def get_speed_days(self, con):
+        self._ensure_speed_days(con)
+        days = self.sd_days
+        start_date = self.sd_start_date
+        mname_idx, mnames, mkeys = {}, [], []
+        buckets = []
+        for i in range(_SPEED_DAYS_MAX_DAYS):
+            b = days.get(start_date + timedelta(days=i))
+            if b is None:
+                buckets.append([0, 0, 0, 0, 0, 0])
+                continue
+            ml = sorted((kv for kv in b[4].items() if kv[1][0] > 0), key=lambda kv: -kv[1][0])
+            top = ml[:_SPEED_DAYS_MAX_MODELS]
+            msl = []
+            for k, v in top:
+                if k not in mname_idx:
+                    mname_idx[k] = len(mnames)
+                    mnames.append(k[0])
+                    mkeys.append(k[1] + "\x1f" + k[0])
+                msl += [mname_idx[k], v[0], int(v[1]), v[2], len(v[3])]
+            per_model = [v[4] for _, v in top] if (len(top) > 1 and i >= _SPEED_DAYS_MAX_DAYS - _SPEED_DAYS_TK_DAYS) else []
+            buckets.append([b[0], b[1], b[2], len(b[3]),
+                            1 if len(ml) > _SPEED_DAYS_MAX_MODELS else 0, msl, [b[5], b[6]] + per_model])
+        return {
+            "v": 1,
+            "source": "local",
+            "start": self.sd_start_ms,
+            "days": buckets,
+            "mnames": mnames,
+            "mkeys": mkeys,
+            "truncated": self.sd_truncated,
+        }
+
+
+_INCR_REQ_COLS = frozenset({
+    "id", "session_id", "turn_id", "model_id", "provider_id", "status", "query_source",
+    "input_tokens", "output_tokens", "reasoning_tokens", "cache_read_input_tokens",
+    "cache_creation_input_tokens", "computed_total_tokens", "tool_call_count", "retry_count",
+    "duration_ms", "time_to_first_token_ms", "started_at", "first_token_at", "completed_at",
+})
+
+
+def _incr_get(con):
+    """获取并同步当前数据库对应的进程内增量状态；内存库/桩连接/列漂移返回 None 退回原全量路径。"""
+    if con is None:
+        return None
+    dbkey = _db_cache_key(con)
+    if dbkey is None:
+        return None
+    try:
+        st = _INCR_STATES.get(dbkey)
+        if st is not None and st.sync(con):
+            return st
+        cols = {r[1] for r in con.execute("pragma table_info(model_usage)").fetchall()}
+        if not _INCR_REQ_COLS.issubset(cols):
+            return None
+        day = _day_start()
+        now_ms = int(time.time() * 1000)
+        mr = con.execute("select max(rowid), count(*) from model_usage").fetchone()
+        max_rid = (mr[0] or 0) if mr else 0
+        cnt = (mr[1] or 0) if mr else 0
+        rid_id = None
+        if max_rid > 0:
+            r2 = con.execute("select id from model_usage where rowid=?", (max_rid,)).fetchone()
+            rid_id = r2[0] if r2 else None
+        st = _IncrState(
+            dbkey, now_ms, max_rid, rid_id, cnt,
+            _epoch_ms(day), _epoch_ms(day + timedelta(days=1)), day.date(),
+            _provider_first_token_covers(con),
+        )
+        if len(_INCR_STATES) > _INCR_MAX_STATES:
+            _INCR_STATES.clear()
+        _INCR_STATES[dbkey] = st
+        return st
+    except (sqlite3.Error, AttributeError, TypeError):
+        _INCR_STATES.pop(dbkey, None)
+        return None
+
+
 def _cached_session(con, sid, kind, fn):
     """会话级聚合缓存（specs/perf-lag-reduction.md 规则 13）：键 (库身份, sid, kind)。
     长会话的 session_usage / 会话均速（全会话 fetchall + Python 逐行）/ 耗时均值原先
@@ -692,6 +1620,9 @@ def _scan_session_ids(con):
     最新会话与 recent 池原先各自独立做同样的全表 group by（3 次 118ms），
     合并为一次扫描并挂 2s TTL。"""
     def run():
+        st = _incr_get(con)
+        if st is not None:
+            return st.get_scan(con)
         # coalesce：崩溃残留的未完成行 completed_at 为 NULL，全会话皆 NULL 时
         # max() 返回 NULL，下游 max()/sorted() 比较会 TypeError 击穿整帧快照。
         return con.execute(
@@ -926,6 +1857,9 @@ def _all_projects_usage(con):
     同款，实测 2.6GB 库 ~210ms/次、载荷 ~6KB，仅水位变化帧重算）；任何列漂移抛
     sqlite3.Error 由调用方按可选增强降级省略。"""
     def run():
+        st = _incr_get(con)
+        if st is not None:
+            return st.get_all_projects(con)
         sess = {}
         for r in con.execute("select id, project_id, directory, parent_id from session"):
             sess[r[0]] = (r[1] or "", r[2] or "", r[3])
@@ -1129,6 +2063,227 @@ def _all_projects_usage_safe(con):
         return None
 
 
+# ---------- 受管 worktree（specs/worktree-branch.md）----------
+# ZCode 受管 worktree 只是会话 cwd，布局固定 <数据根>/.zcode/worktrees/<4位hex bucket>/<源仓库名>
+# （宿主 managed-worktree/layout.ts 同规则）。根候选见 _managed_worktree_roots：当前数据根优先，
+# 其次主目录根。快照只给路径与创建记录（cwd/root/bucket/name/ref/sha），分支名由主进程既有 git
+# 查询（fs.watch 60s 防抖与点击刷新触发）按覆写路径实时给出。
+_MANAGED_WT_BUCKET_RE = re.compile(r"[0-9a-f]{4}")
+_WT_FACT_CACHE = {}      # sid → 事实 dict（受管）或 None（已判定非受管）
+_WT_FACT_CACHE_CAP = 512
+
+
+def _managed_worktree_roots(env=None, home=None):
+    """受管 worktree 根候选（realpath 归一、去重，当前数据根在前）。
+    数据根与 resolve_db_path 第 3 级同序（setting.json 的 dataBaseDir 优先、否则 ZCODE_DATA_BASE_DIR、
+    都没有即主目录）：桌面端把数据目录迁到别处时，是在拉起 agent 子进程那一刻才注入该 env（宿主
+    desktopRuntimeEnv），主进程自身环境里没有；本查询链由主进程拉起，只读 env 会把根错判到主目录
+    （v445 修复）。数据根不在主目录时再补主目录根——迁移数据目录之前建的受管 worktree 留在原地
+    （宿主 copyDataDirectory 只搬 .zcode/v2，任务 cwd 创建后固定），只认当前数据根会漏认它们。"""
+    env = os.environ if env is None else env
+    home = Path(Path.home() if home is None else home)
+    base = _data_base_dir(env, home)
+    roots = []
+    for candidate in ([base] if base else []) + [str(home)]:
+        try:
+            root = Path(os.path.realpath(str(Path(candidate) / ".zcode" / "worktrees")))
+        except OSError:
+            continue
+        if root not in roots:
+            roots.append(root)
+    return roots
+
+
+def _worktree_fact(directory):
+    """会话目录 → 受管 worktree 路径事实；非受管布局返回 None。
+    只做纯路径布局匹配（宿主 parseManagedWorktreePath 同规则：realpath 归一 + 前缀 + 两级
+    结构），不读 .git、不执行 git；目录已删除照常报告（realpath 宽容），降级交渲染端。"""
+    directory = str(directory or "").strip()
+    if not directory:
+        return None
+    try:
+        real_dir = Path(os.path.realpath(directory))
+    except OSError:
+        return None
+    for root in _managed_worktree_roots():
+        try:
+            rel = real_dir.relative_to(root)
+        except ValueError:
+            continue
+        parts = rel.parts
+        if len(parts) < 2 or not _MANAGED_WT_BUCKET_RE.fullmatch(parts[0]):
+            continue
+        return {"cwd": str(real_dir), "root": str(root / parts[0] / parts[1]),
+                "bucket": parts[0], "name": parts[1]}
+    return None
+
+
+def _worktree_origin(con, sid):
+    """创建记录的起点与时刻（首轮 worktree_creation timeline part 的 ref/sha/time.start）；
+    缺 part/解析失败返回 (None, None, None)。detached 默认创建时 ref 为 null（宿主 §6.2），
+    属正常形状。LIKE 预滤会命中正文同字面量的行，按时间序取第一条真正含 worktreeCreation
+    的（损坏 JSON 跳过继续，不让单条坏 part 炸掉起点，更不遮蔽其后真实创建记录）。"""
+    try:
+        rows = con.execute(
+            "select data from part where session_id=? and data like ? order by time_created",
+            (sid, '%"timelineType":"worktree_creation"%')).fetchall()
+    except sqlite3.Error:
+        return None, None, None
+    for row in rows or []:
+        try:
+            data = json.loads(row[0]) or {}
+            fact = data.get("worktreeCreation") or {}
+        except Exception:
+            continue   # LIKE 假命中或损坏行：跳过看下一条
+        if fact:
+            start = (data.get("time") or {}).get("start")   # time 是 part 信封层字段（宿主 §6.6.4）
+            # 数值守卫：布尔/非数值/超出 1970~2100 量级的一律 None（畸形 part 不伪造时刻）
+            if isinstance(start, (int, float)) and not isinstance(start, bool) and 0 < start < 4102444800000:
+                created = int(start)
+            else:
+                created = None
+            return fact.get("ref") or None, fact.get("sha") or None, created
+    return None, None, None
+
+
+def _worktree_source_root(root):
+    """受管 worktree 的源仓库路径（读 <root>/.git 链接文件上溯两级）；非链接/读失败
+    返回 None（fail-soft，展示行隐藏）。链接文件形如 `gitdir: <sourceRoot>/.git/worktrees/<id>`。
+    与宿主 trust-identity 解析的有意从简：不解析相对 gitdir、不做 realpath 与 admin/gitdir
+    回链校验——仅用于 tooltip 展示，不做任何授权判定。"""
+    try:
+        git_path = Path(root) / ".git"
+        if not git_path.is_file():
+            return None
+        text = git_path.read_text(encoding="utf-8", errors="replace").strip()
+        if not text.startswith("gitdir:"):
+            return None
+        gitdir = Path(text.split(":", 1)[1].strip())
+        if gitdir.parent.name != "worktrees" or gitdir.parent.parent.name != ".git":
+            return None
+        return str(gitdir.parent.parent.parent)
+    except OSError:
+        return None
+
+
+def _worktree_facts(con, sids):
+    """force_sid → 受管 worktree 事实映射；无命中返回 None（快照省略字段，不是空对象）。"""
+    out = {}
+    for sid in sids:
+        if sid in _WT_FACT_CACHE:
+            fact = _WT_FACT_CACHE[sid]
+            if fact is None:
+                continue
+            if fact["ref"] is None and fact["sha"] is None and fact.get("created") is None:
+                # 起点「未决」：worktree_creation part 实测比 session 行晚 ~1.2s 落库，
+                # 首见帧可能缓存到空起点；命中也重查，拿到即随缓存对象更新转已决
+                #（sha 非空即已决，detached 默认形状 ref=null/sha=有值）。全 detached 且无
+                # part 记录的会话会每帧重查一次（索引范围扫描该 sid 全部 part 行，节流帧下可接受）。
+                ref, sha, created = _worktree_origin(con, sid)
+                if ref is not None or sha is not None or created is not None:
+                    fact["ref"], fact["sha"], fact["created"] = ref, sha, created
+            out[sid] = fact
+            continue
+        try:
+            row = con.execute("select directory from session where id=?", (sid,)).fetchone()
+        except sqlite3.Error:
+            row = None
+        directory = str(row[0]).strip() if row and row[0] else ""
+        if not directory:
+            continue   # 行未落库/目录为空：不缓存（下一帧自然重查），与确认非受管分开
+        fact = _worktree_fact(directory)
+        if len(_WT_FACT_CACHE) >= _WT_FACT_CACHE_CAP:
+            _WT_FACT_CACHE.clear()
+        _WT_FACT_CACHE[sid] = fact   # None = 已判定非受管（负缓存）；受管事实连同起点一起入缓存
+        if fact is None:
+            continue
+        fact["ref"], fact["sha"], fact["created"] = _worktree_origin(con, sid)
+        fact["sourceRoot"] = _worktree_source_root(fact["root"])
+        out[sid] = fact
+    return out or None
+
+
+def _worktree_facts_safe(con, sids):
+    """同 _all_projects_usage_safe 口径：任何异常静默省略，不拖垮整帧。"""
+    if con is None or not sids:
+        return None
+    try:
+        return _worktree_facts(con, sids)
+    except (sqlite3.Error, TypeError, ValueError, KeyError, IndexError, OverflowError,
+            AttributeError, OSError):
+        return None
+
+
+def _session_compactions(con, sids):
+    """v421：会话压缩边界表（快照顶层 compactions，{sid: [{ts,b,a,cr,cw,out,dur,alt}]}）——
+    宿主时间线「上下文已压缩」分隔线统计标注的数据源。model_usage 的 query_source='compact'
+    行=宿主压缩总结请求，成功一次即时间线上一条 success 分隔线，按 started_at 序与 DOM 里
+    第 k 条分隔线一一对应（数组序即压缩序号，消费端「第 N 次」由此直读）。ts=compact 行
+    完成时刻（分隔线变 success 的秒级近似）；b/a=压缩前末条 / 压缩后首条已完成 main_turn
+    的 input（input>0 守卫剔除零值空行，2026-11-21 实测压缩点紧邻存在 input=0 的 completed
+    行）。与宿主 marker 载荷的 tokensBefore/tokensAfter 同义但口径为插件 ctx 口径（a 含
+    system+工具模式），渲染端不冒充宿主数字。cr/cw=压缩后首请求的缓存读取/创建——压缩冲掉
+    前缀缓存，该请求的缓存构成即「压缩后首请求付出多少未缓存输入」的直接读数，命中率由
+    消费端按 cr/a 计算。v428：out/dur=compact 行自身 output_tokens（摘要写入长度）与
+    completed_at−started_at（压缩耗时，完成时刻缺失时 0，消费端省略）；alt=压缩执行模型
+    与压缩后首请求模型不同才带的模型名（多模型会话的「由 X 执行」，同模型/无法比对省略）。
+    无 compact 行的会话不进映射；查询走 model_usage_query_source_idx，每帧成本可忽略。"""
+    out = {}
+    for sid in sids:
+        rows = con.execute(
+            """select started_at, completed_at, coalesce(output_tokens,0), coalesce(model_id,'')
+               from model_usage
+               where session_id=? and query_source='compact' and status='completed'
+               order by started_at limit 24""",
+            (sid,),
+        ).fetchall()
+        if not rows:
+            continue
+        recs = []
+        for started_at, completed_at, c_out, c_model in rows:
+            done_at = completed_at or started_at or 0
+            rec = {"ts": done_at, "out": c_out or 0,
+                   "dur": max(0, int(done_at - (started_at or 0)))}
+            before = con.execute(
+                """select input_tokens from model_usage
+                   where session_id=? and status='completed' and input_tokens>0
+                     and (query_source is null or query_source='main_turn') and started_at<?
+                   order by started_at desc limit 1""",
+                (sid, started_at),
+            ).fetchone()
+            after = con.execute(
+                """select input_tokens, coalesce(cache_read_input_tokens,0),
+                          coalesce(cache_creation_input_tokens,0), coalesce(model_id,'')
+                   from model_usage
+                   where session_id=? and status='completed' and input_tokens>0
+                     and (query_source is null or query_source='main_turn') and started_at>?
+                   order by started_at limit 1""",
+                (sid, done_at),   # v433：completed_at 缺失时随 done_at 用 started_at 兜底（防窗口塌陷到 >0）
+            ).fetchone()
+            if before and before[0]:
+                rec["b"] = before[0]
+            if after and after[0]:
+                rec["a"] = after[0]
+                rec["cr"] = after[1]
+                rec["cw"] = after[2]
+                if c_model and after[3] and c_model != after[3]:
+                    rec["alt"] = c_model
+            recs.append(rec)
+        out[sid] = recs
+    return out or None
+
+
+def _session_compactions_safe(con, sids):
+    """同 _worktree_facts_safe 口径：任何异常静默省略，不拖垮整帧。"""
+    if con is None or not sids:
+        return None
+    try:
+        return _session_compactions(con, sids)
+    except (sqlite3.Error, TypeError, ValueError, KeyError, IndexError, OverflowError,
+            AttributeError, OSError):
+        return None
+
+
 def range_usage(con, start_ms, end_ms):
     # 末尾三列（reasoning/retry/cache_write）是 v30/v31 追加，CLI 老代码按索引 0-4 取值不受影响
     return con.execute(
@@ -1142,6 +2297,9 @@ def range_usage(con, start_ms, end_ms):
 
 
 def _today_usage(con, start_ms, end_ms):
+    st = _incr_get(con)
+    if st is not None and start_ms == st.today_start_ms and end_ms == st.today_end_ms:
+        return st.get_today_usage(con)
     # v298.1：补 count(distinct turn_id)（今日轮数，条面今日格「N 轮 · M 次」展示）
     # v301：补今日级平均耗时/平均首字延迟两列（>0 样本过滤，同 v211 本轮 / v300 会话口径；
     # review 修复起两列过滤 main_turn——与 _today_rate 的 avg_tps 同口径，子代理/辅助行
@@ -2006,6 +3164,10 @@ def _speed_turns(con, session_ids, covers):
     ms=该模型通过窗口过滤行的 Σ窗口毫秒、n=该模型本轮已完成行数含无效窗口行，仅 out>0
     入列；_speed_history 转索引时按 (model, provider) 建身份表并剥掉末位 provider）、
     c=轮预估费用 USD（价表可能含兜底均价，展示层恒标「含兜底估价」，不冒充完整牌价）。
+    tk（v457，specs/speed-tooltip-v3.md §25）=与 msl 顺序对齐的每模型 Token 总消耗
+    （输入+输出，含无效窗口行）；仅多模型轮、或存在未入列模型（out=0 / 超出 8 条帽）
+    的 token 时携带——缺席即「恰一个入列模型且其 token 恰等于轮的 i+o」，渲染端直接
+    取轮级合计（单模型轮占多数，省帧体积）。
     刻意不存 v（单点 t/s）：渲染端所有柱/桶/均值一律按 Σout÷Σms 重算，杜绝算术平均。
     返回 (turns, session_rows)：session_rows 供顶部名称表一次性取会话名/项目归属。"""
     if not session_ids:
@@ -2089,8 +3251,9 @@ def _speed_turns(con, session_ids, covers):
                 gen_ms = _row_gen_ms(row, covers)
                 # v384 模型级速度：每行都登记模型——n 计该模型本轮全部已完成行（含无效
                 # 窗口行），ms 只累加通过窗口过滤的有效行（渲染端按 Σout÷Σms 算模型速度）
-                m = models.setdefault(key, {"out": 0, "ms": 0, "n": 0})
+                m = models.setdefault(key, {"out": 0, "ms": 0, "n": 0, "tok": 0})
                 m["n"] += 1
+                m["tok"] += inp + tokens   # v457：每模型 Token 总消耗，含无效窗口行
                 if tokens > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
                     valid_out += tokens
                     valid_ms += gen_ms
@@ -2103,10 +3266,15 @@ def _speed_turns(con, session_ids, covers):
                  "out": valid_out, "ms": valid_ms,
                  "i": tin, "o": tout, "n": len(rows)}
             ml = sorted(models.items(), key=lambda kv: -kv[1]["out"])
+            top = [(k, v) for k, v in ml if v["out"] > 0][:8]
             # 预索引条目末位带 provider_id：_speed_history 以 (model, provider) 二元组建
             # mnames/mkeys 身份表，转索引后剥掉——同名牌不同 provider 不再共享身份
-            t["msl"] = [[k[0], v["out"], int(v["ms"]), v["n"], k[1]]
-                        for k, v in ml if v["out"] > 0][:8]
+            t["msl"] = [[k[0], v["out"], int(v["ms"]), v["n"], k[1]] for k, v in top]
+            # v457：未入列模型（out=0 或超出 8 条帽）的 token——有则单靠 msl 还原不了
+            # 轮级合计，须带 tk；多模型轮同理（见函数注释）
+            other_tok = sum(v["tok"] for _, v in ml[len(top):])
+            if len(top) > 1 or other_tok > 0:
+                t["tk"] = [v["tok"] for _, v in top]
             if _pricing is not None:
                 try:
                     groups_in = [(k[0], k[1], g[0], g[1], g[2], g[3])
@@ -2124,6 +3292,9 @@ def _speed_turns(con, session_ids, covers):
 
 
 def _speed_history(con, sid=""):
+    st = _incr_get(con)
+    if st is not None:
+        return st.get_speed_history(con)
     """v254：速度 Tooltip 统一数据面——始终产出本库**全部**会话的有界轮表。
 
     同一帧快照会推给所有窗口/分栏，所以这里不做 pane 级过滤：渲染端按本 pane 可信
@@ -2260,13 +3431,27 @@ def _speed_history_safe(con, sid=""):
         return None
 
 
+def _peak_segment_safe():
+    """peak 段（specs/model-peak-factor-badge.md）：纯函数现算，任何异常返回 None
+    （渲染端判空静默），不拖垮整帧快照；价表模块缺失（旧运行目录）同 None。"""
+    if _pricing is None:
+        return None
+    try:
+        return _pricing.peak_snapshot_segment()
+    except Exception:
+        return None
+
+
 def _speed_days(con):
+    st = _incr_get(con)
+    if st is not None:
+        return st.get_speed_days(con)
     """v384（specs/speed-tooltip-v3.md §1.2）：全历史按**本地自然日**聚合的日桶帧——
     解决轮表 6000 轮上限对「全部」视图的截断。聚合口径与 _speed_turns 完全同源：已完成
     main_turn 行、_row_gen_ms 生成窗口 + 200ms–1h 有效段过滤、covers 特例，辅助
     query_source 与子代理行不计。日界一律 datetime.fromtimestamp 本地日历推导（DST/
     月末/跨年由标准库保证），禁止按固定 86400000 毫秒整除推日。
-    日桶 [out, ms, n, turns, capFlag, msl]：out/ms=当日通过窗口过滤行的 Σ有效输出/Σ窗口
+    日桶 [out, ms, n, turns, capFlag, msl, tk]：out/ms=当日通过窗口过滤行的 Σ有效输出/Σ窗口
     （分母分子完整精确）；n=当日已完成行数（含无效窗口行）；turns=当日 distinct 轮数，
     非空 turn_id 按 (sid, turn_id) 复合键去重，turn_id 为 NULL 的旧行按每行一个独立计次
     （_speed_turns 把 NULL 行按会话归并一组，这里逐行计次是更细的可控口径，渲染端只做
@@ -2277,6 +3462,14 @@ def _speed_days(con):
     条目按 out 降序、仅 out>0 的模型入列（与 _speed_turns 一致；out=0 的模型只计入日级
     总量不进身份列表），tn=当日含该模型已完成行（不论窗口有效性）的 distinct 轮数，
     与日级 turns 同款 NULL 行逐行计次。
+    第 7 位 tk（v457，spec §25）=[tin, tout, 每模型 token…]：tin/tout=当日**全部**已完成
+    main_turn 行的输入/输出合计（含无效窗口行，input 已含缓存、output 已含思考）；其后
+    与 msl 五元组逐条对齐的该模型当日 Token 总消耗（输入+输出）。空日不带（仍 6 个 0）。
+    每模型段不是每天都带（spec §8 帧体积预算，满帧多 45%）：恰一个入列模型的日只带合计
+    （渲染端按契约取该模型 token=合计；这类日在筛选下只有全选或整行剔除两态，推导值不参与
+    显示）；多模型日只给最近 _SPEED_DAYS_TK_DAYS 天携带，更早的只带合计（筛选后该日各
+    模型 token 未知，渲染端不出行）。
+    旧渲染端按前 6 位下标读取、看不见第 7 位；msl 步长恒为 5 不得改（旧渲染端按 5 解析）。
     truncated=1 表示存在早于窗口起点（今天往前 _SPEED_DAYS_MAX_DAYS 个本地日）的已完成
     行，渲染端据此明示「已截断」；早于起点/晚于今天的时间戳行（时钟偏移）不进任何桶，
     不伪造未来日。mnames/mkeys 与 speed_history 同款 (model, provider) 身份表。"""
@@ -2290,10 +3483,10 @@ def _speed_days(con):
              and (query_source is null or query_source='main_turn')
              and completed_at is not null""").fetchone()
     truncated = 1 if probe and probe[0] is not None and probe[0] < start_ms else 0
-    days = {}   # 本地 date → [out, ms, n, 轮键集合, 模型字典]；空日不建桶，装配时补零
+    days = {}   # 本地 date → [out, ms, n, 轮键集合, 模型字典, 输入合计, 输出合计]；空日不建桶
     mname_idx, mnames, mkeys = {}, [], []
     for row in con.execute(
-            """select rowid, output_tokens, completed_at, turn_id, session_id,
+            """select rowid, output_tokens, input_tokens, completed_at, turn_id, session_id,
                       model_id, provider_id, first_token_at, started_at, reasoning_tokens
                from model_usage where status='completed'
                  and (query_source is null or query_source='main_turn')
@@ -2306,7 +3499,7 @@ def _speed_days(con):
             continue   # 未来时间戳（时钟偏移）不伪造日桶；起点判定冗余防御
         b = days.get(day)
         if b is None:
-            b = days[day] = [0, 0, 0, set(), {}]
+            b = days[day] = [0, 0, 0, set(), {}, 0, 0]
         # 轮身份：非空 turn_id 用 (sid, turn_id)；NULL 旧行每行一个独立计次（rowid 唯一）
         tk = (row["session_id"], row["turn_id"]) if row["turn_id"] is not None else (None, row["rowid"])
         b[3].add(tk)
@@ -2317,12 +3510,17 @@ def _speed_days(con):
             mkeys.append(mk[1] + "\x1f" + mk[0])
         macc = b[4].get(mk)
         if macc is None:
-            macc = b[4][mk] = [0, 0, 0, set()]
+            macc = b[4][mk] = [0, 0, 0, set(), 0]
+        tokens = row["output_tokens"] or 0
+        inp = row["input_tokens"] or 0
         b[2] += 1            # n：当日已完成行数（含无效窗口行）
         macc[2] += 1
         macc[3].add(tk)      # tn 与日级 turns 同款 NULL 逐行计次
+        # v457：Token 总消耗（输入+输出）不分窗口有效性——当日全部已完成行都计
+        b[5] += inp
+        b[6] += tokens
+        macc[4] += inp + tokens
         gen_ms = _row_gen_ms(row, covers)
-        tokens = row["output_tokens"] or 0
         if tokens > 0 and gen_ms and _TPS_MIN_GEN_MS <= gen_ms < _TPS_MAX_GEN_MS:
             b[0] += tokens
             b[1] += gen_ms
@@ -2332,15 +3530,19 @@ def _speed_days(con):
     for i in range(_SPEED_DAYS_MAX_DAYS):
         b = days.get(start_date + timedelta(days=i))
         if b is None:
-            buckets.append([0, 0, 0, 0, 0, 0])   # 空日：msl 槽位恒 0（无记录）
+            buckets.append([0, 0, 0, 0, 0, 0])   # 空日：msl 槽位恒 0（无记录）；不带 tk
             continue
         ml = sorted((kv for kv in b[4].items() if kv[1][0] > 0), key=lambda kv: -kv[1][0])
         top = ml[:_SPEED_DAYS_MAX_MODELS]
         msl = []
         for k, v in top:
             msl += [mname_idx[k], v[0], int(v[1]), v[2], len(v[3])]   # 打平五元组，省内层括号
+        # v457：恰一个入列模型的日只带合计（渲染端按契约取该模型 token=合计；单入列模型
+        # 的日在筛选下只有全选或整行剔除两态，该值不参与显示）；多模型日的每模型 token
+        # 是筛选后仍能精确显示的依据，但满帧体积大（spec §8）——只给最近 N 天
+        per_model = [v[4] for _, v in top] if (len(top) > 1 and i >= _SPEED_DAYS_MAX_DAYS - _SPEED_DAYS_TK_DAYS) else []
         buckets.append([b[0], b[1], b[2], len(b[3]),
-                        1 if len(ml) > _SPEED_DAYS_MAX_MODELS else 0, msl])
+                        1 if len(ml) > _SPEED_DAYS_MAX_MODELS else 0, msl, [b[5], b[6]] + per_model])
     return {
         "v": 1,
         "source": "local",               # 数据源边界：远端身份下渲染端禁用「全部」
@@ -3514,6 +4716,9 @@ def _provider_fallback(con):
 
 def _provider_fallback_uncached(con):
     try:
+        st = _incr_get(con)
+        if st is not None:
+            return st.get_provfbk(con)
         row = con.execute(
             """select provider_id from model_usage
                where status='completed' and (query_source is null or query_source='main_turn')
@@ -3525,7 +4730,8 @@ def _provider_fallback_uncached(con):
 
 
 def snapshot(force_sid="", routes=None, serve_con=None, include_speed_history=False,
-             include_all_projects=False, include_speed_days=False):
+             include_all_projects=False, include_speed_days=False, include_worktree=False,
+             include_compactions=False, include_peak=False):
     """单次快照：最新会话 + 最近 6+6 会话池 + 今日。
     force_sid：各窗口当前会话 id，逗号分隔（泵按窗口汇总上报：主进程 IPC 映射的焦点会话 +
     overlay localStorage 键兜底），全部强制纳入快照——不在 6+6 池里的会话（新开的、久远的）
@@ -3538,8 +4744,16 @@ def snapshot(force_sid="", routes=None, serve_con=None, include_speed_history=Fa
     include_all_projects（v331）：同门控产出全部项目聚合（specs/all-projects-usage.md，
     挂顶层 all_projects，~6KB 量级）；任何 sqlite3.Error/列漂移省略字段不拖垮整帧。
     include_speed_days（v384，specs/speed-tooltip-v3.md §1.2）：同门控产出全历史按日聚合
-    日桶帧（挂顶层 speed_days，≤550 日；550 日×8 模型满桶实测 ~105-120KB，与数值位数相关）；开关点与 include_speed_history
+    日桶帧（挂顶层 speed_days，≤550 日；帧体积预算与满帧实测见规格 §8，含 v457 第 7 位 tk）；开关点与 include_speed_history
     完全一致，失败降级 None 不拖垮整帧。
+    include_worktree（specs/worktree-branch.md）：同门控产出 force_sid 中受管 worktree 会话的
+    路径与创建记录（挂顶层 worktrees，~百字节级）；分支名不在此读，主进程 git 轮询按覆写路径实时给出。
+    include_compactions（v421）：同门控产出最新会话与 force_sid 各会话的压缩边界表
+    （挂顶层 compactions，{sid: [{ts,b,a,cr,cw}]}，~百字节级，无 compact 行的会话省略）；
+    宿主「上下文已压缩」分隔线统计标注的数据源，语义见 _session_compactions。
+    include_peak（v480，specs/model-peak-factor-badge.md）：同门控产出峰谷时段段
+    （挂顶层 peak，{glm_plan: {is_peak,next_change_at,factors}}，纯函数现算）；价表模块
+    缺失/异常省略，模型选择器倍率徽标的数据源，口径单一来源 token_pricing。
     连接所有权归调用方：serve 模式下查询期出错会就地 close（调用方下次探活重建），
     finally 不重复关闭。"""
     cfg = load_config()
@@ -3591,6 +4805,9 @@ def snapshot(force_sid="", routes=None, serve_con=None, include_speed_history=Fa
             # 缓存仍经 _WmFn 带连接（水位续用不失效）；任何失败（含最小桩连接无 fetchall）
             # 速度降 0、明细降空，消费端 >0 门控显「—」，不拖垮整帧（同 project/cost 口径）。
             def _today_detail():
+                st = _incr_get(con)
+                if st is not None and start_ms == st.today_start_ms and end_ms == st.today_end_ms:
+                    return st.get_today_detail(con)
                 per_model = {}
                 try:
                     rate = _turn_rate(con.execute(
@@ -3710,6 +4927,12 @@ def snapshot(force_sid="", routes=None, serve_con=None, include_speed_history=Fa
         # v331 全部项目聚合（specs/all-projects-usage.md）：桌面快照链显式开启；
         # 失败按无字段降级，不拖垮整帧（与 provider_fallback 同款口径）
         all_proj = _all_projects_usage_safe(con) if include_all_projects else None
+        wt_facts = _worktree_facts_safe(con, force_sids) if include_worktree else None
+        # v421：压缩边界表候选=最新会话 + force_sid（去重保序）——时间线标注只关心
+        # 当前各窗口正在显示的会话，与 worktrees 的候选集合同型。
+        cmp_map = (_session_compactions_safe(
+            con, list(dict.fromkeys(([latest_sid] if latest_sid else []) + list(force_sids))))
+            if include_compactions else None)
         return {
             # 宿主与能力声明（v241）：消费端据此选择可用指标，不再靠字段缺失猜数据源；
             # 旧消费端忽略未知键，不影响既有渲染。
@@ -3770,9 +4993,19 @@ def snapshot(force_sid="", routes=None, serve_con=None, include_speed_history=Fa
             # v384 全历史按日聚合（specs/speed-tooltip-v3.md §1.2）：与 speed_history 同款
             # 门控/降级（None=失败，渲染端判空）；CLI / MCP / 远端子查询 stdout 不夹带
             **({"speed_days": _speed_days_safe(con)} if include_speed_days else {}),
+            # v480 模型选择器峰谷倍率（specs/model-peak-factor-badge.md）：与 speed_history
+            # 同门控；价表模块缺失/异常省略（None），渲染端判空静默。CLI/MCP 不走本函数，
+            # 手机中继 lean 链与远端子查询不带，纯函数现算无缓存
+            **({"peak": _peak_segment_safe()} if include_peak else {}),
             # v331 全部项目聚合（specs/all-projects-usage.md）：桌面快照链顶层可选字段；
             # 无连接/缺列降级时省略，渲染端判空显「暂不可用」，不借当前项目数据冒充
             **({"all_projects": all_proj} if all_proj is not None else {}),
+            # 受管 worktree 会话路径与创建记录（specs/worktree-branch.md）：桌面链顶层可选
+            # 字段；无命中/降级省略（不是 null），渲染端判空回退现状
+            **({"worktrees": wt_facts} if wt_facts is not None else {}),
+            # v421 压缩边界表（specs/… 无独立规格，语义注释见 _session_compactions）：
+            # 桌面快照链顶层可选字段；无命中/降级省略（不是 null），渲染端判空不标注
+            **({"compactions": cmp_map} if cmp_map else {}),
             "remote_enabled": bool(setup),        # 是否存在可用远端目标（区分"没配"与"配了没查到"）
             "known_sids": known_sids,
             "context_window": base["context_window"],
@@ -4454,6 +5687,10 @@ def serve():
     探活失败或查询异常后重建。json 一次性路径仍每请求开-关。"""
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        # 入站同样钉 UTF-8：主桥按 JSON.stringify 写请求行，spawn 时不注入 PYTHONIOENCODING /
+        # PYTHONUTF8（WorkBuddy 的 wb-overlay.cjs 注入了），区域代码页下含非 ASCII 的
+        # workspaceIdentity 会被解成乱码——远端分栏查不到已配置的目标，恒 remote_missing。
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
     # v202 价表/汇率 12h 定时同步（daemon 线程随本进程退出终止）；一次性 json 路径不启动。
@@ -4513,7 +5750,10 @@ def serve():
             out = json.dumps(snapshot(force_sid, routes, serve_con=con,
                                       include_speed_history=not lean,
                                       include_all_projects=not lean,
-                                      include_speed_days=not lean), separators=(",", ":"))
+                                      include_speed_days=not lean,
+                                      include_worktree=not lean,
+                                      include_compactions=not lean,
+                                      include_peak=not lean), separators=(",", ":"))
         except Exception as e:
             out = json.dumps({"error": str(e)[:200]})   # 单次查询失败不杀常驻进程
             _drop()   # 异常路径下连接状态未知：弃用，下轮重建
@@ -4593,7 +5833,10 @@ def main(argv):
             desktop = os.environ.get("ZUSAGE_REMOTE_CHILD") != "1" and not _query_lean(raw)
             print(json.dumps(snapshot(force_sid, routes, include_speed_history=desktop,
                                       include_all_projects=desktop,
-                                      include_speed_days=desktop), separators=(",", ":")))   # v384 同上
+                                      include_speed_days=desktop,
+                                      include_worktree=desktop,
+                                      include_compactions=desktop,
+                                      include_peak=desktop), separators=(",", ":")))   # v384 同上
             return 0
         if cmd == "serve":
             serve()
@@ -4613,6 +5856,35 @@ def main(argv):
             print(render_workspace(con, argv[1] if len(argv) > 1 else ""))
         elif cmd == "session":
             print(render_session_detail(con, argv[1] if len(argv) > 1 else ""))
+        elif cmd == "session-stats":
+            sid = argv[1] if len(argv) > 1 else ""
+            print(json.dumps(session_stats_json(con, sid), separators=(",", ":"), ensure_ascii=False))
+        elif cmd == "session-browser":
+            sid = argv[1] if len(argv) > 1 else ""
+            opts = {}
+            if len(argv) > 2 and argv[2].lstrip().startswith("{"):   # 选项以单个 JSON 位置参数传入（无 shell，不经转义）
+                try:
+                    opts = json.loads(argv[2])
+                except ValueError:
+                    opts = {}
+                if not isinstance(opts, dict):
+                    opts = {}
+                lim = _opt_int(opts.get("limit"), 80, 1, 300)
+                off = _opt_int(opts.get("offset"), 0, 0, 10 ** 9)
+            else:   # 旧的位置参数形态：<limit> <offset>
+                lim = _cli_count(argv[1:], 80) if len(argv) > 2 else 80
+                off = 0
+                if len(argv) > 3:
+                    try:
+                        off = max(0, int(argv[3]))
+                    except ValueError:
+                        off = 0
+            print(json.dumps(session_browser_json(
+                con, sid, limit=lim, offset=off, turn_id=opts.get("turnId"), before=opts.get("before"),
+            ), separators=(",", ":"), ensure_ascii=False))
+        elif cmd == "insights":
+            days = 0 if (len(argv) > 1 and argv[1] in ("0", "all")) else _cli_count(argv, 7)
+            print(json.dumps(insights_json(con, days=days), separators=(",", ":"), ensure_ascii=False))
         elif cmd == "watch":
             sec = _cli_count(argv, 5)
             while True:
@@ -4635,6 +5907,1354 @@ def main(argv):
                 "Update this plugin before querying; stored history is unaffected."))
         return 1
     return 0
+
+
+def _safe_json_loads(raw):
+    if not raw or not isinstance(raw, str):
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def _cost_and_fx(groups):
+    cost_usd = 0.0
+    per_model = {}
+    fx = None
+    if _pricing is not None:
+        try:
+            cost_usd, per_model = _pricing.merge_model_costs(groups)
+        except Exception:
+            cost_usd, per_model = 0.0, {}
+        try:
+            fv = _pricing.fx_view()
+            if isinstance(fv, dict) and isinstance(fv.get("rate"), (int, float)):
+                fx = fv["rate"]
+        except Exception:
+            fx = None
+    return cost_usd, per_model, fx
+
+
+def _opt_int(v, dflt, lo, hi):
+    """CLI JSON 选项里的整数：非数字/非有限值给默认，再钳到 [lo, hi]。"""
+    try:
+        n = int(v)
+    except (TypeError, ValueError, OverflowError):   # int(float("inf")) 抛 OverflowError
+        return dflt
+    return max(lo, min(hi, n))
+
+
+def _capture_dir():
+    return Path.home() / ".zcode" / "zcode-token-usage-statusbar" / "req-capture"
+
+
+def _capture_lines(jpath):
+    try:
+        return jpath.read_text(encoding="utf-8", errors="replace").splitlines()[-200:]
+    except OSError:
+        return []
+
+
+def _session_is_main(con, session_id):
+    try:
+        prow = con.execute("SELECT parent_id FROM session WHERE id=?", (session_id,)).fetchone()
+        return not bool(prow and prow[0])
+    except sqlite3.Error:
+        return False
+
+
+def _session_traces(con, session_id):
+    try:
+        return {
+            r[0] for r in con.execute(
+                "SELECT DISTINCT trace_id FROM model_usage WHERE session_id=? "
+                "AND trace_id IS NOT NULL AND trace_id != ''", (session_id,),
+            ).fetchall()
+        }
+    except sqlite3.Error:
+        return set()
+
+
+def _read_req_capture(session_id, con=None, resolve=True):
+    """读取可选的引擎请求抓包记录（engine-patch.cjs 启用后落盘；只落 system 与工具 schema，不落消息正文）。
+
+    两种落盘形态：<会话id>.jsonl 全量读；全局滚动文件 requests.jsonl 按 trace 归并——
+    请求头只带 trace id（一次运行一个，父子会话可能共享），取本会话 model_usage 的
+    trace 集合，再用会话类型头把主会话与子代理分开。归并是近似的（同 trace 的兄弟
+    子代理分不开），消费端标「按 trace 归并」。resolve=False 只读元数据、不加载 blob。"""
+    safe_sid = re.sub(r"[^A-Za-z0-9_-]", "", str(session_id or ""))[:128]
+    if not safe_sid:
+        return []
+    cap_dir = _capture_dir()
+    records = []
+    for line in _capture_lines(cap_dir / f"{safe_sid}.jsonl"):
+        obj = _safe_json_loads(line)
+        if isinstance(obj, dict):
+            records.append(obj)
+    if con is not None:
+        traces = _session_traces(con, session_id)
+        if traces:
+            want = "main" if _session_is_main(con, session_id) else "subagent"
+            for line in _capture_lines(cap_dir / "requests.jsonl"):
+                obj = _safe_json_loads(line)
+                if (isinstance(obj, dict) and obj.get("trace") in traces
+                        and str(obj.get("sessionType") or "") == want):
+                    obj["traced"] = True
+                    records.append(obj)
+    if not resolve:
+        return records
+    blobs_dir = cap_dir / "blobs"
+    blob_cache = {}
+    for obj in records:
+        for key in ("systemHash", "toolsHash"):
+            h = obj.get(key)
+            if isinstance(h, str) and re.fullmatch(r"[0-9a-f]{16,64}", h):
+                if h not in blob_cache:
+                    bfile = blobs_dir / f"{h}.json"
+                    try:
+                        blob_cache[h] = json.loads(bfile.read_text(encoding="utf-8")) if bfile.is_file() else None
+                    except Exception:
+                        blob_cache[h] = None
+                if key == "systemHash" and blob_cache[h] is not None:
+                    obj["system"] = blob_cache[h]
+                elif key == "toolsHash" and blob_cache[h] is not None:
+                    obj["tools"] = blob_cache[h]
+    return records
+
+
+def _capture_baseline():
+    """全局抓包最近 200 条请求里 system / 工具 schema 的均摊 token（字符÷4 估算）；无记录返回 None。"""
+    rows = [o for o in (_safe_json_loads(x) for x in _capture_lines(_capture_dir() / "requests.jsonl"))
+            if isinstance(o, dict) and o.get("systemChars") is not None]
+    if not rows:
+        return None
+    n = len(rows)
+    return {
+        "requests": n,
+        "systemTokens": round(sum(int(o.get("systemChars") or 0) for o in rows) / n / 4),
+        "toolsTokens": round(sum(int(o.get("toolsChars") or 0) for o in rows) / n / 4),
+    }
+
+
+def _src_bucket(qs):
+    """query_source → main（主会话轮）/ sub（子代理与工作流子轮）/ aux（标题、压缩、校验等辅助请求）。"""
+    if qs == "main_turn":
+        return "main"
+    if qs in ("subagent", "workflow_child"):
+        return "sub"
+    return "aux"
+
+
+def _new_bucket():
+    return {"requests": 0, "tokens": 0, "inp": 0, "out": 0, "reas": 0, "cr": 0, "cw": 0,
+            "genMs": 0, "durMs": 0, "ttftMs": 0, "costUsd": 0.0, "tools": 0}
+
+
+def _bump(b, inp, outp, reas, cr, cw, gen_ms, dur, ttft, cost, tools=0):
+    b["tools"] += tools
+    b["requests"] += 1
+    b["tokens"] += inp + outp
+    b["inp"] += inp
+    b["out"] += outp
+    b["reas"] += reas
+    b["cr"] += cr
+    b["cw"] += cw
+    b["genMs"] += gen_ms
+    b["durMs"] += dur
+    b["ttftMs"] += ttft
+    b["costUsd"] += cost
+
+
+_PROGRAM_SPLIT_RE = re.compile(r"[\\/]")
+
+
+def _command_program(cmd_s):
+    """命令行首词里的程序名（上下文洞察的命令排行）。PowerShell 的调用符 & 先剥掉（& "C:\\x y\\a.exe"）；
+    首词被引号包裹时取引号内的整段——Windows 上带空格的绝对路径命令写成 "C:\\Program Files\\...\\git.exe"，
+    按空白切只得到半截路径；再去掉两种分隔符前的目录部分，同一程序的不同写法（/usr/bin/git、C:\\...\\git.exe）
+    才不会被拆成多项。"""
+    text = cmd_s.strip()
+    if text[:1] == "&":
+        text = text[1:].lstrip()
+    first = text.split(None, 1)[0] if text else ""
+    if first[:1] in ("\"", "'"):
+        end = text.find(first[0], 1)
+        first = text[1:end] if end > 0 else first[1:]
+    return _PROGRAM_SPLIT_RE.split(first)[-1][:32]
+
+
+def _bucket_out(b):
+    """桶 → 对外形状：加权的 Σ输出÷Σ生成窗口（无有效窗口为 0，消费端显 —）。"""
+    out = {k: b[k] for k in ("requests", "tokens", "inp", "out", "reas", "cr", "cw", "durMs", "ttftMs", "genMs")}
+    out["toolCalls"] = b["tools"]
+    out["costUsd"] = round(b["costUsd"], 6)
+    out["tps"] = round(b["out"] / (b["genMs"] / 1000.0), 1) if (b["out"] > 0 and b["genMs"] > 0) else 0.0
+    out["cacheHitRate"] = round((b["cr"] / b["inp"]) * 100.0, 2) if b["inp"] > 0 else 0.0
+    return out
+
+
+def _token_split(inp, outp, reas, cr, cw):
+    """实测 token 五分：缓存读/写是 input 的子集（input 已含），扣除后不重复计。"""
+    return [
+        {"id": "cacheRead", "tokens": cr},
+        {"id": "cacheWrite", "tokens": cw},
+        {"id": "bareInput", "tokens": max(0, inp - cr - cw)},
+        {"id": "reasoning", "tokens": reas},
+        {"id": "answers", "tokens": max(0, outp - reas)},
+    ]
+
+
+def _percentile(sorted_vals, pct):
+    """已升序列表的百分位（最近秩）；空列表返回 0。"""
+    if not sorted_vals:
+        return 0
+    idx = int(pct / 100.0 * len(sorted_vals) + 0.999999) - 1
+    return sorted_vals[max(0, min(idx, len(sorted_vals) - 1))]
+
+
+def _compaction_row(pd, ts):
+    """压缩 part → 展示行：压缩前后 token、摘要/保留消息数、触发方式与下轮再压缩标记。"""
+    b = pd.get("compactBoundary") if isinstance(pd.get("compactBoundary"), dict) else {}
+
+    def _i(k):
+        try:
+            return int(b.get(k) or 0)
+        except Exception:
+            return 0
+
+    return {
+        "time": ts,
+        "trigger": str(pd.get("trigger") or b.get("trigger") or ""),
+        "auto": bool(pd.get("auto")),
+        "preTokens": _i("preCompactTokenCount"),
+        "postTokens": _i("truePostCompactTokenCount") or _i("postCompactTokenCount"),
+        "summarized": _i("summarizedMessageCount"),
+        "kept": _i("keptMessageCount"),
+        "willRetrigger": bool(b.get("willRetriggerNextTurn")),
+        "reason": str(pd.get("compactReason") or b.get("compactReason") or ""),
+    }
+
+
+def _error_summary(where, params, con):
+    """模型请求质量面：带错误的尝试按类型计数、最终失败/取消状态、重试次数。列缺失（旧库/夹具）按 0 降级。"""
+    out = {"requests": 0, "failedAttempts": 0, "failed": 0, "cancelled": 0, "retries": 0, "byType": {}}
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(model_usage)").fetchall()}
+        retry_expr = "coalesce(retry_count,0)" if "retry_count" in cols else "0"
+        et_expr = "coalesce(error_type,'')" if "error_type" in cols else "''"
+        row = con.execute(
+            f"SELECT count(*), sum({retry_expr}), "
+            f"sum(CASE WHEN {et_expr} != '' THEN 1 ELSE 0 END), "
+            "sum(CASE WHEN status = 'error' THEN 1 ELSE 0 END), "
+            "sum(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) "
+            f"FROM model_usage WHERE {where}", params,
+        ).fetchone()
+        if row:
+            out["requests"] = int(row[0] or 0)
+            out["retries"] = int(row[1] or 0)
+            out["failedAttempts"] = int(row[2] or 0)
+            out["failed"] = int(row[3] or 0)
+            out["cancelled"] = int(row[4] or 0)
+        if "error_type" in cols:
+            for er in con.execute(
+                f"SELECT {et_expr} AS et, count(*) AS n FROM model_usage "
+                f"WHERE {where} AND {et_expr} != '' GROUP BY et ORDER BY n DESC", params,
+            ).fetchall():
+                out["byType"][er["et"]] = int(er["n"])
+    except sqlite3.Error:
+        pass
+    return out
+
+
+def _tool_quality(where, params, con):
+    """工具调用质量面：错误状态、非零退出、截断、只读/破坏性占比、耗时 P50/P95。列缺失按 0 降级。"""
+    out = {"total": 0, "errorStatus": 0, "nonZeroExit": 0, "truncated": 0, "readOnly": 0,
+           "destructive": 0, "p50Ms": 0, "p95Ms": 0, "avgMs": 0}
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(tool_usage)").fetchall()}
+        ex = "coalesce(nullif(exit_code,''),0)" if "exit_code" in cols else "0"
+        ro = "coalesce(read_only,0)" if "read_only" in cols else "0"
+        de = "coalesce(destructive,0)" if "destructive" in cols else "0"
+        tr = "coalesce(truncated,0)" if "truncated" in cols else "0"
+        row = con.execute(
+            "SELECT count(*), "
+            "sum(CASE WHEN status IN ('error','failed') THEN 1 ELSE 0 END), "
+            f"sum(CASE WHEN {ex} != 0 THEN 1 ELSE 0 END), sum({tr}), sum({ro}), sum({de}), "
+            "sum(coalesce(duration_ms,0)) FROM tool_usage WHERE " + where, params,
+        ).fetchone()
+        if row and int(row[0] or 0) > 0:
+            n = int(row[0])
+            out["total"] = n
+            out["errorStatus"] = int(row[1] or 0)
+            out["nonZeroExit"] = int(row[2] or 0)
+            out["truncated"] = int(row[3] or 0)
+            out["readOnly"] = int(row[4] or 0)
+            out["destructive"] = int(row[5] or 0)
+            out["avgMs"] = round(int(row[6] or 0) / n)
+        durs = sorted(int(d[0]) for d in con.execute(
+            "SELECT duration_ms FROM tool_usage WHERE " + where + " AND duration_ms IS NOT NULL", params,
+        ).fetchall() if d[0] is not None and int(d[0]) >= 0)
+        out["p50Ms"] = _percentile(durs, 50)
+        out["p95Ms"] = _percentile(durs, 95)
+    except sqlite3.Error:
+        pass
+    return out
+
+
+def _turn_rows(con, session_id):
+    """turn_usage 逐轮行（轮结束才写，进行中的轮不在内）；只下发最后 200 轮，`n` 是会话里的绝对轮序；
+    列按库内实际存在的取，缺列按 0/空。"""
+    try:
+        cols = {r[1] for r in con.execute("PRAGMA table_info(turn_usage)").fetchall()}
+        want = ("status", "started_at", "completed_at", "duration_ms", "model_request_count",
+                "model_retry_count", "tool_call_count", "tool_error_count", "input_tokens",
+                "output_tokens", "reasoning_tokens", "cache_read_input_tokens",
+                "cancelled_by_user", "context_exceeded", "error_type")
+        sel = ", ".join(["turn_id"] + [c for c in want if c in cols])
+        when = [c for c in ("started_at", "completed_at") if c in cols]
+        order = "coalesce(" + ", ".join(when) + ", 0), rowid" if when else "rowid"   # 两列都缺的旧库按写入序
+        rows = con.execute(
+            f"SELECT {sel} FROM turn_usage WHERE session_id=? ORDER BY {order} ASC", (session_id,),
+        ).fetchall()
+        first = max(1, len(rows) - 199)   # 只保留最后 200 轮；序号仍是会话里的绝对轮序
+        rows = rows[-200:]
+    except sqlite3.Error:
+        return []
+    out = []
+    for i, r in enumerate(rows, first):
+        d = {k: r[k] for k in r.keys()}
+
+        def _i(k):
+            try:
+                return int(d.get(k) or 0)
+            except Exception:
+                return 0
+        out.append({
+            "n": i,
+            "turnId": d.get("turn_id") or "",
+            "status": str(d.get("status") or ""),
+            "startedAt": _i("started_at"),
+            "completedAt": _i("completed_at"),
+            "durationMs": _i("duration_ms"),
+            "requests": _i("model_request_count"),
+            "retries": _i("model_retry_count"),
+            "toolCalls": _i("tool_call_count"),
+            "toolErrors": _i("tool_error_count"),
+            "inputTokens": _i("input_tokens"),
+            "outputTokens": _i("output_tokens"),
+            "reasoningTokens": _i("reasoning_tokens"),
+            "cacheReadTokens": _i("cache_read_input_tokens"),
+            "cancelled": bool(d.get("cancelled_by_user")),
+            "contextExceeded": bool(d.get("context_exceeded")),
+            "errorType": str(d.get("error_type") or ""),
+        })
+    return out
+
+
+def _row_tps(out_tok, dur_ms, ttft_ms):
+    gen_ms = dur_ms - ttft_ms if (dur_ms > ttft_ms and ttft_ms > 0) else dur_ms
+    if out_tok > 0 and gen_ms > 0:
+        return round(out_tok / (gen_ms / 1000.0), 1)
+    return 0.0
+
+
+def _row_cost_usd(mid, pid, inp, outp, cr, cw):
+    if _pricing is None:
+        return 0.0
+    try:
+        return float(_pricing.compute_group_cost(mid, pid, inp, outp, cr, cw))
+    except Exception:
+        return 0.0
+
+
+def _current_fx():
+    if _pricing is None:
+        return None
+    try:
+        fv = _pricing.fx_view()
+        if isinstance(fv, dict) and isinstance(fv.get("rate"), (int, float)):
+            return fv["rate"]
+    except Exception:
+        pass
+    return None
+
+
+def session_stats_json(con, session_id):
+    """Phase 2: 会话级 Context Stats / Token Stats / Timing Stats / Fleet / Steps 全量指标。"""
+    if not session_id:
+        return {"ok": False, "error": "missing session_id"}
+    srow = None
+    try:
+        srow = con.execute(
+            "SELECT id, title, directory, time_created, time_updated, "
+            "coalesce(summary_additions,0) AS add_lines, coalesce(summary_deletions,0) AS del_lines, "
+            "coalesce(summary_files,0) AS files_changed FROM session WHERE id=?",
+            (session_id,),
+        ).fetchone()
+    except sqlite3.Error:
+        srow = None
+
+    mrows = []
+    try:
+        mu_cols = {r[1] for r in con.execute("PRAGMA table_info(model_usage)").fetchall()}
+        amid_sel = "assistant_message_id" if "assistant_message_id" in mu_cols else "'' AS assistant_message_id"
+        mrows = con.execute(
+            f"SELECT id, turn_id, {amid_sel}, query_source, provider_id, model_id, status, "
+            "started_at, first_token_at, completed_at, "
+            "coalesce(duration_ms,0) AS duration_ms, coalesce(time_to_first_token_ms,0) AS ttft_ms, "
+            "coalesce(tool_call_count,0) AS tool_calls, "
+            "coalesce(input_tokens,0) AS inp, coalesce(output_tokens,0) AS outp, "
+            "coalesce(reasoning_tokens,0) AS reas, "
+            "coalesce(cache_creation_input_tokens,0) AS cw, "
+            "coalesce(cache_read_input_tokens,0) AS cr "
+            "FROM model_usage WHERE session_id=? ORDER BY coalesce(started_at, completed_at, rowid) ASC, rowid ASC",
+            (session_id,),
+        ).fetchall()
+    except sqlite3.Error:
+        mrows = []
+
+    turns_set = set()
+    steps = []
+    per_model = {}
+    model_stats = {}   # 模型明细行：mid → {provider, b: {来源桶 → 计数}}（all=合计）
+    src_b = {}         # 会话级来源桶：main / sub / aux / all
+    tot_inp = tot_out = tot_reas = tot_cr = tot_cw = 0
+    tot_model_ms = tot_gen_ms = tot_ttft_ms = 0
+    ttft_cnt = 0
+    tot_tool_calls = 0
+    tot_cost = 0.0
+
+    for idx, r in enumerate(mrows):
+        tid = r["turn_id"] or ""
+        if tid:
+            turns_set.add(tid)
+        inp, outp, reas, cr, cw = int(r["inp"]), int(r["outp"]), int(r["reas"]), int(r["cr"]), int(r["cw"])
+        dur = int(r["duration_ms"] or 0)
+        ttft = int(r["ttft_ms"] or 0)
+        gen_ms = dur - ttft if (dur > ttft and ttft > 0) else dur
+        mid = r["model_id"] or ""
+        pid = r["provider_id"] or ""
+        rc = _row_cost_usd(mid, pid, inp, outp, cr, cw)
+        tot_cost += rc
+        src_key = _src_bucket(r["query_source"] or "")
+        if mid:
+            per_model[mid] = round(per_model.get(mid, 0.0) + rc, 8)
+            mst = model_stats.setdefault(mid, {"provider": pid, "b": {}})
+            for bk in (src_key, "all"):
+                _bump(mst["b"].setdefault(bk, _new_bucket()), inp, outp, reas, cr, cw, gen_ms, dur, ttft, rc,
+                      int(r["tool_calls"] or 0))
+        for bk in (src_key, "all"):
+            _bump(src_b.setdefault(bk, _new_bucket()), inp, outp, reas, cr, cw, gen_ms, dur, ttft, rc,
+                  int(r["tool_calls"] or 0))
+        tot_inp += inp
+        tot_out += outp
+        tot_reas += reas
+        tot_cr += cr
+        tot_cw += cw
+        tot_model_ms += dur
+        tot_gen_ms += gen_ms
+        tot_tool_calls += int(r["tool_calls"] or 0)
+        if ttft > 0:
+            tot_ttft_ms += ttft
+            ttft_cnt += 1
+        steps.append({
+            "step": idx + 1,
+            "id": r["id"],
+            "turnId": tid,
+            "assistantMessageId": r["assistant_message_id"] or "",
+            "querySource": r["query_source"] or "main_turn",
+            "modelId": mid,
+            "providerId": pid,
+            "status": r["status"] or "",
+            "startedAt": r["started_at"],
+            "completedAt": r["completed_at"],
+            "durationMs": dur,
+            "ttftMs": ttft,
+            "tps": _row_tps(outp, dur, ttft),
+            "inputTokens": inp,
+            "outputTokens": outp,
+            "reasoningTokens": reas,
+            "cacheReadTokens": cr,
+            "cacheCreationTokens": cw,
+            "toolCalls": int(r["tool_calls"] or 0),
+        })
+
+    turn_count = len(turns_set)
+    try:
+        tc_row = con.execute("SELECT count(*) FROM turn_usage WHERE session_id=?", (session_id,)).fetchone()
+        if tc_row and int(tc_row[0]) > turn_count:
+            turn_count = int(tc_row[0])
+    except sqlite3.Error:
+        pass
+
+    tools = []
+    tot_tool_ms = 0
+    tot_tool_errs = 0
+    tool_exec_count = 0
+    try:
+        trows = con.execute(
+            "SELECT tool_name, count(*) AS cnt, "
+            "sum(CASE WHEN status IN ('error','failed') OR coalesce(nullif(exit_code,''),0)!=0 THEN 1 ELSE 0 END) AS errs, "
+            "sum(coalesce(duration_ms,0)) AS dur_ms "
+            "FROM tool_usage WHERE session_id=? GROUP BY tool_name ORDER BY cnt DESC, dur_ms DESC",
+            (session_id,),
+        ).fetchall()
+        for tr in trows:
+            cnt = int(tr["cnt"] or 0)
+            errs = int(tr["errs"] or 0)
+            dms = int(tr["dur_ms"] or 0)
+            tool_exec_count += cnt
+            tot_tool_errs += errs
+            tot_tool_ms += dms
+            tools.append({"name": tr["tool_name"] or "unknown", "count": cnt, "errors": errs, "durationMs": dms})
+    except sqlite3.Error:
+        pass
+
+    # Parse message/part for user/answer counts, skill loads, file I/O counts, command programs, context events
+    user_msgs = 0
+    answers = 0
+    msg_role = {}   # message_id → role：parts 循环据此把用户正文与助手正文分开记
+    skill_loads = {}
+    io_counts = {"user": 0, "read": 0, "write": 0, "search": 0, "images": 0}
+    cmd_progs = {}
+    ctx_events = {"inject": 0, "compact": 0, "prune": 0}
+    char_buckets = {"user": 0, "skill": 0, "tool": 0, "reasoning": 0, "answer": 0}
+    compactions = []
+    tl_compact = 0
+
+    try:
+        for mr in con.execute("SELECT id, data FROM message WHERE session_id=?", (session_id,)):
+            md = _safe_json_loads(mr["data"]) or {}
+            role = md.get("role")
+            if mr["id"]:
+                msg_role[mr["id"]] = role
+            if role == "user":
+                user_msgs += 1
+            elif role == "assistant":
+                answers += 1
+        io_counts["user"] = user_msgs
+
+        for pr in con.execute("SELECT message_id, data, time_created FROM part WHERE session_id=?", (session_id,)):
+            pd = _safe_json_loads(pr["data"]) or {}
+            pt = pd.get("type")
+            if pt == "text":
+                # 用户消息的正文记 user，助手正文记 answer（都是字符数，÷4 才是估算 token）
+                if msg_role.get(pr["message_id"]) == "user":
+                    char_buckets["user"] += len(pd.get("text") or "")
+                else:
+                    char_buckets["answer"] += len(pd.get("text") or "")
+            elif pt == "reasoning":
+                char_buckets["reasoning"] += len(pd.get("text") or "")
+            elif pt == "file":
+                if str(pd.get("mime") or "").startswith("image/"):
+                    io_counts["images"] += 1
+            elif pt == "compaction":
+                # 真实压缩记录（带压缩前后 token 与摘要计数）；timeline 里的压缩事件只作兜底计数
+                compactions.append(_compaction_row(pd, int(pr["time_created"] or 0)))
+            elif pt == "timeline":
+                tt = str(pd.get("timelineType") or "").lower()
+                if "compact" in tt:
+                    tl_compact += 1
+                elif "prune" in tt:
+                    ctx_events["prune"] += 1
+                elif tt:
+                    ctx_events["inject"] += 1
+            elif pt == "tool":
+                tname = str(pd.get("tool") or "")
+                low_t = tname.lower()
+                st = pd.get("state") if isinstance(pd.get("state"), dict) else {}
+                tinp = st.get("input")
+                tout = st.get("output")
+                char_buckets["tool"] += len(str(tinp or "")) + len(str(tout or ""))
+                if low_t == "skill" and isinstance(tinp, dict):
+                    sk = str(tinp.get("skill") or tinp.get("name") or "skill")
+                    sk_e = skill_loads.setdefault(sk, {"name": sk, "count": 0, "lastAt": 0})
+                    sk_e["count"] += 1
+                    sk_e["lastAt"] = max(sk_e["lastAt"], int(pr["time_created"] or 0))
+                    char_buckets["skill"] += len(str(tout or ""))
+                if any(k in low_t for k in ("write", "edit", "replace", "patch")):
+                    io_counts["write"] += 1
+                elif any(k in low_t for k in ("grep", "glob", "find", "search")):
+                    io_counts["search"] += 1
+                elif any(k in low_t for k in ("read", "view", "cat")):
+                    io_counts["read"] += 1
+                if low_t in ("bash", "run_command", "exec", "shell", "terminal") or (isinstance(tinp, dict) and ("command" in tinp or "CommandLine" in tinp)):
+                    cmd_s = ""
+                    if isinstance(tinp, dict):
+                        cmd_s = str(tinp.get("command") or tinp.get("CommandLine") or "").strip()
+                    if cmd_s:
+                        prog = _command_program(cmd_s)
+                        if prog:
+                            cmd_progs[prog] = cmd_progs.get(prog, 0) + 1
+    except sqlite3.Error:
+        pass
+
+    # Subagents (Fleet)
+    subagents = []
+    try:
+        subs = con.execute("SELECT id, title FROM session WHERE parent_id=?", (session_id,)).fetchall()
+        for sr in subs:
+            sid_sub = sr["id"]
+            sub_rows = con.execute(
+                "SELECT model_id, provider_id, coalesce(input_tokens,0) AS inp, coalesce(output_tokens,0) AS outp, "
+                "coalesce(cache_read_input_tokens,0) AS cr, coalesce(cache_creation_input_tokens,0) AS cw, "
+                "coalesce(duration_ms,0) AS dur, coalesce(time_to_first_token_ms,0) AS ttft "
+                "FROM model_usage WHERE session_id=?",
+                (sid_sub,),
+            ).fetchall()
+            if not sub_rows:
+                continue
+            s_tok = s_out = s_gen = 0
+            s_cost = 0.0
+            for r in sub_rows:
+                inp, outp, cr, cw = int(r["inp"]), int(r["outp"]), int(r["cr"]), int(r["cw"])
+                s_tok += inp + outp
+                s_out += outp
+                dur, ttft = int(r["dur"]), int(r["ttft"])
+                s_gen += dur - ttft if (dur > ttft and ttft > 0) else dur
+                s_cost += _row_cost_usd(r["model_id"] or "", r["provider_id"] or "", inp, outp, cr, cw)
+            subagents.append({
+                "id": sid_sub,
+                "title": sr["title"] or sid_sub[:12],
+                "steps": len(sub_rows),
+                "tokens": s_tok,
+                "costUsd": round(s_cost, 6),
+                "tps": round(s_out / (s_gen / 1000.0), 1) if (s_out > 0 and s_gen > 0) else 0.0,
+            })
+    except sqlite3.Error:
+        pass
+
+    fx = _current_fx()
+    bare_inp = max(0, tot_inp - tot_cr - tot_cw)
+    cache_hit = round((tot_cr / tot_inp) * 100.0, 1) if tot_inp > 0 else 0.0
+    sess_tps = round(tot_out / (tot_gen_ms / 1000.0), 1) if (tot_out > 0 and tot_gen_ms > 0) else 0.0
+
+    ctx_events["compact"] = max(len(compactions), tl_compact)
+    turns = _turn_rows(con, session_id)
+
+    # Token stats 8 分类：用户/技能/工具三类是正文字符÷4 的估算，思考与回复是实测值；
+    # system 与工具 schema 的 token 库内没有——启用抓包后按抓到的真实内容估算
+    # （basis=capture），否则按剩余输入的固定比例估算（basis=ratio）。
+    cap_rows = _read_req_capture(session_id, con, resolve=False)
+    cap_meta = None
+    if cap_rows:
+        cap_meta = {
+            "requests": len(cap_rows),
+            "systemTokens": round(sum(int(o.get("systemChars") or 0) for o in cap_rows) / len(cap_rows) / 4),
+            "toolsTokens": round(sum(int(o.get("toolsChars") or 0) for o in cap_rows) / len(cap_rows) / 4),
+            "traced": any(o.get("traced") for o in cap_rows),
+        }
+    ans_tok = max(0, tot_out - tot_reas)
+    est_tool_tok = round(char_buckets["tool"] / 4)
+    est_skill_tok = round(char_buckets["skill"] / 4)
+    est_user_tok = max(0, round(char_buckets["user"] / 4))
+    rem_inp = max(0, tot_inp - est_tool_tok - est_skill_tok - est_user_tok)
+    if cap_meta and cap_meta["systemTokens"]:
+        basis = "capture"
+        sys_tok, schema_tok = cap_meta["systemTokens"], cap_meta["toolsTokens"]
+        rem_inp = max(0, rem_inp - sys_tok - schema_tok)
+    else:
+        basis = "ratio"
+        sys_tok, schema_tok = round(rem_inp * 0.12), round(rem_inp * 0.45)
+        rem_inp = round(rem_inp * 0.43)
+    token_breakdown = [
+        {"id": "systemPrompt", "tokens": sys_tok},
+        {"id": "toolSchemas", "tokens": schema_tok},
+        {"id": "userMessages", "tokens": est_user_tok},
+        {"id": "injectedContext", "tokens": rem_inp},
+        {"id": "skillInjections", "tokens": est_skill_tok},
+        {"id": "toolCalls", "tokens": est_tool_tok},
+        {"id": "reasoning", "tokens": tot_reas},
+        {"id": "answers", "tokens": ans_tok},
+    ]
+
+    # Timing：全部实测。每行 dur = ttft + gen（无首字的行 gen=dur），三者相加即总活跃时长。
+    timing = {
+        "modelDurationMs": tot_model_ms,
+        "toolDurationMs": tot_tool_ms,
+        "totalDurationMs": tot_model_ms + tot_tool_ms,
+        "avgTtftMs": round(tot_ttft_ms / ttft_cnt) if ttft_cnt > 0 else 0,
+        "tps": sess_tps,
+        "ttftMs": tot_ttft_ms,
+        "genMs": tot_gen_ms,
+        "toolRunsMs": tot_tool_ms,
+    }
+
+    models_list = []
+    for mid, mst in sorted(model_stats.items(), key=lambda kv: (-kv[1]["b"].get("all", _new_bucket())["tokens"], kv[0]))[:12]:
+        entry = {"model": mid, "provider": mst["provider"], "bySource": {}}
+        for bk in ("all", "main", "sub", "aux"):
+            if bk in mst["b"]:
+                entry["bySource"][bk] = _bucket_out(mst["b"][bk])
+        base = entry["bySource"]["all"]
+        entry["tokens"] = base["tokens"]
+        entry["requests"] = base["requests"]
+        entry["avgTps"] = base["tps"]
+        entry["costUsd"] = base["costUsd"]
+        models_list.append(entry)
+
+    return {
+        "ok": True,
+        "session": {
+            "id": session_id,
+            "title": srow["title"] if srow else "",
+            "directory": srow["directory"] if srow else "",
+            "createdAt": srow["time_created"] if srow else None,
+            "updatedAt": srow["time_updated"] if srow else None,
+            "addLines": int(srow["add_lines"]) if srow else 0,
+            "delLines": int(srow["del_lines"]) if srow else 0,
+            "filesChanged": int(srow["files_changed"]) if srow else 0,
+        },
+        "kpi": {
+            "turns": turn_count,
+            "steps": len(steps),
+            "skillLoads": sum(x["count"] for x in skill_loads.values()),
+            "answers": answers,
+            "contextEvents": ctx_events,
+            "toolCalls": max(tot_tool_calls, tool_exec_count),
+            "toolErrors": tot_tool_errs,
+            "inputTokens": tot_inp,
+            "bareInputTokens": bare_inp,
+            "outputTokens": tot_out,
+            "reasoningTokens": tot_reas,
+            "cacheReadTokens": tot_cr,
+            "cacheCreationTokens": tot_cw,
+            "billedTokens": tot_inp + tot_out,
+            "cacheHitRate": cache_hit,
+            "tps": sess_tps,
+            "costUsd": round(tot_cost, 8),
+            "fx": fx,
+            "perModelCost": per_model,
+        },
+        "inputOutput": io_counts,
+        "skillLoadsList": sorted(skill_loads.values(), key=lambda x: x["count"], reverse=True)[:12],
+        "commandPrograms": [{"program": k, "count": v} for k, v in sorted(cmd_progs.items(), key=lambda kv: kv[1], reverse=True)[:12]],
+        "fleet": {
+            "self": {"tokens": tot_inp + tot_out, "costUsd": round(tot_cost, 6), "tps": sess_tps},
+            "subagents": subagents,
+        },
+        "models": models_list,
+        "tokenBreakdown": token_breakdown,
+        "tokenBreakdownBasis": basis,
+        "tokenSplit": _token_split(tot_inp, tot_out, tot_reas, tot_cr, tot_cw),
+        "timing": timing,
+        "split": {k: _bucket_out(v) for k, v in src_b.items()},
+        "errors": _error_summary("session_id=?", (session_id,), con),
+        "toolQuality": _tool_quality("session_id=?", (session_id,), con),
+        "compactions": compactions[-50:],
+        "turns": turns,
+        "capture": cap_meta,
+        "tools": tools,
+        "steps": steps[-1000:],   # 超长会话限幅：kpi.steps 仍是总数，step 序号不重编
+    }
+
+
+def session_browser_json(con, session_id, limit=80, offset=0, turn_id=None, before=None):
+    """Phase 3: 上下文浏览器（消息、推理、工具参数与结果、TPS、文件活动、命令执行、事件与可选抓包）。
+
+    分页默认最新在前（order=desc）：首页取最新 limit 条，「加载更多」带 before 游标
+    （上一页最老一条的 sequence/time_created/id 三元组，行值比较）取更老的一页，流式
+    新增消息不会让已加载的页错位；给 turn_id 时只取该轮的消息并按时间正序（order=asc）：
+    从该轮的用户消息起到下一轮用户消息之前。"""
+    if not session_id:
+        return {"ok": False, "error": "missing session_id"}
+    limit = max(1, min(int(limit or 80), 300))
+    offset = max(0, int(offset or 0))
+
+    msg_where = "session_id=?"
+    msg_params = [session_id]
+    order = "DESC"
+    if turn_id:
+        def _msg_time(mid):
+            if not mid:
+                return None
+            try:
+                r = con.execute("SELECT time_created FROM message WHERE id=?", (mid,)).fetchone()
+                return int(r[0]) if r and r[0] else None
+            except sqlite3.Error:
+                return None
+        try:
+            keys = {r[1] for r in con.execute("PRAGMA table_info(turn_usage)").fetchall()}
+            sel = "started_at" + (", user_message_id" if "user_message_id" in keys else "")
+            trow = con.execute(f"SELECT {sel} FROM turn_usage WHERE session_id=? AND turn_id=?", (session_id, turn_id)).fetchone()
+        except sqlite3.Error:
+            trow = None
+        if not trow or not trow["started_at"]:
+            return {"ok": False, "error": "turn_not_found"}
+        t0 = _msg_time(trow["user_message_id"]) if "user_message_id" in keys else None
+        if not t0:
+            t0 = int(trow["started_at"])
+        try:
+            nrow = con.execute(
+                f"SELECT {sel} FROM turn_usage WHERE session_id=? AND started_at > ? "
+                "ORDER BY started_at ASC LIMIT 1", (session_id, int(trow["started_at"])),
+            ).fetchone()
+        except sqlite3.Error:
+            nrow = None
+        t1 = None
+        if nrow:
+            t1 = (_msg_time(nrow["user_message_id"]) if "user_message_id" in keys else None) or int(nrow["started_at"])
+        msg_where = "session_id=? AND time_created >= ?" + (" AND time_created < ?" if t1 is not None else "")
+        msg_params = [session_id, t0] + ([t1] if t1 is not None else [])
+        order = "ASC"
+    elif isinstance(before, dict) and before.get("s") is not None:
+        # 游标翻页：与下方 ORDER BY 同键（sequence, time_created, id）做行值比较
+        try:
+            cur = (int(before.get("s") or 0), int(before.get("t") or 0), str(before.get("id") or ""))
+        except (TypeError, ValueError):
+            return {"ok": False, "error": "invalid_before"}
+        msg_where = "session_id=? AND (coalesce(sequence,0), time_created, id) < (?, ?, ?)"
+        msg_params = [session_id] + list(cur)
+
+    total_msgs = 0
+    msgs = []
+    try:
+        c_row = con.execute(f"SELECT count(*) FROM message WHERE {msg_where}", msg_params).fetchone()
+        total_msgs = int(c_row[0]) if c_row else 0
+        mrows = con.execute(
+            f"SELECT id, time_created, data, sequence FROM message WHERE {msg_where} "
+            f"ORDER BY coalesce(sequence, 0) {order}, time_created {order}, id {order} LIMIT ? OFFSET ?",
+            msg_params + [limit, offset],
+        ).fetchall()
+    except sqlite3.Error:
+        mrows = []
+
+    # Map assistant_message_id -> model_usage TPS/timing
+    msg_metrics = {}
+    try:
+        for mr in con.execute(
+            "SELECT assistant_message_id, coalesce(input_tokens,0) AS inp, "
+            "coalesce(cache_read_input_tokens,0) AS cr, "
+            "coalesce(output_tokens,0) AS outp, "
+            "coalesce(duration_ms,0) AS dur, coalesce(time_to_first_token_ms,0) AS ttft "
+            "FROM model_usage WHERE session_id=? AND assistant_message_id IS NOT NULL",
+            (session_id,),
+        ):
+            amid = mr["assistant_message_id"]
+            if amid:
+                msg_metrics[amid] = {
+                    "tps": _row_tps(int(mr["outp"]), int(mr["dur"]), int(mr["ttft"])),
+                    "durationMs": int(mr["dur"]),
+                    "ttftMs": int(mr["ttft"]),
+                    "outputTokens": int(mr["outp"]),
+                    "inputTokens": int(mr["inp"]),
+                    "cacheReadTokens": int(mr["cr"]),
+                }
+    except sqlite3.Error:
+        pass
+
+    msg_ids = [r["id"] for r in mrows]
+    parts_by_msg = {}
+    file_ops = {}
+    cmd_execs = []
+    events = []
+
+    if msg_ids:
+        placeholders = ",".join("?" for _ in msg_ids)
+        try:
+            prows = con.execute(
+                f"SELECT id, message_id, time_created, data, sequence FROM part "
+                f"WHERE session_id=? AND message_id IN ({placeholders}) "
+                f"ORDER BY coalesce(sequence,0) ASC, time_created ASC",
+                [session_id] + msg_ids,
+            ).fetchall()
+        except sqlite3.Error:
+            prows = []
+        for pr in prows:
+            pdata = _safe_json_loads(pr["data"]) or {}
+            ptype = pdata.get("type") or "unknown"
+            item = {"id": pr["id"], "type": ptype, "time": pr["time_created"]}
+            if ptype in ("text", "reasoning"):
+                txt = pdata.get("text") or ""
+                item["text"] = txt
+                item["chars"] = len(txt)
+                item["estTokens"] = max(1, round(len(txt) / 4)) if txt else 0
+            elif ptype == "tool":
+                st = pdata.get("state") if isinstance(pdata.get("state"), dict) else {}
+                tname = pdata.get("tool") or "unknown"
+                tinp = st.get("input")
+                tout = st.get("output")
+                terr = st.get("error")
+                tstat = st.get("status") or ""
+                inp_s = json.dumps(tinp, ensure_ascii=False) if isinstance(tinp, (dict, list)) else str(tinp or "")
+                out_s = json.dumps(tout, ensure_ascii=False) if isinstance(tout, (dict, list)) else str(tout or "")
+                item["toolName"] = tname
+                item["callId"] = pdata.get("callID") or ""
+                item["status"] = tstat
+                item["input"] = inp_s[:12000]
+                item["output"] = out_s[:16000]
+                item["error"] = str(terr or "")[:4000]
+                item["estTokens"] = max(1, round((len(inp_s) + len(out_s)) / 4)) if (inp_s or out_s) else 0
+                fpath = ""
+                if isinstance(tinp, dict):
+                    fpath = tinp.get("file_path") or tinp.get("path") or tinp.get("filePath") or tinp.get("target_file") or ""
+                low_t = tname.lower()
+                if fpath and isinstance(fpath, str):
+                    op_kind = "write" if any(k in low_t for k in ("write", "edit", "replace", "patch")) else ("search" if any(k in low_t for k in ("grep", "glob", "find", "search")) else "read")
+                    fo = file_ops.setdefault(fpath, {"path": fpath, "read": 0, "write": 0, "search": 0})
+                    fo[op_kind] += 1
+                is_cmd = low_t in ("bash", "run_command", "exec", "shell", "terminal") or (isinstance(tinp, dict) and ("command" in tinp or "CommandLine" in tinp))
+                item["cat"] = "command" if is_cmd else ("file" if fpath else "")
+                if is_cmd:
+                    cmd_str = ""
+                    if isinstance(tinp, dict):
+                        cmd_str = tinp.get("command") or tinp.get("CommandLine") or ""
+                    if cmd_str:
+                        cmd_execs.append({
+                            "command": str(cmd_str)[:500],
+                            "status": tstat or ("error" if terr else "completed"),
+                            "time": pr["time_created"],
+                        })
+            elif ptype == "file":
+                item["mime"] = pdata.get("mime") or ""
+                item["url"] = pdata.get("url") or ""
+            elif ptype == "timeline":
+                item["timelineType"] = pdata.get("timelineType") or ""
+                item["status"] = pdata.get("status") or ""
+                events.append({
+                    "kind": pdata.get("timelineType") or "timeline",
+                    "status": pdata.get("status") or "",
+                    "time": pr["time_created"],
+                })
+            elif ptype == "compaction":
+                item["compaction"] = _compaction_row(pdata, pr["time_created"])
+                events.append({"kind": "context_compaction", "status": "done", "time": pr["time_created"],
+                               "compaction": item["compaction"]})
+            elif ptype == "step-finish":
+                item["reason"] = pdata.get("reason") or ""
+                item["tokens"] = pdata.get("tokens")
+            parts_by_msg.setdefault(pr["message_id"], []).append(item)
+
+    for r in mrows:
+        mdata = _safe_json_loads(r["data"]) or {}
+        mm = msg_metrics.get(r["id"])
+        msgs.append({
+            "id": r["id"],
+            "sequence": r["sequence"],
+            "role": mdata.get("role") or "unknown",
+            "modelId": mdata.get("modelId") or (mdata.get("modelSelection") or {}).get("modelId") or "",
+            "time": r["time_created"],
+            "tps": mm["tps"] if mm else 0.0,
+            "durationMs": mm["durationMs"] if mm else 0,
+            "ttftMs": mm["ttftMs"] if mm else 0,
+            "inputTokens": mm["inputTokens"] if mm else 0,
+            "cacheReadTokens": mm["cacheReadTokens"] if mm else 0,
+            "outputTokens": mm["outputTokens"] if mm else 0,
+            "parts": parts_by_msg.get(r["id"], []),
+        })
+
+    captured = _read_req_capture(session_id, con)
+
+    return {
+        "ok": True,
+        "sessionId": session_id,
+        "order": "desc" if order == "DESC" else "asc",
+        "turnId": turn_id or "",
+        "cursor": (lambda m: {"s": m["sequence"] or 0, "t": m["time"], "id": m["id"]} if m and order == "DESC" else None)(msgs[-1] if msgs else None),
+        "totalMessages": total_msgs,
+        "hasMore": offset + len(msgs) < total_msgs,
+        "offset": offset,
+        "limit": limit,
+        "messages": msgs,
+        "fileActivity": sorted(file_ops.values(), key=lambda x: x["read"] + x["write"] + x["search"], reverse=True)[:100],
+        "commands": cmd_execs[:100],
+        "events": events,
+        "capturedRequests": captured,
+    }
+
+
+def insights_json(con, days=7):
+    """Phase 4: 跨会话上下文洞察总览（高性能单次遍历 + 完整 dsh-context 指标 + TPS）。"""
+    is_all = (days == 0 or days is None)
+    days = 0 if is_all else max(1, min(int(days), 365))
+    now_dt = datetime.now()
+    kpi_start_ms = 0 if is_all else _epoch_ms(_day_start() - timedelta(days=days - 1))
+    heat_start_ms = _epoch_ms(_day_start() - timedelta(days=55))
+    query_start_ms = 0 if is_all else min(kpi_start_ms, heat_start_ms)
+
+    mrows = []
+    try:
+        mu_cols = {r[1] for r in con.execute("PRAGMA table_info(model_usage)").fetchall()}
+        s_cols = {r[1] for r in con.execute("PRAGMA table_info(session)").fetchall()}
+        reas_sel = "coalesce(m.reasoning_tokens, 0) AS reas" if "reasoning_tokens" in mu_cols else "0 AS reas"
+        err_sel = "coalesce(m.error_type,'')" if "error_type" in mu_cols else "''"
+        arch_sel = "s.time_archived" if "time_archived" in s_cols else "NULL AS time_archived"
+        mrows = con.execute(
+            "SELECT m.session_id, m.provider_id, m.model_id, "
+            "coalesce(m.completed_at, m.started_at, 0) AS ts, "
+            "coalesce(m.duration_ms, 0) AS duration_ms, "
+            "coalesce(m.time_to_first_token_ms, 0) AS ttft_ms, "
+            "coalesce(m.input_tokens, 0) AS inp, coalesce(m.output_tokens, 0) AS outp, "
+            f"{reas_sel}, "
+            "coalesce(m.cache_creation_input_tokens, 0) AS cw, "
+            "coalesce(m.cache_read_input_tokens, 0) AS cr, "
+            "coalesce(m.tool_call_count, 0) AS tool_calls, "
+            f"m.turn_id, s.title, s.directory, s.time_created, s.time_updated, {arch_sel}, "
+            f"{err_sel} AS et, m.query_source "
+            "FROM model_usage m LEFT JOIN session s ON s.id = m.session_id "
+            "WHERE coalesce(m.completed_at, m.started_at, 0) >= ? "
+            "ORDER BY ts DESC",
+            (query_start_ms,),
+        ).fetchall()
+    except sqlite3.Error:
+        mrows = []
+
+    daily_map = {}
+    heat_map = {}
+    sess_map = {}
+    model_map = {}
+    src_b = {}   # 来源桶：main / sub / aux / all（主/子代理拆分）
+    src_sess = {}
+    kpi_sessions = set()
+    archived_sessions = set()
+    kpi_turns = set()
+    kpi_reqs = kpi_inp = kpi_out = kpi_reas = kpi_cr = kpi_cw = kpi_dur = kpi_gen_ms = kpi_ttft_ms = kpi_tools = 0
+    kpi_ttft_n = 0
+    kpi_cost = 0.0
+
+    for r in mrows:
+        ts = int(r["ts"] or 0)
+        if ts <= 0:
+            continue
+        day_str = datetime.fromtimestamp(ts / 1000.0).strftime("%Y-%m-%d")
+        inp, outp, reas, cr, cw = int(r["inp"]), int(r["outp"]), int(r["reas"]), int(r["cr"]), int(r["cw"])
+        billed = inp + outp
+        sid = r["session_id"] or ""
+        mid = r["model_id"] or "unknown"
+        pid = r["provider_id"] or ""
+        src_key = _src_bucket(r["query_source"] or "")
+        et = str(r["et"] or "")
+
+        if ts >= heat_start_ms:
+            hm = heat_map.setdefault(day_str, {"date": day_str, "tokens": 0, "sessions": set(), "out": 0, "genMs": 0})
+            hm["tokens"] += billed
+            if sid:
+                hm["sessions"].add(sid)
+            dur_h = int(r["duration_ms"] or 0)
+            ttft_h = int(r["ttft_ms"] or 0)
+            gen_h = dur_h - ttft_h if (dur_h > ttft_h and ttft_h > 0) else dur_h
+            if outp > 0 and gen_h > 0:
+                hm["out"] += outp
+                hm["genMs"] += gen_h
+
+        if ts >= kpi_start_ms:
+            rc = _row_cost_usd(mid, pid, inp, outp, cr, cw)
+            dur = int(r["duration_ms"] or 0)
+            ttft = int(r["ttft_ms"] or 0)
+            gen_ms = dur - ttft if (dur > ttft and ttft > 0) else dur
+            for bk in (src_key, "all"):
+                _bump(src_b.setdefault(bk, _new_bucket()), inp, outp, reas, cr, cw, gen_ms, dur, ttft, rc,
+                      int(r["tool_calls"] or 0))
+            if sid:
+                src_sess.setdefault(src_key, set()).add(sid)
+                src_sess.setdefault("all", set()).add(sid)
+
+            kpi_reqs += 1
+            kpi_inp += inp
+            kpi_out += outp
+            kpi_reas += reas
+            kpi_cr += cr
+            kpi_cw += cw
+            kpi_dur += dur
+            kpi_gen_ms += gen_ms
+            kpi_ttft_ms += ttft
+            if ttft > 0:
+                kpi_ttft_n += 1
+            kpi_tools += int(r["tool_calls"] or 0)
+            kpi_cost += rc
+            if sid:
+                kpi_sessions.add(sid)
+                if r["time_archived"]:
+                    archived_sessions.add(sid)
+            if r["turn_id"]:
+                kpi_turns.add((sid, r["turn_id"]))
+
+            dm = daily_map.setdefault(day_str, {"date": day_str, "tokens": 0, "costUsd": 0.0, "requests": 0, "sessions": set(),
+                                                "mainTokens": 0, "subTokens": 0, "mainCost": 0.0, "subCost": 0.0,
+                                                "errors": 0, "rateLimited": 0})
+            dm["tokens"] += billed
+            dm["costUsd"] += rc
+            dm["mainCost"] += rc if src_key == "main" else 0.0
+            dm["subCost"] += rc if src_key == "sub" else 0.0
+            dm["requests"] += 1
+            dm["mainTokens"] += billed if src_key == "main" else 0
+            dm["subTokens"] += billed if src_key == "sub" else 0
+            if et:
+                dm["errors"] += 1
+                if et == "rate_limited":
+                    dm["rateLimited"] += 1
+            if sid:
+                dm["sessions"].add(sid)
+
+            mm = model_map.setdefault(mid, {"modelId": mid, "providerId": pid, "b": {}})
+            for bk in (src_key, "all"):
+                _bump(mm["b"].setdefault(bk, _new_bucket()), inp, outp, reas, cr, cw, gen_ms, dur, ttft, rc,
+                      int(r["tool_calls"] or 0))
+
+            if sid:
+                sm = sess_map.get(sid)
+                if sm is None:
+                    sm = {
+                        "id": sid,
+                        "title": r["title"] or "",
+                        "directory": r["directory"] or "",
+                        "archived": bool(r["time_archived"]),
+                        "createdAt": int(r["time_created"] or 0),
+                        "endTime": int(r["time_updated"] or 0),
+                        "updatedAt": ts,
+                        "turns": set(),
+                        "steps": 0,
+                        "requests": 0,
+                        "tokens": 0,
+                        "outTokens": 0,
+                        "genMs": 0,
+                        "costUsd": 0.0,
+                        "lastContext": inp + outp,
+                        "models": set(),
+                    }
+                    sess_map[sid] = sm
+                sm["steps"] += 1
+                sm["requests"] += 1
+                sm["tokens"] += billed
+                sm["outTokens"] += outp
+                sm["genMs"] += gen_ms
+                sm["costUsd"] += rc
+                if r["turn_id"]:
+                    sm["turns"].add(r["turn_id"])
+                if ts > sm["updatedAt"]:
+                    sm["updatedAt"] = ts
+                    sm["lastContext"] = inp + outp
+                if mid:
+                    sm["models"].add(mid)
+
+    top_tools = []
+    tot_tool_ms = 0
+    tot_tool_cnt = 0
+    try:
+        trows = con.execute(
+            "SELECT tool_name, count(*) AS cnt, "
+            "sum(CASE WHEN status IN ('error','failed') OR coalesce(nullif(exit_code,''),0)!=0 THEN 1 ELSE 0 END) AS errs, "
+            "sum(coalesce(duration_ms,0)) AS dur_ms, "
+            "max(coalesce(completed_at, started_at, 0)) AS last_at "
+            "FROM tool_usage WHERE coalesce(completed_at, started_at, 0) >= ? "
+            "GROUP BY tool_name ORDER BY cnt DESC LIMIT 15",
+            (kpi_start_ms,),
+        ).fetchall()
+        for tr in trows:
+            cnt = int(tr["cnt"] or 0)
+            dms = int(tr["dur_ms"] or 0)
+            tot_tool_cnt += cnt
+            tot_tool_ms += dms
+            top_tools.append({
+                "name": tr["tool_name"] or "unknown",
+                "count": cnt,
+                "errors": int(tr["errs"] or 0),
+                "avgDurationMs": round(dms / cnt) if cnt > 0 else 0,
+                "lastAt": int(tr["last_at"] or 0),
+            })
+    except sqlite3.Error:
+        pass
+
+    # Recent skills & programs (bounded scan of recent tool parts in window)
+    top_skills = []
+    top_programs = []
+    try:
+        s_map = {}
+        p_map = {}
+        for pr in con.execute(
+            "SELECT data, time_created FROM part ORDER BY rowid DESC LIMIT 3000"
+        ):
+            ts_p = int(pr["time_created"] or 0)
+            if ts_p < kpi_start_ms:
+                continue
+            pd = _safe_json_loads(pr["data"]) or {}
+            if pd.get("type") != "tool":
+                continue
+            tname = str(pd.get("tool") or "")
+            low_t = tname.lower()
+            st = pd.get("state") if isinstance(pd.get("state"), dict) else {}
+            tinp = st.get("input")
+            if low_t == "skill" and isinstance(tinp, dict):
+                sk = str(tinp.get("skill") or tinp.get("name") or "skill")
+                se = s_map.setdefault(sk, {"name": sk, "count": 0, "lastAt": 0})
+                se["count"] += 1
+                if ts_p > se["lastAt"]:
+                    se["lastAt"] = ts_p
+            elif (low_t in ("bash", "run_command", "exec", "shell", "terminal") or (isinstance(tinp, dict) and ("command" in tinp or "CommandLine" in tinp))) and isinstance(tinp, dict):
+                cmd_s = str(tinp.get("command") or tinp.get("CommandLine") or "").strip()
+                if cmd_s:
+                    prog = _command_program(cmd_s)
+                    if prog:
+                        pe = p_map.setdefault(prog, {"name": prog, "count": 0, "lastAt": 0})
+                        pe["count"] += 1
+                        if ts_p > pe["lastAt"]:
+                            pe["lastAt"] = ts_p
+        top_skills = sorted(s_map.values(), key=lambda x: x["count"], reverse=True)[:12]
+        top_programs = sorted(p_map.values(), key=lambda x: x["count"], reverse=True)[:12]
+    except sqlite3.Error:
+        pass
+
+    fx = _current_fx()
+    cache_hit = round((kpi_cr / kpi_inp) * 100.0, 2) if kpi_inp > 0 else 0.0
+    global_tps = round(kpi_out / (kpi_gen_ms / 1000.0), 1) if (kpi_out > 0 and kpi_gen_ms > 0) else 0.0
+
+    daily_span = 7 if (is_all or days <= 7) else min(days, 14)
+    daily_list = []
+    for i in range(daily_span - 1, -1, -1):
+        d = (now_dt - timedelta(days=i)).strftime("%Y-%m-%d")
+        dm = daily_map.get(d)
+        daily_list.append({
+            "date": d,
+            "tokens": dm["tokens"] if dm else 0,
+            "costUsd": round(dm["costUsd"], 6) if dm else 0.0,
+            "requests": dm["requests"] if dm else 0,
+            "sessions": len(dm["sessions"]) if dm else 0,
+            "mainTokens": dm["mainTokens"] if dm else 0,
+            "subTokens": dm["subTokens"] if dm else 0,
+            "mainCostUsd": round(dm["mainCost"], 6) if dm else 0.0,
+            "subCostUsd": round(dm["subCost"], 6) if dm else 0.0,
+            "errors": dm["errors"] if dm else 0,
+            "rateLimited": dm["rateLimited"] if dm else 0,
+        })
+
+    heatmap_list = []
+    for i in range(55, -1, -1):
+        d = (now_dt - timedelta(days=i)).strftime("%Y-%m-%d")
+        hm = heat_map.get(d)
+        heatmap_list.append({
+            "date": d,
+            "tokens": hm["tokens"] if hm else 0,
+            "sessions": len(hm["sessions"]) if hm else 0,
+            "avgTps": _rated_tps(hm["out"], hm["genMs"]) if hm else 0,
+        })
+
+    top_models = []
+    for mm in sorted(model_map.values(), key=lambda x: -x["b"].get("all", _new_bucket())["tokens"])[:12]:
+        entry = {"modelId": mm["modelId"], "providerId": mm["providerId"], "bySource": {}}
+        for bk in ("all", "main", "sub", "aux"):
+            if bk in mm["b"]:
+                entry["bySource"][bk] = _bucket_out(mm["b"][bk])
+        base = entry["bySource"]["all"]
+        entry["requests"] = base["requests"]
+        entry["tokens"] = base["tokens"]
+        entry["avgTps"] = base["tps"]
+        entry["costUsd"] = base["costUsd"]
+        top_models.append(entry)
+
+    sessions_list = []
+    for sm in sorted(sess_map.values(), key=lambda x: x["updatedAt"], reverse=True)[:100]:
+        stps = round(sm["outTokens"] / (sm["genMs"] / 1000.0), 1) if (sm["outTokens"] > 0 and sm["genMs"] > 0) else 0.0
+        sessions_list.append({
+            "id": sm["id"],
+            "title": sm["title"] or sm["id"][:14],
+            "directory": sm["directory"],
+            "archived": sm["archived"],
+            "createdAt": sm["createdAt"],
+            "endTime": sm["endTime"],
+            "updatedAt": sm["updatedAt"],
+            "turns": len(sm["turns"]),
+            "steps": sm["steps"],
+            "requests": sm["requests"],
+            "tokens": sm["tokens"],
+            "costUsd": round(sm["costUsd"], 6),
+            "tps": stps,
+            "lastContext": sm["lastContext"],
+            "models": sorted(sm["models"]),
+        })
+
+    # 8 分类 token 构成：思考与回复是实测值；其余六类库内没有，只能估算——system 与工具
+    # schema 有抓包时按抓到的真实内容均摊到每次请求（basis=capture），否则按固定比例
+    # （basis=ratio）；用户消息/注入/技能/工具结果按 2:8:4:73 分摊剩余输入。
+    cap = _capture_baseline()
+    if cap and cap["systemTokens"]:
+        basis = "capture"
+        sys_tok, schema_tok = cap["systemTokens"] * kpi_reqs, cap["toolsTokens"] * kpi_reqs
+    else:
+        basis = "ratio"
+        sys_tok, schema_tok = round(kpi_inp * 0.03), round(kpi_inp * 0.10)
+    ans_tok = max(0, kpi_out - kpi_reas)
+    rest = max(0, kpi_inp - sys_tok - schema_tok)
+    token_breakdown = [
+        {"id": "systemPrompt", "tokens": round(sys_tok)},
+        {"id": "toolSchemas", "tokens": round(schema_tok)},
+        {"id": "userMessages", "tokens": round(rest * 2 / 87)},
+        {"id": "injectedContext", "tokens": round(rest * 8 / 87)},
+        {"id": "skillInjections", "tokens": round(rest * 4 / 87)},
+        {"id": "toolCalls", "tokens": round(rest * 73 / 87)},
+        {"id": "reasoning", "tokens": kpi_reas},
+        {"id": "answers", "tokens": ans_tok},
+    ]
+    # Timing：全部实测。每行 dur = ttft + gen（无首字的行 gen=dur），三者相加即总活跃时长。
+    timing_breakdown = {
+        "ttftMs": kpi_ttft_ms,
+        "genMs": kpi_gen_ms,
+        "toolRunsMs": tot_tool_ms,
+        "modelMs": kpi_dur,
+        "avgTtftMs": round(kpi_ttft_ms / kpi_ttft_n) if kpi_ttft_n > 0 else 0,
+    }
+
+    # 真实压缩记录（窗口内全量，压缩是低频事件）
+    compactions = []
+    try:
+        for crow in con.execute(
+            "SELECT data, time_created FROM part WHERE time_created >= ? "
+            "AND json_extract(data,'$.type')='compaction' ORDER BY time_created DESC", (kpi_start_ms,),
+        ).fetchall():
+            pd = _safe_json_loads(crow["data"]) or {}
+            if isinstance(pd, dict) and pd.get("type") == "compaction":
+                compactions.append(_compaction_row(pd, int(crow["time_created"] or 0)))
+    except sqlite3.Error:
+        pass
+    cuts = [1 - c["postTokens"] / c["preTokens"] for c in compactions
+            if c["preTokens"] > 0 and 0 < c["postTokens"] <= c["preTokens"]]
+    compaction_health = {
+        "count": len(compactions),
+        "willRetrigger": sum(1 for c in compactions if c["willRetrigger"]),
+        "avgReductionPct": round(sum(cuts) / len(cuts) * 100, 1) if cuts else 0.0,
+        "latest": compactions[0] if compactions else None,
+    }
+    scope_where = "coalesce(completed_at, started_at, 0) >= ?"
+
+    return {
+        "ok": True,
+        "days": days,
+        "kpi": {
+            "sessions": len(kpi_sessions),
+            "archivedSessions": len(archived_sessions),
+            "turns": len(kpi_turns),
+            "requests": kpi_reqs,
+            "billedTokens": kpi_inp + kpi_out,
+            "inputTokens": kpi_inp,
+            "outputTokens": kpi_out,
+            "cacheReadTokens": kpi_cr,
+            "cacheHitRate": cache_hit,
+            "costUsd": round(kpi_cost, 6),
+            "fx": fx,
+            "toolCalls": max(kpi_tools, tot_tool_cnt),
+            "toolDurationMs": tot_tool_ms,
+            "activeDurationMs": kpi_dur + tot_tool_ms,
+            "modelCalls": kpi_reqs,
+            "tps": global_tps,
+        },
+        "tokenBreakdown": token_breakdown,
+        "tokenBreakdownBasis": basis,
+        "tokenSplit": _token_split(kpi_inp, kpi_out, kpi_reas, kpi_cr, kpi_cw),
+        "timingBreakdown": timing_breakdown,
+        "split": {k: dict(_bucket_out(v), sessions=len(src_sess.get(k, ()))) for k, v in src_b.items()},
+        "errors": _error_summary(scope_where, (kpi_start_ms,), con),
+        "toolQuality": _tool_quality(scope_where, (kpi_start_ms,), con),
+        "compactions": compactions[:50],
+        "compactionHealth": compaction_health,
+        "capture": cap,
+        "daily": daily_list,
+        "heatmap": heatmap_list,
+        "topSkills": top_skills,
+        "topTools": top_tools,
+        "topPrograms": top_programs,
+        "topModels": top_models,
+        "sessions": sessions_list,
+    }
 
 
 def render_today(con):

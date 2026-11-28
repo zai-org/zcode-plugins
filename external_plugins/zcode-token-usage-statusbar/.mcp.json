@@ -2,9 +2,8 @@
   "mcpServers": {
     "zusage": {
       "type": "stdio",
-      "command": "node",
+      "command": "zcode-python",
       "args": [
-        "${ZCODE_PLUGIN_ROOT}/mcp-launch.cjs",
         "${ZCODE_PLUGIN_ROOT}/usage_mcp.py"
       ],
       "enabled": true

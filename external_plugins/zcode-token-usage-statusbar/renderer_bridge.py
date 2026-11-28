@@ -940,9 +940,9 @@ def _sweep_stale_stages(directory):
             pass
 
 
-def _inspect_deploy(asar_path):
+def _inspect_deploy(asar_path, source=None):
     """只读检查目标 asar 的桥状态：返回 ("result", dict) 或 ("patch", tuple)。"""
-    before = asar.source_fingerprint(asar_path)
+    before = source if source is not None else asar.source_fingerprint(asar_path)
     with asar_path.open("rb") as stream:
         header, base = asar.read_header(stream)
         nodes = dict(asar.iter_files(header))
@@ -956,8 +956,15 @@ def _inspect_deploy(asar_path):
             asset_path = target["asset"]
             original = _read(stream, nodes, base, asset_path)
             if MARKER not in original and _digest(original) != target["sha256"]:
-                return "result", {"status": "skipped-unknown", "version": version,
-                                  "detail": "asset hash mismatch for pinned version (host build drift)"}
+                # 同版本字节漂移（宿主对同版本号重 build）先走 derive_target 严格结构
+                # 推导：混淆区未轮换时四项唯一校验与表外版本同一强度，通过则按推导
+                # 指纹打桥；推导不过仍 fail-closed，detail 保留漂移与拒绝原因供诊断。
+                try:
+                    target = derive_target(version, original, asset_path, set(nodes))
+                except BridgeError as error:
+                    return "result", {"status": "skipped-unknown", "version": version,
+                                      "detail": "asset hash mismatch for pinned version (host build drift); "
+                                                "derive refused: " + str(error)}
         else:
             modules = {path: _read(stream, nodes, base, path) for path in
                        sorted(path for path in nodes if AUTO_ASSET_RE.fullmatch(path))}
@@ -999,11 +1006,56 @@ def _inspect_deploy(asar_path):
                                   "detail": "auto-derivation ambiguous across renderer assets"}
             target = derived[0]
             asset_path, original = target["asset"], modules[target["asset"]]
-    _original_module(original, target)
+    try:
+        _original_module(original, target)
+    except BridgeError:
+        # 桥在而 pinned 指纹校验不过 = 前次按推导指纹打的兜底桥（原始字节漂移）。
+        # 剥桥后结构推导命中、且按推导指纹重打的整模块逐字节等于现状（覆盖属性
+        # 串与桥块，移植自其它版本资产的桥——形状合法、names 映射错误——在此拦
+        # 截），才认定为已部署；否则维持 tampered 语义上抛。
+        if MARKER not in original:
+            raise
+        stripped = _strip_auto_bridge(original)
+        derived = derive_target(version, stripped, asset_path, set(nodes))
+        if transform_module(stripped, "patch", derived) != original:
+            raise BridgeError("Bridge marker/content tampered")
+        return "result", {"status": "present", "version": version,
+                          "detail": "bridge already deployed (derived fingerprint)"}
     modified = transform_module(original, "patch", target)
     if modified == original:
         return "result", {"status": "present", "version": version, "detail": "bridge already deployed"}
-    return "patch", (before, base, nodes, header, version, auto, asset_path, original, modified)
+    return "patch", (before, base, nodes, header, version, auto, bool(target.get("derived")),
+                     asset_path, original, modified)
+
+
+def plan_deploy(asar_path):
+    """loader 安装事务的并入钩子（patch_install.install(extra_modify=...) 的数据来源）：
+    只读判定目标 asar 是否缺桥，缺则给出改写后的渲染资产与判定时的整包指纹。返回 None =
+    不并入（已带桥、布局无法验证或任何读档失败）——桥是旁路增强，绝不影响 loader 安装。
+    调用方只有在本指纹与其重打包来源一致时才并入（specs/asar-single-transaction.md）。"""
+    try:
+        asar_path = Path(asar_path)
+        kind, payload = _inspect_deploy(asar_path)
+        if kind != "patch":
+            return None
+        before, _base, _nodes, _header, _version, _auto, _derived, asset_path, _original, modified = payload
+        if not isinstance(asset_path, str) or not isinstance(modified, bytes) or not modified:
+            return None
+        return {"source": before, "modify": {asset_path: modified}}
+    except Exception:
+        return None
+
+
+def plan_supplement(asar_path, source):
+    """Return bridge diagnostics and the asset change for the shared archive transaction."""
+    try:
+        kind, payload = _inspect_deploy(asar_path, source=source)
+    except Exception as error:
+        return {"status": "skipped-error", "detail": str(error)}, {}
+    if kind == "result":
+        return payload, {}
+    _, _, _, _, version, _, _, asset_path, _, modified = payload
+    return {"status": "planned", "version": version}, {asset_path: modified}
 
 
 def ensure_deployed(asar_path):
@@ -1012,10 +1064,12 @@ def ensure_deployed(asar_path):
     与 rewrite_asar（CLI/测试，只输出到工作区/临时目录）不同，本函数就是为写
     安装目录设计的：借用 patch_install 同一把 app.asar.zusage.lock 跨进程锁，
     输出临时文件在 asar 同目录后 os.replace 原子换。任何失败都不抛出——桥只是
-    实时统计的增强，绝不影响安装/更新主流程。表内版本严格按指纹；表外版本
-    先走 derive_target 的严格结构推导，校验不过按 fail-closed 跳过。受保护目录
-    拿不到锁写权限时先做只读判定：确定无需写盘（present/skipped-unknown）直接
-    返回真实状态，确需写入才报 skipped-error（带 permission 标记，见 issue #67/#247）。
+    实时统计的增强，绝不影响安装/更新主流程。表内版本严格按指纹，同版本字节
+    漂移（宿主重 build）先走 derive_target 结构推导兜底；表外版本同样先走
+    derive_target 的严格结构推导，校验不过按 fail-closed 跳过。只读判定在锁外
+    完成：确定无需写盘（present/skipped-unknown）不碰锁直接返回真实状态；确需
+    写入而目录不可写（受保护目录）才报 skipped-error（带 permission 标记，见
+    issue #67/#247）。
     返回状态：
       {"status": "patched"|"present"|"skipped-unknown"|"skipped-error",
        "version": <客户端版本>, "detail": <说明>}
@@ -1023,41 +1077,36 @@ def ensure_deployed(asar_path):
     或目标目录 ACL 只读）：此时返回 replace-failed，stage 是已构建完整的带桥
     包、source 是发布前 asar 的指纹；调用方应转存待替换链
     （patch_install.publish_external_pending）或删除 stage，不能留在原地。
+
+    锁窗口纪律（与 mobile relay 补装同款）：读档、推导与 stage 写盘全程在锁外
+    完成（读 asar 不需要锁），目标锁只包「发布前指纹重验 + os.replace」的亚秒级
+    提交——多窗口并发 SessionStart 抢同一把锁时不再整段空转；构建期间目标被并发
+    改写时按指纹不符整体重试一次，二次仍变按 skipped-error 报告。
     """
-    try:
-        from runtime_lock import file_lock
-        asar_path = Path(asar_path)
-        with contextlib.ExitStack() as stack:
-            try:
-                stack.enter_context(file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")))
-            except PermissionError as lock_error:
-                # 受保护目录（Program Files / /opt 等）下普通用户拿不到同目录锁文件写权限：
-                # 先只读判定——若桥已在位（present）或版本未登记（skipped-unknown），
-                # 无需任何写操作，直接返回真实状态，避免提权安装后每次普通会话误报
-                # skipped-error 或吞掉未登记版本的兼容性提醒（issue #67/#247）。
-                # 检查自身失败（坏 asar、读档异常）无法证明无需写盘，按锁失败原语义
-                # 上报，保住 permission 标记供提权指引，不降级为无标记的通用错误。
-                try:
-                    kind, payload = _inspect_deploy(asar_path)
-                except Exception:
-                    raise lock_error
-                if kind == "result":
-                    return payload
-                raise lock_error
-            _sweep_stale_stages(asar_path.parent)
+    for attempt in range(2):
+        stage = None
+        try:
+            from runtime_lock import file_lock
+            asar_path = Path(asar_path)
+            # —— 锁外：过期残留清扫、只读检查、构建完整 stage ——
+            _sweep_stale_stages(asar_path.parent)   # 只清过期残留，锁外并发安全
             kind, payload = _inspect_deploy(asar_path)
             if kind == "result":
                 return payload
-            before, base, nodes, header, version, auto, asset_path, original, modified = payload
+            before, base, nodes, header, version, auto, derived, asset_path, original, modified = payload
             fd, name = asar.bounded_mkstemp(prefix=".zusage-bridge-", dir=str(asar_path.parent))
             stage = Path(name)
-            try:
-                with os.fdopen(fd, "wb") as dest, asar_path.open("rb") as stream:
-                    _rewrite_to(stream, base, nodes, header, asset_path, original, modified, dest)
-                    dest.flush()
-                    os.fsync(dest.fileno())
+            with os.fdopen(fd, "wb") as dest, asar_path.open("rb") as stream:
+                _rewrite_to(stream, base, nodes, header, asset_path, original, modified, dest)
+                dest.flush()
+                os.fsync(dest.fileno())
+            # —— 短锁：指纹重验 + 原子替换 ——
+            with file_lock(asar_path.with_name(asar_path.name + ".zusage.lock")):
                 if asar.source_fingerprint(asar_path) != before:
-                    raise BridgeError("Source archive changed")
+                    if attempt:
+                        return {"status": "skipped-error", "version": version,
+                                "detail": "target archive kept changing during build"}
+                    continue   # 丢弃本轮 stage（finally 清理），基于新内容重建
                 os.chmod(stage, stat.S_IMODE(asar_path.stat().st_mode))
                 try:
                     os.replace(stage, asar_path)
@@ -1068,22 +1117,31 @@ def ensure_deployed(asar_path):
                                 "detail": str(error), "stage": str(stage), "source": before}
                     stage = None   # 已移交：finally 不得清理
                     return handover
-                stage = None
-            finally:
-                if stage is not None:
-                    try:
-                        stage.unlink(missing_ok=True)
-                    except OSError:
-                        pass
-        return {"status": "patched", "version": version,
-                "detail": "auto-derived bridge deployed" if auto else "bridge deployed"}
-    except PermissionError as error:
-        # 权限不足要单独可辨：Windows 的 os.access 看不见 ACL（目录恒报可写），
-        # 调用方只能按本标记给用户提权指引（issue #67 场景 1）
-        return {"status": "skipped-error", "version": None, "detail": str(error),
-                "permission": True}
-    except Exception as error:  # 安装链的旁路增强：任何异常都只报告
-        return {"status": "skipped-error", "version": None, "detail": str(error)}
+            stage = None
+            return {"status": "patched", "version": version,
+                    "detail": ("auto-derived bridge deployed" if auto else
+                               ("bridge deployed (derived fingerprint)" if derived
+                                else "bridge deployed"))}
+        except asar.PendingTmpError as error:
+            # 锁外只读判定/取指纹撞上并发发布窗口（source_fingerprint 的 stamp 校验
+            # 失败）：与短锁指纹重验同语义重试一轮，二次仍撞才 skipped-error。
+            # version 固定 None：抛点可能在 payload 解包前，此时尚未绑定
+            if attempt:
+                return {"status": "skipped-error", "version": None, "detail": str(error)}
+            continue
+        except PermissionError as error:
+            # 权限不足要单独可辨：Windows 的 os.access 看不见 ACL（目录恒报可写），
+            # 调用方只能按本标记给用户提权指引（issue #67 场景 1）
+            return {"status": "skipped-error", "version": None, "detail": str(error),
+                    "permission": True}
+        except Exception as error:  # 安装链的旁路增强：任何异常都只报告
+            return {"status": "skipped-error", "version": None, "detail": str(error)}
+        finally:
+            if stage is not None:
+                try:
+                    stage.unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 def _inspect_remove(asar_path):
@@ -1115,15 +1173,25 @@ def _inspect_remove(asar_path):
             original = _read(stream, nodes, base, asset_path)
             if MARKER not in original:
                 return "result", {"status": "absent", "version": target["version"], "detail": "no bridge present"}
-            restored = transform_module(original, "remove")
+            try:
+                restored = transform_module(original, "remove")
+            except BridgeError:
+                # pinned 指纹校验不过的桥 = 前次按推导指纹打的兜底桥（原始字节漂移）：
+                # 剥桥后结构推导命中、且按推导指纹重打的整模块逐字节等于现状（覆盖
+                # 属性串与桥块），才放行剥离；否则维持 tampered 语义上抛。
+                restored = _strip_auto_bridge(original)
+                derived = derive_target(version, restored, asset_path, set(nodes))
+                if transform_module(restored, "patch", derived) != original:
+                    raise BridgeError("Bridge marker/content tampered")
     return "remove", (before, base, nodes, header, version, auto, asset_path, original, restored)
 
 
 def remove_deployed(asar_path):
     """卸载链对称清理：只剥离本项目的桥，其余内容不动。
 
-    表内版本按指纹逐版本识别；表外版本（自动推导补的桥）按模板剥离桥块与
-    属性串。与 ensure_deployed 同样的锁/原子替换/不抛出约定，状态 dict 同构：
+    表内版本按指纹逐版本识别（同版本字节漂移的兜底桥走剥桥+推导验证对称
+    剥离）；表外版本（自动推导补的桥）按模板剥离桥块与属性串。与
+    ensure_deployed 同样的锁/原子替换/不抛出约定，状态 dict 同构：
     常规路径的读取与判定都在锁内（锁拿不到写权限时按只读判定放行，见
     ensure_deployed），发布前复核 source fingerprint，避免用锁外旧布局写坏归档。"""
     try:

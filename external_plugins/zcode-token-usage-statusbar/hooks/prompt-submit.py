@@ -18,6 +18,15 @@ import sys
 import threading
 from pathlib import Path
 
+# 解释器版本门（issue #454）：hooks.json 的 python3 → python → py -3 回退链只认退出码，
+# PATH 里的低版本 python 跑通主体、异常被下方兜底吞掉后以 0 退出，后面的候选永远轮不到。
+# 必须先于 read_stdin 与任何 3.8+ 语法/API：不达标即非零退出让位下一候选，hook 入参也
+# 不会被旧解释器读掉。退出码不得用 2（宿主语义=阻断）；本段保持 3.7 可解析。
+if sys.version_info < (3, 8):
+    sys.stderr.write("[zusage-plugin] Python %d.%d is too old; zusage needs 3.8+, "
+                     "skipping this interpreter\n" % sys.version_info[:2])
+    sys.exit(9)
+
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 
 

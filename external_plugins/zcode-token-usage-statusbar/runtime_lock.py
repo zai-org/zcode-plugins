@@ -2,6 +2,7 @@
 """Permanent-file OS locks shared by the runtime synchronizer and Node helpers."""
 import argparse
 import errno
+import hashlib
 import json
 import os
 import shutil
@@ -9,7 +10,7 @@ import stat
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 _MKSTEMP_ATTEMPTS = 16
@@ -98,6 +99,63 @@ def fixed_drives(letters):
     return [letter for letter in letters if drive_type(f"{letter}:\\") == 3]   # DRIVE_FIXED
 
 
+class FileLockBusy(TimeoutError):
+    """An advisory lock stayed held until its acquisition deadline."""
+
+
+# os.replace / os.unlink 遇并发读者的短暂重试（同 token_rate._replace_state_file）。
+_REPLACE_ATTEMPTS = 20
+_REPLACE_WAIT_S = 0.01
+
+
+def _replace_retrying(source, target):
+    """os.replace 短暂重试。Windows 上目标被任何句柄打开时替换都被拒绝——读者、杀软，也包括
+    主进程自己的 fs 句柄（实测不论共享模式）；这些读者都是微秒级短开，重试窗口远大于它。
+    静默放弃会丢掉重启待办，手机安装意图的回滚失败还会留下一条永不销账的
+    pending-install。POSIX 的 rename 不受并发读者影响，重试零成本；永久性拒绝只是多等
+    (_REPLACE_ATTEMPTS − 1) × _REPLACE_WAIT_S（约 190ms）才上抛同一异常。"""
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_WAIT_S)
+
+
+def _unlink_retrying(path):
+    """同 _replace_retrying，用于删除标记；文件本就不在按成功处理。"""
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.unlink(path)
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_WAIT_S)
+
+
+def _discard_tmp(name):
+    """丢弃没发布的临时文件（尽力清理，不打断已经在传播的异常）。带 preserve 的写入会把
+    临时文件 chmod 成目标的权限位：Windows 上目标只读时它也只读，unlink 被拒——先补回写
+    权限再删，否则每次失败都留下一个 .tmp。"""
+    try:
+        os.unlink(name)
+    except FileNotFoundError:
+        return
+    except PermissionError:
+        try:
+            os.chmod(name, stat.S_IWRITE | stat.S_IREAD)
+            os.unlink(name)
+        except OSError:
+            pass
+    except OSError:
+        pass
+
+
 @contextmanager
 def file_lock(path, timeout=10.0):
     """Acquire an advisory lock or raise TimeoutError; never unlink the lock file."""
@@ -108,7 +166,14 @@ def file_lock(path, timeout=10.0):
         if os.name == "nt":
             import msvcrt
             if os.fstat(fd).st_size == 0:
-                os.write(fd, b"\0")
+                # 两个进程同时首次创建同一锁文件时，后到者在先到者补写之前看到大小 0，这次
+                # 补写会撞上对方刚锁定的首字节（EACCES）。这只是锁被占，落到下面的取锁
+                # 循环按 busy 处理；其它错误原样上抛。
+                try:
+                    os.write(fd, b"\0")
+                except OSError as exc:
+                    if exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                        raise
         else:
             import fcntl
         while True:
@@ -125,7 +190,7 @@ def file_lock(path, timeout=10.0):
                     raise
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    raise TimeoutError("runtime lock is busy: " + os.fspath(path)) from exc
+                    raise FileLockBusy("runtime lock is busy: " + os.fspath(path)) from exc
                 time.sleep(min(0.05, remaining))
         yield
     finally:
@@ -140,12 +205,27 @@ def file_lock(path, timeout=10.0):
             os.close(fd)
 
 
-def _read_marker(marker):
+def _read_marker(marker, unreadable=None):
+    """JSON 损坏/非对象按空标记（合并与发布链据此重建）；读不到（OSError）返回 unreadable。
+    缺省仍是空标记；record_restart/ack_restart 传 False 以区分「读不到」与「没有待办」。
+    文件不存在恒为空标记：「没有标记」不是读失败。"""
     try:
-        data = json.loads(marker.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+        raw = marker.read_text(encoding="utf-8")
+    except (FileNotFoundError, UnicodeDecodeError):
         return {}
+    except OSError:
+        return {} if unreadable is None else unreadable
+    return _parse_marker(raw)
+
+
+def _parse_marker(raw):
+    try:
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        data = json.loads(raw)
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _hashes(value):
@@ -169,14 +249,29 @@ def _write_marker(marker, data, preserve=None):
             fd = None
             json.dump(data, stream, ensure_ascii=False)
             stream.write("\n")
-        os.replace(name, marker)
+        _replace_retrying(name, marker)
     finally:
         if fd is not None:
             os.close(fd)
-        try:
-            os.unlink(name)
-        except OSError:
-            pass
+        _discard_tmp(name)
+
+
+def _restore_marker_bytes(marker, previous):
+    if previous is None:
+        _unlink_retrying(marker)
+        return
+    fd, name = bounded_mkstemp(prefix=marker.name + ".", suffix=".tmp", dir=marker.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            fd = None
+            stream.write(previous)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _replace_retrying(name, marker)
+    finally:
+        if fd is not None:
+            os.close(fd)
+        _discard_tmp(name)
 
 
 def update_config(runtime, changes, defaults=None, merge=None):
@@ -232,9 +327,13 @@ def update_config(runtime, changes, defaults=None, merge=None):
 
 
 def update_enhance_provider(runtime, revision, changes):
-    """Update the restricted enhancement settings under the shared runtime lock."""
-    if os.name == "nt":
-        raise ValueError("secure enhancement provider storage unavailable")
+    """Update the restricted enhancement settings under the shared runtime lock.
+
+    POSIX enforces owner-only access (uid + 0600 mode); Windows has no equivalent
+    owner semantics, so those checks are skipped there and the file relies on the
+    profile-directory ACL like quota-secrets.json (issue #442 lifted the old
+    unconditional fail-closed gate).
+    """
     if not isinstance(revision, int) or isinstance(revision, bool) or revision < 0 or not isinstance(changes, dict):
         raise ValueError("invalid enhancement settings")
     fields = {"mode", "source", "providerId", "target", "baseUrl", "protocol", "model", "keyAction", "apiKey", "allowDowngrade", "saveHistory"}
@@ -242,7 +341,9 @@ def update_enhance_provider(runtime, revision, changes):
         raise ValueError("invalid enhancement settings")
     runtime = Path(runtime)
     info = runtime.stat()
-    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.geteuid():
+    if not stat.S_ISDIR(info.st_mode):
+        raise ValueError("unsafe runtime directory")
+    if os.name != "nt" and info.st_uid != os.geteuid():
         raise ValueError("unsafe runtime directory")
     config = runtime / "enhance-provider.json"
     lock = runtime / "enhance-provider.lock"
@@ -257,7 +358,8 @@ def update_enhance_provider(runtime, revision, changes):
         else:
             with os.fdopen(fd, "r", encoding="utf-8") as stream:
                 st = os.fstat(stream.fileno())
-                if not stat.S_ISREG(st.st_mode) or st.st_uid != os.geteuid() or st.st_nlink != 1 or st.st_mode & 0o077:
+                if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1 or (
+                        os.name != "nt" and (st.st_uid != os.geteuid() or st.st_mode & 0o077)):
                     raise ValueError("unsafe enhancement settings")
                 current = json.load(stream)
             if not isinstance(current, dict) or current.get("version") != 1 or not isinstance(current.get("revision"), int):
@@ -289,20 +391,28 @@ def update_enhance_provider(runtime, revision, changes):
         updated["revision"] = revision + 1
         fd, name = bounded_mkstemp(prefix=".enhance-provider-", suffix=".tmp", dir=runtime)
         try:
-            os.fchmod(fd, 0o600)
+            if hasattr(os, "fchmod"):
+                os.fchmod(fd, 0o600)   # POSIX：收紧到属主；Windows 无此调用，随目录 ACL（quota-secrets.json 同款取舍）
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
                 fd = None
                 json.dump(updated, stream, ensure_ascii=False)
                 stream.write("\n")
-            os.replace(name, config)
+            _replace_retrying(name, config)   # 同标记写入：Windows 上并发读者会让替换被拒
         finally:
             if fd is not None:
                 os.close(fd)
-            try:
-                os.unlink(name)
-            except OSError:
-                pass
+            _discard_tmp(name)
         return updated
+
+
+def _merge_restart(previous, data):
+    hashes = _hashes(previous.get("hashes"))
+    hashes.update(_hashes(data.get("hashes")))
+    if data.get("state") == "pending-install":
+        previous.pop("publishedAt", None)  # A retry/new intent cannot inherit an earlier publication.
+    previous.update(data)
+    previous.update(createdAt=time.time(), hashes=hashes)
+    return previous
 
 
 def record_restart(runtime, data):
@@ -312,15 +422,22 @@ def record_restart(runtime, data):
     runtime = Path(runtime)
     marker = runtime / ".plugin-restart-required"
     with file_lock(runtime / "plugin-restart.lock"):
-        previous = _read_marker(marker)
-        hashes = _hashes(previous.get("hashes"))
-        hashes.update(_hashes(data.get("hashes")))
-        if data.get("state") == "pending-install":
-            previous.pop("publishedAt", None)  # A retry/new intent cannot inherit an earlier publication.
-        previous.update(data)
-        previous.update(createdAt=time.time(), hashes=hashes)
-        _write_marker(marker, previous)
+        previous = _read_marker(marker, unreadable=False)
+        if previous is False:
+            # 读不到 ≠ 没有旧通知，不能用新记录覆盖无法读取的旧待办。
+            raise OSError("restart marker unreadable")
+        _write_marker(marker, _merge_restart(previous, data))
     return {"ok": True}
+
+
+def _confirm_publication(marker, data):
+    if marker.is_file() and _read_marker(marker) == data:
+        data["publishedAt"] = time.time() * 1000
+        try:
+            _write_marker(marker, data)
+        except OSError as exc:
+            # ASAR is already published. Leave the intent unconfirmed, not a false success.
+            print("[zusage-plugin] installation publication record failed: " + str(exc), file=sys.stderr)
 
 
 @contextmanager
@@ -335,13 +452,49 @@ def publish_install(runtime, installation):
         data = _read_marker(marker)
         owned = data.get("installation") == installation
         yield
-        if owned and marker.is_file() and _read_marker(marker) == data:
-            data["publishedAt"] = time.time() * 1000
-            try:
-                _write_marker(marker, data)
-            except OSError as exc:
-                # ASAR is already published. Leave the intent unconfirmed, not a false success.
-                print("[zusage-plugin] installation publication record failed: " + str(exc), file=sys.stderr)
+        if owned:
+            _confirm_publication(marker, data)
+
+
+class RestartMarkerBusy(TimeoutError):
+    """The independent restart-marker advisory lock could not be acquired."""
+
+
+@contextmanager
+def publish_supplement(runtime, installation, *, committed):
+    """Own the patch intent through direct replacement or validated pending publication."""
+    runtime = Path(runtime)
+    marker = runtime / ".plugin-restart-required"
+    pending = False
+
+    def keep_pending():
+        nonlocal pending
+        pending = True
+
+    with ExitStack() as stack:
+        try:
+            stack.enter_context(file_lock(runtime / "plugin-restart.lock", timeout=0.0))
+        except FileLockBusy as error:
+            raise RestartMarkerBusy("restart marker lock is busy") from error
+        try:
+            previous = marker.read_bytes()
+        except FileNotFoundError:
+            previous = None
+        data = _merge_restart(_parse_marker(previous) if previous is not None else {},
+                              {"state": "pending-install", "installation": installation})
+        try:
+            _write_marker(marker, data)
+            yield keep_pending
+        except BaseException:
+            if not pending and _read_marker(marker) == data and not committed():
+                try:
+                    _restore_marker_bytes(marker, previous)
+                except OSError as exc:
+                    print("[zusage-plugin] patch installation intent rollback failed: " + str(exc),
+                          file=sys.stderr)
+            raise
+        if not pending and data.get("installation") == installation:
+            _confirm_publication(marker, data)
 
 
 def ack_restart(runtime, loaded):
@@ -353,7 +506,12 @@ def ack_restart(runtime, loaded):
     with file_lock(runtime / "plugin-restart.lock"):
         if not marker.exists():
             return {"ok": True, "cleared": False}
-        data = _read_marker(marker)
+        data = _read_marker(marker, unreadable=False)
+        if data is False or (not data and not marker.exists()):
+            # 瞬态读失败 ≠ 没有待办：保留标记，下次 ack 再核（此前按空标记直接删除，
+            # 一次读失败就把「需要重启」的红点误销）。判存在后读完即被外部删除同理：
+            # 什么都没销、也不重建标记
+            return {"ok": True, "cleared": False}
         loaded_at = loaded.get("_loadedAt")
         hot_loaded = loaded.get("_hotLoadedAt")
         created_at = data.get("createdAt")
@@ -391,16 +549,39 @@ def ack_restart(runtime, loaded):
             if (not isinstance(installation, dict)
                     or not isinstance(published_at, (int, float)) or isinstance(published_at, bool)
                     or not isinstance(loaded_at, (int, float)) or isinstance(loaded_at, bool)
+                    or published_at != published_at   # NaN：json.loads 放行，比较恒假会把销账放行
                     or loaded_at <= published_at):
                 return {"ok": True, "cleared": False}
         hashes = _hashes(data.get("hashes"))
         if hashes:
-            remaining = {key: digest for key, digest in hashes.items() if loaded.get(key) != digest}
+            remaining = {}
+            for key, digest in hashes.items():
+                if loaded.get(key) == digest:
+                    continue   # 本进程已持有目标字节
+                # 防孤儿 marker（2026-11-21 实机红点常亮）：digest 已不在盘上 = 记录后运行文件被第三方改写
+                #（如 preserved 保护的开发部署覆盖了同步写入的字节）。该目标重启也
+                # 加载不到（loaded 恒不等于 digest），保留只会让 ⚙ 红点永亮——以盘上
+                # 现状为准视为已被超越，从待办剔除；目标仍有效（盘上==digest）则照常保留。
+                if (os.path.splitdrive(key)[0] or os.path.isabs(key) or "\x00" in key
+                        or key in (os.curdir, os.pardir)
+                        or os.sep in key or (os.altsep and os.altsep in key)):
+                    continue   # 损坏 marker 的路径形键：正常写入方全白名单，拒读防拼路径逃逸
+                try:
+                    on_disk = hashlib.sha256((runtime / key).read_bytes()).hexdigest()
+                except (FileNotFoundError, IsADirectoryError, NotADirectoryError):
+                    on_disk = None   # 文件已不在盘上：目标永加载不到，按已被超越剔除
+                except OSError:
+                    # Windows 读目录占位抛 PermissionError 而非 IsADirectoryError：目录永不
+                    # 匹配 digest，同样按已被超越剔除；其余瞬态读失败保守保留待办，下次 ack 再核
+                    on_disk = None if (runtime / key).is_dir() else digest
+                if on_disk != digest:
+                    continue
+                remaining[key] = digest
             if remaining:
                 data["hashes"] = remaining
                 _write_marker(marker, data)
                 return {"ok": True, "cleared": False}
-        marker.unlink()
+        _unlink_retrying(marker)   # 同标记替换：Windows 上并发读者会让 unlink 被拒
     return {"ok": True, "cleared": True}
 
 
@@ -442,4 +623,14 @@ def main():
 
 
 if __name__ == "__main__":
+    # 入站 JSON（--record-restart / --update-config / --update-enhance-provider 的载荷）按 UTF-8
+    # 严格解码：主进程与更新器按 JSON.stringify 写 stdin、spawn 时不注入 PYTHONUTF8，中文 Windows
+    # 的管道默认按区域代码页解码——含非 ASCII 的载荷（经 stdin 的调用方里只有
+    # --update-enhance-provider 可能如此：模型名、密钥、地址这些自由落盘的字符串）会被读成乱码
+    # 或留下孤立代理项（后者让这次保存失败）。一次性命令行没有读循环要保护：畸形字节直接以
+    # 非零退出失败，不把替换字符写进配置（字符串内的坏字节若换成 U+FFFD 会照常解析并落盘）。
+    try:
+        sys.stdin.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
     raise SystemExit(main())   # main() 的 return 1（事务失败）必须传播为非零退出码，否则调用方把失败当成功

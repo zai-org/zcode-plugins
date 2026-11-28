@@ -21,15 +21,38 @@
     return n;
   }
 
+  /* 重挂后的稳窗（issue #483，specs/live-rate-estimate-robustness.md）。重挂时 tracker 的首个快照是订阅那一刻的
+   * 整份快照，被压住的增量帧随后涌入，两者之间的输出会被算成瞬间生成（真机 71ms 内 43 个 seq）。tracker
+   * 建立后 SETTLE_MS 内，每一帧字符增长的入库都改作新基线——按帧间隔判会漏掉来得稀一点的帧，所以不看间隔；
+   * 只管 tracker 刚建立这一小段，之后的积压是真实生成的迟到投递，仍按窗口平均。昂贵会话里通知被下方预算
+   * 合并成一次入库，可能落在这段之后，放宽到建立后 MERGE_SETTLE_MS 内的第一个合并入库（预算间隔上限 1 秒），
+   * 每次建立只做一次。 */
+  const SETTLE_MS = 300, MERGE_SETTLE_MS = 1200;
+
+  /* 缩水保持窗沿用的下降前速率，只在末样本还很新时取（issue #483）：输出已经停了一阵再缩水，沿用旧速率
+   * 等于把一条早就该消失的读数再延长 2 秒。 */
+  const HOLD_FRESH_MS = 500;
+
+  /* 滑动窗速率：窗口首样本到采样时刻的字符增量 ÷ 跨度。跨度不足 200ms、或末样本已停更 2 秒 → null。 */
+  function windowRate(samples, sampledAt) {
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    const elapsed = first ? sampledAt - first.at : 0;
+    return elapsed >= 200 && last && sampledAt - last.at <= 2000 ?
+      Math.max(0, last.characters - first.characters) * 1000 / elapsed : null;
+  }
+
   function createTracker(options = {}) {
     const now = options.now || (() => performance.now());
     const turns = new Map();
     let epoch = null;
     let session = null;
     let sequence = -1;
+    let bornAt = null;   // 首个成功入库的快照时刻：稳窗从这里起算（换会话/纪元时重置；clear() 把纪元置空，下一帧走同一分支）
     let disposed = false;
 
-    function ingest(snapshot) {
+    /* merged=true：subscribeStore 把预算间隔内的通知合并后的入库（中间帧被跳过） */
+    function ingest(snapshot, merged) {
       if (disposed || !snapshot || typeof snapshot.sessionId !== 'string' ||
           typeof snapshot.logEpoch !== 'string' || !Number.isSafeInteger(snapshot.seq) ||
           !snapshot.rows || !Array.isArray(snapshot.rows.window)) return false;
@@ -38,25 +61,42 @@
         epoch = snapshot.logEpoch;
         session = snapshot.sessionId;
         sequence = -1;
+        bornAt = null;   // 换会话/纪元：tracker 视同新建（按轮记的 mergeSettled 随 turns.clear() 一并清掉）
       }
       if (snapshot.seq <= sequence) return false;
       sequence = snapshot.seq;
       const at = now();
+      if (bornAt === null) bornAt = at;
       const currentIds = new Set(snapshot.rows.window.map(row => row && row.rowId));
       for (const row of snapshot.rows.window) {
         if (!row || typeof row.turnId !== 'string' || !Number.isSafeInteger(row.rowId)) continue;
         const key = row.productTurnId || row.turnId;
         let turn = turns.get(key);
         if (!turn) {
-          turn = { sessionId: snapshot.sessionId, turnId: key, rows: new Map(), samples: [], observedAt: at, counts: new Map() };
+          turn = { sessionId: snapshot.sessionId, turnId: key, rows: new Map(), samples: [], observedAt: at, counts: new Map(),
+            hist: new Map(), maxRowId: null, allCharacters: 0, hold: null, prevChars: null, mergeSettled: false };
           turns.set(key, turn);
         }
+        // 历史回填（issue #483）：此前没见过、行号又小于本轮已知最大行号的行，是宿主往前补拉的旧行（loadOlder、
+        // 尾窗截断后的补拉），不是新生成——登记进 hist，长度在计数时填，不进速率分子。首个快照里行号乱序的行
+        // 也照此处理：速率只看增量，等同于全部计入。
+        // hist 记的是「这一行不算新生成的字符数」：此前没见过的旧行按出现时的长度不算；出窗后回来的行，回来时
+        // 行号仍小于最大行号的按回来时的长度不算（会盖掉出窗时记的长度，更保守），否则按出窗时记的长度不算。
+        if (turn.maxRowId !== null && row.rowId < turn.maxRowId && !turn.rows.has(row.rowId)) turn.hist.set(row.rowId, -1);
         turn.rows.set(row.rowId, row);
+        if (turn.maxRowId === null || row.rowId > turn.maxRowId) turn.maxRowId = row.rowId;
       }
       for (const turn of turns.values()) {
-        let characters = 0;
-        for (const id of turn.rows.keys()) if (!currentIds.has(id)) { turn.rows.delete(id); turn.counts.delete(id); }
+        let characters = 0, allCharacters = 0;
+        for (const id of turn.rows.keys()) {
+          if (currentIds.has(id)) continue;
+          const gone = turn.counts.get(id);
+          turn.rows.delete(id); turn.counts.delete(id);
+          if (gone) turn.hist.set(id, Math.max(turn.hist.get(id) || 0, gone.n));   // 出窗时记住长度：回来时这么多不算新生成
+          if (id === turn.maxRowId) turn.maxRowId = null;
+        }
         if (turn.rows.size === 0) { turns.delete(turn.turnId); continue; }
+        if (turn.maxRowId === null) for (const id of turn.rows.keys()) if (turn.maxRowId === null || id > turn.maxRowId) turn.maxRowId = id;
         for (const row of turn.rows.values()) {
           const text = row.kind === 'assistantText' || row.kind === 'reasoning' ? row.text :
             row.kind === 'toolCall' ? row.inputText : '';
@@ -65,7 +105,10 @@
             // 文本都变，只重算它自己，已完成的长行/大工具入参不再重复计数。
             let c = turn.counts.get(row.rowId);
             if (!c || c.text !== text) { c = { text, n: countCodePoints(text) }; turn.counts.set(row.rowId, c); }
-            characters += c.n;
+            allCharacters += c.n;
+            let old = turn.hist.get(row.rowId);
+            if (old === -1) { old = c.n; turn.hist.set(row.rowId, old); }   // 前插的旧行：整行不算新生成
+            characters += Math.max(0, c.n - (old || 0));
           }
           // 只要曾经见过这一轮处于未完成状态，就记作"亲历过"：区分"实时追踪到的完成"
           // 与"刚绑定/重绑时一步到位捞到的历史存量已完成轮次"（后者可能缺详细字段，
@@ -75,9 +118,30 @@
             turn.seenIncomplete = true;
           }
         }
-        const last = turn.samples[turn.samples.length - 1];
-        if (last && last.characters > characters) turn.samples.length = 0;
-        if (!last || last.characters !== characters) turn.samples.push({ at, characters });
+        turn.allCharacters = allCharacters;
+        // 保持窗结束 400ms 后才来的首个快照（尚无新基线）：保持作废，只作新基线——长时间停更后再回显旧速率
+        // 像一次闪烁。新基线已落的，沿用只看新基线自己的年龄（见 get）。
+        if (turn.hold && at - turn.hold.until >= 400 && turn.samples.length === 0) turn.hold = null;
+        const cur = turn.samples[turn.samples.length - 1];
+        if (turn.prevChars !== null && characters < turn.prevChars) {
+          // 字符数比上一条快照少（行文本被替换得更短、行被移除、快照整体替换）：清样本，保持窗从这一条重新
+          // 计时，窗内不采样——窗内再次下降照样续期，它随后的回填也不会被采样。沿用的下降前速率取到末样本
+          // 时刻，末样本停更超过 HOLD_FRESH_MS 就不沿用；新基线还不满 200ms 时取不到，就沿用上一段保持的
+          // 速率。此前立即从新的低基线起算，文本随即回填时回填量被算成 200ms 内新生成（issue #483）。
+          let held = cur && at - cur.at <= HOLD_FRESH_MS ? windowRate(turn.samples, cur.at) : null;
+          if (held === null && turn.hold && at - turn.hold.until < 400) held = turn.hold.rate;
+          turn.samples.length = 0;
+          turn.hold = { rate: held, until: at + 2000 };
+        } else if (cur && characters > cur.characters &&
+                   (at - bornAt < SETTLE_MS || (merged && !turn.mergeSettled && at - bornAt < MERGE_SETTLE_MS))) {
+          // 重挂后的补齐突发：tracker 建立后 SETTLE_MS 内的每一帧增长都改作新基线，逐条入库与合并入库都一样；
+          // 昂贵会话的第一个合并入库落在这段之后的话，由后半个条件接住。合并入库重取过一次就按轮记上，不再重复。
+          turn.samples.length = 0;
+          if (merged) turn.mergeSettled = true;
+        }
+        turn.prevChars = characters;
+        const base = turn.samples[turn.samples.length - 1];
+        if (!(turn.hold && at < turn.hold.until) && (!base || base.characters !== characters)) turn.samples.push({ at, characters });
         while (turn.samples.length > 2 && turn.samples[1].at < at - 2000) turn.samples.shift();
       }
       return true;
@@ -90,12 +154,16 @@
       if (!header) return null;
       const complete = ['completedSuccess', 'completedInterrupted', 'failed'].includes(header.state);
       const samples = turn.samples;
-      const first = samples[0];
-      const last = samples[samples.length - 1];
       const sampledAt = now();
-      const elapsed = first ? sampledAt - first.at : 0;
-      const characterRate = !complete && elapsed >= 200 && last && sampledAt - last.at <= 2000 ?
-        Math.max(0, last.characters - first.characters) * 1000 / elapsed : null;
+      let characterRate = !complete ? windowRate(samples, sampledAt) : null;
+      const hold = turn.hold;
+      if (!complete && hold && characterRate === null) {
+        // 缩水保持窗（issue #483）：窗内沿用下降前的速率；窗结束后 400ms 内（下一条通知通常马上就来）与新基线
+        // 未满 200ms 时也沿用，不闪「思考中」。以新基线自身的年龄为准；窗结束 400ms 之后才来的新基线接不上
+        // （入库时保持已作废），没有新基线（不再有通知）也不沿用。
+        const fresh = samples.length && sampledAt - samples[0].at < 200;
+        if (sampledAt - hold.until < 400 || fresh) characterRate = hold.rate;
+      }
       const outputTokens = Number.isFinite(header.outputTokens) && header.outputTokens >= 0 ? header.outputTokens : null;
       const modelMs = Number.isFinite(header.modelDurationMs) && header.modelDurationMs >= 0 ? header.modelDurationMs : null;
       const durationMs = Number.isFinite(header.activeMs) && header.activeMs >= 0 ? header.activeMs :
@@ -164,7 +232,7 @@
         runningGroup,   // v187 补回 v181：null=运行行不在 ≥2 连续同类组尾（含子代理/完成态）；{kind:'explore'|'terminal', startedAt}
         runningSubagents,   // 全部 running subagent 行的 childSessionId（v97 多槽位）；完成态恒 []
         phase,   // 'thinking' | 'tool' | 'writing' | null（完成态恒 null）
-        totalCharacters: last ? last.characters : 0,   // 当前累计字符数：供调用方做 c2t（字符→token）自校准
+        totalCharacters: turn.allCharacters,   // 当前累计字符数（含回填的旧行）：供调用方做 c2t（字符→token）自校准
         observedLive: !!turn.seenIncomplete,   // 是否亲历过"未完成→完成"：false=刚绑定/重绑时
           // 一步到位捞到的历史存量已完成轮次，而非这次订阅期间实时追踪到的完成
         tokenRate: complete && outputTokens !== null && modelMs >= 200 && modelMs < 3600000 ? outputTokens * 1000 / modelMs : null,
@@ -243,8 +311,9 @@
    * 长会话（数千行）里「读 store + ingest + 回调」一次就几十毫秒，流式期间每秒数次通知就把主线程占满。
    * 上一次处理实测 ≥ MIN_COST 时，下一次处理至少间隔 min(MAX_GAP, cost × GAP_RATIO)（插件占比 ≤ ~10%）；
    * 间隔内的通知只置 pending，由唯一的尾部定时器在间隔届满时处理**最新**状态（中间快照不读不 ingest，
-   * ingest 以 seq 单调，丢中间帧无副作用）。廉价会话（cost < MIN_COST）与此前逐字一致：每次通知同步
-   * 处理，不排任何定时器（规则 5：测试与语义依赖通知后同步更新状态条）。 */
+   * ingest 以 seq 单调，丢中间帧无副作用）；合并入库以 ingest 第二参 merged=true 告知 tracker，供其识别
+   * 重挂后的补齐突发（issue #483）。廉价会话（cost < MIN_COST）与此前逐字一致：每次通知同步处理，不排
+   * 任何定时器（规则 5：测试与语义依赖通知后同步更新状态条）。 */
   const BUDGET_MIN_COST_MS = 8;
   const BUDGET_GAP_RATIO = 9;
   const BUDGET_MAX_GAP_MS = 1000;
@@ -259,13 +328,13 @@
     const arm = options.setTimeout || ((fn, ms) => (typeof setTimeout === 'function' ? setTimeout(fn, ms) : null));
     const disarm = options.clearTimeout || (t => { if (typeof clearTimeout === 'function') clearTimeout(t); });
     let closed = false, timer = null, pending = false, lastEnd = 0, lastCost = 0;
-    const run = () => {
+    const run = merged => {
       const started = now();
       /* changed() 跑在宿主 store 的通知分发链上，异常会冒进宿主其它订阅者——统一兜住
        * （调用方 overlay 侧另有 try 记录诊断，这里是不让异常出模块的最后闸）。 */
       try {
         const state = store.getState();
-        if (tracker.ingest(state && state.snapshot)) changed(state);
+        if (tracker.ingest(state && state.snapshot, merged)) changed(state);
       } catch (e) { /* 单次通知失败不影响后续订阅 */ }
       lastEnd = now();
       lastCost = lastEnd - started;
@@ -274,7 +343,7 @@
       timer = null;
       if (closed || !pending) return;
       pending = false;
-      run();
+      run(true);   // 合并入库：间隔内的中间帧被跳过
     };
     const update = () => {
       if (closed) return;
@@ -297,10 +366,12 @@
         }
       }
       // 同步处理（廉价会话 / 间隔已过 / 无法排定时器）：先作废待冲刷的尾部定时器——它被后台节流而迟到时，
-      // 新通知已处理了最新状态，再让它读一次整窗只是白拷贝。
+      // 新通知已处理了最新状态，再让它读一次整窗只是白拷贝。定时器迟到期间的通知确实被跳过了，这一条按
+      // 合并入库告知 tracker（issue #483）；无法排定时器的回退没有跳过任何通知，仍是逐条入库。
+      const skipped = pending;
       if (timer !== null) { try { disarm(timer); } catch (e) { } timer = null; }
       pending = false;
-      run();
+      run(skipped);
     };
     const off = store.subscribe(update);
     if (typeof off !== 'function') { closed = true; return null; }

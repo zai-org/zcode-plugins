@@ -1,7 +1,8 @@
 /* 额度客户端（主进程热换模块）v3：多厂商适配器 + 多源调度器。
  * 阶段 3（浮层 v96 线）：BigModel/Z.ai 内置套餐（解密宿主 OAuth 凭据直查 monitor 端点）
  * 之外，新增零配置官方域适配器（MiniMax/Kimi/CommandCode/DeepSeek/OpenRouter/SiliconFlow/
- * Anthropic OAuth）与显式配置适配器（Cline/MiMo Cookie/火山 AK-SK/SCNet 账本）。
+ * Anthropic OAuth/OpenCode Go/R4 Coder/千问/Ollama Cloud/StepFun）与显式配置适配器（Cline/MiMo
+ * Cookie/火山 AK-SK/SCNet 账本）；清单仅为沿革，现行注册表以 ADAPTERS 为准。
  *
  * 调度语义：enabled 源全量低频刷新（供 tooltip 分家列全），chip 主显跟随本 pane 会话的
  * 模型归属（primary 源）。每源独立 nextAt/epoch/退避/凭据指纹；凭据只在内存，不落盘、
@@ -36,7 +37,7 @@ const EXP_RETRY_MS = 5 * 60 * 1000;
  * 与额度 monitor 是两条链——卡是账号级「立即恢复额度池」的核销机会，每张带 expire_at。 */
 const RESET_PATH = "/api/v1/coding-plan/reset/status";
 const RESET_TTL_MS = 2 * 60 * 1000;       // 稳态轮询（v361 提速：5min→2min，status 是只读查询）
-const RESET_LIST_TTL_MS = 10 * 60 * 1000; // 网页列表增强子链独立 TTL（tooltip 深度信息，慢刷新控体量）
+const RESET_LIST_TTL_MS = RESET_TTL_MS;   // 网页列表增强子链与 status 同节奏（specs/reset-card-refresh.md）：徽标张数读 status、tooltip 明细读 list，同轮刷新才对得上；结算同一时刻写 nextAt 与 listFetchedAt 保证 status 到期即 list 到期
 const RESET_POKE_GAP_MS = 30 * 1000;      // pokeReset 软强刷最小间隔（visibility/hover 触发防抖）
 const RESET_PARSE_BACKOFF_MS = 15 * 60 * 1000;
 
@@ -772,7 +773,10 @@ function loadProviderCfg(readFile2, cfgPath, builtinCfgPath) {
     const api = Object.assign({}, tpl && tpl.api, cfg.api);
     const access = Object.assign({}, tpl && tpl.access, cfg.access);
     if (!api.baseUrl && tpl && tpl.api) api.baseUrl = tpl.api.baseUrl;
-    byId.set(id, { baseUrl: String(api.baseUrl || "").replace(/\/+$/, ""), apiKey: String(access.apiKey || ""), name: cfg.name || "",
+    /* enc: 形态是宿主加密信封（或误贴的密文），不是可用凭据：按未配置处理、绝不随请求外发
+     * （与 model-puller 规则路径同闸）。宿主 schema 是 z.string() 不 trim，先 trim 再判。 */
+    const rawKey = String(access.apiKey || "").trim();
+    byId.set(id, { baseUrl: String(api.baseUrl || "").replace(/\/+$/, ""), apiKey: rawKey.indexOf("enc:") === 0 ? "" : rawKey, name: cfg.name || "",
       accessType: String(access.type || "") });
   }
   if (stamp !== null) providerCfgCache = { stamp, readFile: readFile2, byId };
@@ -904,11 +908,13 @@ function teamSelectionOf(j, fam) {
  *    （缺条目不创建——宿主在 App 内切换团队套餐时自建，本插件只读）；
  * ③ POST api_keys/{id}/access_tokens（Bearer 业务 token，body clientType/clientVersion）
  *    → 项目级短期 PAT，用作 monitor?type=2 的 authorization（裸头，不套 Bearer）。
- * PAT 按 fam|org|project 缓存到过期前 2 分钟；apiKeyId 稳定一并缓存。链上任一环节失败
+ *    {id} 就是条目的 apiKey 字段（线上条目没有 apiKeyId；宿主 ProjectAccessTokenClient 同款，
+ *    issue #481）。
+ * PAT 按 fam|org|project 缓存到过期前 2 分钟；密钥 ID 稳定一并缓存。链上任一环节失败
  * 按既有分类抛出（auth_failed/unsupported/network_error…），fail-closed 零请求降级。 */
 const TEAM_PAT_REFRESH_LEAD = 120 * 1000;
 const TEAM_PAT_CLIENT = { clientType: "zcode", clientVersion: "3.18.0" };
-const teamPatCache = new Map();   // fam|org|project → { pat, expiresAt, apiKeyId }
+const teamPatCache = new Map();   // fam|org|project → { pat, expiresAt(ms), apiKey }
 function teamPatCacheGet(key, now) {
   const c = teamPatCache.get(key);
   if (c && c.expiresAt - TEAM_PAT_REFRESH_LEAD > now) return c;
@@ -940,11 +946,15 @@ async function ensureTeamPat(j, fam, sel, loginToken, ctl) {
   const teamKey = keyList.find((k) => k && k.name === "zcode-team-api-key" &&
     k.keyType === 2 && typeof k.apiKey === "string" && k.apiKey.trim());
   if (!teamKey) throw qErr("unsupported", "team api key missing");
+  /* 密钥 ID 就是条目的 apiKey（issue #481）；`.` 与 `..` 是路径段保留写法——URL 规范化会吃掉上一级
+   * 路径段（同源内，仍不该发），按没有团队密钥处理 */
+  const teamKeyId = teamKey.apiKey.trim();
+  if (teamKeyId === "." || teamKeyId === "..") throw qErr("unsupported", "team api key missing");
   /* ③ PAT 签发（Bearer 业务 token；429/5xx 一次重试，与宿主 MAX_TOKEN_ISSUE_ATTEMPTS 对齐） */
   let raw = null, lastErr = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      raw = await j.http.post(keysUrl + "/" + encodeURIComponent(teamKey.apiKeyId) + "/access_tokens", {
+      raw = await j.http.post(keysUrl + "/" + encodeURIComponent(teamKeyId) + "/access_tokens", {
         authorization: "Bearer " + loginToken,
         "content-type": "application/json",
       }, ctl);
@@ -961,10 +971,19 @@ async function ensureTeamPat(j, fam, sel, loginToken, ctl) {
   const pat = patData && patData.enable !== false && typeof patData.accessToken === "string" &&
     patData.accessToken.trim() ? patData.accessToken.trim() : null;
   if (!pat) throw qErr("unsupported", "team pat missing");
-  const expiresAt = typeof patData.expiresAt === "number" && patData.expiresAt > 0
-    ? patData.expiresAt : (typeof patData.expiresIn === "number" && patData.expiresIn > 0
-      ? now + patData.expiresIn * 1000 : now + 3600 * 1000);
-  const cachedEntry = { pat, expiresAt, apiKeyId: teamKey.apiKeyId };
+  /* issue #481（线上样本来自报告者抓包）：expiresAt 是秒级时间戳（与 expiresIn 同单位）——< 1e12
+   * 视为秒换成毫秒，再与毫秒时钟比较（此前秒级值直接比较，缓存永不命中、每轮都重签 PAT）。
+   * 离谱值按缺失处理，否则 PAT 会被永久缓存：非有限值，换算后距今超过 7 天的 expiresAt，以及
+   * 折算超过 7 天的 expiresIn；已过期的 expiresAt 原样保留。 */
+  const maxTtlMs = 7 * 24 * 3600 * 1000;
+  /* 时钟在三步往返之后重取（函数开头的 now 只服务缓存命中判断）：有效期恰好 7 天的 PAT 不因往返
+   * 耗时被判成离谱值；增强链同样是在响应之后才取时钟 */
+  const settledAt = typeof j.now === "function" ? j.now() : Date.now();
+  const at = typeof patData.expiresAt === "number" ? patData.expiresAt : 0;
+  const atMs = at > 0 ? (at < 1e12 ? at * 1000 : at) : 0;
+  const ttlSec = typeof patData.expiresIn === "number" && patData.expiresIn > 0 && patData.expiresIn * 1000 <= maxTtlMs ? patData.expiresIn : 3600;
+  const expiresAt = atMs && atMs - settledAt <= maxTtlMs ? atMs : settledAt + ttlSec * 1000;
+  const cachedEntry = { pat, expiresAt, apiKey: teamKeyId };
   teamPatCache.set(cacheKey, cachedEntry);
   return cachedEntry.pat;
 }
@@ -1327,6 +1346,316 @@ ADAPTERS.push({
     return { windows };   // 子配额窗（seven_day_sonnet 等）整体丢弃，不覆盖主窗
   },
 });
+
+/* --- 千问 AI 平台 Token Plan（issue #399；端点与字段转写自 magpie qianwen_plan.go /
+ * alibaba_usage.go（MIT），即官方 @qianwenai/qianwen-cli 1.11.0 的登录与用量读法） ---
+ * 推理网关 token-plan.maas.qianwenaiapi.com（sk-sp- key）是纯推理入口：用量百分比只对
+ * 平台登录态开放（sk-sp- key 查 cs-data 得 BailianGateway.Login.NotLogined）。链路：
+ * 设备码（t.qianwenai.com）→ 浏览器授权 → access token（无 refresh，过期整链重登）→
+ * 换控制台令牌（cli.qianwenai.com GenerateCLIAccessToken，按 access 指纹缓存 20 分钟）→
+ * cs-data 网关查 per<N><Unit>Percentage 窗口（个人套餐=周/月两窗）。凭据只发 qianwen
+ * 官方三域。阿里云百炼（token-plan.*.maas.aliyuncs.com）凭据是 AccessKey 签名链、
+ * 本版不认领（落 custom 中转保持现状）；团队 seat 版的绝对 Credits 字段不解析。 */
+const QIANWEN_UA = "qianwen-cli/1.11.0";
+const QIANWEN_REGION = "cn-beijing";
+const QIANWEN_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
+const QIANWEN_CLI_TOKEN_TTL = 20 * 60 * 1000;   // magpie aliTokenTTL 同款
+const QIANWEN_POLL_MAX_MS = 30 * 1000;   // 设备码轮询间隔经 slow_down 逐次翻长后的封顶
+const qianwenCliTokens = new Map();   // access 指纹 → { token, at }（控制台令牌缓存）
+const QIANWEN_WIN_RE = /^per(\d+)(Hour|Day|Week|Month)(Percentage|ResetTime)$/;
+function qianwenUuid() {
+  const b = crypto.randomBytes(16);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = b.toString("hex");
+  return h.slice(0, 8) + "-" + h.slice(8, 12) + "-" + h.slice(12, 16) + "-" + h.slice(16, 20) + "-" + h.slice(20);
+}
+function qianwenPkce() {   // S256：verifier=32B base64url，challenge=sha256(verifier) base64url
+  const verifier = crypto.randomBytes(32).toString("base64url");
+  return { verifier, challenge: crypto.createHash("sha256").update(verifier).digest("base64url") };
+}
+function qianwenExpiryMs(v) {   // ExpireTime：秒/毫秒数、数字串、日期串自适应（magpie qianwenTime 子集）
+  if (typeof v === "number" && isFinite(v) && v > 0) return v < 1e12 ? v * 1000 : v;
+  if (typeof v === "string" && v) {
+    const n = Number(v);
+    if (isFinite(n) && n > 0) return n < 1e12 ? n * 1000 : n;
+    const t = Date.parse(v);
+    return isFinite(t) && t > 0 ? t : 0;
+  }
+  return 0;
+}
+/* device/token 轮询回复宽容解析（magpie readQianwenReply 同款两形状：Data.Credentials
+ * 大写形与 credentials 小写形；数字/空值字段按缺省走，不连累整回复）。 */
+function qianwenReadSigninReply(rep) {
+  if (!rep || typeof rep !== "object" || Array.isArray(rep)) return null;
+  const data = rep.Data && typeof rep.Data === "object" && !Array.isArray(rep.Data) ? rep.Data : null;
+  const creds = data && data.Credentials && typeof data.Credentials === "object" ? data.Credentials : null;
+  const alt = rep.credentials && typeof rep.credentials === "object" ? rep.credentials : null;
+  const status = String((data && data.Status != null ? data.Status : rep.status) || "authorization_pending").toLowerCase();
+  const access = String((creds && creds.AccessToken) || (alt && alt.access_token) || "");
+  const expires = creds && creds.ExpireTime != null ? creds.ExpireTime : (alt && alt.expire_time != null ? alt.expire_time : null);
+  const u = creds && creds.User && typeof creds.User === "object" ? creds.User
+    : (alt && alt.user && typeof alt.user === "object" ? alt.user : null);
+  const user = u ? String(u.Id != null ? u.Id : (u.id != null ? u.id : "")) : "";
+  const email = u ? String(u.Email || u.email || "") : "";
+  return { status, access, expires, account: email || user };
+}
+function qianwenStatusWordOf(rep) {   // HTTP ≥3xx 错误体里的状态词（magpie 只认这三个，正文不进错误文案）
+  let hay = "";
+  if (rep && typeof rep === "object") {
+    const data = rep.Data && typeof rep.Data === "object" ? rep.Data : null;
+    hay = String((data && data.Status) || rep.status || JSON.stringify(rep).slice(0, 500)).toLowerCase();
+  }
+  if (hay.indexOf("expired") >= 0) return "expired_token";
+  if (hay.indexOf("access_denied") >= 0) return "access_denied";
+  if (hay.indexOf("slow_down") >= 0) return "slow_down";
+  return "";
+}
+/* 设备端点原始 POST：绕过 j.http 的严格 JSON.parse（回复可能带 BOM 前缀，magpie 实测案例），
+ * 剥 BOM 后宽容解析；失败只抛状态错误，响应体绝不进错误文案（可能含 token）。 */
+async function qianwenPost(j, ctl, url) {
+  const res = await j.fetchImpl(url, {
+    method: "POST",
+    headers: { accept: "application/json", "user-agent": QIANWEN_UA },
+    signal: ctl ? ctl.signal : undefined, redirect: "manual",
+  });
+  const text = await res.text();
+  if (text.length > BODY_LIMIT) throw qErr("network_error", "qianwen reply too large");
+  let parsed = null;
+  try { parsed = JSON.parse(text.replace(/^\uFEFF/, "")); } catch (e) { parsed = null; }
+  if (res.status < 200 || res.status >= 300) {
+    const err = qErr("network_error", "qianwen HTTP " + res.status);
+    err.body = parsed;
+    throw err;
+  }
+  return parsed;
+}
+async function qianwenMintCliToken(j, access, fp, ctl) {
+  const hit = qianwenCliTokens.get(fp);
+  const t = j.now();
+  if (hit && t - hit.at < QIANWEN_CLI_TOKEN_TTL) return hit.token;
+  const body = JSON.stringify({ product: "ModelStudioRegional", action: "GenerateCLIAccessToken",
+    region: QIANWEN_REGION, params: {}, version: "2026-02-10" });
+  const r = await j.http.post("https://cli.qianwenai.com/data/v2/api.json", {
+    "content-type": "application/json", authorization: "Bearer " + access, "user-agent": QIANWEN_UA,
+  }, ctl, body);
+  const code = String((r && r.code) != null ? r.code : "");
+  const tok = r && r.data && typeof r.data === "object" ? String(r.data.cliAccessToken || "").trim() : "";
+  if (code === "200" && r.successResponse === true && tok && tok !== access) {
+    qianwenCliTokens.set(fp, { token: tok, at: t });
+    return tok;
+  }
+  qianwenCliTokens.delete(fp);
+  if (/NeedLogin|NotLogined|NotLogin/i.test(code)) throw qErr("auth_failed", "qianwen session expired");
+  if (code || (r && r.message)) throw qErr("network_error", ("qianwen mint " + (code || "error")).slice(0, 60));
+  throw qErr("parse_error", "qianwen mint shape");
+}
+async function qianwenAskUsage(j, cliToken, ctl) {
+  const url = "https://cs-data.qianwenai.com/cli/api.json?action=BroadScopeAspnGateway&product=sfm_bailian&api=" +
+    encodeURIComponent(QIANWEN_USAGE_API);
+  const params = JSON.stringify({ Api: QIANWEN_USAGE_API, V: "1.0", Data: { cornerstoneParam: {
+    protocol: "V2", console: "ONE_CONSOLE", productCode: "p_efm", switchUserType: 3, consoleSite: "QIANWENAI" } } });
+  const form = "params=" + encodeURIComponent(params) + "&region=" + QIANWEN_REGION;
+  const r = await j.http.post(url, {
+    "content-type": "application/x-www-form-urlencoded", authorization: "Bearer " + cliToken, "user-agent": QIANWEN_UA,
+  }, ctl, form);
+  const d = r && r.data && typeof r.data === "object" && !Array.isArray(r.data) ? r.data : null;
+  if (d && d.success === false) {
+    const code = String(d.errorCode != null ? d.errorCode : "");
+    if (/NotLogined|NeedLogin|NotLogin/i.test(code)) throw qErr("auth_failed", "qianwen session expired");
+    throw qErr("network_error", ("qianwen console " + (code || "error")).slice(0, 80));   // 只回 code：errorMsg 是服务端文本，不进错误链
+  }
+  let node = d && d.DataV2 != null ? d.DataV2 : null;   // 双层 {data:…} 剥壳（magpie 同款，缺层容忍）
+  for (let i = 0; i < 2; i++) {
+    if (node && typeof node === "object" && !Array.isArray(node) && node.data && typeof node.data === "object" && !Array.isArray(node.data)) node = node.data;
+    else break;
+  }
+  return node;
+}
+function qianwenReadWindows(node) {
+  const wins = {};
+  if (!node || typeof node !== "object" || Array.isArray(node)) return wins;
+  for (const k of Object.keys(node)) {
+    const m = QIANWEN_WIN_RE.exec(k);
+    if (!m) continue;
+    const key = m[1] + m[2];
+    const w = wins[key] || (wins[key] = { reset: null, used: null });
+    if (m[3] === "ResetTime") w.reset = num(node[k]);
+    else { const v = num(node[k]); if (v != null) w.used = v; }
+  }
+  const nameOf = { "5Hour": "fiveHour", "1Day": "daily", "1Week": "weekly", "1Month": "monthly" };
+  const out = {};
+  for (const key of Object.keys(wins)) {
+    const w = wins[key];
+    if (w.used == null || !isFinite(w.used) || w.used < 0) continue;
+    const name = nameOf[key];
+    if (!name || out[name]) continue;   // 未知窗长丢弃，绝不冒充已知窗口
+    out[name] = { percent: Math.round(clampPct(w.used * 100) * 10) / 10, resetsAt: resetOf(w.reset) };
+  }
+  return out;
+}
+ADAPTERS.push({
+  id: "qianwen", label: "千问 Token Plan", kind: "plan", defaultOn: true, unverified: true,
+  envKeys: ["ZCODE_QIANWEN_ACCESS_TOKEN"],
+  /* 官方域精确命中，或 qianwenaiapi.com 域内 + sk-sp- key 前缀（token-plan key 被用于
+   * 同族其它网关路径时仍认领）；不按 provider 名判定（模板名与实际套餐常不一致，issue
+   * 明示），qwencloud/aliyuncs 等同族异域不认领。sk-sp- 推理 key 不作额度凭据。 */
+  detect(j, providerId) {
+    if (providerId.indexOf("account:") === 0) return null;
+    const cp = j.customProviderOf(providerId);
+    if (!cp) return null;
+    let host = "";
+    try { host = new URL(cp.baseUrl).hostname.toLowerCase(); } catch (e) { host = ""; }
+    if (host === "token-plan.maas.qianwenaiapi.com") return { config: true, family: "qianwen" };
+    if (host.endsWith(".qianwenaiapi.com") && String(cp.apiKey || "").indexOf("sk-sp-") === 0) return { config: true, family: "qianwen" };
+    return null;
+  },
+  resolveCred(j, ctx) {
+    for (const k of this.envKeys) {
+      const v = j.env[k];
+      if (v) return { token: v, fingerprint: "env:" + sha16(v), source: "env" };
+    }
+    const sec = (j.secrets.sources || {}).qianwen || {};
+    const token = typeof sec.token === "string" ? sec.token.trim() : "";
+    if (!token) return null;
+    const exp = num(sec.tokenExpiresAt);   // 平台登录态已过：无 refresh token，归未配置引导重登
+    if (exp > 0 && j.now() > exp) return null;
+    return { token, fingerprint: "sec:" + sha16(token), source: "secrets" };
+  },
+  async fetchOne(j, ctx, cred, ctl) {
+    const fp = cred.fingerprint;
+    let cliToken = await qianwenMintCliToken(j, cred.token, fp, ctl);
+    let node;
+    try {
+      node = await qianwenAskUsage(j, cliToken, ctl);
+    } catch (e) {
+      /* 缓存的控制台令牌被网关拒（NotLogined）：重换一次新令牌；新令牌仍被拒=平台登录态
+       * 已失效，auth_failed 冻结到重新登录（凭据指纹变化），绝不循环重试。 */
+      if (e && e.code === "auth_failed" && qianwenCliTokens.has(fp)) {
+        qianwenCliTokens.delete(fp);
+        cliToken = await qianwenMintCliToken(j, cred.token, fp, ctl);
+        node = await qianwenAskUsage(j, cliToken, ctl);
+      } else throw e;
+    }
+    const windows = qianwenReadWindows(node);
+    if (!Object.keys(windows).length) throw qErr("parse_error", "qianwen: no personal plan windows");   // 团队 seat 账号/未购个人套餐：不显示 0%
+    return { label: "千问 Token Plan", kind: "plan", windows };
+  },
+});
+
+/* ---------- 千问设备码登录流（⚙ 面板「登录」按钮驱动；每个 client 实例一条） ----------
+ * 状态机 idle→pending→done/failed；gen 是唯一存活令牌（重开/取消/dispose 都 +1，在途
+ * 轮询按 gen 自弃）。完成经 saveSecrets（注入侧 writeQuotaSecrets）持久化 token/account/
+ * tokenExpiresAt → credentialsChanged → 解冻即查。错误文案绝不引用响应体（可能含 token，
+ * magpie 有真实泄露事故）。 */
+function installQianwenFlow(client, j, o) {
+  const flow = { state: "idle", error: "", url: "", account: "", gen: 0, timer: 0 };
+  const armTimer = (ms, fn) => {
+    flow.timer = setTimeout(() => { flow.timer = 0; fn(); }, ms);
+    if (flow.timer && typeof flow.timer.unref === "function") flow.timer.unref();
+  };
+  const armPoll = (ctl, url) => {   // 单次轮询 15s 超时兜底：挂死不至于冻结整流（重开即恢复）
+    const kill = setTimeout(() => { try { ctl.abort(); } catch (e) { } }, 15 * 1000);
+    if (kill && typeof kill.unref === "function") kill.unref();
+    return qianwenPost(j, ctl, url).finally(() => { clearTimeout(kill); });
+  };
+  function finish(state, error) {
+    flow.state = state;
+    flow.error = error || "";
+    flow.url = "";   // 终态一律清：授权页 URL 带设备码 auth_token，done/failed 后渲染端都不再需要
+  }
+  function flowCancel() {
+    flow.gen += 1;
+    if (flow.timer) { clearTimeout(flow.timer); flow.timer = 0; }
+    flow.state = "idle"; flow.error = ""; flow.url = ""; flow.account = "";
+  }
+  client.qianwenSignInState = () => ({ ok: true, state: flow.state, error: flow.error, url: flow.url, account: flow.account });
+  client.qianwenSignInCancel = () => flowCancel();
+  client.disposeQianwenFlow = () => flowCancel();
+  client.qianwenSignInStart = async () => {
+    if (!o || typeof o.saveSecrets !== "function") return { ok: false, error: "sign-in unavailable" };
+    flowCancel();
+    const gen = flow.gen;
+    const clientID = qianwenUuid();
+    const pk = qianwenPkce();
+    let codeRep = null, codeErr = null;
+    const startCtl = new AbortController();
+    try {
+      codeRep = await armPoll(startCtl, "https://t.qianwenai.com/cli/device/code?client_id=" + encodeURIComponent(clientID) +
+        "&code_challenge=" + encodeURIComponent(pk.challenge) + "&code_challenge_method=S256");
+    } catch (e) { codeErr = e; }
+    if (gen !== flow.gen) return { ok: false, error: "cancelled" };
+    const d = codeRep && codeRep.Data && typeof codeRep.Data === "object" ? codeRep.Data : null;
+    const deviceToken = d && typeof d.Token === "string" ? d.Token : "";
+    /* 授权页 URL 域白名单（官方=account.qianwenai.com）：服务端可控串不经白名单不交 openExternal。
+     * 交出去的是 URL 解析归一后的 href——原始串里的首尾空白/控制字符不随 openExternal
+     * 出门；带 userinfo 的「evil.com@account.qianwenai.com」形（地址栏可误导）直接拒。 */
+    let url = "";
+    if (d && typeof d.VerificationUrl === "string") {
+      try {
+        const u = new URL(d.VerificationUrl);
+        url = u.protocol === "https:" && !u.username && !u.password &&
+          u.hostname.toLowerCase().endsWith(".qianwenai.com") ? u.href : "";
+      } catch (e) { url = ""; }
+    }
+    if (codeErr && codeErr.body) {   // HTTP ≥3xx：只嗅状态词，正文不进文案
+      const word = qianwenStatusWordOf(codeErr.body);
+      if (word === "expired_token") { finish("failed", "设备码已过期，请重试"); return { ok: false, error: flow.error }; }
+    }
+    if (!codeRep || !d || !deviceToken || !url) {
+      finish("failed", "无法发起千问登录" + (codeErr ? "（" + String(codeErr.message || "network").slice(0, 40) + "）" : ""));
+      return { ok: false, error: flow.error };
+    }
+    const everyMs = Math.min(Math.max((num(d.Interval) > 0 ? num(d.Interval) : 2) * 1000, 100), 2000);
+    const deadline = j.now() + Math.min(Math.max((num(d.ExpiresIn) > 0 ? num(d.ExpiresIn) : 300) * 1000, 30 * 1000), 15 * 60 * 1000);
+    let curMs = everyMs;
+    flow.state = "pending";
+    flow.url = url;
+    const poll = async () => {
+      if (gen !== flow.gen) return;
+      if (j.now() >= deadline) { finish("failed", "登录页已过期，请重新登录"); return; }
+      const ctl = new AbortController();
+      let rep = null, netErr = null;
+      try { rep = await armPoll(ctl, "https://t.qianwenai.com/cli/device/token?client_id=" + encodeURIComponent(clientID) +
+        "&token=" + encodeURIComponent(deviceToken) + "&code_verifier=" + encodeURIComponent(pk.verifier)); }
+      catch (e) { netErr = e; }
+      if (gen !== flow.gen) return;
+      let parsed = rep ? qianwenReadSigninReply(rep) : null;
+      if (netErr && netErr.body) {   // HTTP ≥3xx 错误体状态词（expired/access_denied/slow_down）
+        parsed = { status: qianwenStatusWordOf(netErr.body) || "http_error", access: "", expires: null, account: "" };
+      } else if (netErr) {
+        parsed = { status: "authorization_pending", access: "", expires: null, account: "" };   // 掉线轮询重问（magpie 同款）
+      } else if (rep && !parsed) {
+        finish("failed", "平台返回未知形态，请重试");
+        return;
+      }
+      /* 当前轮询间隔：slow_down 持续加长并沿用（RFC 8628 §3.5——加长后的间隔不回落，
+       * 否则服务端要求的间隔高于客户端上限时会一直 slow_down 到 deadline），封顶 30s */
+      if (parsed.status === "authorization_pending") { armTimer(curMs, poll); return; }
+      if (parsed.status === "slow_down") { curMs = Math.min(curMs * 2, QIANWEN_POLL_MAX_MS); armTimer(curMs, poll); return; }
+      if (parsed.status === "complete") {
+        if (!parsed.access) { finish("failed", "平台未返回令牌，请重试"); return; }
+        const expMs = qianwenExpiryMs(parsed.expires);
+        try {
+          o.saveSecrets((sec) => {
+            sec.qianwen = Object.assign({}, sec.qianwen || {}, { token: parsed.access, account: parsed.account });
+            if (expMs > 0) sec.qianwen.tokenExpiresAt = expMs; else delete sec.qianwen.tokenExpiresAt;
+          });
+        } catch (e) { finish("failed", "登录态保存失败"); return; }
+        if (gen !== flow.gen) return;   // 保存与取消竞窗：凭据已落盘无害（下次登录覆盖同字段）
+        flow.account = parsed.account;
+        finish("done", "");
+        return;
+      }
+      if (parsed.status === "expired_token") { finish("failed", "登录页已过期，请重新登录"); return; }
+      if (parsed.status === "access_denied") { finish("failed", "授权被拒绝"); return; }
+      if (parsed.status === "http_error") { armTimer(curMs, poll); return; }   // 未知 HTTP 错误：按瞬时重问
+      finish("failed", "平台返回未知状态，请重试");   // 服务端 Status 串不进错误链（与 usage 错误同口径）
+    };
+    armTimer(everyMs, poll);
+    return { ok: true, url, state: "pending" };
+  };
+}
 
 /* --- DeepSeek（官方域零配置；total/granted/topped_up 三分拆分） --- */
 ADAPTERS.push({
@@ -2001,6 +2330,191 @@ ADAPTERS.push({
   },
 });
 
+/* --- Ollama Cloud（issue #410；官方 /api/balance 单端点，两代套餐形状） ---
+ * 自定义供应商 baseUrl host 为 ollama.com 时零配置认领（路径不参与判定，/v1 等宿主
+ * baseUrl 变体同域命中；本地 11434 非 https 不命中）。新套餐 included.balance_usd
+ * （本期剩余）+ allowance_usd（总额）+ period → 月度额度池窗；旧套餐 included.session/
+ * weekly 的 remaining_percent（剩余制）翻转为已用并映射 5 小时/周窗；purchased.
+ * balance_usd 是套餐外充值余额——有窗口时不进顶层 balance（渲染端余额形态优先会挤掉
+ * 窗口段），仅无窗口时退化为余额卡。端点与两代响应形状转写自 magpie（MIT）与官方
+ * docs（docs.ollama.com/cloud/usage、/api/balance）；限流 10 req/min（issue 报告者
+ * 转述，未实测），429 由调度器按 Retry-After 退避；未真账号实测（unverified）。 */
+function normalizeOllama(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw qErr("parse_error", "ollama shape");
+  const included = body.included && typeof body.included === "object" && !Array.isArray(body.included) ? body.included : null;
+  const purchased = body.purchased && typeof body.purchased === "object" && !Array.isArray(body.purchased) ? body.purchased : null;
+  if (!included && !purchased) throw qErr("parse_error", "ollama empty");
+  const windows = {};
+  /* 旧套餐：remaining_percent 是剩余制（75=还剩 75%），翻转为已用并钳 [0,100]；
+   * 缺 remaining_percent 不猜 0，直接无窗。 */
+  const pctWin = (l) => {
+    if (!l || typeof l !== "object" || Array.isArray(l)) return null;
+    const left = num(l.remaining_percent);
+    if (left == null) return null;
+    return { percent: Math.round(clampPct(100 - left) * 10) / 10, resetsAt: resetOf(l.resets_at) };
+  };
+  const s = pctWin(included && included.session);
+  if (s) windows.fiveHour = s;
+  const w = pctWin(included && included.weekly);
+  if (w) windows.weekly = w;
+  /* 新套餐：allowance<=0（含 0 档/字段为 0）无窗防除零；balance>allowance（超支后
+   * 由充值余额垫付）钳满格。period.until 可解析才带 resetsAt 并入月窗，否则落 plan
+   * 窗（「套餐」标签不带周期语义，不冒充月窗）。 */
+  if (included) {
+    const allowance = num(included.allowance_usd);
+    const left = num(included.balance_usd);
+    if (allowance != null && allowance > 0 && left != null) {
+      const used = Math.min(allowance, Math.max(0, allowance - left));
+      const win = {
+        percent: Math.round(clampPct((used / allowance) * 100) * 10) / 10,
+        used, total: allowance,
+        remaining: Math.min(Math.max(0, left), allowance),
+        currency: "USD",
+      };
+      const period = included.period && typeof included.period === "object" && !Array.isArray(included.period) ? included.period : null;
+      /* until 非空但非日期（端点改版回垃圾串）不得冒充月窗：resetOf 对非空字符串透传是
+       * 全仓基线，此处单适配器内敛加 Date.parse 门，解析失败落 plan 窗。数字毫秒（及毫秒
+       * 数字串——同 stepfun 的整数字符串写法）不经 Date.parse 直接作 resetsAt：此前只认
+       * 日期串，数字形态会被误落 plan 窗（「套餐」标签、无重置时间）。 */
+      const untilRaw = period ? resetOf(period.until) : null;
+      let until = null;
+      if (typeof untilRaw === "number") until = untilRaw >= 1e11 ? untilRaw : null;
+      else if (typeof untilRaw === "string") {
+        /* 纯数字串只当毫秒，不走 Date.parse：V8 会把 "12345" 当成公元 12345 年而放行。
+         * 1e11（1973 年）下限挡玩具数值——resetOf 会把任何 <1e12 的数字当秒乘 1000。 */
+        if (/^\d+$/.test(untilRaw)) { const n = Number(untilRaw); until = Number.isFinite(n) && n >= 1e11 ? n : null; }   // 超长数字串是 Infinity：同 stepfun 加有限性闸
+        else if (!Number.isNaN(Date.parse(untilRaw))) until = untilRaw;
+      }
+      if (until) { win.resetsAt = until; windows.monthly = win; }
+      else windows.plan = win;
+    }
+  }
+  const out = { label: "Ollama Cloud", kind: "plan" };
+  if (Object.keys(windows).length) { out.windows = windows; return out; }
+  const bought = purchased ? num(purchased.balance_usd) : null;
+  if (bought != null && bought >= 0) {
+    out.kind = "balance";
+    out.balance = { amount: bought, currency: "USD" };
+  }
+  /* included 在但无任何可解析窗口且无/负 purchased：ok 空窗——纯 PAYG 账号合法形态，
+   * 不判 no_plan 冻结（balance 端点对有效 key 恒回其账号数据，无「无订阅」信封可辨）。 */
+  return out;
+}
+ADAPTERS.push({
+  id: "ollama", label: "Ollama Cloud", kind: "plan", defaultOn: true, unverified: true,
+  envKeys: ["OLLAMA_API_KEY"],
+  detect(j, providerId) {
+    if (providerId.indexOf("account:") === 0) return null;
+    const cp = j.customProviderOf(providerId);
+    if (!cp) return null;
+    let u = null;
+    try { u = new URL(cp.baseUrl); } catch (e) { return null; }
+    if (u.protocol !== "https:" || u.hostname.toLowerCase() !== "ollama.com") return null;
+    return { key: cp.apiKey, origin: "cfg" };
+  },
+  resolveCred(j, ctx) {
+    for (const k of this.envKeys) {
+      const v = j.env[k];
+      if (v) return { token: v, fingerprint: "env:" + sha16(v), source: "env" };
+    }
+    const sec = (j.secrets.sources || {}).ollama || {};
+    if (sec.apiKey) return { token: sec.apiKey, fingerprint: "sec:" + sha16(sec.apiKey), source: "secrets" };
+    if (ctx.key) return { token: ctx.key, fingerprint: "cfg:" + sha16(ctx.key), source: "provider_config" };
+    return null;
+  },
+  async fetchOne(j, ctx, cred, ctl) {
+    return normalizeOllama(await j.http.getJson("https://ollama.com/api/balance", { authorization: "Bearer " + cred.token }, ctl));
+  },
+});
+
+/* --- StepFun Step Plan（订阅 Credit 池，2026-11-21 外部贡献） ---
+ * 官方文档化端点：GET https://api.stepfun.com/step_plan/v1/usage（Bearer key），
+ * 转写自 platform.stepfun.com/docs/zh/step-plan/usage（2026-11-20 抓取）并经真实账号
+ * 实调验证（Pro/Max 两档快照 + createQuotaClient 全链 + 桌面 chip 挂载，2026-11-20/21）。
+ * 响应是账号级套餐额度快照：plan.name / plan.subscription.expires_at_ms 为套餐名与
+ * 订阅到期；quota.credit_buckets[] 为额度桶（type="subscription" 是套餐月池，加油包
+ * 桶同构）。total/remaining 是整数字符串（官方防 JS 精度损失写法，Token Plan 档位
+ * ≤ 2e10 Credit < 2^53，按 Number 解析安全）；used_percent 是服务端已算好的已用%，
+ * 缺失时按 (total−remaining)/total 自算兜底。Credit 按订阅月发放、当期剩余到期清零
+ * 不结转（1 元 = 1,000,000 Credit，档位见官方 pricing 文档）。 */
+const STEPFUN_USAGE_URL = "https://api.stepfun.com/step_plan/v1/usage";
+/* 毫秒时间戳归一（resets_at_ms / expires_at_ms 同一口径）：数字毫秒直传；全数字字符串转
+ * Number 恢复（官方 total/remaining 用整数字符串防精度，毫秒值可能同款——isFinite 拦超长
+ * 串的 Infinity，低于 1e11 视为非毫秒垃圾串丢弃）；其余字符串仅当 allowDate 时过
+ * Date.parse 门（对齐 ollama 的单适配器内敛门——端点改版回垃圾串不冒充重置时间）。 */
+function stepfunStamp(v, allowDate) {
+  const raw = resetOf(v);
+  if (typeof raw === "number") return raw >= 1e11 ? raw : null;   // 1e11 下限同 ollama：挡玩具数值
+  if (typeof raw !== "string") return null;
+  if (/^\d+$/.test(raw)) {
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1e11 ? n : null;
+  }
+  return allowDate && !Number.isNaN(Date.parse(raw)) ? raw : null;
+}
+function normalizeStepfun(body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw qErr("parse_error", "stepfun non-object body");
+  const plan = body.plan, quota = body.quota;
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) throw qErr("parse_error", "stepfun missing plan");
+  if (!quota || typeof quota !== "object" || Array.isArray(quota)) throw qErr("parse_error", "stepfun missing quota");
+  const buckets = (Array.isArray(quota.credit_buckets) ? quota.credit_buckets : [])
+    .filter((b) => b && typeof b === "object" && !Array.isArray(b) && num(b.total) > 0 && num(b.remaining) >= 0);
+  if (!buckets.length) return { noPlan: true };   // 无有效额度桶 = 无在订套餐（fail-closed 冻结，不造 0%）
+  /* 选桶（规格「无 subscription 桶时取首个有效桶兜底」）：subscription 桶优先；没有时取
+   * 首个 remaining 可解析的桶——加油包桶列表里前几个桶缺 remaining 时不再被它们抢占
+   * （此前 buckets[0] 会选中缺 remaining 的桶，让紧随其后的有效桶也报 parse_error）；
+   * 全都解析不了才落 buckets[0]，走下方 parse_error 按 30 分钟退避自愈。 */
+  const pick = buckets.find((b) => b.type === "subscription")
+    || buckets.find((b) => num(b.remaining) != null) || buckets[0];
+  const total = num(pick.total), remaining = num(pick.remaining);
+  if (total == null || remaining == null || remaining > total) throw qErr("parse_error", "stepfun bucket shape invalid");
+  const usedPct = num(pick.used_percent);
+  const pct = usedPct != null ? usedPct : ((total - remaining) / total) * 100;
+  /* remaining 为 null/undefined/空串的桶不被过滤（JS 里 null >= 0 为 true），落下面
+   * remaining == null 的 parse_error 按 30 分钟退避自愈，优于对在订账号误冻结 noPlan；
+   * total 为 null/空串（无法产出任何窗口）与负 remaining（透支形状，官方文档未载）在
+   * 过滤条件被剔除 → noPlan。 */
+  const resetsAt = stepfunStamp(pick.resets_at_ms, true);
+  const out = { label: "StepFun", kind: "plan",
+    /* resets_at_ms 是月度 Credit 重置（真重置语义才填 resetsAt）；缺失（实测 Max 快照
+     * 不带该字段）不拿订阅到期冒充——到期时间单独落 plan.validEnd。 */
+    windows: { monthly: { percent: Math.round(clampPct(pct) * 10) / 10, resetsAt } } };
+  const name = typeof plan.name === "string" ? plan.name.slice(0, 40) : "";
+  const sub = plan.subscription;
+  const expiresMs = (sub && typeof sub === "object" && !Array.isArray(sub)) ? stepfunStamp(sub.expires_at_ms, false) : null;
+  if (name || expiresMs) {
+    out.plan = { version: "", productName: name, validStart: "",
+      validEnd: expiresMs != null ? zcodeStartStamp(expiresMs).slice(0, 10) : "" };
+  }
+  return out;
+}
+ADAPTERS.push({
+  id: "stepfun", label: "StepFun", kind: "plan", defaultOn: true,
+  envKeys: ["STEPFUN_API_KEY"],
+  detect(j, providerId) {
+    if (providerId.indexOf("account:") === 0) return null;
+    const cp = j.customProviderOf(providerId);
+    if (!cp) return null;
+    let u = null;
+    try { u = new URL(cp.baseUrl); } catch (e) { return null; }
+    if (u.protocol !== "https:" || u.hostname.toLowerCase() !== "api.stepfun.com") return null;
+    return { key: cp.apiKey, origin: "cfg" };
+  },
+  resolveCred(j, ctx) {
+    for (const k of this.envKeys) {
+      const v = j.env[k];
+      if (v) return { token: v, fingerprint: "env:" + sha16(v), source: "env" };
+    }
+    const sec = (j.secrets.sources || {}).stepfun || {};
+    if (sec.apiKey) return { token: sec.apiKey, fingerprint: "sec:" + sha16(sec.apiKey), source: "secrets" };
+    if (ctx.key) return { token: ctx.key, fingerprint: "cfg:" + sha16(ctx.key), source: "provider_config" };
+    return null;
+  },
+  async fetchOne(j, ctx, cred, ctl) {
+    return normalizeStepfun(await j.http.getJson(STEPFUN_USAGE_URL, { authorization: "Bearer " + cred.token }, ctl));
+  },
+});
+
 /* --- 自定义中转（sub2api / OpenAI legacy；仅查询配置地址的同源） --- */
 ADAPTERS.push({
   id: "custom", label: "中转站", kind: "balance", defaultOn: false,
@@ -2054,12 +2568,15 @@ const SOURCE_PRESETS = {
     ],
   },
   deepseek: { keyUrl: "https://platform.deepseek.com/api_keys" },
+  stepfun: { keyUrl: "https://platform.stepfun.com/account-overview" },
   openrouter: { keyUrl: "https://openrouter.ai/settings/keys" },
   r4: { keyUrl: "https://r4.codes/dashboard/api-keys" },
   kimi: { keyUrl: "https://platform.moonshot.cn/console/api-keys" },
   anthropic: { keyUrl: "https://console.anthropic.com/settings/keys" },
   mimo: { keyUrl: "https://platform.xiaomimimo.com" },
   volcano: { keyUrl: "https://console.volcengine.com/ark" },
+  qianwen: { keyUrl: "https://platform.qianwenai.com" },
+  ollama: { keyUrl: "https://ollama.com/settings/keys" },
 };
 
 /* ---------- 多源调度器 ---------- */
@@ -2114,11 +2631,12 @@ function createQuotaClient(opts) {
     }
     return qErr("network_error", "HTTP " + status, { httpStatus: status });
   }
-  async function rawFetch(url, headers, ctl, method) {
+  async function rawFetch(url, headers, ctl, method, body) {
     const res = await fetchImpl(url, {
       method: method || "GET",
       headers: Object.assign({ accept: "application/json", "accept-encoding": "identity" }, headers),
       signal: ctl ? ctl.signal : undefined, redirect: "manual",
+      body: body == null ? undefined : body,
     });
     let text = "";
     if (res.body && typeof res.body.getReader === "function") {
@@ -2148,8 +2666,8 @@ function createQuotaClient(opts) {
     async maybeGetJson(url, headers, ctl) {
       try { return await http.getJson(url, headers, ctl); } catch (e) { return null; }
     },
-    async post(url, headers, ctl) {
-      const r = await rawFetch(url, headers, ctl, "POST");
+    async post(url, headers, ctl, body) {   // body：可选请求体字符串（JSON/form；火山调用不传维持原状）
+      const r = await rawFetch(url, headers, ctl, "POST", body);
       let json = null;
       try { json = JSON.parse(r.text); } catch (e) { json = null; }
       const meta = json && json.ResponseMetadata && json.ResponseMetadata.Error;   // 火山信封：HTTP 200 也可能带错
@@ -2572,7 +3090,7 @@ function createQuotaClient(opts) {
       if (ctl.signal && typeof ctl.signal.addEventListener === "function") {
         ctl.signal.addEventListener("abort", () => clearTimeout(kill), { once: true });
       }
-      let listAttempted = false;   // v361：个人链列表增强按 RESET_LIST_TTL_MS 独立计时（尝试即计时）
+      let listAttempted = false;   // 个人链列表增强按 RESET_LIST_TTL_MS 计时（尝试即计时；v361 起独立计时，现与 status 同节奏）
       let listFailed = false;      // 本轮尝试了列表但未取到（传输失败/形状变化）：沿用旧 list 防天窗
       const p = (async () => {
         if (cred.team) {
@@ -2602,8 +3120,9 @@ function createQuotaClient(opts) {
             (force || t - st.listFetchedAt >= RESET_LIST_TTL_MS)) {
           /* 网页控制台列表端点：补充近 7 天过期卡与上次重置时间（status 无过期历史）。
            * 与 subscription 同款可选并行——失败/形状变化静默降级，不影响 status 主链。
-           * v361 status 提频到 2min 后列表不随之翻倍：独立 10min TTL，force 仍必打；
-           * 团队分支不走这里（团队 list 就是主链）。 */
+           * 列表与 status 同节奏（RESET_LIST_TTL_MS = RESET_TTL_MS，specs/reset-card-refresh.md）：
+           * 徽标张数读 status、tooltip 明细读 list，status 到期重查的同一轮必打列表，两边同轮落库；
+           * TTL 内的 poke 轮只刷 status，force 仍必打；团队分支不走这里（团队 list 就是主链）。 */
           listAttempted = true;
           const listBody = await j.http.maybeGetJson(RESET_LIST_ORIGIN + famConf.listPath,
             { authorization: cred.oauth, "set-language": "zh" }, ctl);
@@ -2620,23 +3139,25 @@ function createQuotaClient(opts) {
       })().then((value) => {
         if (!resetGateOpen() || resetStates.get(famConf.fam) !== st || ep !== st.epoch) return;
         if (syncResetCredential(st, resolveResetCred(famConf))) { if (onUpdate) onUpdate(); return; }
-        /* 列表增强按自己的 10 分钟窗口刷新：本轮未打列表或尝试失败（listFailed）时沿用上一轮
-         * 的 list/上次重置时间，否则 status 每 2 分钟重查会把深度信息清掉，tooltip 在两个列表
-         * 窗口之间开天窗；业务如实返回的空列表（extra 非 null）不沿用。仅限个人链——团队分支
-         * 每轮 list 都是新鲜抓取（listAttempted 恒 false），sticky 会把它冻结在首次抓取，
-         * tooltip 与 badge 张数从此不一致。 */
+        /* 列表增强按 RESET_LIST_TTL_MS 刷新：本轮未打列表（TTL 内 poke 轮）或尝试失败（listFailed）
+         * 时沿用上一轮的 list/上次重置时间，否则这一轮 status 重查会把深度信息清掉，tooltip 开天窗；
+         * 业务如实返回的空列表（extra 非 null）不沿用。仅限个人链——团队分支每轮 list 都是新鲜抓取
+         * （listAttempted 恒 false），sticky 会把它冻结在首次抓取，tooltip 与 badge 张数从此不一致。 */
         if (!cred.team && (!listAttempted || listFailed) && st.value) {
           if (st.value.list) value.list = st.value.list;
           if (st.value.lastFiveHour) value.lastFiveHour = st.value.lastFiveHour;
           if (st.value.lastWeek) value.lastWeek = st.value.lastWeek;
         }
         st.value = value;
-        st.fetchedAt = now();
+        /* 三个时刻同源：RESET_LIST_TTL_MS = RESET_TTL_MS 时「status 到期」恒推出「列表到期」；
+         * 分两次取时钟会在边界毫秒上让列表隔一轮（tick 恰等于 nextAt 而 listFetchedAt 晚 1ms）。 */
+        const doneAt = now();
+        st.fetchedAt = doneAt;
         st.status = "ok";
         st.lastError = "";
         st.backoffIdx = 0;
-        st.nextAt = now() + RESET_TTL_MS;
-        if (listAttempted) st.listFetchedAt = now();
+        st.nextAt = doneAt + RESET_TTL_MS;
+        if (listAttempted) st.listFetchedAt = doneAt;
       }).catch((e) => {
         if (!resetGateOpen() || resetStates.get(famConf.fam) !== st || ep !== st.epoch) return;
         if (syncResetCredential(st, resolveResetCred(famConf))) { if (onUpdate) onUpdate(); return; }
@@ -2682,6 +3203,11 @@ function createQuotaClient(opts) {
     tick,
     refresh() { v2KeyRetryNow(); return tick(true) > 0; },   // 用户显式刷新：越过 v2 密钥冷却/失配限频
     pokeReset,
+    /* 千问设备码登录（issue #399）：saveSecrets 由注入侧传入（writeQuotaSecrets），
+     * 登录完成持久化并触发 credentialsChanged 解冻；未传（旧装配/测试）时 start 报不可用。 */
+    qianwenSignInStart: () => Promise.resolve({ ok: false, error: "sign-in unavailable" }),
+    qianwenSignInState: () => ({ ok: false, error: "sign-in unavailable" }),
+    qianwenSignInCancel: () => { },
     refreshSource(id) {   // 厂商按钮刷新该厂商各账户；chip 的完整源 id 只刷新本账户
       const a = adapterOf(id);
       if (!a) return false;
@@ -2803,7 +3329,7 @@ function createQuotaClient(opts) {
         list.push({
           id: a.id, label: a.label, kind: a.kind, defaultOn: a.defaultOn, unverified: !!a.unverified,
           enabled: cfg.enabled !== false && (a.defaultOn || cfg.enabled === true),
-          credentialFields: a.id === "mimo" ? ["cookie"] : a.id === "volcano" ? ["accessKeyId", "secretAccessKey"] : a.id === "scnet" ? ["planCredits", "planStart"] : a.id === "anthropic" ? ["token"] : ["apiKey"],
+          credentialFields: a.id === "mimo" ? ["cookie"] : a.id === "volcano" ? ["accessKeyId", "secretAccessKey"] : a.id === "scnet" ? ["planCredits", "planStart"] : (a.id === "anthropic" || a.id === "qianwen") ? ["token"] : ["apiKey"],
           keyConfigured: !!(cfg.apiKey || cfg.cookie || cfg.token || cfg.accessKeyId ||
             accounts.some((entry) => !!entry.cred) || (a.id === "scnet" && num(cfg.planCredits) > 0)),
           keySource: st && st.cred ? st.cred.source : "",
@@ -2823,6 +3349,7 @@ function createQuotaClient(opts) {
     },
     secretsPath,
     dispose() {
+      client.disposeQianwenFlow();   // 千问登录流随实例销毁（在途轮询按 gen 自弃）
       for (const st of states.values()) {
         if (st.ctl) { try { st.ctl.abort(); } catch (e) { } }
         st.inFlight = null;
@@ -2837,6 +3364,7 @@ function createQuotaClient(opts) {
     _states: states,
     _adapters: ADAPTERS,
   };
+  installQianwenFlow(client, j, o);   // 覆写上面的 no-op 缺省：真登录流绑定本实例的 http 与 saveSecrets
   return client;
 }
 
@@ -2860,6 +3388,8 @@ module.exports = {
   normalizeSubscriptionPlan,
   normalizeSub2api,
   normalizeR4,
+  normalizeOllama,
+  normalizeStepfun,
   relayQuotaUrls,
   isNoPlanMessage,
   normalizeMimoCookie,

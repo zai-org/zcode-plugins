@@ -14,6 +14,7 @@ cache_read 与 cache_creation、output_tokens 已含 reasoning，因此
 一次性 CLI（json 子命令）只读不拉网；config pricing.fetch=false 彻底关闭联网。
 币种换算不在本模块：快照只带 cost_usd 原值与 fx 汇率，¥ 在展示层相乘。
 """
+import calendar
 import json
 import math
 import os
@@ -560,6 +561,165 @@ def merge_model_costs(groups):
     return round(total, 8), per
 
 
+# ---- 峰谷时段（按数据源口径分窗口；纯时间判定，不依赖价表与联网）----
+# DeepSeek 口径自 zcode-fox-widget pricing.mjs 移植；GLM Coding Plan 口径按官方
+# 说明补充（specs/peak-valley-time.md）。当前无运行时消费者，先落基座：快照展示
+# 与「按请求时刻选档计价/额度系数」都从这里取口径。
+
+# 各数据源的高峰窗口（北京时间小时区间）：
+#   deepseek = 工作日 9:00–12:00 与 14:00–18:00；周末全天谷自北京 2026-08-23
+#              00:00 起（官方规则变更），分界前历史时刻周末仍按旧规则有峰，保留
+#              分界让将来按时刻计价的历史桶不被新规则重算错。
+#   glm-plan = 周一至周五 14:00–18:00（GLM Coding Plan 官方口径），周末自然非高峰。
+PEAK_HOURS = {
+    'deepseek': ((9, 12), (14, 18)),
+    'glm-plan': ((14, 18),),
+}
+_WEEKEND_VALLEY_FROM_SEC = calendar.timegm((2026, 8, 22, 16, 0, 0))  # 北京 08-23 00:00
+
+# 小时切换边界从 PEAK_HOURS 展开（每段起点与终点，外加 0 点跨日边界），不手写
+# 第二份边界清单：改窗口只动 PEAK_HOURS 一处，切换点与判定不打架。
+_PEAK_EDGES = {
+    mode: tuple(sorted({0} | {h for start, end in hours for h in (start, end)}))
+    for mode, hours in PEAK_HOURS.items()
+}
+
+
+# time.gmtime 能表示的范围（0001-01-01 ~ 9999-12-31）；超出它的 epoch 与 None / 非数同属非法输入
+_EPOCH_MIN, _EPOCH_MAX = -62135596800, 253402300799
+
+
+def _epoch_or_none(time_sec):
+    """epoch 秒的合法性归一：None / 非数 / NaN / inf，以及超出 time.gmtime 表示范围的值，都返回 None。
+    各峰谷函数对非法输入按谷处理、不抛错（time.gmtime 自己对越界值抛 OSError）。"""
+    try:
+        sec = int(time_sec)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return sec if _EPOCH_MIN <= sec <= _EPOCH_MAX else None
+
+
+def is_peak_time(time_sec, mode='deepseek'):
+    """epoch 秒是否高峰时段（按北京时间判定，与机器时区无关）。
+
+    mode 选数据源口径，窗口见 PEAK_HOURS；周末特例只有 deepseek 有（分界起全天
+    谷），glm-plan 因「周一至五」定义周末自然非高峰。非法输入（None/非数/NaN/
+    inf/超出可表示范围的 epoch）按谷 False 处理，不抛错；未知 mode 属调用方错误，
+    让它照常 KeyError。
+    """
+    sec = _epoch_or_none(time_sec)
+    if sec is None:
+        return False
+    try:
+        bj = time.gmtime(sec + 8 * 3600)  # 加 8h 再按 UTC 读，即北京日历
+    except (OSError, OverflowError, ValueError):
+        return False   # 平台的 time_t 更窄时同样按非法输入处理
+    # 周末恒为谷的条件：glm-plan 无分界、周一至五定义下周末恒非高峰；deepseek
+    # 有 2026-08-23 生效分界（分界前周末按旧规则仍有峰，不豁免）
+    if bj.tm_wday >= 5 and (mode != 'deepseek' or sec >= _WEEKEND_VALLEY_FROM_SEC):
+        return False  # 5=周六 6=周日
+    for start, end in PEAK_HOURS[mode]:
+        if start <= bj.tm_hour < end:
+            return True
+    return False
+
+
+def next_peak_change(time_sec, mode='deepseek'):
+    """epoch 秒 → 下一个峰/谷切换点（epoch 秒），与 is_peak_time 同 mode 同口径。
+
+    从北京当日 0 点起最多扫 12 天的小时边界，取第一个与当前状态相反的时刻；
+    扫不到（理论不可达）兜底 +1 天，避免倒计时卡 00:00:00。非法输入返回 None。
+    """
+    sec = _epoch_or_none(time_sec)
+    if sec is None:
+        return None
+    edges = _PEAK_EDGES[mode]
+    cur = is_peak_time(sec, mode)
+    day0 = (sec + 8 * 3600) // 86400 * 86400  # 北京当日 0 点（已含 8h 平移）
+    for d in range(13):
+        for edge in edges:
+            cand = day0 + d * 86400 + edge * 3600 - 8 * 3600
+            if cand <= sec:   # 只排除当前与过去时刻；边界前 1 秒（如 08:59:59）必须能取到 09:00:00
+                continue
+            if is_peak_time(cand, mode) != cur:
+                return cand
+    return sec + 86400
+
+
+# GLM Coding Plan 峰谷额度消耗系数（官方说明）：系数乘在套餐额度扣减上，不是现金单价；
+# 高峰窗口同 'glm-plan' 口径。
+# 1) 历史套餐（V2 个人版 / 团队版，usage-revision）：
+#    glm-5.3-flash 在 2026-11-24 ~ 2026-12-24（UTC+8）限时活动期间按原系数 50%（0.2/0.6）结算，
+#    活动外按常规 0.4/1.2；glm-5.3-flashx 为体验版按常规 flash×2.5（1.0/3.0）。
+# 2) V3 新版积分套餐（overview）：所有收录模型高峰期按基础积分 1.0 倍消耗，非高峰期按 0.5 倍消耗。
+GLM_PLAN_PEAK_FACTOR = {
+    'glm-5.4': (0.67, 2.0),
+    'glm-5.3': (1.0, 3.0),
+    'glm-5.3-flash': (0.4, 1.2),
+    'glm-5.3-flashx': (1.0, 3.0),
+}
+GLM_PLAN_V3_PEAK_FACTOR = {k: (0.5, 1.0) for k in GLM_PLAN_PEAK_FACTOR}
+_FLASH_PROMO_START = calendar.timegm((2026, 11, 24, 0, 0, 0)) - 8 * 3600   # 北京 2026-11-24 00:00:00
+_FLASH_PROMO_END = calendar.timegm((2026, 12, 25, 0, 0, 0)) - 8 * 3600     # 北京 2026-12-25 00:00:00（含 12.24 全天）
+# 模型名匹配用精确等值（小写化后比较），不用子串——防 GLM-5.3-FlashX 子串误命中
+# GLM-5.3-Flash；倍率徽标场景「未收录模型不显示」依赖这一语义（specs/peak-valley-time.md）
+
+
+def _is_flash_promo(time_sec):
+    sec = _epoch_or_none(time_sec)
+    return sec is not None and _FLASH_PROMO_START <= sec < _FLASH_PROMO_END
+
+
+def _glm_plan_pairs(time_sec, plan_version=None):
+    ver = str(plan_version or '').strip().lower()
+    promo = _is_flash_promo(time_sec)
+    if ver == 'v3':
+        if not promo:
+            return GLM_PLAN_V3_PEAK_FACTOR
+        pairs = dict(GLM_PLAN_V3_PEAK_FACTOR)
+        pairs['glm-5.3-flash'] = (0.25, 0.5)
+        return pairs
+    if not promo:
+        return GLM_PLAN_PEAK_FACTOR
+    pairs = dict(GLM_PLAN_PEAK_FACTOR)
+    pairs['glm-5.3-flash'] = (0.2, 0.6)
+    return pairs
+
+
+def glm_plan_peak_factor(model, time_sec, plan_version=None):
+    """GLM Coding Plan 模型在指定时刻的额度消耗系数（float）。
+
+    按 is_peak_time(…, 'glm-plan') 与 plan_version（v3/v2/v1/team）选 (非高峰, 高峰) 两档；
+    模型名（去空白小写化）与系数表键精确等值匹配，未收录或名字为空按 1.0（无系数调整）。
+    """
+    ver = str(plan_version or '').strip().lower()
+    pairs = _glm_plan_pairs(time_sec, plan_version=ver)
+    pair = pairs.get(str(model or '').strip().lower())
+    if not pair:
+        return 1.0
+    return pair[1] if is_peak_time(time_sec, 'glm-plan') else pair[0]
+
+
+def peak_snapshot_segment(time_sec=None):
+    """桌面快照 peak 段（消费契约见 specs/model-peak-factor-badge.md）。
+
+    返回 {"glm_plan": {"is_peak": bool, "next_change_at": int,
+    "factors": [[模型键, 非高峰, 高峰], …], "factors_v3": [[模型键, 非高峰, 高峰], …],
+    "flash_promo": bool}}；异常向上抛，由 zusage 侧 _peak_segment_safe 宽捕获后省略字段。
+    time_sec 缺省取当前时刻。
+    """
+    sec = int(time.time() if time_sec is None else time_sec)
+    v2_pairs = _glm_plan_pairs(sec, plan_version='v2')
+    v3_pairs = _glm_plan_pairs(sec, plan_version='v3')
+    return {"glm_plan": {
+        "is_peak": is_peak_time(sec, 'glm-plan'),
+        "next_change_at": next_peak_change(sec, 'glm-plan'),
+        "factors": [[key, pair[0], pair[1]] for key, pair in v2_pairs.items()],
+        "factors_v3": [[key, pair[0], pair[1]] for key, pair in v3_pairs.items()],
+        "flash_promo": _is_flash_promo(sec),
+    }}
+
+
 # ---- 运行时覆盖层与汇率（pricing-cache.json）----
 _STATE_LOCK = threading.Lock()
 _START_LOCK = threading.Lock()
@@ -680,6 +840,20 @@ def _read_cache_raw():
         return {}
 
 
+def _replace_with_retry(tmp, path):
+    """os.replace 短暂重试。Windows 上目标被任何句柄打开时替换都被拒绝——pricing-cache.json 的读者
+    是并发的 serve / MCP / 逐问脚本（各自启动时读一次），都是微秒级短开，重试窗口远大于它；静默
+    放弃会让这一轮刷新作废、下一次要等 12 小时。永久性拒绝只是多等约 190ms 才上抛同一异常。"""
+    for attempt in range(20):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.01)
+
+
 def _write_cache(payload):
     """校验 → 同目录临时文件 → os.replace 原子替换 → 重载内存。"""
     if _CACHE_PATH is None:
@@ -693,7 +867,7 @@ def _write_cache(payload):
     tmp = _CACHE_PATH.with_name(_CACHE_PATH.name + ".tmp")
     try:
         tmp.write_text(json.dumps(payload, ensure_ascii=False, sort_keys=True), encoding="utf-8")
-        os.replace(tmp, _CACHE_PATH)
+        _replace_with_retry(tmp, _CACHE_PATH)
     except OSError:
         try:
             tmp.unlink()

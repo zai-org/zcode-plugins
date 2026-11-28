@@ -1,6 +1,6 @@
 /* mobile-relay：官方中继目标快照推送（主进程热换模块）。
  * inject-main 以宿主 mobileTaskView 与唯一活跃桥校验目标，按 SID + identity 查询；
- * wire 只发送数值投影和随机 binding，远控页调用桌面同一份 overlay.js。
+ * wire 只发送数值投影和随机 binding，远控页面调用同一份桌面 overlay.js。
  * seq/ack/分片仍由官方 AcknowledgedRelayProtocol 管理，不直接写 socket。
  * 目标代次、发送前复验与隐私契约见 specs/mobile-unified-overlay.md。 */
 "use strict";
@@ -10,7 +10,7 @@ const MAX_JSON_BYTES = 262144;
 /* 查询/推送限频：与桌面主泵同源同值（config.activity_min_ms，缺省 1500ms，下限 300）。
  * 实际值由 inject-main 创建本模块时传入（options.minIntervalMs），此常量仅兜底/测试用。 */
 const DEFAULT_ACTIVITY_MIN_MS = 1500;
-/* 同一目标的数据刷新节奏：远控页看的是「当前会话」，1s 级刷新才像桌面。
+/* 同一目标的数据刷新节奏：远控页面看的是「当前会话」，1s 级刷新才像桌面。
  * 每次查询走常驻 `zusage.py serve`（见下方 residentQuery），单次 ~5-20ms，
  * 不再每次 spawn 新解释器（Windows 冷启动 0.5~1.5s 是此前「更新慢」的主因之一）。 */
 /* 桌面同款触发模型（v346）：DB 写入事件驱动（inject-main 的 fs.watch 300ms 去抖调 pump），
@@ -19,7 +19,7 @@ const FALLBACK_HEARTBEAT_MS = 30000;
 const ANNOUNCE_MS = 2500;  // 能力公告节奏（握手起点；极小帧，不影响数据推送节流）
 const UPLINK_CAP = 2;      // 上行能力/帧代际（与油猴 zuUp 配对；握手成功油猴才上行）
 const HEARTBEAT_MS = 15000;          // 内容不变也至少 15s 一帧（消费端 30s 标灰阈值的一半）
-/* 数据心跳：本地目标没有 remoteTimer 的周期驱动，只靠 30s 桥兜底会踩手机端
+/* 数据心跳：本地目标没有 remoteTimer 的周期驱动，只靠 30s 桥兜底会踩页面的
  * DATA_TTL_MS=30s 标灰边界。10s tick + HEARTBEAT_MS=15s 内容去重：去重只在距上次
  * 发送 <15s 时跳过，因此相邻 tick 至多被跳过一次，最坏间隔 <25s（首 tick 落在 ≥15s 处），
  * 不会形成 >30s 空档。`bridgeTimer`（30s）兼作桥维护与兜底心跳（通常被内容去重），
@@ -64,7 +64,6 @@ function encodeEventFireFrame(payloadJson) {
 }
 
 function createMobileRelay(options) {
-  const log = (options && options.log) || (() => { });
   const stash = () => {
     try { const s = globalThis.__zusageRelayStash; return Array.isArray(s) ? s : []; } catch (e) { return []; }
   };
@@ -135,7 +134,7 @@ function createMobileRelay(options) {
   }
   let targetEpoch = 0, validateTarget = null, verifyTarget = null, disposed = false, readyBridge = null;
   let queryBusy = false, activeQuery = null, lastQueryAt = 0, queryPending = false;
-  /* 手机端已上报配置 = 有消费者（v346 门控）：只有收到手机上行配置后才开始查库推送，
+  /* 远控页面已上报配置 = 有消费者（v346 门控）：只有收到远控页面的配置后才开始查库推送，
    * 单纯建立远控通道不推（避免无消费者盲推占带宽）。 */
   let clientReady = false, clientCfg = null, clientCfgGen = 0, uplinkFrames = 0;
   /* v1 持久钩子推裸帧（无 {frame,b,relay} 外壳，直接带 zuUp/zuCfg）：识别后停发能力公告，
@@ -169,9 +168,9 @@ function createMobileRelay(options) {
     return live.length === 1 && live[0].p === readyBridge && (!bridge || live[0].p === bridge);
   }
 
-  /* 上行排空：宿主钩子（mobile_relay_patch 的 injection）把带 zuUp 标记的帧推进
+  /* 上行排空：patch_install 注入的宿主钩子把带 zuUp 标记的帧推进
    * globalThis.__zusageRelayUplinkQueue——帧在 acceptPayload 严格 seq 校验前被消费，
-   * 官方 ack 水位零接触。载荷 = 手机端 overlay 偏好（zusage3.* 同键），gen 单调幂等。 */
+   * 官方 ack 水位零接触。载荷 = 远控页面的 overlay 偏好（zusage3.* 同键），gen 单调幂等。 */
   function drainUplink(schedule) {
     /* 先观察启用边沿/丢弃旧队列，再取帧；仅清全局队列不能撤销已经 splice 的 frames。 */
     if (disposed || !isEnabled()) return;
@@ -245,7 +244,6 @@ function createMobileRelay(options) {
           relay.acceptPayload = wrapped;
           if (relay.acceptPayload === wrapped) {
             relay.__zusageUplinkDispatcherV2 = wrapped;
-            relay.__zusageUplinkWrappedV2 = wrapped;
           }
         } catch (e2) { }
       }
@@ -276,9 +274,9 @@ function createMobileRelay(options) {
     }
   }, 1000);
   if (typeof remoteTimer.unref === "function") remoteTimer.unref();
-  /* 数据心跳（仅本地目标）：远端目标由 remoteTimer 严格按 poll_ms 驱动，10s tick 不能
-   * 绕过它（poll_ms=60000 的远端会因此被拉到 10s 查询）。本地目标原本只有 DB 事件与
-   * 30s 桥兜底——空闲时恰好踩手机端 30s 标灰阈值。10s tick 只做数据对账，配合
+  /* 数据心跳仅驱动本地目标。远端由 remoteTimer 按 poll_ms 周期查询，也可由 bridgeTimer
+   * 每 30s 触发兜底，两者都经过查询节流。本地目标原本只有 DB 事件与
+   * 30s 桥兜底——空闲时恰好踩页面的 30s 标灰阈值。10s tick 只做数据对账，配合
    * HEARTBEAT_MS 去重保证最坏间隔 <25s；桥维护与兜底心跳仍由 bridgeTimer（30s，通常
    * 被内容去重）负责。 */
   const dataTimer = setInterval(() => {
@@ -342,7 +340,8 @@ function createMobileRelay(options) {
    * 主因。常驻进程下同一查询 5~20ms。空闲 60s 回收；连续 3 次快速早退/拉起异常进
    * 60s 冷却（冷却期走一次性 spawn，到期清零重试），单次成功回包不清零。
    * turns:true 不再携带（逐轮统计块随回答统计行一并回退）。
-   * lean:true：手机 projection 不消费 speed_history/all_projects，serve 侧跳过计算与传输；
+   * lean:true：查询省略远控页面不用的 speed_history、all_projects、speed_days、
+   * worktrees、compactions 和 peak；
    * 一次性 json 回退复用同一 request 字符串，因此同样享受 lean。 */
   const RESIDENT_LINE = (target) => JSON.stringify(Object.assign({ lean: true },
     target.workspaceIdentity
@@ -573,9 +572,9 @@ function createMobileRelay(options) {
     });
   }
 
-  /* 能力公告帧（v346 握手起点，打破死锁）：桌面等手机配置才推、手机等 zuUpCap 才发配置，
+  /* 能力公告帧（v346 握手起点，打破死锁）：桌面收到页面配置才推送，页面收到 zuUpCap 才发配置，
    * 两者互等。这里在「有活跃桥」时不依赖 target/clientReady 周期发极小公告
-   * （~80B，仅能力声明），手机收到即上行配置 → 桌面门控打开 → 开始推数据。
+   * （~80B，仅能力声明），页面收到后即上报配置 → 桌面门控打开 → 开始推数据。
    * 无补丁宿主不会发此帧，油猴因此绝不会对无钩子连接上行（安全门不受影响）。 */
   let lastAnnounceAt = 0;
   function announce() {
@@ -590,7 +589,7 @@ function createMobileRelay(options) {
      * 标记（acceptPayload 只读时会走后者，持久钩子在各模块实例前消费裸帧）。 */
     let persistentV2 = false;
     try { persistentV2 = globalThis.__zusageRelayUplinkGeneration === 2; } catch (e) { }
-    if (relay.__zusageUplinkWrappedV2 !== relay.acceptPayload && !persistentV2) return;
+    if (relay.__zusageUplinkDispatcherV2 !== relay.acceptPayload && !persistentV2) return;
     const now = Date.now();
     if (now - lastAnnounceAt < ANNOUNCE_MS) return;
     lastAnnounceAt = now;
@@ -608,7 +607,7 @@ function createMobileRelay(options) {
     }
   }
 
-  /* 本地与远端均只发送受限快照，手机复用同一桌面 overlay；不再生成第二种状态条。
+  /* 本地与远端均只发送受限快照，远控页面复用桌面 overlay；不再生成第二种状态条。
    * 超限只裁可选明细，仍超限则发送目标专属不可用状态，不能更改目标类型。 */
   async function sendUnavailable(target, epoch, bridge, runId) {
     if (runId !== queryRuns || !targetIsCurrent(target, epoch, bridge)) return;
@@ -726,7 +725,7 @@ function createMobileRelay(options) {
   }
 
   /* 主进程目标发现上报：{zm:1, target}。目标变化立即 pump；同一目标等 DB 事件。
-   * 无手机配置（clientReady=false）时不查库不推——门控在 pump 内。 */
+   * 未收到页面配置（clientReady=false）时不查库不推——门控在 pump 内。 */
   function push(payload, validator, verifier) {
     if (disposed || !payload || payload.zm !== 1 || !isEnabled()) return false;
     const input = payload.target;

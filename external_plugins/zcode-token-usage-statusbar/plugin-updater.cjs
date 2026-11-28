@@ -467,6 +467,24 @@ function createUpdater(options) {
     }
     throw new Error("市场清单刷新连续 3 次失败: " + String((lastError && lastError.message) || lastError));
   }
+  /* 渠道落后察觉（specs/channel-lag-detection.md，issue #497）：market 渠道与 GitCode Release 渠道的
+   * 版本源只有宿主手里的渠道清单，清单没跟上最新发布（分支断链、清单没推、宿主刷新静默失败）时
+   * 用户只会看到「已是最新」。结论为「已是最新」时用不依赖用户克隆的 Release 列表交叉核对一次；
+   * 只提示，不换源、不替宿主修克隆。它是诊断：任何失败都静默返回，不改变检查结论。 */
+  async function noteChannelLag(source) {
+    try {
+      if (!source || !source.repository || source.flavor !== "github" && source.flavor !== "gitcode") return;
+      let latest;
+      if (source.flavor === "gitcode") {
+        if (!releaseChannel.sameRepository(source.repository, releaseChannel.GITCODE_MIRROR_REPOSITORY)) return;
+        latest = (await releaseChannel.checkGitcodeMirrorRelease(compareVersions, fetchRelease)).version;
+      } else latest = (await releaseChannel.checkRelease(source.repository, compareVersions, fetchRelease)).version;
+      // 交叉核对要等网络：期间来源或结论可能已被改写，只给同一次检查的结论落痕
+      if (compareVersions(latest, state.latestVersion) <= 0 || !isDeepStrictEqual(channel(), source)) return;
+      state.lastError = { message: ("更新渠道没有跟上最新发布：渠道清单是 " + state.latestVersion + "，最新发布已是 " + latest
+        + "。请在插件市场刷新 zusage-marketplace 后重新检查；仍不行可移除该市场后按仓库地址重新注册").slice(0, 500), at: now() };
+    } catch (error) { }
+  }
   function migrationRepoFor(source) {
     // 已确认的改名迁移（install-release.md §6）：注册名命中记录 from 时直接返回 to，
     // 后续检查零额外请求；记录形状非法或注册名已变化返回 null（豁免随之失效）。
@@ -595,6 +613,7 @@ function createUpdater(options) {
       state.lastAttempt = now();
       save();
       const source = channel();
+      let catalogOnly = false;   // 本轮版本源只有渠道清单、没问过 Release 列表（渠道落后察觉的触发条件）
       state.channel = source.kind; state.channelHost = source.flavor === "gitcode" ? "gitcode" : source.flavor === "github" ? "github" : "";
       state.channelRepo = source.repository || "";   // 更新日志卡片按渠道仓库构造 Release 页链接（market/local 为空）
       state.releaseUrl = ""; selectedRelease = null; selectedChannel = source; state.checkedVia = ""; state.mirror = false;
@@ -604,6 +623,7 @@ function createUpdater(options) {
         if (!isDeepStrictEqual(channel(), source)) throw new Error("更新期间市场来源已变化");
         selectedRelease = releaseChannel.gitcodeReleaseFromCatalog(readReleaseCatalog(), source.repository);
         state.checkedVia = "release-catalog";
+        catalogOnly = true;
       } else if (source.kind === "release") {
         const outcome = await checkGithubRelease(source).catch(async (error) => {
           // 疑似仓库改名（install-release.md §6）：只有「来源/仓库不一致」类校验失败才可能由改名引起
@@ -638,6 +658,7 @@ function createUpdater(options) {
         maybeClearFailure();
         const newer = compareVersions(state.latestVersion, record.version) > 0;
         state.lastError = null;   // 检查成功：上次失败记录随之清除
+        if (!newer && catalogOnly) await noteChannelLag(source);   // 渠道落后察觉（specs/channel-lag-detection.md）
         state.phase = newer ? "available" : "current"; state.checkedAt = now(); save(); publish();
         if ((auto || install) && newer) {
           const overview = listOverview(await cli(["list"])); diagnostics(overview);
@@ -659,6 +680,7 @@ function createUpdater(options) {
         maybeClearFailure();
         const newer = compareVersions(state.latestVersion, state.currentVersion) > 0;
         state.lastError = null;   // 检查成功：上次失败记录随之清除
+        if (!newer) await noteChannelLag(source);   // 渠道落后察觉：market 渠道的版本源只有渠道清单
         state.phase = newer ? "available" : "current";
         state.checkedAt = now(); save(); publish();
         if ((auto || install) && newer && installed.enabled !== false) await installUpdate(auto);
@@ -875,8 +897,11 @@ function createUpdater(options) {
   async function recordRestart(report) {
     if (report.restartRecorded === true) return;
     const changed = Array.isArray(report.changed) ? report.changed : [];
+    // 与 overlay_install.py 的 cold_files 保持同款（两处清单不许漂移）：
+    // 常冷 8 项 + hot_reload:false 时追加 overlay.js/zusage.py/mobile-relay.cjs。
     const cold = changed.filter((f) => f === "inject-main.cjs" || f === "plugin-updater.cjs" || f === "plugin-release.cjs" || f === "plugin-storage.cjs" || f === "quota-client.cjs"
-      || ((readConfig(configFile) || {}).hot_reload === false && (f === "overlay.js" || f === "zusage.py")));
+      || f === "model-puller.cjs" || f === "engine-patch.cjs" || f === "sysmon-client.cjs"
+      || ((readConfig(configFile) || {}).hot_reload === false && (f === "overlay.js" || f === "zusage.py" || f === "mobile-relay.cjs")));
     if (!cold.length) return;
     const hashes = {};
     for (const name of cold) {

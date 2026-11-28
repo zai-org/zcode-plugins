@@ -27,14 +27,16 @@ MAX_ENTRIES = 1000
 MAX_RATIO = 1000
 SEMVER = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
 PLUGIN_FILES = (
-    "usage_mcp.py", "mcp-launch.cjs", "zusage.py", "patch_install.py", "install_monitor.py",
-    "inject-main.cjs", "plugin-updater.cjs", "plugin-storage.cjs", "quota-client.cjs", "model-puller.cjs", "engine-patch.cjs", "mobile-relay.cjs", "mobile_relay_patch.py", "sysmon-client.cjs", "runtime_lock.py", "usage_stats.py", "turn-stats.js", "overlay.js",
+    "usage_mcp.py", "zusage.py", "patch_install.py", "install_monitor.py",
+    "inject-main.cjs", "plugin-updater.cjs", "plugin-storage.cjs", "quota-client.cjs", "model-puller.cjs", "engine-patch.cjs", "mobile-relay.cjs", "sysmon-client.cjs", "runtime_lock.py", "usage_stats.py", "turn-stats.js", "overlay.js",
     "plugin-release.cjs", "release_unpack.py", "overlay_install.py", "token_rate.py", "renderer_bridge.py", "token_pricing.py",
     "pending_zip_patch.py",
     "plugin_auto_update.py", "restart_notice.py", ".mcp.json", "README.md",
     ".zcode-plugin/plugin.json", ".claude-plugin/plugin.json", "hooks/hooks.json",
-    "hooks/session-start.py", "hooks/prompt-submit.py", "commands/usage.md",
+    "hooks/session-start.py", "hooks/prompt-submit.py", "commands/context.md", "commands/usage.md",
+    "extension-main.cjs", "extension-view-context.js", "extension-view-insights.js",
     "commands/install-overlay.md", "commands/uninstall-overlay.md",
+    "commands/zusage-doctor.md",
     "skills/zcode-token-usage/SKILL.md",
 )
 ALLOWED_FILES = frozenset(("marketplace.json", "LICENSE") +
