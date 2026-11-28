@@ -1673,6 +1673,54 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "lesson-plan-builder",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/lesson-plan-builder",
+      "displayName": "Lesson Plan Builder",
+      "displayName_i18n": {
+        "en": "Lesson Plan Builder",
+        "zh-CN": "教案制作"
+      },
+      "description": "Write lesson plans as simple Markdown and get standard, printable 教案 in Word and PDF — and a check of the things reviewers mark you down for. Each lesson has its info (subject, grade, textbook, length), objectives, key points, materials, the teaching process (step headings with teacher / student / intent lines, a table, or one-line steps with minutes), board plan and homework. Edit any item or step in the table, add steps or homework, set the teacher, date and class start time (every step gets its start–end clock time). It checks that step times add up to the lesson length, flags objectives with vague verbs (了解 / 理解 / 掌握) and no observable outcome, long teacher-only stretches with no student activity, materials used in a step but missing from the preparation list, missing objectives, key points or homework. Exports one document for the whole unit — a lesson per page, the process as a 环节 / 时间 / 教师活动 / 学生活动 / 设计意图 table, optional blank reflection lines — as Word, PDF and Markdown. No account or API keys; runs on your computer.",
+      "description_i18n": {
+        "en": "Write lesson plans as simple Markdown and get standard, printable 教案 in Word and PDF — and a check of the things reviewers mark you down for. Each lesson has its info (subject, grade, textbook, length), objectives, key points, materials, the teaching process (step headings with teacher / student / intent lines, a table, or one-line steps with minutes), board plan and homework. Edit any item or step in the table, add steps or homework, set the teacher, date and class start time (every step gets its start–end clock time). It checks that step times add up to the lesson length, flags objectives with vague verbs (了解 / 理解 / 掌握) and no observable outcome, long teacher-only stretches with no student activity, materials used in a step but missing from the preparation list, missing objectives, key points or homework. Exports one document for the whole unit — a lesson per page, the process as a 环节 / 时间 / 教师活动 / 学生活动 / 设计意图 table, optional blank reflection lines — as Word, PDF and Markdown. No account or API keys; runs on your computer.",
+        "zh-CN": "用简单的 Markdown 写教案，得到格式规范、可打印的 Word 和 PDF 教案——并检查评课时常被扣分的地方。每课包含基本信息（学科、年级、教材、课时）、教学目标、重难点、教学准备、教学过程（环节标题下写 教师/学生/设计意图，或表格，或一行一个带分钟数的环节）、板书设计和作业。可在表格里改任何条目和环节，增加环节或作业，设置授课人、日期和上课时间（每个环节自动标出起止时刻）。会检查环节时间加起来是否等于课时，标出用“了解/理解/掌握”等模糊动词、没有可观察结果的目标，教师连续讲授很久却没有学生活动的环节，环节里用到但教学准备里没列的教具，以及缺少目标、重难点或作业。整个单元导出为一份文档——每课一页，教学过程做成 环节/时间/教师活动/学生活动/设计意图 表格，可留教学反思空行——Word、PDF 和 Markdown。不用登录，无需 API 密钥，本机运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "lesson plan",
+        "teaching",
+        "teacher",
+        "教案",
+        "备课",
+        "教学设计",
+        "教学过程",
+        "课时",
+        "教师",
+        "school"
+      ],
+      "examplePrompts": [
+        "Make Word and PDF lesson plans from the files in 教案",
+        "Fix the timing and add homework to lesson 2",
+        "Export the lesson plans"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 教案 文件夹里的两课时做成 Word 和 PDF 教案",
+          "把超时的环节调好，给第2课时补上作业",
+          "导出教案"
+        ]
+      }
     }
   ]
 }
