@@ -1,0 +1,1 @@
+{"prefix": "scorecard", "folder": "HR", "pick": ["面试"], "startSettings": {}, "uiEdit": {"row": 7, "key": "c1", "value": "4.5"}, "expectText": "candidate", "expectFiles": ["ranking\\.xlsx$", "scorecards\\.pdf$", "blank-scorecard\\.pdf$"]}
