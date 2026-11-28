@@ -1673,6 +1673,60 @@
           "把上一个 Hi3D 任务生成的模型按角色拆分成部件"
         ]
       }
+    },
+    {
+      "name": "card-print-sheets",
+      "componentTypes": [
+        "ui"
+      ],
+      "source": "./external_plugins/card-print-sheets",
+      "displayName": "Card Print Sheets",
+      "displayName_i18n": {
+        "en": "Card Print Sheets",
+        "zh-CN": "卡牌打印排版"
+      },
+      "description": "Turn a folder of card images into print-ready sheets for board games, tarot, flash cards or business cards. Pick a card size (poker, bridge, tarot, mini, business, square or your own), add bleed, gap, paper and crop marks, and set how many copies of each card to print — from a counts sheet or by editing. Double-sided printing places a mirrored back page after each front page so backs line up on long- or short-edge flip, with a different back per card if you need one. Checks for images missing from the folder, low resolution at print size, art with the wrong shape or no bleed, double-sided cards without a back, bad counts, duplicates, sizes that don't fit the paper and empty slots on the last sheet. Exports print-sheets.pdf, backs.pdf and card-list.csv. Runs locally.",
+      "description_i18n": {
+        "en": "Turn a folder of card images into print-ready sheets for board games, tarot, flash cards or business cards. Pick a card size (poker, bridge, tarot, mini, business, square or your own), add bleed, gap, paper and crop marks, and set how many copies of each card to print — from a counts sheet or by editing. Double-sided printing places a mirrored back page after each front page so backs line up on long- or short-edge flip, with a different back per card if you need one. Checks for images missing from the folder, low resolution at print size, art with the wrong shape or no bleed, double-sided cards without a back, bad counts, duplicates, sizes that don't fit the paper and empty slots on the last sheet. Exports print-sheets.pdf, backs.pdf and card-list.csv. Runs locally.",
+        "zh-CN": "把一文件夹的卡牌图片排成可直接打印的拼版页，适合桌游卡、塔罗、单词卡、名片。可选卡牌尺寸（扑克、桥牌、塔罗、迷你、名片、方形或自定义），设置出血、间距、纸张和裁切线，每张卡打几份可从数量表读取或直接修改。双面打印时每张正面页后跟一张镜像的背面页，长边/短边翻转都能对齐，每张卡也可以有自己的背面。会发现文件夹里缺的图片、按打印尺寸分辨率太低、比例不对或没有出血的卡面、开了双面却没有背面、数量写错、重复列出、尺寸放不下纸张，以及最后一页的空位。导出 print-sheets.pdf、backs.pdf 和 card-list.csv。本地运行。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "Penova",
+        "url": "https://github.com/ppppp2005-p"
+      },
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "cards",
+        "card game",
+        "print and play",
+        "bleed",
+        "crop marks",
+        "tarot",
+        "flash cards",
+        "imposition",
+        "卡牌",
+        "桌游",
+        "打印",
+        "拼版",
+        "出血",
+        "裁切线",
+        "卡背",
+        "双面打印"
+      ],
+      "examplePrompts": [
+        "Lay out the cards in 卡牌 for printing",
+        "Make it double-sided with back.png",
+        "Export the print sheets"
+      ],
+      "examplePrompts_i18n": {
+        "zh-CN": [
+          "把 卡牌 里的卡面排成打印页",
+          "用 back.png 做双面打印",
+          "导出打印页"
+        ]
+      }
     }
   ]
 }
