@@ -1,0 +1,59 @@
+{
+  "name": "photo-grid-collage",
+  "version": "0.1.0",
+  "description": "Arrange photos into a collage or grid poster: a 3×3 nine-grid, 2×2, one big photo with smaller ones around it, an even auto grid, a justified mosaic that never crops, or a vertical strip. Choose the canvas (square, 4:5 post, story, landscape, A4 poster or a custom size), gap, margin, rounded corners, background, a title and a footer, and put a caption on any photo. Each photo has an order (which slot it gets) and a crop focus, so faces and products stay in frame. Before you export you are told when a fixed grid has empty or unused slots, when a small photo will look blurry in a big cell, when a crop cuts away most of a photo, and which files can't be read. Exports PNG and JPG. Runs locally; no account or API keys.",
+  "description_i18n": {
+    "en": "Arrange photos into a collage or grid poster: a 3×3 nine-grid, 2×2, one big photo with smaller ones around it, an even auto grid, a justified mosaic that never crops, or a vertical strip. Choose the canvas (square, 4:5 post, story, landscape, A4 poster or a custom size), gap, margin, rounded corners, background, a title and a footer, and put a caption on any photo. Each photo has an order (which slot it gets) and a crop focus, so faces and products stay in frame. Before you export you are told when a fixed grid has empty or unused slots, when a small photo will look blurry in a big cell, when a crop cuts away most of a photo, and which files can't be read. Exports PNG and JPG. Runs locally; no account or API keys.",
+    "zh-CN": "把多张照片拼成拼图或海报：3×3 九宫格、2×2 四宫格、一张大图配几张小图、自动均匀网格、不裁切的瀑布拼接，或者竖条。可以选画布（方形、4:5 帖子、竖屏、横版、A4 海报或自定义尺寸），调间距、外边距、圆角、背景色，加标题和底部文字，给任意一张加说明。每张照片可以设顺序（放在哪个格子）和裁切焦点，人脸和商品不会被切掉。导出前会提示：固定格数的版式有空格或多出来的照片、小图放进大格子会糊、裁切掉了大半张照片、哪些文件读不出来。导出 PNG 和 JPG。在本地运行，不用登录，无需 API 密钥。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "collage",
+    "photo grid",
+    "nine grid",
+    "poster",
+    "instagram",
+    "moodboard",
+    "拼图",
+    "九宫格",
+    "照片拼接",
+    "海报",
+    "拼贴",
+    "朋友圈",
+    "小红书"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "photo-grid-collage": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "拼图海报",
+          "en-US": "Photo Grid Collage"
+        },
+        "icon": "layout-grid",
+        "server": "photo-grid-collage",
+        "resourceUri": "ui://photo-grid-collage/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
