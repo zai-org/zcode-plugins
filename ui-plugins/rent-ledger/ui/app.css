@@ -1,0 +1,39 @@
+.top { display:flex; align-items:baseline; gap:10px; }
+.files { max-height: 260px; overflow:auto; border:1px solid var(--line); border-radius:6px; padding:4px; background:var(--bg); }
+.file { padding:2px 4px; font-size:12px; word-break: break-all; }
+.filter { width:100%; margin-bottom:6px; }
+.settings { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:6px 12px; }
+.set { justify-content: space-between; }
+.set span { color: var(--muted); }
+.set input[type=text], .set input[type=number], .set select, .set textarea, .set input[type=date] { width: 60%; }
+.set-textarea { grid-column: 1 / -1; align-items: flex-start; }
+.set-textarea textarea { width: 80%; }
+.head .pname { font-weight:600; }
+.summary { margin:8px 0 4px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 8px; }
+.chip { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:1px 8px; font-size:12px; }
+.issues { margin:6px 0; }
+.issues ul { margin:4px 0; padding-left:18px; max-height:180px; overflow:auto; }
+.issues li { cursor:pointer; }
+.lvl-error { color: var(--bad); } .lvl-warn { color: var(--warn); }
+.split2 { display:grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap:10px; align-items:start; }
+.split2 .previewcol:empty { display:none; }
+.split2:has(.previewcol:empty) { grid-template-columns: 1fr; }
+@media (max-width: 900px) { .split2 { grid-template-columns: 1fr; } }
+.tablewrap { overflow:auto; max-height: 60vh; border:1px solid var(--line); border-radius:6px; }
+table.edit { font-size:12px; }
+table.edit td { padding:1px 2px; }
+table.edit th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+table.edit td input[type=text], table.edit td select { width:100%; min-width:70px; border-color: transparent; background: transparent; padding:2px 4px; }
+table.edit td input:focus, table.edit td select:focus { border-color: var(--accent); background: var(--bg); }
+table.edit td.wide input { min-width: 200px; }
+table.edit td.ro { color: var(--muted); padding: 2px 6px; white-space: nowrap; }
+table.edit .num { text-align: right; }
+table.edit td.idx { color: var(--muted); text-align: right; padding: 2px 4px; }
+table.edit tr.warn td.idx { background: var(--warnbg); }
+table.edit tr.err td.idx { background: var(--badbg); color: var(--bad); }
+table.edit tr.focus td { outline: 1px solid var(--accent); }
+button.del { padding: 0 6px; }
+.preview { border:1px solid var(--line); border-radius:6px; padding:8px; background: var(--bg); overflow:auto; max-height: 75vh; }
+.preview img, .preview svg { max-width: 100%; height: auto; }
+.exported ul { margin: 4px 0; padding-left: 18px; font-size: 12px; }
