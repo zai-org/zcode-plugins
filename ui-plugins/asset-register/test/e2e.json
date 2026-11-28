@@ -1,0 +1,1 @@
+{"prefix": "asset", "folder": "资产", "pick": ["资产"], "startSettings": {"asOf": "2026-11-30"}, "uiEdit": {"row": 9, "key": "bought", "value": "2025-12-02"}, "expectText": "asset", "expectFiles": ["asset-tags\\.pdf$", "depreciation\\.xlsx$", "stocktake\\.pdf$"]}

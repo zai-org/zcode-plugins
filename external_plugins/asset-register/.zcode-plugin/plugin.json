@@ -1,0 +1,59 @@
+{
+  "name": "asset-register",
+  "version": "0.1.0",
+  "description": "Keep a small company's fixed-asset register in a spreadsheet and get QR asset tags, a depreciation schedule and a stocktake checklist from it. Depreciation is monthly from the month after purchase, straight-line, double-declining (last two years straight-line) or sum-of-years, with default useful lives per category and a residual as a percentage or an amount; see accumulated depreciation and net book value as of any date. Catches duplicate or missing asset numbers, the same serial number entered twice, unreadable dates and costs, residuals that aren't below cost, assets with no useful life, checked-out items with no holder or overdue, assets with no location and fully depreciated assets still in use. Exports A4 sheets of QR labels (50×30 or 70×40 mm), a depreciation workbook (register, yearly schedule, totals by category and location, checked-out list) and a stocktake sheet by location with check boxes. No account or API keys; runs on your computer.",
+  "description_i18n": {
+    "en": "Keep a small company's fixed-asset register in a spreadsheet and get QR asset tags, a depreciation schedule and a stocktake checklist from it. Depreciation is monthly from the month after purchase, straight-line, double-declining (last two years straight-line) or sum-of-years, with default useful lives per category and a residual as a percentage or an amount; see accumulated depreciation and net book value as of any date. Catches duplicate or missing asset numbers, the same serial number entered twice, unreadable dates and costs, residuals that aren't below cost, assets with no useful life, checked-out items with no holder or overdue, assets with no location and fully depreciated assets still in use. Exports A4 sheets of QR labels (50×30 or 70×40 mm), a depreciation workbook (register, yearly schedule, totals by category and location, checked-out list) and a stocktake sheet by location with check boxes. No account or API keys; runs on your computer.",
+    "zh-CN": "用一张表管小公司的固定资产台账，生成二维码资产标签、折旧表和盘点表。按月计提折旧（当月购入次月起提），支持年限平均法、双倍余额递减法（最后两年改直线）和年数总和法，各类别可设默认年限，残值可写比例或金额；随时看到截至某天的累计折旧和净值。会发现重复或缺失的资产编号、重复录入的序列号、读不懂的日期和金额、残值不低于原值、没有使用年限、借出没写使用人或已逾期、没有存放地点，以及已提足折旧仍在使用的资产。导出 A4 二维码标签（50×30 或 70×40 mm）、折旧 Excel（台账、年度折旧、按类别和地点汇总、借出清单）和按地点分组带勾选框的盘点表。不用登录，无需 API 密钥，本机运行。"
+  },
+  "author": {
+    "name": "Penova",
+    "url": "https://github.com/ppppp2005-p"
+  },
+  "license": "MIT",
+  "keywords": [
+    "asset",
+    "fixed asset",
+    "register",
+    "depreciation",
+    "asset tag",
+    "qr",
+    "stocktake",
+    "固定资产",
+    "资产台账",
+    "折旧",
+    "资产标签",
+    "盘点",
+    "二维码"
+  ],
+  "skills": "skills",
+  "mcpServers": {
+    "asset-register": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/dist/server.mjs"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 900000,
+      "env": {
+        "ZCODE_WORKSPACE_ROOT": "${ZCODE_PROJECT_DIR}"
+      }
+    }
+  },
+  "ui": {
+    "surfaces": [
+      {
+        "id": "editor",
+        "title": {
+          "zh-CN": "固定资产台账",
+          "en-US": "Asset Register"
+        },
+        "icon": "barcode",
+        "server": "asset-register",
+        "resourceUri": "ui://asset-register/panel.html",
+        "availability": "session"
+      }
+    ]
+  }
+}
